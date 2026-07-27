@@ -33,12 +33,28 @@ static uint16_t pack_glyph_index(uint8_t lead, uint8_t trail)
     return (uint16_t)((idx << 8) | trail);
 }
 
+/*
+ * 从 ROM 字库（ADDR_FONT_CHS_NORMAL @ 0x09000000）读取字模。
+ * 每字 128B = 4 个 8×8 4bpp tile（TL/BL/TR/BR）
+ * 映射为 16×16 bitmap。渲染时 drawGlyph12 只取左 8px + 右 4px，
+ * 光标推进 12px，右 4px 跨入下一 tile 列形成 spill 重叠。
+ */
 static const uint8_t *glyph_ptr(uint16_t index)
 {
     /* 128B / glyph: 16x16 4bpp slot (TL,BL,TR,BR) — Gen3 hardware container. */
     return (const uint8_t *)(ADDR_FONT_CHS_NORMAL + ((uint32_t)index << 7));
 }
 
+/*
+ * 短语表渲染入口。
+ * 调用时机：解析到 F9 <op> hi lo（phrase 模式），code = (hi << 8) | lo。
+ * 1. PhraseOffsets[code]（u16 @ 0x08810000）→ 条目偏移
+ * 2. PhraseTable[offset]（@ 0x08820000）→ {u8 count, u8 pad, u16 idx[count]}
+ * 3. 逐字渲染：glyph_ptr(idx) → DrawGlyph_Chinese（12px advance / glyph）
+ * 短语表与 F9 00（单字侧载）共享同一渲染后端，区别仅在于字形来源：
+ *   F9 00：glyph_ptr(pack_glyph_index(lead, trail))
+ *   F9 7F/op：glyph_ptr(phrase_indices[i])
+ */
 static void draw_phrase(TextPrinter *win, uint16_t code)
 {
     const uint16_t *offsets = (const uint16_t *)ADDR_PHRASE_OFFSETS;
@@ -53,8 +69,23 @@ static void draw_phrase(TextPrinter *win, uint16_t code)
 }
 
 /**
- * PrintNextChar ???????? / ?? + sticky?
- * F9 7F ?? write.op??? +4 ???
+ * PrintNextChar_C — GBA 文字渲染引擎的 CJK 扩展入口。
+ *
+ * 调用时机：原版 ProcessCurrentChar 检测到 ROM 中的 F9 逃逸码时
+ * 通过 hook（main.asm）跳转到此函数。受管指令格式：
+ *   F9 00 ll tt   单 CJK 字 — lead/trail 编码 → pack_glyph_index → glyph_ptr
+ *   F9 7F hi lo   短语（通用）— 重置 write_op=0 → draw_phrase(code)
+ *   F9 01..7E hi lo 短语（带 write_op）
+ *                   — st->write_op = op（01=物种/grid, 04=招式/slot, etc.）
+ *                   → draw_phrase(code)，op 影响 drawGlyph12 的模式选择
+ *
+ * F9 00 受字段 stride 限制：每字 4 字节，8 字节槽最多 2 汉字。
+ * 短语模式（F9 7F/op）将文本移到 PhraseTable 扩展区，槽内只存 4 字节
+ * 引用，突破长度限制（详见 game.h:ADDR_PHRASE_OFFSETS 注释）。
+ *
+ * 渲染后端：DrawGlyph_Chinese → drawGlyph12（16px 字模 + 12px advance）。
+ *
+ * @return 0=未处理（交由原版 FontFuncTable 继续），1=已由本函数完成
  */
 int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
 {

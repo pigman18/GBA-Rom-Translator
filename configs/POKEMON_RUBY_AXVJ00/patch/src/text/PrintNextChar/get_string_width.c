@@ -38,7 +38,13 @@ int GetStringWidth_Chinese(TextPrinter *win, const uint8_t *s,
     }
 }
 
-/* Full (win, str) → width for thin-shell GetStringWidth replace. */
+/*
+ * Full (win, str) → width for thin-shell GetStringWidth replace.
+ *
+ * 与 drawGlyph12 保持一致的 advance：F9 序列走
+ * CHS_GLYPH_ADVANCE_PX（12px），JP 原版半角字符走 8px。
+ * 右半字仅4px，不额外推进。计算不包含右边距残余。
+ */
 uint8_t GetStringWidthChinese_Full(TextPrinter *win, const uint8_t *s)
 {
     uint8_t width = 0;

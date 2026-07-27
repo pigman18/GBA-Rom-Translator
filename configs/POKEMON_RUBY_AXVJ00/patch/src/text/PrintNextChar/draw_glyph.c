@@ -109,6 +109,14 @@ static void put_px(uint8_t *tile, unsigned x, unsigned y, uint8_t ink)
 /*
  * Remap via ROM CopyGlyph (15→C ink, 14→E shadow, 0→D bg) then place at startPixel.
  * All pixel work stays in IWRAM; VRAM only receives 32-bit word copies.
+ *
+ * GBA VRAM 禁止 byte 写入（会 mirror 到半字另一字节导致鬼影）。
+ * 所有像素合成在栈上 IWRAM（temp/dest_l/spill_l）完成，最后通过
+ * copy_tile32 以 8 次 32-bit word copy 刷入 VRAM。
+ *
+ * spill 机制：当 startPixel + width > 8 时（因 12px advance 必然
+ * 跨 tile 列），need_spill=1，同时处理当前 tile 和下一 tile 的
+ * IWRAM 副本。清像素列 → OR 墨水 → 两 tile 分别写回 VRAM。
  */
 static void draw_glyph_tile_12(
     TextPrinter *win,
@@ -189,6 +197,22 @@ static void map_at(TextPrinter *win, uint8_t tx, uint16_t abs_u, uint16_t abs_l)
 
 void drawGlyph12(TextPrinter *win, const uint8_t *src128, int linear)
 {
+    /*
+     * 16px 字模 → 12px advance 的核心实现。
+     * GBA 硬件 tile 为 8×8，字模按 4-tile（TL/BL/TR/BR）存储，但光标
+     * 推进由 chs_px 累积控制。每字分两趟写入：
+     *   趟1（width=8）：取 src128[0x00..0x3F]（左半 TL+BL），从
+     *   startPixel = chs_px & 7 起写入 8px。
+     *   趟2（width=4）：取 src128[0x40..0x7F]（右半 TR+BR），从同一
+     *   startPixel 起写入 4px。
+     * 两趟合计 chs_px += 12，下一字的 startPixel = (12+12) & 7 = 0
+     * （偶数）或 4（奇数）。宽度总和 8+4=12 正好对齐 GBA tile 边界，
+     * 但右 4px 必然跨入下一 tile 列（startPixel + 8 > 8 触发 spill）。
+     * spill 处理：draw_glyph_tile_12 先读目标 tile 和 spill tile 的
+     * 当前 VRAM 内容到 IWRAM，清掉本字拥有的像素列，再 OR 上墨水像素，
+     * 最后 32-bit word copy 回 VRAM。下一字左 4px 覆盖上一字右 4px，
+     * 利用汉字外缘空白实现视觉上的紧凑连续排版。
+     */
     volatile struct ChineseTileState *st = chinese_tile_state();
     unsigned startPixel;
     uint16_t off, abs_u, abs_l, su, sl;

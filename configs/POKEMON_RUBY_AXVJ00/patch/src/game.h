@@ -11,6 +11,20 @@
 #define ADDR_COPY_GLYPH_2BPP_4BPP  0x080038A0u
 #define ADDR_UPDATE_TILEMAP       0x080036DCu
 #define ADDR_GAME_BIN              0x08800000u
+/*
+ * 短语表（PhraseTable）—— 固定长度字段突破字符数限制的方案。
+ * 日版 Gen3 的招式/特性/物种等字段有 stride 限制（6-8 字节），
+ * 若用 F9 00 ll tt 侧载一个汉字占 4 字节，8 字节槽最多 2 汉字。
+ * 短语表将"文本存储"和"字段引用"解耦：
+ *   字段槽（8B）：F9 <op> hi lo FF          → 4 字节引用
+ *   PhraseTable：count + u16 glyph_idx[n]   → 最多 8 汉字
+ * 查找路径：draw_phrase(code) →
+ *   PhraseOffsets[code]（u16 数组 @ 0x08810000）
+ *   → PhraseTable + offset（条目 @ 0x08820000）
+ *   → 逐字形渲染（DrawGlyph_Chinese × count）
+ * layout: .org 0x08810000 → offsets （u16[code_max], sentinel = total_size）
+ *         .org 0x08820000 → entries  ({u8 count, u8 pad, u16 idx[count]})
+ */
 #define ADDR_PHRASE_OFFSETS        0x08810000u
 #define ADDR_PHRASE_TABLE          0x08820000u
 #define ADDR_FONT_CHS_NORMAL       0x09000000u
@@ -45,6 +59,15 @@ struct ChineseTileState {
 };
 
 /*
+ * GBA 硬件以 8×8 tile 为单位（4bpp / tile 32B）。中文字模存储为 16×16
+ * 标准 4-tile（TL/BL/TR/BR 各 32B 共 128B），但渲染时光标每次只推进
+ * CHS_GLYPH_ADVANCE_PX（12px），而非 16px。原理：drawGlyph12 分两趟写
+ * VRAM——左 8px（TL+BL）→ 右 4px（TR+BR 的左边 4px），两趟共进 12px。
+ * 右 4px 跨入下一 tile 列形成 spill；下一字模的 startPixel 为 4（累积
+ * chs_px & 7），其左 4px 覆盖上一字的溢出像素。由于汉字笔画集中在字模
+ * 中部，外缘空白区域被覆盖不影响视觉。字模保持 16px 宽可复用原生 tilemap
+ * 寻址逻辑（每列 2 tile，index +0/+1），兼容所有 Gen3 文本窗口。
+ *
  * 12px = ink / advance / line metrics (product).
  * Hardware glyph container stays 8x16 (two 8x8 tiles) / 16x16 slot — do not change.
  * See docs/FONT_12PX_DRAW.md and .cursor/rules/axvj-font-12px-only.mdc.

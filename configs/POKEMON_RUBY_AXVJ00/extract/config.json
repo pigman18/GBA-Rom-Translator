@@ -19,6 +19,10 @@
     "UI文本": {
       "addr_bands": [["0x3E8FC0", "0x3EA800"], ["0x3CFD00", "0x3DFF00"], ["0x3E8A80", "0x3EA800"]],
       "description": "UI/设施文本银行白名单：指针源在拒绝区但目标在此范围时放行（S1/S2门控例外）"
+    },
+    "设置菜单": {
+      "addr_bands": [["0x37B44C", "0x37B500"]],
+      "description": "设置选项文本白名单：同UI文本逻辑，防止GFX拒绝误杀设置文字"
     }
   },
   "trusted_lz_bands": {

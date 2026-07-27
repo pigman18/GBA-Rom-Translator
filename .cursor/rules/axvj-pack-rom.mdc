@@ -1,0 +1,19 @@
+---
+description: AXVJ 用户授权打包时必须代打 ROM，勿推回 GUI
+alwaysApply: true
+---
+
+# AXVJ：授权即打包
+
+标准命令与默认跳过模块清单见 [`tools/Meowth-GBA-Translator-JP/docs/PACK_ROM.md`](../../tools/Meowth-GBA-Translator-JP/docs/PACK_ROM.md)。
+
+## 必须
+
+- 用户说打 rom / 打包 / build / 出 ROM，或粘贴 `PACK_ROM.md` 命令 → **当场代跑流水线**。
+- 默认跳过：`物种名`、`姓名输入`、`默认名字`、`赛事娱乐`、`高风险混杂`、`未归类`（已在 `modules.json` `default: false`）。
+
+## 禁止
+
+- 已授权仍推「请自己跑 start_gui.bat」。
+- 把 API key 写入仓库或文档（只用当轮参数 / 环境变量）。
+- 手改成品 ROM 字节冒充打包。

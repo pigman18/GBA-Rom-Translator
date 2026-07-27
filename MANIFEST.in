@@ -1,0 +1,26 @@
+# Binary files are downloaded at runtime from GitHub releases
+# Keep only the loader module, exclude all binary artifacts
+include src/meowth/binaries/__init__.py
+include src/meowth/binaries/loader.py
+
+# Exclude all binary files and their dependencies
+recursive-exclude src/meowth/binaries/windows *
+recursive-exclude src/meowth/binaries/macos *
+recursive-exclude src/meowth/binaries/linux *
+exclude src/meowth/binaries/windows
+exclude src/meowth/binaries/macos
+exclude src/meowth/binaries/linux
+
+# Include documentation
+include README.md
+include LICENSE
+
+# Include configuration examples
+include meowth.toml.example
+
+# Exclude development files
+exclude .gitignore
+exclude .github/*
+recursive-exclude tests *
+recursive-exclude work *
+recursive-exclude outputs *

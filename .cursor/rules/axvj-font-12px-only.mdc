@@ -1,0 +1,22 @@
+---
+description: AXVJ Chinese uses 12px metrics inside Gen3 8x16 tile containers
+alwaysApply: true
+---
+
+# AXVJ 中文：12px 度量，8×16 容器
+
+详档：[`tools/Meowth-GBA-Translator-JP/docs/FONT_12PX_DRAW.md`](tools/Meowth-GBA-Translator-JP/docs/FONT_12PX_DRAW.md)
+
+## 必须
+
+- **硬件字模容器 = 8×16**（字槽 16×16 / 128B TL·BL·TR·BR）。**禁止**改成「无 16 高槽的真 12×12 tile」。
+- **12px** = 墨水高度、`CHS_CHAR_HEIGHT_PX`、`CHS_GLYPH_ADVANCE_PX`、行距 14 — 与成熟 RS 汉化一致。
+- 绘制：Font_Patch **8+4** + ink-only；取字 `index << 7`。
+- 改绘制后同步 `FONT_12PX_DRAW.md`。
+
+## 禁止
+
+1. 产品路径用 **18B 1bpp** / **32B** 冒充交付，或宣称「tile 高度改成 12」。
+2. 默认 `CHS_GLYPH_ADVANCE_PX → 16`；扩大 `scene_keep_linear_16` 躲 bug。
+3. ShadowedFont `colors[0]=bg`+OR；对中文走 `CopyGlyph2bppTo4bpp` 做相位。
+4. 用「仅 top/Y」的 `scene_is_shop_desc` 把标题送进 Linear16。

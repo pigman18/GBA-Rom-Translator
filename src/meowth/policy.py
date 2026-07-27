@@ -1,0 +1,814 @@
+"""Inject/extract policy — stage packs ``extract/`` + ``translate/`` + ``inject/``.
+
+AUTHORITATIVE PROCESS (do not violate; see docs/FUNNEL.md and
+.cursor/rules/axvj-funnel-no-hardcode.mdc):
+
+  Domain → S0 Geography → S1 PointerClass → S2 TargetClass
+        → S3 ContentPolicy → S4 Translation → S5 RewriteGate
+        → S6 PostRestore → Version record
+
+Config mapping:
+- extract/config.json → S0 geography belts (SCRIPT_BANK_MIN, GFX deny ranges, …)
+- translate/config.json skip → S3/S4 skip_zh_inject (keep JP text)
+- inject/config.json → S5 site deny (title gfx ptrs, brand literals)
+- translate/config.json modules → GUI addr-band scope (not this funnel file)
+
+Domains (story / ui / pokemon / move / place / item / ime / …) MUST use
+separate policies. Prefer dynamic class rules over per-address or
+per-line story whitelists.
+
+TEMPORARY debt: STABLE_SCRIPT_PREFIXES / keep_for_stable_inject exist only
+as a brake; they are NOT the localization strategy — replace with domain
+rules, do not extend the prefix list.
+
+Hardcoded site lists for S1 registries live here or in ``intro_addrs``.
+Do not add parallel deny/allow logic in ``rom_writer`` / ``extract``.
+"""
+from __future__ import annotations
+
+import re
+import struct
+from enum import Enum, auto
+from typing import Any, Iterable
+
+from .config_loader import get_active_game_id, list_available_games, load_policy
+from .intro_addrs import birch_ptr_allowlist, trainer_ui_ptr_allowlist
+from .jp_pcs import looks_like_jp_text
+
+_EXTRACTION_BY_GAME: dict[str, dict[str, Any]] = {}
+
+# Defaults when policy.json is absent (other games / incomplete packs).
+_DEFAULT_TITLE_GFX_PTR_DENY = frozenset(
+    {
+        0x78EA4, 0x78F74, 0x78FD0, 0x79094, 0x79240, 0x79244,
+        0x7924C, 0x79250, 0x79258, 0x79260, 0x79268, 0x79270,
+        0x79274, 0x79278, 0x7927C, 0x7951C, 0x79524, 0x1379D0,
+        0x137A24, 0x137A40, 0x1214B8, 0x36D684,
+    }
+)
+_DEFAULT_BRAND_COMPACT_SKIP = frozenset({"ポケモン", "カイオーガ", "グラードン"})
+_DEFAULT_SKIP_ZH_ORIGINALS = frozenset()
+_DEFAULT_SKIP_ZH_PREFIXES: tuple[str, ...] = ()
+# Per-game skip lives in translate/config.json (see translate/README.md).
+# Empty defaults: do not re-hardcode toxic strings here.
+
+
+def _resolve_any_game_id() -> str:
+    games = list_available_games()
+    if not games:
+        raise RuntimeError("No game configs found in configs/ directory")
+    return games[0]
+
+
+def _resolve_game_id(game_id: str = "") -> str:
+    return (game_id or get_active_game_id() or _resolve_any_game_id()).strip()
+
+
+def _parse_addr(val: Any) -> int:
+    if isinstance(val, int):
+        return val
+    s = str(val).strip().lower().replace("0x", "")
+    return int(s, 16)
+
+
+def _cfg(game_id: str = "") -> dict:
+    gid = _resolve_game_id(game_id)
+    if gid not in _EXTRACTION_BY_GAME:
+        from .config_loader import load_game_config
+        _EXTRACTION_BY_GAME[gid] = load_game_config(gid).get("extraction", {})
+    return _EXTRACTION_BY_GAME[gid]
+
+
+def _get(key: str, default):
+    return _cfg().get(key, default)
+
+
+def _policy(game_id: str = "") -> dict[str, Any]:
+    return load_policy(_resolve_game_id(game_id))
+
+
+def title_gfx_ptr_deny(game_id: str = "") -> frozenset[int]:
+    raw = _policy(game_id).get("title_gfx_ptr_deny")
+    if not raw:
+        return _DEFAULT_TITLE_GFX_PTR_DENY
+    return frozenset(_parse_addr(x) for x in raw)
+
+
+def brand_compact_skip(game_id: str = "") -> frozenset[str]:
+    raw = _policy(game_id).get("brand_compact_skip")
+    if not raw:
+        return _DEFAULT_BRAND_COMPACT_SKIP
+    return frozenset(str(x) for x in raw)
+
+
+def skip_zh_inject_originals(game_id: str = "") -> frozenset[str]:
+    block = _policy(game_id).get("skip_zh_inject") or {}
+    raw = block.get("originals")
+    if not raw:
+        return _DEFAULT_SKIP_ZH_ORIGINALS
+    return frozenset(str(x) for x in raw)
+
+
+def skip_zh_inject_prefixes(game_id: str = "") -> tuple[str, ...]:
+    block = _policy(game_id).get("skip_zh_inject") or {}
+    raw = block.get("prefixes")
+    if not raw:
+        return _DEFAULT_SKIP_ZH_PREFIXES
+    return tuple(str(x) for x in raw)
+
+
+# Backward-compatible names resolved via ``__getattr__`` (per active game).
+
+
+def __getattr__(name: str):
+    if name == "TITLE_GFX_PTR_DENY":
+        return title_gfx_ptr_deny()
+    if name == "BRAND_COMPACT_SKIP":
+        return brand_compact_skip()
+    if name == "SKIP_ZH_INJECT_ORIGINALS":
+        return skip_zh_inject_originals()
+    if name == "SKIP_ZH_INJECT_PREFIXES":
+        return skip_zh_inject_prefixes()
+    raise AttributeError(f"module {__name__!r} has no attribute {name!r}")
+
+
+def BASE() -> int:
+    return 0x08000000
+
+
+def SCRIPT_BANK_MIN() -> int:
+    return _get("script_bank_min", 0x100000)
+
+
+def UI_RANGE() -> tuple:
+    return tuple(_get("ui_range", [0x3E9440, 0x3E9900]))
+
+
+def UI_TEXT_BANK() -> tuple:
+    return tuple(_get("ui_text_bank", [0x3E9440, 0x3EB000]))
+
+
+def FC_UI_BANKS() -> tuple:
+    return tuple(
+        tuple(r)
+        for r in _get(
+            "fc_ui_banks",
+            [[0x3D0000, 0x3E0000], [0x3E9000, 0x3EB000]],
+        )
+    )
+
+
+def IME_RANGE() -> tuple:
+    return tuple(_get("ime_range", [0x3E9816, 0x3E9850]))
+
+
+def OPTION_MENU_BAND() -> tuple:
+    return tuple(_get("option_menu_band", [0x37B50C, 0x37B5C0]))
+
+
+def TITLE_LZ_BAND() -> tuple:
+    return tuple(_get("title_lz_band", [0x36D000, 0x370000]))
+
+
+def GFX_PTR_SOURCE_DENY() -> tuple:
+    return tuple(
+        tuple(r)
+        for r in _get(
+            "gfx_ptr_source_deny",
+            [[0x350000, 0x3E9440], [0x3EB000, 0x400000]],
+        )
+    )
+
+
+def GFX_STRING_TARGET_DENY() -> tuple:
+    return tuple(
+        tuple(r)
+        for r in _get(
+            "gfx_string_target_deny",
+            [[0x370000, 0x3E9440], [0x3EB000, 0x3F0000]],
+        )
+    )
+
+
+def SCRIPT_TEXT_PTR_OPCODES() -> frozenset[int]:
+    """Opcodes whose following 4 bytes are a text pointer (AXVJ map scripts).
+
+    Classic ``loadword`` (``0F rr``) is handled separately. Defaults from
+    extract config — not a per-string address list.
+    """
+    raw = _get("script_text_ptr_opcodes", [0x67])
+    out: set[int] = set()
+    for x in raw or []:
+        try:
+            out.add(int(x) & 0xFF)
+        except (TypeError, ValueError):
+            continue
+    return frozenset(out)
+
+
+def TRUSTED_LZ_BANDS() -> tuple:
+    return tuple(tuple(r) for r in _get("trusted_lz_bands", [[0x200000, 0x800000]]))
+
+
+# S1 registries (intro_addrs + naming/confirm sites)
+BIRCH_PTR_ALLOW = birch_ptr_allowlist()
+TRAINER_UI_PTR_ALLOW = trainer_ui_ptr_allowlist()
+
+_RE_KANA_ROW = re.compile(r"^[ぁ-んァ-ン]{5}$")
+_GOJUON_EXTRA = frozenset({"やゆよわをん"})
+
+
+class Geo(Enum):
+    SCRIPT = auto()
+    UI_BANK = auto()
+    OPTION = auto()
+    TITLE_LZ = auto()
+    GFX = auto()
+    LOW_ROM = auto()
+    OTHER = auto()
+
+
+def in_ranges(off: int, ranges: tuple[tuple[int, int], ...]) -> bool:
+    return any(lo <= off < hi for lo, hi in ranges)
+
+
+def geography_of(off: int) -> Geo:
+    """S0: classify a ROM file offset."""
+    tlz = TITLE_LZ_BAND()
+    if tlz[0] <= off < tlz[1]:
+        return Geo.TITLE_LZ
+    uib = UI_TEXT_BANK()
+    if uib[0] <= off < uib[1] or in_ranges(off, FC_UI_BANKS()):
+        return Geo.UI_BANK
+    omb = OPTION_MENU_BAND()
+    if omb[0] <= off < omb[1]:
+        return Geo.OPTION
+    if in_ranges(off, GFX_PTR_SOURCE_DENY()) or in_ranges(off, GFX_STRING_TARGET_DENY()):
+        return Geo.GFX
+    if off < SCRIPT_BANK_MIN():
+        return Geo.LOW_ROM
+    if off >= SCRIPT_BANK_MIN():
+        return Geo.SCRIPT
+    return Geo.OTHER
+
+
+def string_in_ui_text_bank(so: int) -> bool:
+    """UI / facility chrome body: extract config banks ∪ dump high UI geo.
+
+    Dump ``geo_ranges`` for 界面 and high-ROM 设施 pools (shop/PC menus past
+    the old 0x3EB000 cut) are the source of truth — not a hand-extended ceiling.
+    """
+    uib = UI_TEXT_BANK()
+    if uib[0] <= so < uib[1]:
+        return True
+    if in_ranges(so, FC_UI_BANKS()):
+        return True
+    return string_in_dump_high_ui_geo(so)
+
+
+def string_in_dump_high_ui_geo(so: int) -> bool:
+    """True if ``so`` falls in a dump-measured band in the high UI pool region.
+
+    Region class: band starts at ≥ 0x3D0000 (same floor as FC UI / menu pools).
+    Covers PC chrome past ``ui_text_bank`` end without raising a magic ceiling.
+    """
+    from .modules import HIGH_UI_GEO_FLOOR, iter_high_ui_geo_bands
+
+    # Script/dialogue bodies never need this path — skip before band walk.
+    if so < HIGH_UI_GEO_FLOOR:
+        return False
+    try:
+        return any(lo <= so <= hi for lo, hi in iter_high_ui_geo_bands())
+    except Exception:
+        return False
+
+
+def string_in_option_band(so: int) -> bool:
+    omb = OPTION_MENU_BAND()
+    return omb[0] <= so < omb[1]
+
+
+def is_loadword_text_ptr(rom: bytes | bytearray, ptr_off: int) -> bool:
+    """True if ``ptr_off`` is a script-embedded text-pointer operand.
+
+    Class rules (not per-address):
+    - Gen3 ``loadword``: ``0F rr`` (rr ≤ 3) then pointer
+    - Configurable trailing opcodes (extract ``script_text_ptr_opcodes``),
+      e.g. AXVJ ``nn <op> <ptr>`` message embeds
+    """
+    if ptr_off < 2 or ptr_off + 4 > len(rom):
+        return False
+    if rom[ptr_off - 2] == 0x0F and rom[ptr_off - 1] <= 0x03:
+        return True
+    if rom[ptr_off - 1] in SCRIPT_TEXT_PTR_OPCODES():
+        return True
+    return False
+
+
+def is_registry_ptr(ptr_off: int) -> bool:
+    return ptr_off in BIRCH_PTR_ALLOW or ptr_off in TRAINER_UI_PTR_ALLOW
+
+
+def is_local_pool_ptr(ptr_off: int, string_off: int) -> bool:
+    return (ptr_off & 3) == 0 and string_off < ptr_off < string_off + 0x80
+
+
+def _bus(off: int) -> int:
+    return off if off >= BASE() else off + BASE()
+
+
+def _file(off: int) -> int:
+    return off - BASE() if off >= BASE() else off
+
+
+def iter_entry_ptr_offs(entry: dict) -> list[int]:
+    """Normalize extract ``pointer_sources`` / ``pointer_addresses`` to file offs."""
+    out: list[int] = []
+    for ptr_src in entry.get("pointer_addresses") or entry.get("pointer_sources") or []:
+        try:
+            ptr_addr = int(str(ptr_src).replace("0x", ""), 16)
+        except ValueError:
+            continue
+        out.append(_file(ptr_addr))
+    return out
+
+
+def is_live_aligned_text_ptr(
+    rom: bytes | bytearray, ptr_off: int, string_off: int
+) -> bool:
+    """Aligned site whose current value is the string bus address."""
+    if (ptr_off & 3) != 0 or ptr_off < 0x6000 or ptr_off + 4 > len(rom):
+        return False
+    cur = struct.unpack_from("<I", rom, ptr_off)[0]
+    return _bus(cur) == _bus(string_off)
+
+
+def is_nature_name_table_ptr(ptr_off: int) -> bool:
+    from .tables import nature_names_cfg
+
+    cfg = nature_names_cfg()
+    table = int(cfg.get("table", 0x3971E8))
+    count = int(cfg.get("count", 25))
+    return table <= ptr_off < table + count * 4 and (ptr_off - table) % 4 == 0
+
+
+def is_item_desc_table_ptr(ptr_off: int) -> bool:
+    from .tables import item_data_cfg
+
+    cfg = item_data_cfg()
+    base = int(cfg.get("offset", 0x39A648))
+    count = int(cfg.get("count", 348))
+    entry_size = int(cfg.get("entry_size", 40))
+    desc_off = int(cfg.get("desc_ptr_offset", 0x10))
+    if not (base <= ptr_off < base + count * entry_size):
+        return False
+    return (ptr_off - base) % entry_size == desc_off
+
+
+def is_class_text_ptr(
+    rom: bytes | bytearray, ptr_off: int, string_off: int
+) -> bool:
+    """S1 pointer class (loadword / registry / local-pool / UI band / name tables).
+
+    No module-id lists. Used by target gate + pointer filter.
+    """
+    string_off = _file(string_off)
+    ptr_off = _file(ptr_off)
+    if is_registry_ptr(ptr_off) and (ptr_off & 3) == 0:
+        return True
+    if is_local_pool_ptr(ptr_off, string_off):
+        return True
+    if is_loadword_text_ptr(rom, ptr_off):
+        return True
+    if ptr_in_known_ui_band(ptr_off, string_off):
+        return True
+    if is_nature_name_table_ptr(ptr_off) or is_item_desc_table_ptr(ptr_off):
+        return is_live_aligned_text_ptr(rom, ptr_off, string_off)
+    if not is_live_aligned_text_ptr(rom, ptr_off, string_off):
+        return False
+    tlz = TITLE_LZ_BAND()
+    if tlz[0] <= ptr_off < tlz[1] or ptr_off in title_gfx_ptr_deny():
+        return False
+    # Mid-ROM data / UI chrome bodies referenced from code or tables.
+    if string_in_ui_text_bank(string_off) or string_in_option_band(string_off):
+        return True
+    if 0x300000 <= string_off < 0x400000 and ptr_off >= 0x6000:
+        return True
+    if 0x100000 <= ptr_off < 0x200000 and string_off >= 0x140000:
+        return True
+    return False
+
+
+def entry_has_class_text_ptr(
+    rom: bytes | bytearray, entry: dict, string_off: int
+) -> bool:
+    """True if extract listed a pointer site of a known text-pointer class."""
+    string_off = _file(string_off)
+    if entry_has_registry_ptr(entry):
+        return True
+    for ptr_off in iter_entry_ptr_offs(entry):
+        if is_class_text_ptr(rom, ptr_off, string_off):
+            return True
+    return False
+
+
+def ptr_in_known_ui_band(ptr_off: int, string_off: int) -> bool:
+    if is_local_pool_ptr(ptr_off, string_off):
+        return True
+    if 0x37B000 <= ptr_off < 0x37C000:
+        return True
+    if 0x3D0000 <= ptr_off < 0x3EB000:
+        return True
+    if 0x100000 <= ptr_off < 0x200000 and string_off >= 0x140000:
+        return True
+    return False
+
+
+def ptr_source_ok(
+    rom: bytes | bytearray,
+    ptr_off: int,
+    string_off: int,
+    *,
+    lz_spans: list[tuple[int, int]] | None = None,
+    strict: bool = False,
+) -> bool:
+    """S1(+S5 core): safe to treat this site as a text pointer.
+
+    ``strict=True`` (script / 未归类 inject): only loadword, registry, or
+    local-pool — the loose mid-ROM aligned allow is too broad and white-screens.
+
+    UI chrome bodies (config UI banks ∪ dump high-UI geo) may be referenced
+    from tables inside ``GFX_PTR_SOURCE_DENY`` or low-ROM menus; aligned
+    sites are allowed for that body class.
+    """
+    from .extract import ptr_in_trusted_lz, trusted_lz_spans
+
+    if is_registry_ptr(ptr_off) and (ptr_off & 3) == 0:
+        return True
+    tlz = TITLE_LZ_BAND()
+    if tlz[0] <= ptr_off < tlz[1]:
+        return False
+    if ptr_off in title_gfx_ptr_deny():
+        return False
+    if is_local_pool_ptr(ptr_off, string_off):
+        return True
+    ui_body = string_in_ui_text_bank(string_off) or string_in_option_band(string_off)
+    if in_ranges(ptr_off, GFX_PTR_SOURCE_DENY()) and not ui_body:
+        return False
+    spans = lz_spans if lz_spans is not None else trusted_lz_spans(rom)
+    # False LZ streams often cover real UI chrome pointer tables.
+    if ptr_in_trusted_lz(ptr_off, spans) and not ui_body:
+        return False
+    if is_loadword_text_ptr(rom, ptr_off):
+        return True
+    if strict:
+        return False
+    if ui_body and (ptr_off & 3) == 0 and ptr_off >= 0x6000:
+        # UI chrome class: trust aligned ptr tables (incl. gfx-deny / low ROM).
+        return True
+    if (
+        (ptr_off & 3) == 0
+        and 0x100000 <= ptr_off < 0x200000
+        and string_off >= 0x140000
+    ):
+        return True
+    return False
+
+
+def is_struct_like_pcs(s: bytes) -> bool:
+    if not s or s[-1] != 0xFF:
+        return False
+    body = s[:-1]
+    if len(body) <= 8:
+        if body.count(0x00) >= 2 and body.count(0xFE) >= 1:
+            return True
+        if body in (
+            b"\x04\x00\x01\x00\xfe",
+            b"\x00\x00\x00\x00",
+            b"\x01\x00\x00\x00",
+        ):
+            return True
+        if body and all(b in (0x00, 0x01, 0x04, 0xFE, 0xFA, 0xFB) for b in body):
+            return True
+    return False
+
+
+def string_target_ok(
+    so: int,
+    *,
+    allow: bool,
+    lz_spans: list[tuple[int, int]] | None = None,
+) -> bool:
+    """S2: reject ARM/code, title-LZ, gfx false string targets."""
+    del lz_spans
+    if allow:
+        return True
+    if so < SCRIPT_BANK_MIN():
+        return False
+    tlz = TITLE_LZ_BAND()
+    if tlz[0] <= so < tlz[1]:
+        return False
+    if string_in_ui_text_bank(so) or string_in_option_band(so):
+        return True
+    if in_ranges(so, GFX_STRING_TARGET_DENY()):
+        return False
+    return True
+
+
+def text_target_ok(
+    rom: bytearray | bytes,
+    address: int,
+    entry: dict,
+    *,
+    lz_spans: list[tuple[int, int]] | None = None,
+) -> bool:
+    """S2+S3 gate used at inject time for a string body."""
+    from .extract import ptr_in_trusted_lz, trusted_lz_spans
+
+    if address < 0 or address >= len(rom):
+        return False
+
+    address = _file(address)
+    # Pointer class (not module-id lists): false LZ10 often covers real UI PCS.
+    class_ptr = entry_has_class_text_ptr(rom, entry, address)
+    if address < SCRIPT_BANK_MIN() and not class_ptr:
+        return False
+    tlz = TITLE_LZ_BAND()
+    if tlz[0] <= address < tlz[1]:
+        return False
+    if not class_ptr:
+        if not string_in_ui_text_bank(address) and not string_in_option_band(address):
+            if in_ranges(address, GFX_STRING_TARGET_DENY()):
+                return False
+
+    spans = lz_spans if lz_spans is not None else trusted_lz_spans(rom)
+    if ptr_in_trusted_lz(address, spans):
+        if not (
+            class_ptr
+            or string_in_ui_text_bank(address)
+            or string_in_option_band(address)
+        ):
+            return False
+
+    hex_str = (entry.get("original_hex") or "").replace(" ", "")
+    if hex_str:
+        try:
+            expected = bytes.fromhex(hex_str)
+        except ValueError:
+            expected = b""
+        if expected and bytes(rom[address : address + len(expected)]) != expected:
+            return False
+        check = expected if expected.endswith(b"\xFF") else expected + b"\xFF"
+        if not expected or not looks_like_jp_text(check):
+            return False
+        if is_struct_like_pcs(check):
+            return False
+    else:
+        end = rom.find(0xFF, address, address + 201)
+        if end < 0:
+            return False
+        expected = bytes(rom[address : end + 1])
+        if not looks_like_jp_text(expected):
+            return False
+        if is_struct_like_pcs(expected):
+            return False
+
+    original = entry.get("original") or ""
+    if not class_ptr and is_garbage_jp(original):
+        return False
+    return True
+
+
+def is_ime_gojuon_row(text: str) -> bool:
+    compact = text.replace(" ", "").replace("\n", "")
+    return bool(_RE_KANA_ROW.match(compact)) or compact in _GOJUON_EXTRA
+
+
+def is_garbage_jp(text: str) -> bool:
+    if "がのく" in text or "なくけ" in text or "にくけ" in text:
+        return True
+    if text.count("そ ") >= 2 and "ポケモン" not in text:
+        return True
+    if re.search(r"[A-Za-z][ぁ-んァ-ン]{1,3}[A-Za-z]", text):
+        return True
+    if len(re.findall(r"[ぁ-ん]{1}\s+[ぁ-ん]{1}\s+", text)) >= 3:
+        return True
+    return False
+
+
+def looks_like_translatable(text: str, body_len: int) -> bool:
+    if body_len < 2 or body_len > 512:
+        return False
+    if is_ime_gojuon_row(text):
+        return False
+    if is_garbage_jp(text):
+        return False
+    cleaned = text.replace("\\l", "").replace("\\p", "")
+    cleaned = re.sub(r"\\CC[0-9A-Fa-f]+", "", cleaned)
+    cleaned = re.sub(r"\\[0-9A-Fa-f]{2}", "", cleaned)
+    cleaned = cleaned.replace("\n", "")
+    if "<" in cleaned or "[" in cleaned:
+        return False
+    if text.count("とく") >= 2:
+        return False
+    if len(re.findall(r"[Ａ-Ｚａ-ｚ]{3,}", text)) >= 2:
+        return False
+    kana = sum(1 for ch in text if "\u3040" <= ch <= "\u30ff")
+    if body_len <= 16:
+        return kana >= 2
+    if body_len <= 40:
+        return kana >= 3
+    return kana >= 4
+
+
+def should_skip_zh_inject(original: str) -> bool:
+    if not original:
+        return False
+    originals = skip_zh_inject_originals()
+    if original in originals:
+        return True
+    compact = original.replace(" ", "")
+    for jp in originals:
+        if compact == jp.replace(" ", ""):
+            return True
+    for prefix in skip_zh_inject_prefixes():
+        if original.startswith(prefix) or compact.startswith(prefix.replace(" ", "")):
+            return True
+    return False
+
+
+def keep_for_stable_inject(entry: dict) -> bool:
+    original = entry.get("original") or ""
+    if should_skip_zh_inject(original):
+        return False
+    tr = (entry.get("translated") or "").strip()
+    if not tr or tr == original:
+        return False
+    return True
+
+
+def entry_has_registry_ptr(entry: dict) -> bool:
+    for ptr_src in entry.get("pointer_addresses") or entry.get("pointer_sources") or []:
+        try:
+            ptr_addr = int(str(ptr_src).replace("0x", ""), 16)
+        except ValueError:
+            continue
+        if ptr_addr >= BASE():
+            ptr_addr -= BASE()
+        if is_registry_ptr(ptr_addr):
+            return True
+    return False
+
+
+def filter_pointer_sources(
+    rom: bytes | bytearray,
+    pointer_sources: Iterable,
+    text_address: int,
+    *,
+    category: str = "",
+    original: str = "",
+    expected_pointer: int,
+    lz_spans: list[tuple[int, int]] | None = None,
+    min_pointer_source: int = 0x6000,
+) -> list[int]:
+    """S5: keep only pointer sites that currently reference ``text_address``."""
+    from .extract import ptr_in_trusted_lz, trusted_lz_spans
+    from .modules import entry_group_in, entry_is_script_like
+
+    # Synthetic entry: category may already be Chinese module id after stamp
+    _tag_entry = {"category": category, "module": category}
+    text_address = _file(text_address)
+
+    spans = lz_spans if lz_spans is not None else trusted_lz_spans(rom)
+    compact = (original or "").replace(" ", "").replace("\n", "")
+    valid: list[int] = []
+    for ptr_src in pointer_sources:
+        try:
+            ptr_addr = int(str(ptr_src).replace("0x", ""), 16)
+        except ValueError:
+            continue
+        ptr_addr = _file(ptr_addr)
+        if ptr_addr + 4 > len(rom):
+            continue
+        if ptr_addr in title_gfx_ptr_deny():
+            continue
+        tlz = TITLE_LZ_BAND()
+        if tlz[0] <= ptr_addr < tlz[1]:
+            continue
+        # Facility clerks / PC UI: map-script pointers, not Thumb loadword.
+        facility_like = entry_group_in(_tag_entry, "设施")
+        class_ptr = is_class_text_ptr(rom, ptr_addr, text_address)
+        local_pool = is_local_pool_ptr(ptr_addr, text_address)
+        ui_body = string_in_ui_text_bank(text_address) or string_in_option_band(
+            text_address
+        )
+        # Local pools + UI chrome / name-table ptrs often sit in gfx-deny banks.
+        if (
+            in_ranges(ptr_addr, GFX_PTR_SOURCE_DENY())
+            and ptr_addr not in TRAINER_UI_PTR_ALLOW
+            and not class_ptr
+            and not local_pool
+            and not ui_body
+            and not facility_like
+        ):
+            continue
+
+        script_like = entry_is_script_like(_tag_entry)
+        # Keep strict for open-world 剧情; facilities need mid-ROM event ptrs.
+        strict_script = script_like and not facility_like
+        if ptr_addr in BIRCH_PTR_ALLOW:
+            pass
+        elif ptr_in_trusted_lz(ptr_addr, spans) and not class_ptr and not local_pool:
+            if not ptr_source_ok(
+                rom, ptr_addr, text_address, lz_spans=spans, strict=strict_script
+            ):
+                continue
+        if strict_script:
+            if not ptr_source_ok(
+                rom, ptr_addr, text_address, lz_spans=spans, strict=True
+            ):
+                continue
+        elif script_like and facility_like:
+            if not ptr_source_ok(
+                rom, ptr_addr, text_address, lz_spans=spans, strict=False
+            ):
+                continue
+        elif ptr_addr < min_pointer_source and not class_ptr:
+            if not ptr_source_ok(rom, ptr_addr, text_address, lz_spans=spans):
+                continue
+        if not script_like and (ptr_addr & 3) and not local_pool:
+            continue
+        # Brand literals: site/string class, not module id.
+        if compact in brand_compact_skip() and ptr_addr >= 0x100000:
+            continue
+        cur = struct.unpack_from("<I", rom, ptr_addr)[0]
+        if cur != expected_pointer:
+            continue
+        if 0x0836D000 <= cur <= 0x08370000:
+            continue
+        valid.append(ptr_addr)
+    return valid
+
+
+def should_keep_relocated_local_pool(
+    baseline: bytes,
+    ptr_off: int,
+    old_tgt: int,
+) -> bool:
+    """S6: keep intentional UI/option local-pool relocates."""
+    from .extract import read_pcs
+    from .tables import (
+        item_data_cfg,
+        nature_names_cfg,
+    )
+
+    BASE_VAL = BASE()
+    nature_cfg = nature_names_cfg()
+    item_cfg = item_data_cfg()
+
+    nature_table = nature_cfg.get("table", 0x3971E8) + BASE_VAL
+    nature_count = nature_cfg.get("count", 25)
+
+    item_offset = item_cfg.get("offset", 0x39A648) + BASE_VAL
+    item_count = item_cfg.get("count", 348)
+    item_entry_size = item_cfg.get("entry_size", 40)
+    item_desc_ptr_offset = item_cfg.get("desc_ptr_offset", 0x10)
+
+    if nature_table <= ptr_off < nature_table + nature_count * 4:
+        return True
+    if item_offset <= ptr_off < item_offset + item_count * item_entry_size:
+        if (ptr_off - item_offset) % item_entry_size == item_desc_ptr_offset:
+            return True
+    if 0x3E9B00 <= old_tgt < 0x3EB000:
+        return True
+    if 0x3DC000 <= old_tgt < 0x3DD800:
+        return True
+
+    if not (old_tgt < ptr_off < old_tgt + 0x80):
+        return False
+    if not (
+        string_in_ui_text_bank(old_tgt) or string_in_option_band(old_tgt)
+    ):
+        return False
+    s = read_pcs(baseline, old_tgt, 64)
+    if not s or not looks_like_jp_text(s) or is_struct_like_pcs(s):
+        return False
+    from .jp_pcs import decode_pcs
+
+    text = decode_pcs(s)
+    return looks_like_translatable(text, len(s) - 1)
+
+
+def ptr_site_in_danger(
+    ptr_off: int,
+    *,
+    lz_spans: list[tuple[int, int]],
+) -> bool:
+    from .extract import ptr_in_trusted_lz
+
+    tlz = TITLE_LZ_BAND()
+    return (
+        tlz[0] <= ptr_off < tlz[1]
+        or in_ranges(ptr_off, GFX_PTR_SOURCE_DENY())
+        or ptr_in_trusted_lz(ptr_off, lz_spans)
+    )

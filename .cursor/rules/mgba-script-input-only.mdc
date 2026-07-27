@@ -1,0 +1,26 @@
+---
+description: mGBA 输入只用本地脚本；按A黑屏=最简单元测试，禁止键盘与过度通信
+alwaysApply: true
+---
+
+# mGBA：脚本按键 + 最简单元测试
+
+## 原则
+
+按 A 是否黑屏 = **一个单元测试**。实现：本地脚本按 A + 看屏。不要死磕 OS 通信、焦点、换键、SendInput。
+
+## 必须
+
+- 按键逻辑在**仓库内本地脚本**（优先 `roms/work/*.lua`）：`emu:setKeys` / `emu:addKey`（A = `C.GBA_KEY.A` / bitmask）。
+- 模拟器**加载并执行**该脚本；宿主只启进程、传 `-t` 存档与 ROM（副本）、读脚本输出的 verdict 文件。
+- 断言尽量单一：例如连续 N 帧黑屏 → `BLACKSCREEN`，否则 `OK`。
+
+## 禁止
+
+- `pyautogui` / `SendKeys` / `SendInput` / `PostMessage(WM_KEY*)` / 点击窗口再按键。
+- 「没有 `--script` 就改用键盘」；应挂 Tools→Scripting、scripts 目录或可跑脚本的 mGBA 构建。
+- 为按 A 去解析 PC、改 config 换一堆键位、冷启动跑完整开场（除非用户明确要求且脚本按 A 已通）。
+
+## 自检
+
+流程里若出现键盘模拟 API，或验证结论未证明「画面已因 A 推进」，即违规。

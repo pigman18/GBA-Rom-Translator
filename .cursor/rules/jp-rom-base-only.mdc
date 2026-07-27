@@ -1,0 +1,24 @@
+---
+description: 日版 ROM 为底汉化；禁止以美版/欧版为底做 Gen3 汉化
+alwaysApply: true
+---
+
+# 日版为底 — 硬性约束
+
+本仓库目标是 **日版 Gen3（AXVJ / AXPJ / BPEJ / BPRJ / BPGJ 等）中文汉化**。
+
+## 必须
+
+- 输入与输出 ROM 必须以 **日版原盘** 为底（游戏码如 `AXVJ`，不是 `AXVE`）。
+- 产品路径：`tools/Meowth-AXVJ` **二进制注入**（选日版 ROM → 翻译 → 写回日版）。
+- 美版 / 欧版 ROM 与 pret 英版反编译（如 `pokeruby` + `baserom.gba` 美版）**仅可作对照/参考**（diff、地址、算法），不得当作汉化成品基座。
+
+## 禁止
+
+- 禁止用美版（如 AXVE）`make` 出 ROM 冒充日版汉化（英文 logo、AXVE 码即违规）。
+- 禁止把「美版 decomp + 改几句中文」当成交付物。
+- 禁止再把 Meowth-AXVJ 标成 DEPRECATED、或把 GUI 重定向到美版 decomp 构建。
+
+## 自检
+
+交付 ROM 打开后应仍是日版资源（日文 logo/开场等未换成美版），文件头游戏码保持日版码。市面上美版汉化已成熟；用户要的是日版底，不是再做一套美版汉化。

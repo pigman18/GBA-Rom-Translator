@@ -1,0 +1,27 @@
+[build-system]
+requires = ["setuptools>=68.0", "wheel"]
+build-backend = "setuptools.build_meta"
+
+[project]
+name = "meowth"
+version = "0.4.5"
+description = "GBA Pokemon ROM translation tool with CLI and GUI support"
+requires-python = ">=3.10"
+dependencies = [
+    "click>=8.0",
+    "httpx>=0.25",
+]
+
+[project.optional-dependencies]
+dev = ["pytest>=7.0", "pytest-asyncio>=0.21"]
+gui = ["customtkinter>=5.2.0", "Pillow>=10.0.0"]
+
+[project.scripts]
+meowth = "meowth.cli:main"
+meowth-gui = "meowth.gui:main"
+
+[tool.setuptools.packages.find]
+where = ["src"]
+
+# Binary files are downloaded at runtime from GitHub releases
+# Do not include them in the PyPI package to keep size small

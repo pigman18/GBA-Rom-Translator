@@ -1,0 +1,32 @@
+{
+  "script_bank_min": "0x100000",
+  "script_text_ptr_opcodes": [103],
+  "reject": {
+    "标题LZ": {
+      "addr_bands": [["0x36D000", "0x370000"]],
+      "description": "标题画面LZ压缩图形区，全流程拒绝（S0/S1/S2/S5）"
+    },
+    "gfx_ptr_source": {
+      "addr_bands": [["0x350000", "0x3E8FC0"], ["0x3EA800", "0x3FFF00"]],
+      "description": "图形区指针源拒绝：这些地址不可作为文本指针来源（S1指针分类+S5 RewriteGate）"
+    },
+    "gfx_string_target": {
+      "addr_bands": [["0x370000", "0x3E8FC0"], ["0x3EA800", "0x3F0000"]],
+      "description": "图形区字符串目标拒绝：这些地址不视为文本字符串（S2目标验证）"
+    }
+  },
+  "allow": {
+    "UI文本": {
+      "addr_bands": [["0x3E8FC0", "0x3EA800"], ["0x3CFD00", "0x3DFF00"], ["0x3E8A80", "0x3EA800"]],
+      "description": "UI/设施文本银行白名单：指针源在拒绝区但目标在此范围时放行（S1/S2门控例外）"
+    },
+    "设置菜单": {
+      "addr_bands": [["0x37B44C", "0x37B500"]],
+      "description": "设置选项文本白名单：同UI文本逻辑，防止GFX拒绝误杀设置文字"
+    }
+  },
+  "trusted_lz_bands": {
+    "addr_bands": [["0x200000", "0x800000"]],
+    "description": "可信LZ压缩区，注入阶段解压安全范围"
+  }
+}

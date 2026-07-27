@@ -1,56 +1,28 @@
 {
-  "script_bank_min": 1048576,
+  "script_bank_min": "0x100000",
   "script_text_ptr_opcodes": [103],
-  "ui_text_bank": [
-    4101184,
-    4108288
-  ],
-  "fc_ui_banks": [
-    [
-      3997696,
-      4063232
-    ],
-    [
-      4100096,
-      4108288
-    ]
-  ],
-  "ime_range": [
-    4102166,
-    4102224
-  ],
-  "option_menu_band": [
-    3650828,
-    3651008
-  ],
-  "title_lz_band": [
-    3592192,
-    3604480
-  ],
-  "gfx_ptr_source_deny": [
-    [
-      3473408,
-      4101184
-    ],
-    [
-      4108288,
-      4194304
-    ]
-  ],
-  "gfx_string_target_deny": [
-    [
-      3604480,
-      4101184
-    ],
-    [
-      4108288,
-      4128768
-    ]
-  ],
-  "trusted_lz_bands": [
-    [
-      2097152,
-      8388608
-    ]
-  ]
+  "reject": {
+    "标题LZ": {
+      "addr_bands": [["0x36D000", "0x370000"]],
+      "description": "标题画面LZ压缩图形区，全流程拒绝（S0/S1/S2/S5）"
+    },
+    "gfx_ptr_source": {
+      "addr_bands": [["0x350000", "0x3E8FC0"], ["0x3EA800", "0x3FFF00"]],
+      "description": "图形区指针源拒绝：这些地址不可作为文本指针来源（S1指针分类+S5 RewriteGate）"
+    },
+    "gfx_string_target": {
+      "addr_bands": [["0x370000", "0x3E8FC0"], ["0x3EA800", "0x3F0000"]],
+      "description": "图形区字符串目标拒绝：这些地址不视为文本字符串（S2目标验证）"
+    }
+  },
+  "allow": {
+    "UI文本": {
+      "addr_bands": [["0x3E8FC0", "0x3EA800"], ["0x3CFD00", "0x3DFF00"], ["0x3E8A80", "0x3EA800"]],
+      "description": "UI/设施文本银行白名单：指针源在拒绝区但目标在此范围时放行（S1/S2门控例外）"
+    }
+  },
+  "trusted_lz_bands": {
+    "addr_bands": [["0x200000", "0x800000"]],
+    "description": "可信LZ压缩区，注入阶段解压安全范围"
+  }
 }

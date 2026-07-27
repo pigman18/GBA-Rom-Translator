@@ -14,7 +14,6 @@ from .modules import DEFAULT_MODULES
 from .policy import (
     BASE as _BASE_fn,
     BIRCH_PTR_ALLOW as _EARLY_SCRIPT_PTR_ALLOWLIST,
-    FC_UI_BANKS as _FC_UI_BANKS_fn,
     GFX_PTR_SOURCE_DENY as _GFX_PTR_SOURCE_DENY_fn,
     GFX_STRING_TARGET_DENY as _GFX_STRING_TARGET_DENY_fn,
     IME_RANGE as _IME_RANGE_fn,
@@ -24,7 +23,6 @@ from .policy import (
     TRAINER_UI_PTR_ALLOW as _TRAINER_UI_PTR_ALLOW,
     TRUSTED_LZ_BANDS as _TRUSTED_LZ_BANDS_fn,
     UI_RANGE as _UI_RANGE_fn,
-    UI_TEXT_BANK as _UI_TEXT_BANK_fn,
     in_ranges as _in_ranges,
     is_garbage_jp as _is_garbage_jp,
     is_ime_gojuon_row as _is_ime_gojuon_row,
@@ -51,7 +49,6 @@ from .tables import (
 from .jp_pcs import decode_pcs, looks_like_jp_text
 
 BASE = _BASE_fn()
-FC_UI_BANKS = _FC_UI_BANKS_fn()
 GFX_PTR_SOURCE_DENY = _GFX_PTR_SOURCE_DENY_fn()
 GFX_STRING_TARGET_DENY = _GFX_STRING_TARGET_DENY_fn()
 IME_RANGE = _IME_RANGE_fn()
@@ -60,7 +57,6 @@ SCRIPT_BANK_MIN = SCRIPT_BANK_MIN_fn()
 TITLE_LZ_BAND = _TITLE_LZ_BAND_fn()
 TRUSTED_LZ_BANDS = _TRUSTED_LZ_BANDS_fn()
 UI_RANGE = _UI_RANGE_fn()
-UI_TEXT_BANK = _UI_TEXT_BANK_fn()
 
 _RE_SORT_LABEL = re.compile(r"(ごじゅうおん|アイウエオ|じゅん|おとこ|おんな)")
 

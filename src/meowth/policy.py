@@ -38,15 +38,8 @@ from .jp_pcs import looks_like_jp_text
 _EXTRACTION_BY_GAME: dict[str, dict[str, Any]] = {}
 
 # Defaults when policy.json is absent (other games / incomplete packs).
-_DEFAULT_TITLE_GFX_PTR_DENY = frozenset(
-    {
-        0x78EA4, 0x78F74, 0x78FD0, 0x79094, 0x79240, 0x79244,
-        0x7924C, 0x79250, 0x79258, 0x79260, 0x79268, 0x79270,
-        0x79274, 0x79278, 0x7927C, 0x7951C, 0x79524, 0x1379D0,
-        0x137A24, 0x137A40, 0x1214B8, 0x36D684,
-    }
-)
-_DEFAULT_BRAND_COMPACT_SKIP = frozenset({"ポケモン", "カイオーガ", "グラードン"})
+_DEFAULT_TITLE_GFX_PTR_DENY: frozenset[int] = frozenset()
+_DEFAULT_BRAND_COMPACT_SKIP: frozenset[str] = frozenset()
 _DEFAULT_SKIP_ZH_ORIGINALS = frozenset()
 _DEFAULT_SKIP_ZH_PREFIXES: tuple[str, ...] = ()
 # Per-game skip lives in translate/config.json (see translate/README.md).
@@ -88,7 +81,7 @@ def _policy(game_id: str = "") -> dict[str, Any]:
 
 
 def title_gfx_ptr_deny(game_id: str = "") -> frozenset[int]:
-    raw = _policy(game_id).get("title_gfx_ptr_deny")
+    raw = _policy(game_id).get("reject", {}).get("title_gfx_sites", {}).get("sites")
     if not raw:
         return _DEFAULT_TITLE_GFX_PTR_DENY
     return frozenset(_parse_addr(x) for x in raw)
@@ -137,57 +130,48 @@ def BASE() -> int:
 
 
 def SCRIPT_BANK_MIN() -> int:
-    return _get("script_bank_min", 0x100000)
+    return _parse_addr(_get("script_bank_min", 0x100000))
 
 
 def UI_RANGE() -> tuple:
-    return tuple(_get("ui_range", [0x3E9440, 0x3E9900]))
+    return tuple(_parse_addr(v) for v in _get("ui_range", [0x3E9440, 0x3E9900]))
 
 
-def UI_TEXT_BANK() -> tuple:
-    return tuple(_get("ui_text_bank", [0x3E9440, 0x3EB000]))
+def _bands_from_cfg(*keys: str, fallback: list | None = None) -> tuple:
+    """Read addr_bands from a nested _cfg() path, e.g. _bands_from_cfg('allow', 'UI文本')."""
+    val: Any = _cfg()
+    for k in keys:
+        val = val.get(k, {}) if isinstance(val, dict) else {}
+    raw = val.get("addr_bands") if isinstance(val, dict) else None
+    if not raw:
+        raw = fallback or []
+    return tuple(tuple(_parse_addr(v) for v in r) for r in raw)
 
 
-def FC_UI_BANKS() -> tuple:
-    return tuple(
-        tuple(r)
-        for r in _get(
-            "fc_ui_banks",
-            [[0x3D0000, 0x3E0000], [0x3E9000, 0x3EB000]],
-        )
-    )
+def UI_BANKS() -> tuple:
+    return _bands_from_cfg("allow", "UI文本", fallback=[[0x3E8FC0, 0x3EA800], [0x3CFD00, 0x3DFF00], [0x3E8A80, 0x3EA800]])
 
 
 def IME_RANGE() -> tuple:
-    return tuple(_get("ime_range", [0x3E9816, 0x3E9850]))
+    return (0x3E98D6, 0x3E9910)
 
 
 def OPTION_MENU_BAND() -> tuple:
-    return tuple(_get("option_menu_band", [0x37B50C, 0x37B5C0]))
+    b = _bands_from_cfg("allow", "设置菜单", fallback=[[0x37B44C, 0x37B500]])
+    return b[0]
 
 
 def TITLE_LZ_BAND() -> tuple:
-    return tuple(_get("title_lz_band", [0x36D000, 0x370000]))
+    b = _bands_from_cfg("reject", "标题LZ", fallback=[[0x36D000, 0x370000]])
+    return b[0]
 
 
 def GFX_PTR_SOURCE_DENY() -> tuple:
-    return tuple(
-        tuple(r)
-        for r in _get(
-            "gfx_ptr_source_deny",
-            [[0x350000, 0x3E9440], [0x3EB000, 0x400000]],
-        )
-    )
+    return _bands_from_cfg("reject", "gfx_ptr_source", fallback=[[0x350000, 0x3E8FC0], [0x3EA800, 0x3FFF00]])
 
 
 def GFX_STRING_TARGET_DENY() -> tuple:
-    return tuple(
-        tuple(r)
-        for r in _get(
-            "gfx_string_target_deny",
-            [[0x370000, 0x3E9440], [0x3EB000, 0x3F0000]],
-        )
-    )
+    return _bands_from_cfg("reject", "gfx_string_target", fallback=[[0x370000, 0x3E8FC0], [0x3EA800, 0x3F0000]])
 
 
 def SCRIPT_TEXT_PTR_OPCODES() -> frozenset[int]:
@@ -207,7 +191,8 @@ def SCRIPT_TEXT_PTR_OPCODES() -> frozenset[int]:
 
 
 def TRUSTED_LZ_BANDS() -> tuple:
-    return tuple(tuple(r) for r in _get("trusted_lz_bands", [[0x200000, 0x800000]]))
+    raw = _cfg().get("trusted_lz_bands", {}).get("addr_bands", [[0x200000, 0x800000]])
+    return tuple(tuple(_parse_addr(v) for v in r) for r in raw)
 
 
 # S1 registries (intro_addrs + naming/confirm sites)
@@ -215,7 +200,11 @@ BIRCH_PTR_ALLOW = birch_ptr_allowlist()
 TRAINER_UI_PTR_ALLOW = trainer_ui_ptr_allowlist()
 
 _RE_KANA_ROW = re.compile(r"^[ぁ-んァ-ン]{5}$")
-_GOJUON_EXTRA = frozenset({"やゆよわをん"})
+
+
+def _gojuon_extra(game_id: str = "") -> frozenset[str]:
+    raw = _policy(game_id).get("gojuon_extra", {}).get("values", [])
+    return frozenset(str(x) for x in raw)
 
 
 class Geo(Enum):
@@ -237,8 +226,7 @@ def geography_of(off: int) -> Geo:
     tlz = TITLE_LZ_BAND()
     if tlz[0] <= off < tlz[1]:
         return Geo.TITLE_LZ
-    uib = UI_TEXT_BANK()
-    if uib[0] <= off < uib[1] or in_ranges(off, FC_UI_BANKS()):
+    if in_ranges(off, UI_BANKS()):
         return Geo.UI_BANK
     omb = OPTION_MENU_BAND()
     if omb[0] <= off < omb[1]:
@@ -258,10 +246,7 @@ def string_in_ui_text_bank(so: int) -> bool:
     Dump ``geo_ranges`` for 界面 and high-ROM 设施 pools (shop/PC menus past
     the old 0x3EB000 cut) are the source of truth — not a hand-extended ceiling.
     """
-    uib = UI_TEXT_BANK()
-    if uib[0] <= so < uib[1]:
-        return True
-    if in_ranges(so, FC_UI_BANKS()):
+    if in_ranges(so, UI_BANKS()):
         return True
     return string_in_dump_high_ui_geo(so)
 
@@ -581,7 +566,9 @@ def text_target_ok(
 
 def is_ime_gojuon_row(text: str) -> bool:
     compact = text.replace(" ", "").replace("\n", "")
-    return bool(_RE_KANA_ROW.match(compact)) or compact in _GOJUON_EXTRA
+    if bool(_RE_KANA_ROW.match(compact)):
+        return True
+    return compact in _gojuon_extra()
 
 
 def is_garbage_jp(text: str) -> bool:
@@ -744,7 +731,8 @@ def filter_pointer_sources(
         cur = struct.unpack_from("<I", rom, ptr_addr)[0]
         if cur != expected_pointer:
             continue
-        if 0x0836D000 <= cur <= 0x08370000:
+        deny_bands = _policy().get("reject", {}).get("pointer_target", {}).get("addr_bands")
+        if deny_bands and _parse_addr(deny_bands[0][0]) <= cur <= _parse_addr(deny_bands[0][1]):
             continue
         valid.append(ptr_addr)
     return valid

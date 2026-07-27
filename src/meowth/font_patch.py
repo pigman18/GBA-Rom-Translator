@@ -88,6 +88,7 @@ def _build_game_bin(patch_dir: Path) -> Path:
                     raise RuntimeError(
                         f"game.bin 过大 ({out_bin.stat().st_size} >= {_GAME_BIN_MAX})"
                     )
+                _write_game_syms(out_dir / "game.map", out_dir / "game_syms.asm")
                 return out_bin
 
     gcc = _find_arm_gcc()
@@ -341,9 +342,17 @@ def apply_font_patch(
     # C 逻辑 → game.bin，再交给 armips .incbin
     _build_game_bin(build_dir)
 
-    local_armips = build_dir / "tools" / ("armips.exe" if _system == "Windows" else "armips")
-    if local_armips.exists():
-        armips_path = local_armips
+    root_armips = Path(__file__).resolve().parent.parent.parent / "tools" / ("armips.exe" if _system == "Windows" else "armips")
+    if root_armips.exists():
+        armips_path = root_armips
+    if armips_path is None:
+        local_armips = build_dir / "tools" / ("armips.exe" if _system == "Windows" else "armips")
+        if local_armips.exists():
+            armips_path = local_armips
+    if armips_path is None:
+        which = shutil.which("armips") or shutil.which("armips.exe")
+        if which:
+            armips_path = Path(which)
     if armips_path is None:
         raise RuntimeError("armips not found")
 

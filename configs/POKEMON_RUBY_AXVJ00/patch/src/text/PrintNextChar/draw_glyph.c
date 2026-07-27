@@ -71,7 +71,7 @@ static uint16_t linear_cursor_tile(TextPrinter *win, unsigned x_off, unsigned y_
 static void compute_mode2_pair(
     TextPrinter *win, int tile_x, uint16_t *upper, uint16_t *lower)
 {
-    int x = (int)win_u8(win, WIN_CURSOR_X) + tile_x;
+    int x = tile_x;
     int y = (int)win_u8(win, WIN_CURSOR_Y) + (int)win_u8(win, WIN_CURSOR_TILE_Y);
     int band = 0;
     int origin = CHS_MODE2_ORIGIN_SHOP;
@@ -305,7 +305,8 @@ void drawGlyph12(TextPrinter *win, const uint8_t *src128, int linear)
     }
 
     st->chs_px = (uint16_t)(st->chs_px + 4u);
-    win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(st->base_tx + (st->chs_px >> 3)));
+    win_set_u8(win, WIN_CURSOR_TILE_X,
+        (uint8_t)(st->base_tx + ((st->chs_px + CHS_GLYPH_ADVANCE_PX - 1) >> 3)));
 }
 
 int DrawGlyph_ShouldUseLinear(TextPrinter *win, uint8_t write_op)
@@ -347,7 +348,7 @@ void DrawGlyph_Chinese(TextPrinter *win, const uint8_t *glyph_src)
         st->write_op = 0;
         pitch_reset(win);
     } else if (st->chs_px != 0) {
-        uint8_t expect = (uint8_t)(st->base_tx + (st->chs_px >> 3));
+        uint8_t expect = (uint8_t)(st->base_tx + ((st->chs_px + CHS_GLYPH_ADVANCE_PX - 1) >> 3));
         if (cur_tx != expect)
             pitch_reset(win);
     } else {

@@ -44,8 +44,10 @@ FontChsNormal                          equ 0x09000000
 FontChsSmall                           equ 0x09100000
 PokeRSFontChsNormal                    equ FontChsNormal
 PokeRSFontChsSmall                     equ FontChsSmall
-; Font3 glyph 基地址 (JP ROM - GetGlyphTilePointers 反推)
-gFont3LatinGlyphs                      equ 0x081B6D2C
+; JP Font3 body (GetGlyphTilePointers type3) — do NOT overlay Latin Sym here
+gFont3JapaneseGlyphs                   equ 0x081B6D2C
+; Sym punct: free ROM after Small; drawn via PrintNextChar_C (2bpp→CHS4)
+PokeRSFontChsSymAddress                equ 0x091E0000
 ; +0 u16 char_base +2 write_op +3 base_tx +4 next_abs +6 chs_px(u16 pixel)
 ChineseTileState                       equ 0x0203FFF8
 ChineseTileCursor                      equ 0x0203FFFC

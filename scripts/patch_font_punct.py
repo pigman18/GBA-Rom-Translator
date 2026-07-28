@@ -58,11 +58,17 @@ def render_bdf_glyph(
     if dst_top < 0:
         dst_top = 0
 
+    # Center cropped ink horizontally, but ensure it fits within columns 0-7
+    # so the drawGlyph12 pass-2 (slot cols 8→next-tile spill) adds no visible ink.
+    # Without this, a narrow character like ？ extends into col 8 → that right-edge
+    # pixel wraps to tile X+1 col 0 → looks like a second character.
+    center_pad = (INK_W - ink_w) // 2
+    pad_x = min(center_pad, max(0, 8 - ink_w))
     ink = bytearray(INK_W * INK_H)
     for y in range(ink_h):
         for x in range(ink_w):
             if raw[(min_y + y) * src_w + (min_x + x)]:
-                dx = x
+                dx = x + pad_x
                 dy = dst_top + y
                 if 0 <= dx < INK_W and 0 <= dy < INK_H:
                     ink[dy * INK_W + dx] = 1
@@ -71,9 +77,19 @@ def render_bdf_glyph(
 
 
 def patch_font(font_path: Path, charmap_path: Path, bdf_path: Path, *,
+               bdf_punct_path: Path | None = None,
                shadow: bool = False) -> None:
-    """Patch punctuation glyphs into an existing font .bin at empty slots."""
-    bdf_glyphs, font_ascent, _, _ = parse_bdf(bdf_path)
+    """Patch punctuation glyphs into an existing font .bin at specific indices.
+
+    Uses ``bdf_punct_path`` (e.g. fireflyR12) as the primary glyph source for
+    better 12px bitmap quality, falling back to ``bdf_path`` (e.g. SimSun-16)
+    for glyphs not found in the primary.
+    """
+    bdf_primary_glyphs: dict | None = None
+    bdf_primary_ascent = 0
+    if bdf_punct_path and bdf_punct_path.exists():
+        bdf_primary_glyphs, bdf_primary_ascent, _, _ = parse_bdf(bdf_punct_path)
+    bdf_fallback_glyphs, bdf_fallback_ascent, _, _ = parse_bdf(bdf_path)
 
     # ── hardcode slots to patch ─────────────────────────────────────────
     #  lead 0x1E → adjusted glyph index base = lead_adjust(0x1E) << 8 = 27 << 8.
@@ -147,7 +163,7 @@ def patch_font(font_path: Path, charmap_path: Path, bdf_path: Path, *,
         0x1B90: "\u30FB",   # ・
     }
 
-    # U+30FB is not in SimSun; fall back to U+00B7 glyph
+    # U+30FB is not in some BDFs; fall back to U+00B7 glyph
     BDF_FALLBACK: dict[int, int] = {0x30FB: 0x00B7}
 
     # ── validate against charmap ───────────────────────────────────────
@@ -183,14 +199,21 @@ def patch_font(font_path: Path, charmap_path: Path, bdf_path: Path, *,
         char = PATCH_SLOTS[idx]
         encoding = ord(char)
         off = idx * BYTES_PER_GLYPH
-        existing = buf[off:off+BYTES_PER_GLYPH]
-        if any(b != 0 for b in existing):
-            continue  # slot already has data
 
         bdf_enc = BDF_FALLBACK.get(encoding, encoding)
-        if bdf_enc in bdf_glyphs:
-            bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y = bdf_glyphs[bdf_enc]
-            ink = render_bdf_glyph(bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y, font_ascent)
+        glyph_data = None
+        used_ascent = bdf_fallback_ascent
+        used_bdf_name = Path(bdf_path).name
+        # Try primary BDF first (fireflyR12) for better 12px quality
+        if bdf_primary_glyphs and bdf_enc in bdf_primary_glyphs:
+            glyph_data = bdf_primary_glyphs[bdf_enc]
+            used_ascent = bdf_primary_ascent
+            used_bdf_name = Path(bdf_punct_path).name
+        elif bdf_enc in bdf_fallback_glyphs:
+            glyph_data = bdf_fallback_glyphs[bdf_enc]
+        if glyph_data:
+            bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y = glyph_data
+            ink = render_bdf_glyph(bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y, used_ascent)
             if bdf_enc != encoding:
                 print(f"  Using fallback U+{bdf_enc:04X} for U+{encoding:04X}")
         else:
@@ -203,7 +226,7 @@ def patch_font(font_path: Path, charmap_path: Path, bdf_path: Path, *,
         buf[off:off+BYTES_PER_GLYPH] = packed
         nz = sum(1 for b in packed if b != 0)
         label = char.encode("ascii", errors="replace").decode("ascii")
-        print(f"  Patched {label} (U+{encoding:04X}) @ idx 0x{idx:04X}: {nz}/128")
+        print(f"  Patched {label} (U+{encoding:04X}) @ idx 0x{idx:04X}: {nz}/128 [{used_bdf_name}]")
         patched += 1
 
     font_path.write_bytes(bytes(buf))
@@ -214,11 +237,12 @@ def main():
     ap = argparse.ArgumentParser(description="Patch punctuation glyphs into existing font bin")
     ap.add_argument("--font", required=True, type=Path, help="Path to font .bin to patch")
     ap.add_argument("--charmap", required=True, type=Path, help="Path to charmap.txt")
-    ap.add_argument("--bdf", required=True, type=Path, help="Path to BDF font")
+    ap.add_argument("--bdf", required=True, type=Path, help="Fallback BDF font (e.g. SimSun-16)")
+    ap.add_argument("--bdf-punct", type=Path, default=None, help="Primary BDF for punctuation (e.g. fireflyR12)")
     ap.add_argument("--no-shadow", dest="shadow", action="store_false", default=False)
     args = ap.parse_args()
 
-    patch_font(args.font, args.charmap, args.bdf, shadow=args.shadow)
+    patch_font(args.font, args.charmap, args.bdf, bdf_punct_path=args.bdf_punct, shadow=args.shadow)
 
 if __name__ == "__main__":
     main()

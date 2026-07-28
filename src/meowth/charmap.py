@@ -23,9 +23,18 @@ def _build_chinese_leads(ranges: list[list[int]]) -> frozenset:
 _DEFAULT_CHS_LEADS = [[1, 5], [7, 26], [28, 30]]
 _DEFAULT_ESCAPE_BYTES = bytes([0xF9, 0x00])
 _DEFAULT_IDEOSPACE = bytes([0x01, 0xF7])
+# Sym punct bank (glyph 0x36.. @ ADDR_FONT_CHS_SYM): fullwidth sentence
+# punct stay single-byte (NOT F9→1Exx into Normal CJK). AXVJ draws these
+# via PrintNextChar_C (JP Font3 is type3 — cannot Latin-overlay Sym there).
+_FONT3_SYM_PUNCT: dict[str, int] = {
+    "。": 0x37,
+    "、": 0x3A,
+    "，": 0x3B,
+    "！": 0x3C,
+    "？": 0x3D,
+}
 _DEFAULT_PUNCT_MAP: dict[str, int] = {
-    # 全角标点通过 charmap.txt 多字节映射 + F9 escape 走 Normal 字库渲染，
-    # 不再映射到拉丁单字节槽 (JP ROM Font3 乱序布局导致错字)
+    # Quotes / dashes still use Font3 single-byte slots (Sym / Latin band).
     "『": 177,
     "』": 178,
     "「": 179,
@@ -34,6 +43,7 @@ _DEFAULT_PUNCT_MAP: dict[str, int] = {
     "…": 176,
     "ー": 174,
     "・": 175,
+    **_FONT3_SYM_PUNCT,
 }
 
 
@@ -84,6 +94,11 @@ class Charmap:
             self._parse(Path(path))
         for ch, b in self._punct_map.items():
             self.char_to_bytes[ch] = bytes([b])
+        # Force Sym-band sentence punct to Font3 single bytes even if charmap.txt
+        # later listed 1E5E=， / 1E61=？ (those would F9 into Normal and blur).
+        for ch, b in _FONT3_SYM_PUNCT.items():
+            self.char_to_bytes[ch] = bytes([b])
+            self._punct_map[ch] = b
         self.char_to_bytes["　"] = self._ideospace_bytes
 
     def _parse(self, path: Path):
@@ -124,8 +139,12 @@ class Charmap:
                 self.bytes_to_char[byte_val] = char
 
     def encode_char(self, ch: str) -> bytes | None:
-        """Encode a single character to Font Patch bytes."""
-        if self._escape and ch in self._punct_map:
+        """Encode a single character to Font Patch bytes.
+
+        Sym-band punct (，。！？、) and other ``punct_map`` entries are always
+        single-byte Font3 codes — never F9 Chinese leads.
+        """
+        if ch in self._punct_map:
             return bytes([self._punct_map[ch]])
         return self.char_to_bytes.get(ch)
 
@@ -184,7 +203,7 @@ class Charmap:
         "\u201D": "\"",   # right double quote
         "\u300A": "\"",   # 《 → "
         "\u300B": "\"",   # 》 → "
-        "\u3001": ",",    # 、 → ,
+        # Keep 、 as Sym 0x3A — do not collapse to ASCII ',' (0xB8).
         "\uFF5E": "~",    # ～ fullwidth tilde
         "\u00B7": ".",    # middle dot
         "$": "",          # dollar sign (not in charmap, strip)

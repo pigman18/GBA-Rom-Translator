@@ -1302,6 +1302,39 @@ class TranslationEngine:
                 raise RuntimeError(f"Font generation failed:\n{r.stderr}\n{r.stdout}")
             self._fonts_from_bdf = True
             self._log("info", f"Font generated from {bdf_path.name} -> {fonts_dir}")
+
+            # Patch punctuation glyphs: baseline alignment + no pass-2 right spill.
+            # build_chinese_font places all glyphs via bdf_to_ink12 which ignores BDF
+            # baseline (bbx_y) and doesn't restrict glyphs to slot cols 0-7, causing
+            # narrow characters like ? to show as ?? at end of sentence.
+            try:
+                _charmap_path = get_charmap_path(self.config.game)
+                if _charmap_path.exists():
+                    _no_shadow = fp_cfg.get("shadow") is False
+                    _bdf_punct = Path("fonts/firefly-bdf-bitmap/fireflyR12.bdf")
+                    if not _bdf_punct.exists():
+                        # also check repo root
+                        _alt = Path(__file__).resolve().parents[3] / "fonts" / "firefly-bdf-bitmap" / "fireflyR12.bdf"
+                        if _alt.exists():
+                            _bdf_punct = _alt
+                        else:
+                            _bdf_punct = None
+                    for _bin in sorted(fonts_dir.glob("*.bin")):
+                        _args_patch = [
+                            sys.executable,
+                            str(_scripts_dir / "patch_font_punct.py"),
+                            "--font", str(_bin),
+                            "--charmap", str(_charmap_path),
+                            "--bdf", str(bdf_path),
+                        ]
+                        if _bdf_punct:
+                            _args_patch += ["--bdf-punct", str(_bdf_punct)]
+                        if _no_shadow:
+                            _args_patch.append("--no-shadow")
+                        subprocess.run(_args_patch, capture_output=True, text=True, timeout=60)
+                    self._log("info", "Punctuation glyphs patched (baseline + no right spill)")
+            except Exception as _e:
+                self._log("warning", f"Punctuation patch failed: {_e}")
         except (FileNotFoundError, OSError) as e:
             self._fonts_from_bdf = False
             self._log("warning", f"Font generation skipped: {e}")

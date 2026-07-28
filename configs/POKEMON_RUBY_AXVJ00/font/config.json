@@ -16,6 +16,13 @@
       "addr": 152043520,
       "glyph_count": 7168,
       "bytes_per_glyph": 128
+    },
+    {
+      "label": "Sym",
+      "addr": 152961024,
+      "glyph_count": 9,
+      "bytes_per_glyph": 64,
+      "slot_size": 576
     }
   ]
 }

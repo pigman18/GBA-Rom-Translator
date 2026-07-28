@@ -45,6 +45,65 @@ static const uint8_t *glyph_ptr(uint16_t index)
     return (const uint8_t *)(ADDR_FONT_CHS_NORMAL + ((uint32_t)index << 7));
 }
 
+/* Sym bank: 16×16 2bpp (64B). CHS draw wants 128B TL/BL/TR/BR 4bpp (0/E/F). */
+static uint8_t sym_pix2(const uint8_t *g64, unsigned x, unsigned y)
+{
+    unsigned bitpos = y * 16u + x;
+    uint8_t byte = g64[bitpos >> 2];
+    unsigned shift = (bitpos & 3u) * 2u;
+    return (uint8_t)((byte >> shift) & 3u);
+}
+
+static void put_nib4(uint8_t *tile32, unsigned x, unsigned y, uint8_t nib)
+{
+    unsigned bi = y * 4u + x / 2u;
+    if (x & 1u)
+        tile32[bi] = (uint8_t)((tile32[bi] & 0xF0u) | (nib & 0x0Fu));
+    else
+        tile32[bi] = (uint8_t)((tile32[bi] & 0x0Fu) | ((nib & 0x0Fu) << 4));
+}
+
+static uint8_t sym_val_to_nib(uint8_t v)
+{
+    if (v >= 3u)
+        return 0x0Fu; /* ink */
+    if (v == 2u)
+        return 0x0Eu; /* shadow */
+    return 0;
+}
+
+static void sym64_to_chs128(uint8_t out[128], const uint8_t *g64)
+{
+    unsigned i, x, y;
+    for (i = 0; i < 128u; i++)
+        out[i] = 0;
+    for (y = 0; y < 16u; y++) {
+        for (x = 0; x < 16u; x++) {
+            uint8_t nib = sym_val_to_nib(sym_pix2(g64, x, y));
+            uint8_t *tile;
+            if (y < 8u)
+                tile = out + ((x < 8u) ? 0x00u : 0x40u);
+            else
+                tile = out + ((x < 8u) ? 0x20u : 0x60u);
+            put_nib4(tile, x & 7u, y & 7u, nib);
+        }
+    }
+}
+
+static int draw_sym_punct(TextPrinter *win, uint32_t cur_char)
+{
+    const uint8_t *src;
+    uint8_t tmp[128];
+
+    if (cur_char < SYM_GLYPH_BASE || cur_char >= SYM_GLYPH_BASE + SYM_GLYPH_COUNT)
+        return 0;
+    src = (const uint8_t *)(ADDR_FONT_CHS_SYM
+                            + (cur_char - SYM_GLYPH_BASE) * 64u);
+    sym64_to_chs128(tmp, src);
+    DrawGlyph_Chinese(win, tmp);
+    return 1;
+}
+
 /*
  * 短语表渲染入口。
  * 调用时机：解析到 F9 <op> hi lo（phrase 模式），code = (hi << 8) | lo。
@@ -90,6 +149,10 @@ static void draw_phrase(TextPrinter *win, uint16_t code)
 int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
 {
     ensure_linear_tile_bump(win);
+
+    /* Single-byte Sym punct (。、，！？ …): do not use JP Font3. */
+    if (draw_sym_punct(win, cur_char))
+        return 1;
 
     if (cur_char != CHS_ESCAPE)
         return 0;

@@ -9,8 +9,12 @@
 #define ADDR_CALL_VIA_R2           0x081B12DCu
 #define ADDR_FONT_FUNC_TABLE       0x081BB3ACu
 #define ADDR_COPY_GLYPH_2BPP_4BPP  0x080038A0u
+#define ADDR_COPY_GLYPH_1BPP_4BPP  0x08003830u
 #define ADDR_UPDATE_TILEMAP       0x080036DCu
+#define ADDR_GET_GLYPH_TILE_PTRS   0x08003730u
 #define ADDR_GAME_BIN              0x08800000u
+#define LANGUAGE_JAPANESE          1u
+#define CHS_GLYPH_ADVANCE_JP_PX    8u
 /*
  * 短语表（PhraseTable）—— 固定长度字段突破字符数限制的方案。
  * 日版 Gen3 的招式/特性/物种等字段有 stride 限制（6-8 字节），
@@ -38,9 +42,12 @@
 
 #define WIN_TEMPLATE        0x00
 #define WIN_STATE           0x04
-#define WIN_FONTNUM         0x0A
+/* AXVJ TextPrinter: +0x0A = textMode (FontFuncTable index in entry.s);
+ * +0x0B = fontNum (GetGlyphTilePointers). Colors are C/D/E only — do NOT
+ * alias fontNum as COLOR_B (that caused dual-path / wrong glyph fetches). */
+#define WIN_TEXTMODE        0x0A
+#define WIN_FONTNUM         0x0A  /* legacy alias = textMode */
 #define WIN_FONTNUM_REAL    0x0B
-#define WIN_COLOR_B         0x0B
 #define WIN_COLOR_C         0x0C
 #define WIN_COLOR_D         0x0D
 #define WIN_COLOR_E         0x0E
@@ -56,12 +63,12 @@
 
 /* 8 bytes at IWRAM end (0x0203FFF8..FFFF). */
 struct ChineseTileState {
-    uint16_t char_base; /* +0 */
-    uint8_t  write_op;  /* +2 */
-    uint8_t  base_tx;   /* +3 pitch-run start CURSOR_TILE_X */
-    uint16_t next_abs;  /* +4 unused by Linear dest (was floor/sticky hijack) */
-
-    uint16_t chs_px;    /* +6 pixel X in pitch run (RS 12 path) */
+    uint8_t  char_base;  /* +0 template charBaseBlock */
+    uint8_t  write_op;   /* +1 */
+    uint8_t  base_tx;    /* +2 pitch-run start CURSOR_TILE_X */
+    uint8_t  last_adv;   /* +3 last glyph advance (8 JP / 12 CN) */
+    uint16_t pitch_key;  /* +4 window fingerprint for pitch_reset */
+    uint16_t chs_px;     /* +6 pixel X in pitch run */
 };
 
 /*
@@ -161,11 +168,29 @@ static inline void chs_copy_glyph_2bpp_to_4bpp(
     ((chs_fn5)(ADDR_COPY_GLYPH_2BPP_4BPP | 1u))(src, dst, c, e, d);
 }
 
+typedef void (*chs_fn4)(const void *src, void *dst, uint32_t a, uint32_t b);
+
+static inline void chs_copy_glyph_1bpp_to_4bpp(
+    const void *src, void *dst, uint32_t fg, uint32_t bg)
+{
+    ((chs_fn4)(ADDR_COPY_GLYPH_1BPP_4BPP | 1u))(src, dst, fg, bg);
+}
+
+static inline uint16_t chs_pitch_key(TextPrinter *win)
+{
+    /* Window identity only — do NOT fold CURSOR_X (JP advances it each glyph). */
+    return (uint16_t)(win_u16(win, WIN_TILE_BASE)
+                      ^ ((uint16_t)win_u8(win, WIN_CURSOR_Y) << 8)
+                      ^ (uint16_t)win_u8(win, WIN_CURSOR_TILE_Y));
+}
+
 int PrintNextChar_C(TextPrinter *win, uint32_t cur_char);
 
 void DrawGlyph_Chinese(TextPrinter *win, const uint8_t *glyph_src);
+void DrawGlyph_Chinese_Adv(TextPrinter *win, const uint8_t *glyph_src, unsigned adv_px);
 int  DrawGlyph_ShouldUseLinear(TextPrinter *win, uint8_t write_op);
 void drawGlyph12(TextPrinter *win, const uint8_t *src18, int linear);
+void drawGlyph_Adv(TextPrinter *win, const uint8_t *src128, int linear, unsigned adv_px);
 int  GetStringWidth_Chinese(TextPrinter *win, const uint8_t *s,
                             uint16_t *index, uint8_t *width);
 uint8_t GetStringWidthChinese_Full(TextPrinter *win, const uint8_t *s);
@@ -174,8 +199,31 @@ int  scene_field_wants_linear(TextPrinter *win);
 int  scene_menu_wants_mode2(TextPrinter *win);
 int  scene_is_shop_desc(TextPrinter *win);
 int  scene_is_party_footer(TextPrinter *win);
+int  scene_jp_via_chs(TextPrinter *win);
 void scene_mode2_apply(TextPrinter *win, int *x, int *y, int *band, int *origin);
 int  scene_battle_force_linear(TextPrinter *win);
 int  scene_keep_linear_16(TextPrinter *win);
+
+/*
+ * AXVJ GetGlyphTilePointers @ 0x08003730 is 4-arg (JP ROM; language baked
+ * into sFonts[fontNum]):
+ *   void GetGlyphTilePointers(u8 fontNum, u16 glyph, u8 **upper, u8 **lower);
+ * pokeruby US has an extra language arg — do NOT pass LANGUAGE_JAPANESE here
+ * or r1 becomes glyph=1 and r2 is treated as a pointer → blank text.
+ */
+static inline void chs_get_glyph_tile_pointers(
+    uint8_t font_num, uint16_t glyph,
+    uint8_t **upper, uint8_t **lower)
+{
+    typedef void (*fn_t)(uint32_t, uint32_t, uint8_t **, uint8_t **);
+    ((fn_t)(ADDR_GET_GLYPH_TILE_PTRS | 1u))(
+        font_num, glyph, upper, lower);
+}
+
+/* Fonts 0/1/2/6 = 1bpp (8B/tile); 3/4/5 = shadowed 4bpp-index (32B/tile). */
+static inline int chs_font_is_shadowed(uint8_t font_num)
+{
+    return font_num >= 3u && font_num <= 5u;
+}
 
 #endif /* GAME_H */

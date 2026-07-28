@@ -48,7 +48,8 @@ PokeRSFontChsSmall                     equ FontChsSmall
 gFont3JapaneseGlyphs                   equ 0x081B6D2C
 ; Sym punct: free ROM after Small; drawn via PrintNextChar_C (2bpp→CHS4)
 PokeRSFontChsSymAddress                equ 0x091E0000
-; +0 u16 char_base +2 write_op +3 base_tx +4 next_abs +6 chs_px(u16 pixel)
+; IWRAM ChineseTileState @ 0x0203FFF8 (8B):
+; +0 char_base +1 write_op +2 base_tx +3 last_adv +4 pitch_key(u16) +6 chs_px(u16)
 ChineseTileState                       equ 0x0203FFF8
 ChineseTileCursor                      equ 0x0203FFFC
 CHS_ESCAPE                             equ 0xF9

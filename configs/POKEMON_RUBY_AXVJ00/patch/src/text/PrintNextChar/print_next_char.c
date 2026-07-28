@@ -128,67 +128,118 @@ static void draw_phrase(TextPrinter *win, uint16_t code)
 }
 
 /**
- * PrintNextChar_C — GBA 文字渲染引擎的 CJK 扩展入口。
+ * PrintNextChar_C — CJK + JP-via-CHS (ProcessCurrentChar hook).
  *
- * 调用时机：原版 ProcessCurrentChar 检测到 ROM 中的 F9 逃逸码时
- * 通过 hook（main.asm）跳转到此函数。受管指令格式：
- *   F9 00 ll tt   单 CJK 字 — lead/trail 编码 → pack_glyph_index → glyph_ptr
- *   F9 7F hi lo   短语（通用）— 重置 write_op=0 → draw_phrase(code)
- *   F9 01..7E hi lo 短语（带 write_op）
- *                   — st->write_op = op（01=物种/grid, 04=招式/slot, etc.）
- *                   → draw_phrase(code)，op 影响 drawGlyph12 的模式选择
+ * F9: Chinese sideload / phrase.
+ * Printable PCS (1..0xF6): ALWAYS CHS allocator — never fall back to
+ * original FontFuncTable (dual-path VRAM clash / 「汉字替换」).
  *
- * F9 00 受字段 stride 限制：每字 4 字节，8 字节槽最多 2 汉字。
- * 短语模式（F9 7F/op）将文本移到 PhraseTable 扩展区，槽内只存 4 字节
- * 引用，突破长度限制（详见 game.h:ADDR_PHRASE_OFFSETS 注释）。
- *
- * 渲染后端：DrawGlyph_Chinese → drawGlyph12（16px 字模 + 12px advance）。
- *
- * @return 0=未处理（交由原版 FontFuncTable 继续），1=已由本函数完成
+ * AXVJ GetGlyphTilePointers is 4-arg (font, glyph, &u, &l) — no language.
+ * Font 3/4/5: 32B shadowed tiles (0/E/F). Font 0/1/2/6: 8B 1bpp → expand.
  */
+/* 1bpp row bytes → 32B 4bpp-index tile with ink=0xF (CopyGlyph2bpp-ready). */
+static void expand_1bpp_tile(const uint8_t *src8, uint8_t *dst32)
+{
+    unsigned row, col;
+    for (row = 0; row < 8u; row++) {
+        uint8_t bits = src8[row];
+        uint32_t out = 0;
+        for (col = 0; col < 8u; col++) {
+            if (bits & (uint8_t)(0x80u >> col))
+                out |= 0xFu << (col * 4u);
+        }
+        dst32[row * 4u + 0u] = (uint8_t)(out);
+        dst32[row * 4u + 1u] = (uint8_t)(out >> 8);
+        dst32[row * 4u + 2u] = (uint8_t)(out >> 16);
+        dst32[row * 4u + 3u] = (uint8_t)(out >> 24);
+    }
+}
+
+/* Returns 1 for printable PCS (consumed by CHS path). Controls return 0. */
+static int draw_jp_via_chs(TextPrinter *win, uint32_t cur_char)
+{
+    uint8_t *upper = 0;
+    uint8_t *lower = 0;
+    uint8_t tmp[128];
+    uint8_t font;
+    unsigned i;
+
+    if (cur_char == 0 || cur_char >= 0xF7)
+        return 0;
+
+    font = win_u8(win, WIN_FONTNUM_REAL);
+    /* 0x0B is fontNum; if aliased garbage (>6), fall back to shadowed. */
+    if (font > 6u)
+        font = FONT_NORMAL_SHADOWED;
+
+    chs_get_glyph_tile_pointers(font, (uint16_t)cur_char, &upper, &lower);
+    if (!upper || !lower)
+        return 0; /* ABI/lookup fail → original FontFunc (never blank claim) */
+
+    for (i = 0; i < 128u; i++)
+        tmp[i] = 0;
+
+    if (chs_font_is_shadowed(font)) {
+        for (i = 0; i < 32u; i++) {
+            tmp[0x00 + i] = upper[i];
+            tmp[0x20 + i] = lower[i];
+        }
+    } else {
+        expand_1bpp_tile(upper, tmp + 0x00);
+        expand_1bpp_tile(lower, tmp + 0x20);
+    }
+
+    DrawGlyph_Chinese_Adv(win, tmp, CHS_GLYPH_ADVANCE_JP_PX);
+    return 1;
+}
+
 int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
 {
     ensure_linear_tile_bump(win);
 
-    /* Single-byte Sym punct (。、，！？ …): do not use JP Font3. */
     if (draw_sym_punct(win, cur_char))
         return 1;
 
-    if (cur_char != CHS_ESCAPE)
-        return 0;
+    if (cur_char != CHS_ESCAPE) {
+        /* Printable → CHS only. Controls (0 / FA+) → original. */
+        return draw_jp_via_chs(win, cur_char);
+    }
 
-    const uint8_t *text = (const uint8_t *)(uintptr_t)win_u32(win, WIN_TEXT_PTR);
-    uint16_t index = win_u16(win, WIN_TEXT_INDEX);
-    const uint8_t *p = text + index;
-    uint8_t op = p[0];
+    {
+        const uint8_t *text = (const uint8_t *)(uintptr_t)win_u32(win, WIN_TEXT_PTR);
+        uint16_t index = win_u16(win, WIN_TEXT_INDEX);
+        const uint8_t *p = text + index;
+        uint8_t op = p[0];
 
-    if (op == 0) {
-        if (index == 1)
-            chinese_tile_state()->write_op = 0;
-        uint8_t lead = p[1];
-        uint8_t trail = p[2];
-        if (!lead_trail_ok(lead, trail))
-            return 0;
+        if (op == 0) {
+            if (index == 1)
+                chinese_tile_state()->write_op = 0;
+            {
+                uint8_t lead = p[1];
+                uint8_t trail = p[2];
+                uint16_t gidx;
+                if (!lead_trail_ok(lead, trail))
+                    return 0;
+                win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(index + 3));
+                gidx = pack_glyph_index(lead, trail);
+                if (gidx >= CHS_FONT_GLYPH_MAX)
+                    return 1;
+                DrawGlyph_Chinese(win, glyph_ptr(gidx));
+                return 1;
+            }
+        }
 
-        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(index + 3));
-        uint16_t gidx = pack_glyph_index(lead, trail);
-        if (gidx >= CHS_FONT_GLYPH_MAX)
+        {
+            volatile struct ChineseTileState *st = chinese_tile_state();
+            uint16_t code;
+            if (op == CHS_PHRASE_DEFAULT)
+                st->write_op = 0;
+            else
+                st->write_op = op;
+            code = (uint16_t)((p[1] << 8) | p[2]);
+            win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(index + 3));
+            draw_phrase(win, code);
             return 1;
-        DrawGlyph_Chinese(win, glyph_ptr(gidx));
-        return 1;
+        }
     }
-
-    volatile struct ChineseTileState *st = chinese_tile_state();
-    if (op == CHS_PHRASE_DEFAULT) {
-        st->write_op = 0;
-    } else {
-        st->write_op = op;
-        if (op < 3)
-            st->next_abs = 0;
-    }
-
-    uint16_t code = (uint16_t)((p[1] << 8) | p[2]);
-    win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(index + 3));
-    draw_phrase(win, code);
-    return 1;
 }

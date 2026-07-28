@@ -125,6 +125,17 @@ int scene_battle_force_linear(TextPrinter *win)
     return win_u16(win, WIN_TILE_BASE) >= CHS_BATTLE_FIXED_BASE;
 }
 
+/**
+ * JP/digit PCS share the CHS tile allocator (glyph from vanilla font).
+ * Always attempt for printable RegularGlyph — gate used to require Mode2
+ * menu pool / chs_session and silently fell back to dual-path (详情无改善).
+ */
+int scene_jp_via_chs(TextPrinter *win)
+{
+    (void)win;
+    return 1;
+}
+
 int scene_keep_linear_16(TextPrinter *win)
 {
     /* TEMPORARILY off: shop_desc used top==13 / 0x68 and caught the title

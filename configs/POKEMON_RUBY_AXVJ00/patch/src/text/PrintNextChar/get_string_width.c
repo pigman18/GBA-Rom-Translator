@@ -11,7 +11,7 @@ int GetStringWidth_Chinese(TextPrinter *win, const uint8_t *s,
 
     {
         uint8_t op = s[i + 1];
-        uint8_t font = win_u8(win, WIN_FONTNUM);
+        uint8_t font = win_u8(win, WIN_FONTNUM_REAL);
         int glyph_px = (font == FONT_NORMAL_UNSHADOWED || font == FONT_NORMAL_SHADOWED)
                            ? CHS_GLYPH_ADVANCE_PX
                            : 10;

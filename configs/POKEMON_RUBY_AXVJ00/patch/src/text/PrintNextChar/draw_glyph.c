@@ -197,27 +197,27 @@ static void map_at(TextPrinter *win, uint8_t tx, uint16_t abs_u, uint16_t abs_l)
 
 void drawGlyph12(TextPrinter *win, const uint8_t *src128, int linear)
 {
+    drawGlyph_Adv(win, src128, linear, CHS_GLYPH_ADVANCE_PX);
+}
+
+void drawGlyph_Adv(TextPrinter *win, const uint8_t *src128, int linear, unsigned adv_px)
+{
     /*
-     * 16px 字模 → 12px advance 的核心实现。
-     * GBA 硬件 tile 为 8×8，字模按 4-tile（TL/BL/TR/BR）存储，但光标
-     * 推进由 chs_px 累积控制。每字分两趟写入：
-     *   趟1（width=8）：取 src128[0x00..0x3F]（左半 TL+BL），从
-     *   startPixel = chs_px & 7 起写入 8px。
-     *   趟2（width=4）：取 src128[0x40..0x7F]（右半 TR+BR），从同一
-     *   startPixel 起写入 4px。
-     * 两趟合计 chs_px += 12，下一字的 startPixel = (12+12) & 7 = 0
-     * （偶数）或 4（奇数）。宽度总和 8+4=12 正好对齐 GBA tile 边界，
-     * 但右 4px 必然跨入下一 tile 列（startPixel + 8 > 8 触发 spill）。
-     * spill 处理：draw_glyph_tile_12 先读目标 tile 和 spill tile 的
-     * 当前 VRAM 内容到 IWRAM，清掉本字拥有的像素列，再 OR 上墨水像素，
-     * 最后 32-bit word copy 回 VRAM。下一字左 4px 覆盖上一字右 4px，
-     * 利用汉字外缘空白实现视觉上的紧凑连续排版。
+     * 16px 字模 → adv_px advance（默认 12=8+4；JP via CHS 为 8=仅左半）。
+     * 推进由 chs_px 累积；Mode2/Linear 落点与中文共用。
      */
     volatile struct ChineseTileState *st = chinese_tile_state();
     unsigned startPixel;
+    unsigned pass2_w;
     uint16_t off, abs_u, abs_l, su, sl;
     uint8_t *du, *dl, *du_sp, *dl_sp;
     uint8_t map_tx;
+
+    if (adv_px < 8u)
+        adv_px = 8u;
+    if (adv_px > 12u)
+        adv_px = 12u;
+    pass2_w = adv_px - 8u;
 
     if (st->chs_px == 0)
         st->base_tx = win_u8(win, WIN_CURSOR_TILE_X);
@@ -265,16 +265,23 @@ void drawGlyph12(TextPrinter *win, const uint8_t *src128, int linear)
     }
 
     st->chs_px = (uint16_t)(st->chs_px + 8u);
+    if (pass2_w == 0u) {
+        st->last_adv = (uint8_t)adv_px;
+        win_set_u8(win, WIN_CURSOR_TILE_X,
+            (uint8_t)(st->base_tx + ((st->chs_px + adv_px - 1) >> 3)));
+        return;
+    }
+
     map_tx = (uint8_t)(st->base_tx + (st->chs_px >> 3));
 
-    /* ---- pass width 4: TR + BR ---- */
+    /* ---- pass width pass2_w: TR + BR ---- */
     if (linear) {
         off = win_u16(win, WIN_TILE_OFFSET);
         abs_u = linear_cursor_tile(win, 0, 0);
         abs_l = linear_cursor_tile(win, 0, 1);
         du = vram_tile(win, abs_u);
         dl = vram_tile(win, abs_l);
-        if (startPixel + 4u > 8u) {
+        if (startPixel + pass2_w > 8u) {
             su = linear_cursor_tile(win, 1, 0);
             sl = linear_cursor_tile(win, 1, 1);
             du_sp = vram_tile(win, su);
@@ -283,15 +290,15 @@ void drawGlyph12(TextPrinter *win, const uint8_t *src128, int linear)
             du_sp = 0;
             dl_sp = 0;
         }
-        draw_glyph_tile_12(win, du, du_sp, src128 + 0x40, startPixel, 4);
-        draw_glyph_tile_12(win, dl, dl_sp, src128 + 0x60, startPixel, 4);
+        draw_glyph_tile_12(win, du, du_sp, src128 + 0x40, startPixel, pass2_w);
+        draw_glyph_tile_12(win, dl, dl_sp, src128 + 0x60, startPixel, pass2_w);
         map_at(win, map_tx, abs_u, abs_l);
         win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + (startPixel == 0u ? 0u : 2u)));
     } else {
         compute_mode2_pair(win, (int)map_tx, &abs_u, &abs_l);
         du = vram_tile(win, abs_u);
         dl = vram_tile(win, abs_l);
-        if (startPixel + 4u > 8u) {
+        if (startPixel + pass2_w > 8u) {
             compute_mode2_pair(win, (int)map_tx + 1, &su, &sl);
             du_sp = vram_tile(win, su);
             dl_sp = vram_tile(win, sl);
@@ -299,14 +306,15 @@ void drawGlyph12(TextPrinter *win, const uint8_t *src128, int linear)
             du_sp = 0;
             dl_sp = 0;
         }
-        draw_glyph_tile_12(win, du, du_sp, src128 + 0x40, startPixel, 4);
-        draw_glyph_tile_12(win, dl, dl_sp, src128 + 0x60, startPixel, 4);
+        draw_glyph_tile_12(win, du, du_sp, src128 + 0x40, startPixel, pass2_w);
+        draw_glyph_tile_12(win, dl, dl_sp, src128 + 0x60, startPixel, pass2_w);
         map_at(win, map_tx, abs_u, abs_l);
     }
 
-    st->chs_px = (uint16_t)(st->chs_px + 4u);
+    st->chs_px = (uint16_t)(st->chs_px + pass2_w);
+    st->last_adv = (uint8_t)adv_px;
     win_set_u8(win, WIN_CURSOR_TILE_X,
-        (uint8_t)(st->base_tx + ((st->chs_px + CHS_GLYPH_ADVANCE_PX - 1) >> 3)));
+        (uint8_t)(st->base_tx + ((st->chs_px + adv_px - 1) >> 3)));
 }
 
 int DrawGlyph_ShouldUseLinear(TextPrinter *win, uint8_t write_op)
@@ -337,24 +345,36 @@ int DrawGlyph_ShouldUseLinear(TextPrinter *win, uint8_t write_op)
 
 void DrawGlyph_Chinese(TextPrinter *win, const uint8_t *glyph_src)
 {
+    DrawGlyph_Chinese_Adv(win, glyph_src, CHS_GLYPH_ADVANCE_PX);
+}
+
+void DrawGlyph_Chinese_Adv(TextPrinter *win, const uint8_t *glyph_src, unsigned adv_px)
+{
     volatile struct ChineseTileState *st = chinese_tile_state();
     uint8_t *tpl = win_template(win);
     uint8_t char_base = tpl ? tpl[1] : 0;
     uint8_t cur_tx = win_u8(win, WIN_CURSOR_TILE_X);
+    uint16_t key = chs_pitch_key(win);
+    unsigned last;
     int linear;
 
-    if (char_base != st->char_base) {
+    if (char_base != st->char_base || key != st->pitch_key) {
         st->char_base = char_base;
+        st->pitch_key = key;
         st->write_op = 0;
+        st->last_adv = (uint8_t)CHS_GLYPH_ADVANCE_PX;
         pitch_reset(win);
     } else if (st->chs_px != 0) {
-        uint8_t expect = (uint8_t)(st->base_tx + ((st->chs_px + CHS_GLYPH_ADVANCE_PX - 1) >> 3));
-        if (cur_tx != expect)
-            pitch_reset(win);
+        last = st->last_adv ? st->last_adv : CHS_GLYPH_ADVANCE_PX;
+        {
+            uint8_t expect = (uint8_t)(st->base_tx + ((st->chs_px + last - 1) >> 3));
+            if (cur_tx != expect)
+                pitch_reset(win);
+        }
     } else {
         st->base_tx = cur_tx;
     }
 
     linear = DrawGlyph_ShouldUseLinear(win, st->write_op);
-    drawGlyph12(win, glyph_src, linear);
+    drawGlyph_Adv(win, glyph_src, linear, adv_px);
 }

@@ -35,3 +35,9 @@
 
 **phrase_auto（F9 7F）只清 sticky（+2），不清 linear HW（+4）。**  
 **勿在 `DrawGlyph_Chinese` 预同步 `char_base`。**
+
+## JP via CHS（与 F9 共用落点；禁止回落原版）
+
+详情页昵称·亲代·数字与中文标签曾双通道抢池 →「汉字替换」。  
+**可印 PCS（1..0xF6）一律**经 `GetGlyphTilePointers` 取原版字模（**统一 2bpp×32B**，勿对日文字库走 1bpp），再走 `DrawGlyph_Chinese_Adv(..., 8)`；**禁止**交回 `FontFuncTable`。  
+指针空则跳过墨水仍 `return 1`。跨窗 `pitch_key` 复位。**不靠再调 tile 带。**

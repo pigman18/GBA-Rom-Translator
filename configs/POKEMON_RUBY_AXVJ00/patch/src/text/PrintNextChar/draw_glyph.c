@@ -71,7 +71,7 @@ static uint16_t linear_cursor_tile(TextPrinter *win, unsigned x_off, unsigned y_
 static void compute_mode2_pair(
     TextPrinter *win, int tile_x, uint16_t *upper, uint16_t *lower)
 {
-    int x = tile_x;
+    int x = (int)win_u8(win, WIN_CURSOR_X) + tile_x;
     int y = (int)win_u8(win, WIN_CURSOR_Y) + (int)win_u8(win, WIN_CURSOR_TILE_Y);
     int band = 0;
     int origin = CHS_MODE2_ORIGIN_SHOP;

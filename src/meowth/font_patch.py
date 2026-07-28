@@ -191,7 +191,7 @@ def _write_game_syms(map_path: Path, out_asm: Path) -> None:
     out_asm.write_text("\n".join(lines), encoding="utf-8")
 
 
-def _generate_addrs_asm(cfg: dict[str, Any], output_path: Path) -> None:
+def _generate_addrs_asm(cfg: dict[str, Any], output_path: Path, game_id: str = "") -> None:
     """由 config 生成 include/axvj_addrs.asm（供部分旧 include；主入口用 game_addrs.asm）。"""
     addrs = cfg.get("addrs", {})
     win = cfg.get("win_offsets", {})
@@ -202,14 +202,14 @@ def _generate_addrs_asm(cfg: dict[str, Any], output_path: Path) -> None:
         for name in sorted(addrs):
             lines.append(f"{name:<40s} equ 0x{addrs[name]:08X}")
         lines.append("")
-    slots = cfg.get("font_slots", [])
+    slots = _normalize_font_slots(cfg, game_id=game_id)
     if slots:
         lines.append("; --- Font slot addresses ---")
         for slot in slots:
             label = slot.get("label", "Unknown")
             addr = slot.get("addr")
             if addr is not None:
-                lines.append(f"FontChs{label:<35s} equ 0x{addr:08X}")
+                lines.append(f"FontChs{label:<35s} equ 0x{int(addr):08X}")
         lines.append("")
     if win:
         lines.append("; --- Window struct offsets ---")
@@ -226,9 +226,25 @@ def _generate_addrs_asm(cfg: dict[str, Any], output_path: Path) -> None:
     output_path.write_text("\n".join(lines), encoding="utf-8")
 
 
-def _generate_fonts_s(cfg: dict[str, Any], work_font_dir: Path, output_path: Path) -> None:
+# AXVJ: Sym punct bank lives after Small (0x09100000+0xE0000). Must match
+# ADDR_FONT_CHS_SYM in patch/src/game.h — never overlay JP Font3 @ 0x081B7AAC.
+_AXVJ_SYM_VMA = 0x091E0000
+
+
+def _normalize_font_slots(cfg: dict[str, Any], game_id: str = "") -> list[dict[str, Any]]:
+    """Copy slots; pin Sym VMA for Ruby JP so C draw path and .incbin agree."""
+    slots = [dict(s) for s in (cfg.get("font_slots") or [])]
+    gid = (game_id or "").upper()
+    if (not gid) or ("RUBY_AXVJ" in gid) or gid.endswith("AXVJ00"):
+        for s in slots:
+            if str(s.get("label", "")).lower() == "sym":
+                s["addr"] = _AXVJ_SYM_VMA
+    return slots
+
+
+def _generate_fonts_s(cfg: dict[str, Any], work_font_dir: Path, output_path: Path, game_id: str = "") -> None:
     """生成 graphic/fonts.s：字库 .incbin + 短语表 include。"""
-    slots = cfg.get("font_slots", [])
+    slots = _normalize_font_slots(cfg, game_id=game_id)
     prefix = cfg.get("font_bin_prefix", "PokeRSFontChs")
     prefer_unshadow = cfg.get("shadow") is False
     lines = []
@@ -251,7 +267,7 @@ def _generate_fonts_s(cfg: dict[str, Any], work_font_dir: Path, output_path: Pat
             else:
                 bin_path = alt[0] if alt else bin_path
         if addr is not None:
-            lines.append(f".org 0x{addr:08X}")
+            lines.append(f".org 0x{int(addr):08X}")
         if bin_path.exists():
             lines.append(f".incbin \"{bin_path.resolve()}\"")
             if prefer_unshadow:
@@ -329,13 +345,15 @@ def apply_font_patch(
     if root_tools.is_dir() and not (build_dir / "tools").exists():
         shutil.copytree(root_tools, build_dir / "tools")
 
-    _generate_addrs_asm(font_patch_cfg, include_dir / "axvj_addrs.asm")
+    _generate_addrs_asm(font_patch_cfg, include_dir / "axvj_addrs.asm", game_id=game_id)
 
     fonts_build_dir.mkdir(parents=True, exist_ok=True)
     if fonts_src.exists():
         for bin_file in fonts_src.glob("*.bin"):
             shutil.copy2(bin_file, fonts_build_dir / bin_file.name)
-        _generate_fonts_s(font_patch_cfg, fonts_src, graphic_dir / "fonts.s")
+        _generate_fonts_s(
+            font_patch_cfg, fonts_src, graphic_dir / "fonts.s", game_id=game_id
+        )
 
     shutil.copy2(rom_path, build_dir / "baserom.gba")
 

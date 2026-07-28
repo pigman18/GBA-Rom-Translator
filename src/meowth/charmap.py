@@ -34,11 +34,8 @@ _FONT3_SYM_PUNCT: dict[str, int] = {
     "？": 0x3D,
 }
 _DEFAULT_PUNCT_MAP: dict[str, int] = {
-    # Quotes / dashes still use Font3 single-byte slots (Sym / Latin band).
-    "『": 177,
-    "』": 178,
-    "「": 179,
-    "」": 180,
+    # Dash / middot still Font3 single-byte (narrow). Quotes use Normal via
+    # charmap 1E65–1E68 (F9) — JP Font3 has no Latin 『』 glyphs.
     "‥": 176,
     "…": 176,
     "ー": 174,

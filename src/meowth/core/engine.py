@@ -974,13 +974,7 @@ class TranslationEngine:
         that predates options-menu extract. Seeds (menu pad, house, options)
         must still land in the ROM.
         """
-        from ..extract import (
-            extract_option_menu,
-            extract_s1_registry_strings,
-            extract_save_power_prompts,
-            extract_short_menu_labels,
-            extract_ui_block,
-        )
+        from ..extract_pipeline import build_enrich_ops, run_extract_pipeline
         from ..policy import should_skip_zh_inject
         from ..seed_translate import seed_translate_entry
 
@@ -992,12 +986,12 @@ class TranslationEngine:
             by_addr[addr] = dict(e)
 
         rom_bytes = bytes(rom)
-        _enrich_list = (
-            extract_ui_block(rom_bytes)
-            + extract_option_menu(rom_bytes)
-            + extract_short_menu_labels(rom_bytes)
-            + extract_save_power_prompts(rom_bytes)
-            + extract_s1_registry_strings(rom_bytes)
+        game_id = self.config.game
+        _enrich_list = run_extract_pipeline(
+            rom_bytes,
+            game_id=game_id,
+            include_scripts=False,
+            ops=build_enrich_ops(game_id),
         )
         for e in _enrich_list:
             addr = e.get("address") or ""
@@ -1029,7 +1023,6 @@ class TranslationEngine:
         out: list[dict] = []
         from ..modules import stamp_entry_module
 
-        game_id = self.config.game
         ct = self._custom_translations or {}
         for e in by_addr.values():
             stamp_entry_module(e, game_id=game_id)

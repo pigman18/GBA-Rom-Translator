@@ -8,7 +8,8 @@ AUTHORITATIVE PROCESS (do not violate; see docs/FUNNEL.md and
         → S6 PostRestore → Version record
 
 Config mapping:
-- extract/config.json → S0 geography belts (SCRIPT_BANK_MIN, GFX deny ranges, …)
+- extract/config.json → S0 geography belts (SCRIPT_BANK_MIN, GFX deny ranges, …);
+  ``enrich.<name>.addr_bands`` = optional Build/extract bypass scan belts
 - translate/config.json skip → S3/S4 skip_zh_inject (keep JP text)
 - inject/config.json → S5 site deny (title gfx ptrs, brand literals)
 - translate/config.json modules → GUI addr-band scope (not this funnel file)
@@ -134,12 +135,16 @@ def SCRIPT_BANK_MIN() -> int:
 
 
 def UI_RANGE() -> tuple:
-    return tuple(_parse_addr(v) for v in _get("ui_range", [0x3E9440, 0x3E9900]))
+    """Narrow UI walk for ``extract_ui_block`` (``allow.UI窄扫``)."""
+    b = _bands_from_cfg(
+        "allow", "UI窄扫", fallback=[[0x3E9440, 0x3E9900]]
+    )
+    return b[0] if b else (0x3E9440, 0x3E9900)
 
 
-def _bands_from_cfg(*keys: str, fallback: list | None = None) -> tuple:
+def _bands_from_cfg(*keys: str, fallback: list | None = None, game_id: str = "") -> tuple:
     """Read addr_bands from a nested _cfg() path, e.g. _bands_from_cfg('allow', 'UI文本')."""
-    val: Any = _cfg()
+    val: Any = _cfg(game_id)
     for k in keys:
         val = val.get(k, {}) if isinstance(val, dict) else {}
     raw = val.get("addr_bands") if isinstance(val, dict) else None
@@ -153,12 +158,155 @@ def UI_BANKS() -> tuple:
 
 
 def IME_RANGE() -> tuple:
-    return (0x3E98D6, 0x3E9910)
+    b = _bands_from_cfg(
+        "allow", "IME五十音", fallback=[[0x3E98D6, 0x3E9910]]
+    )
+    return b[0] if b else (0x3E98D6, 0x3E9910)
 
 
 def OPTION_MENU_BAND() -> tuple:
     b = _bands_from_cfg("allow", "设置菜单", fallback=[[0x37B44C, 0x37B500]])
     return b[0]
+
+
+def enrich_scan_bands(name: str, game_id: str = "") -> tuple[tuple[int, int], ...]:
+    """``extract/config.json`` → ``enrich.<name>.addr_bands``."""
+    return _bands_from_cfg("enrich", name, fallback=[], game_id=game_id)
+
+
+def enrich_seed_from_lexicon(name: str, game_id: str = "") -> bool:
+    block = (_cfg(game_id).get("enrich") or {}).get(name) or {}
+    return bool(block.get("seed_from_lexicon", False))
+
+
+def enrich_seed_originals(name: str, game_id: str = "") -> tuple[str, ...]:
+    """Optional JP needle list under ``enrich.<name>.seed_originals``."""
+    block = (_cfg(game_id).get("enrich") or {}).get(name) or {}
+    raw = block.get("seed_originals") or []
+    return tuple(str(x) for x in raw)
+
+
+def enrich_block(name: str, game_id: str = "") -> dict[str, Any]:
+    return dict((_cfg(game_id).get("enrich") or {}).get(name) or {})
+
+
+def enrich_module_by_original(name: str, game_id: str = "") -> dict[str, str]:
+    raw = enrich_block(name, game_id).get("module_by_original") or {}
+    return {str(k): str(v) for k, v in raw.items()} if isinstance(raw, dict) else {}
+
+
+def enrich_default_module(name: str, game_id: str = "") -> str:
+    return str(enrich_block(name, game_id).get("default_module") or "")
+
+
+def enrich_classify_rules(name: str, game_id: str = "") -> list[dict[str, Any]]:
+    raw = enrich_block(name, game_id).get("classify_rules") or []
+    return [dict(r) for r in raw if isinstance(r, dict)]
+
+
+def enrich_keep_any_contains(name: str, game_id: str = "") -> tuple[str, ...]:
+    raw = enrich_block(name, game_id).get("keep_any_contains") or []
+    return tuple(str(x) for x in raw)
+
+
+def content_class_spec(name: str, game_id: str = "") -> dict[str, Any]:
+    return dict((_cfg(game_id).get("content_classes") or {}).get(name) or {})
+
+
+def _text_compact(text: str) -> str:
+    return (
+        (text or "")
+        .replace(" ", "")
+        .replace("\u3000", "")
+        .replace("\n", "")
+        .replace("\r", "")
+    )
+
+
+def match_text_clause(text: str, clause: dict[str, Any]) -> bool:
+    """Generic contains matcher for classify_rules / content_classes clauses."""
+    if not clause:
+        return True
+    compact = _text_compact(text)
+    max_len = clause.get("max_len")
+    if max_len is not None and len(text or "") >= int(max_len):
+        return False
+    all_c = [str(x) for x in (clause.get("all_contains") or [])]
+    if all_c and not all(x in compact for x in all_c):
+        return False
+    any_c = [str(x) for x in (clause.get("any_contains") or [])]
+    if any_c and not any(x in compact for x in any_c):
+        return False
+    any_raw = [str(x) for x in (clause.get("any_contains_raw") or [])]
+    if any_raw:
+        raw_u = text or ""
+        raw_up = raw_u.upper()
+        if not any(x in raw_u or x.upper() in raw_up for x in any_raw):
+            return False
+    also = [str(x) for x in (clause.get("also_any_contains") or [])]
+    if also and not any(x in compact for x in also):
+        return False
+    meaningful = bool(all_c or any_c or any_raw or also or max_len is not None)
+    return True if meaningful or clause.get("module") else False
+
+
+def classify_by_rules(
+    text: str,
+    rules: list[dict[str, Any]] | None,
+    *,
+    default_module: str = "",
+) -> str:
+    """First matching classify_rule wins; else ``default_module``."""
+    for rule in rules or []:
+        probe = {
+            k: v
+            for k, v in rule.items()
+            if k not in ("module", "description")
+        }
+        if not probe or match_text_clause(text, rule):
+            mid = str(rule.get("module") or "").strip()
+            if mid:
+                return mid
+    return (default_module or "").strip()
+
+
+def module_for_original(
+    original: str,
+    *,
+    enrich_name: str,
+    game_id: str = "",
+) -> str:
+    """``module_by_original`` map, else classify_rules, else ``default_module``."""
+    by = enrich_module_by_original(enrich_name, game_id)
+    if original in by:
+        return by[original]
+    rules = enrich_classify_rules(enrich_name, game_id)
+    default = enrich_default_module(enrich_name, game_id)
+    if rules:
+        return classify_by_rules(original, rules, default_module=default)
+    return default
+
+
+def is_enrich_seed_label(
+    text: str,
+    *enrich_names: str,
+    game_id: str = "",
+) -> bool:
+    """True if ``text`` (or compact form) matches any ``seed_originals`` list."""
+    compact = _text_compact(text)
+    for name in enrich_names:
+        for seed in enrich_seed_originals(name, game_id):
+            if text == seed or compact == _text_compact(seed):
+                return True
+    return False
+
+
+def matches_content_class(text: str, class_name: str, game_id: str = "") -> bool:
+    spec = content_class_spec(class_name, game_id)
+    clauses = spec.get("any_of") or []
+    if not clauses:
+        return False
+    return any(match_text_clause(text, c) for c in clauses if isinstance(c, dict))
 
 
 def TITLE_LZ_BAND() -> tuple:
@@ -409,49 +557,11 @@ def ptr_in_known_ui_band(ptr_off: int, string_off: int) -> bool:
     return False
 
 
-def is_save_power_prompt(text: str) -> bool:
-    """True for save / battery / RTC / report-write system prompts.
-
-    Domain class (not address list): engine + dialogue-bank copies of
-    「レポートかきこみ」「でんげんをきらない」 etc.
-    """
+def is_save_power_prompt(text: str, game_id: str = "") -> bool:
+    """Save / battery / RTC prompts — rules from ``content_classes.存档与电源``."""
     if not text:
         return False
-    compact = (
-        text.replace(" ", "")
-        .replace("\u3000", "")
-        .replace("\n", "")
-        .replace("\r", "")
-    )
-    if "でんげんを" in compact and "きらない" in compact:
-        return True
-    if "ポケモンレポート" in compact and "かきこみ" in compact:
-        return True
-    if "レポート" in compact and (
-        "かきこみ" in compact
-        or "かきしる" in compact
-        or "かきのこ" in compact
-        or "かかれた" in compact
-        or "かかれています" in compact
-    ):
-        return True
-    if "バックアップ" in compact and (
-        "カートリッジ" in compact
-        or "きのう" in compact
-        or "セーブ" in compact
-    ):
-        return True
-    if ("ＲＴＣ" in text or "RTC" in text.upper()) and (
-        "リセット" in compact or "じかん" in compact
-    ):
-        return True
-    if "ゲームない" in compact and "じかん" in compact:
-        return True
-    if "ずかん" in compact and "セーブ" in compact:
-        return True
-    if "うえから" in compact and "かいて" in compact and "レポート" in compact:
-        return True
-    return False
+    return matches_content_class(text, "存档与电源", game_id)
 
 
 def is_save_power_prompt_at(rom: bytes | bytearray, string_off: int) -> bool:

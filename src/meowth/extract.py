@@ -11,6 +11,7 @@ import struct
 from pathlib import Path
 
 from .modules import DEFAULT_MODULES
+from .config_loader import get_active_game_id
 from .policy import (
     BASE as _BASE_fn,
     BIRCH_PTR_ALLOW as _EARLY_SCRIPT_PTR_ALLOWLIST,
@@ -85,12 +86,15 @@ def _ptrs_to(rom: bytes, addr: int, limit: int = 16) -> list[int]:
 
 
 def _classify_ui(addr: int, text: str) -> str:
-    """IME gojuon → 姓名输入; chrome/buttons → 标题与主菜单."""
+    """IME gojuon → ime module; chrome/buttons → ui module (from config)."""
+    from .extract_pipeline import module_defaults
+
+    md = module_defaults()
     if _is_ime_gojuon_row(text):
-        return "姓名输入"
+        return md["ime"] or md["ui"]
     if UI_RANGE[0] <= addr < UI_RANGE[1] or IME_RANGE[0] <= addr < IME_RANGE[1]:
-        return "标题与主菜单"
-    return "未归类"
+        return md["ui"]
+    return md["unclassified"]
 
 
 def extract_ui_block(rom: bytes) -> list[dict]:
@@ -178,6 +182,8 @@ def extract_option_menu(rom: bytes) -> list[dict]:
         if not ptrs:
             a = eos + 1
             continue
+        from .extract_pipeline import module_defaults
+
         entries.append(
             {
                 "id": f"axvj_{BASE + a:08X}",
@@ -189,7 +195,7 @@ def extract_option_menu(rom: bytes) -> list[dict]:
                 "original_hex": rom[a : eos + 1].hex(" "),
                 "original": text,
                 "translated": "",
-                "category": "标题与主菜单",
+                "category": module_defaults()["ui"],
             }
         )
         a = eos + 1
@@ -339,9 +345,13 @@ def extract_script_pointers(
         off += step
     _ = min_ptr_source
 
-    from .seed_translate import MENU_LABEL_SEEDS, OPTION_SEEDS
+    from .extract_pipeline import module_defaults
+    from .policy import enrich_default_module, is_enrich_seed_label
 
     entries: list[dict] = []
+    md = module_defaults()
+    ui_mod = enrich_default_module("短标菜单") or md["ui"]
+    story_mod = md["story"]
     for so, ptrs in sorted(hits.items()):
         s = read_pcs(rom, so, max_len + 1)
         assert s
@@ -359,17 +369,11 @@ def extract_script_pointers(
         if not allow_so and not _looks_like_translatable(text, body_len):
             continue
         if body_len <= 16 and text.count("\n") == 0 and "\\l" not in text:
-            compact = text.replace(" ", "")
-            seed_hit = (
-                text in MENU_LABEL_SEEDS
-                or compact in MENU_LABEL_SEEDS
-                or text in OPTION_SEEDS
-                or compact in OPTION_SEEDS
-            )
+            seed_hit = is_enrich_seed_label(text, "短标菜单", "选项菜单")
             ptr_ui = any(_ptr_in_known_ui_band(p, so) for p in use)
-            cat = "标题与主菜单" if (seed_hit or ptr_ui) else "道路与洞窟"
+            cat = ui_mod if (seed_hit or ptr_ui) else story_mod
         else:
-            cat = "道路与洞窟"
+            cat = story_mod
         entries.append(
             {
                 "id": f"axvj_{BASE + so:08X}",
@@ -391,11 +395,18 @@ def extract_script_pointers(
 
 def extract_fc_prefixed_ui(rom: bytes) -> list[dict]:
     """Starter bag / battle / colored UI: ``FC ..`` + JP text."""
+    from .policy import enrich_scan_bands
+
+    bands = enrich_scan_bands("FC彩窗")
+    if not bands:
+        return []
     entries: list[dict] = []
     lz_spans = trusted_lz_spans(rom)
-    for start, end in ((0x3E9000, 0x3EB000), (0x3D0000, 0x3E0000)):
+    for start, end in bands:
+        # addr_bands hi is inclusive
+        end_ex = min(end + 1, len(rom))
         a = start
-        while a < end - 4:
+        while a < end_ex - 4:
             if rom[a] != 0xFC:
                 a += 1
                 continue
@@ -425,14 +436,10 @@ def extract_fc_prefixed_ui(rom: bytes) -> list[dict]:
             if not ptrs:
                 a = eos + 1
                 continue
-            # Battle / safari fight chrome vs generic colored UI
-            cat = "标题与主菜单"
-            if "たたかう" in text or (
-                "にげる" in text and ("バッグ" in text or "ボール" in text)
-            ):
-                cat = "战斗菜单"
-            elif "バッグ" in text and "ポケモン" in text and len(text) < 40:
-                cat = "背包界面"
+            # Battle / safari fight chrome vs generic colored UI — config rules
+            from .policy import module_for_original
+
+            cat = module_for_original(text, enrich_name="FC彩窗")
             entries.append(
                 {
                     "id": f"axvj_{BASE + a:08X}",
@@ -449,22 +456,6 @@ def extract_fc_prefixed_ui(rom: bytes) -> list[dict]:
             )
             a = eos + 1
     return entries
-
-
-_BATTLE_HUD_LABELS = frozenset(
-    {
-        "わざ",
-        "めいちゅう",
-        "いりょく",
-        "タイプ",
-        "PP",
-        "つよさ",
-        "ぼうぎょ",
-        "とくこう",
-        "とくぼう",
-        "すばやさ",
-    }
-)
 
 
 def _hud_ptr_ok(rom: bytes, ptr_off: int, string_off: int, lz_spans) -> bool:
@@ -490,15 +481,21 @@ def extract_battle_hud_labels(rom: bytes) -> list[dict]:
     """Short battle/status HUD labels (わざ / めいちゅう / …) with pointers.
 
     Chinese never fits the 3–6 byte JP slots — only emit pointer-backed hits
-    so inject can relocate. Search past the UI bank (tables live ~0x1E/0x9C).
+    so inject can relocate. Bands + needles: ``enrich.战斗HUD``.
     """
     from .jp_pcs import CHAR_TO_BYTE
+    from .policy import enrich_scan_bands, enrich_seed_originals
 
+    labels = enrich_seed_originals("战斗HUD")
+    bands = enrich_scan_bands("战斗HUD")
+    if not labels or not bands:
+        return []
     out: list[dict] = []
     seen: set[int] = set()
     lz_spans = trusted_lz_spans(rom)
-    end = min(len(rom), 0x400000)
-    for label in _BATTLE_HUD_LABELS:
+    find_lo = min(a for a, _ in bands)
+    find_hi = min(max(b for _, b in bands) + 1, len(rom))
+    for label in labels:
         raw = bytearray()
         ok = True
         for ch in label:
@@ -511,9 +508,9 @@ def extract_battle_hud_labels(rom: bytes) -> list[dict]:
             continue
         raw.append(0xFF)
         needle = bytes(raw)
-        start = 0x100000
+        start = find_lo
         while True:
-            off = rom.find(needle, start, end)
+            off = rom.find(needle, start, find_hi)
             if off < 0:
                 break
             start = off + 1
@@ -538,41 +535,30 @@ def extract_battle_hud_labels(rom: bytes) -> list[dict]:
                     "original_hex": needle.hex(" "),
                     "original": label,
                     "translated": "",
-                    "category": "战斗菜单",
                 }
             )
     return out
 
 
-_SUMMARY_BAG_LABELS = (
-    "ポケモンじょうほう",
-    "おぼえているわざ",
-    "せつめい",
-    "パーソナル",
-    "トレーナーメモ",
-    "とくせい",
-    "きりかえ",
-    "いれかえ",
-    "たたかうわざ",
-    "ポケモンのうりょく",
-    "バッグをとじる",
-    "どうぐ",
-    "だいじなもの",
-    "ボール",
-    "わざマシン",
-    "きのみ",
-)
-
-
 def extract_summary_ui_pool(rom: bytes) -> list[dict]:
-    """Summary / bag chrome via known label needles (pointer-backed)."""
+    """Summary / bag chrome via known label needles (pointer-backed).
+
+    Bands + needles: ``enrich.状态背包``.
+    """
     from .jp_pcs import CHAR_TO_BYTE
+    from .policy import enrich_scan_bands, enrich_seed_originals
+
+    labels = enrich_seed_originals("状态背包")
+    bands = enrich_scan_bands("状态背包")
+    if not labels or not bands:
+        return []
+    from .policy import module_for_original
 
     out: list[dict] = []
     seen: set[int] = set()
-    lz_spans = trusted_lz_spans(rom)
-    end = min(len(rom), 0x400000)
-    for label in _SUMMARY_BAG_LABELS:
+    find_lo = min(a for a, _ in bands)
+    find_hi = min(max(b for _, b in bands) + 1, len(rom))
+    for label in labels:
         raw = bytearray()
         ok = True
         for ch in label:
@@ -585,9 +571,9 @@ def extract_summary_ui_pool(rom: bytes) -> list[dict]:
             continue
         raw.append(0xFF)
         needle = bytes(raw)
-        start = 0x3E0000
+        start = find_lo
         while True:
-            off = rom.find(needle, start, end)
+            off = rom.find(needle, start, find_hi)
             if off < 0:
                 break
             start = off + 1
@@ -599,11 +585,7 @@ def extract_summary_ui_pool(rom: bytes) -> list[dict]:
             if not ptrs:
                 continue
             seen.add(off)
-            cat = (
-                "背包界面"
-                if label in ("バッグをとじる", "どうぐ", "だいじなもの", "ボール", "わざマシン", "きのみ")
-                else "状态界面"
-            )
+            cat = module_for_original(label, enrich_name="状态背包")
             out.append(
                 {
                     "id": f"axvj_{BASE + off:08X}",
@@ -622,11 +604,23 @@ def extract_summary_ui_pool(rom: bytes) -> list[dict]:
 
 
 def extract_battle_prompt_pool(rom: bytes) -> list[dict]:
-    """Battle prompt / move-type chrome in 0x3DC000–0x3DD7FF (subset of ui_bank_3d)."""
+    """Battle prompt / move-type chrome (``enrich.战斗提示``)."""
+    from .policy import (
+        enrich_keep_any_contains,
+        enrich_scan_bands,
+        module_for_original,
+        _text_compact,
+    )
+
+    bands = enrich_scan_bands("战斗提示")
+    if not bands:
+        return []
+    keep_needles = enrich_keep_any_contains("战斗提示")
     out: list[dict] = []
     seen: set[int] = set()
     lz_spans = trusted_lz_spans(rom)
-    start, end = 0x3DC000, min(len(rom), 0x3DD800)
+    start = min(a for a, _ in bands)
+    end = min(max(b for _, b in bands) + 1, len(rom))
     a = start
     while a < end:
         if rom[a] == 0xFF:
@@ -657,22 +651,11 @@ def extract_battle_prompt_pool(rom: bytes) -> list[dict]:
         if not re.search(r"[\u3040-\u30ff]", text):
             a = eos + 1
             continue
-        # Keep battle-relevant prompts / type chrome only
-        keep = (
-            "どうする" in text
-            or "わざタイプ" in text
-            or "たたかう" in text
-            or "にげる" in text
-            or "バッグ" in text
-            or "ノーマル" in text
-            or "ほのお" in text
-            or "みず" in text
-            or "くさ" in text
-            or "でんき" in text
-        )
-        if not keep:
-            a = eos + 1
-            continue
+        if keep_needles:
+            compact = _text_compact(text)
+            if not any(n in compact or n in text for n in keep_needles):
+                a = eos + 1
+                continue
         ptrs = [
             p
             for p in _ptrs_to(rom, a, 16)
@@ -685,12 +668,7 @@ def extract_battle_prompt_pool(rom: bytes) -> list[dict]:
             a = eos + 1
             continue
         seen.add(a)
-        cat = (
-            "战斗菜单"
-            if ("たたかう" in text and "バッグ" in text)
-            or ("にげる" in text and ("ボール" in text or "ポロック" in text))
-            else "战斗提示"
-        )
+        cat = module_for_original(text, enrich_name="战斗提示")
         out.append(
             {
                 "id": f"axvj_{BASE + a:08X}",
@@ -803,7 +781,10 @@ def extract_s1_registry_strings(rom: bytes) -> list[dict]:
         ]
         if not ptrs:
             ptrs = [ptr_off]
-        cat = "道路与洞窟" if ptr_off in BIRCH_PTR_ALLOW else "标题与主菜单"
+        from .extract_pipeline import module_defaults
+
+        md = module_defaults()
+        cat = md["story"] if ptr_off in BIRCH_PTR_ALLOW else md["ui"]
         entries.append(
             {
                 "id": f"axvj_{BASE + so:08X}",
@@ -823,10 +804,15 @@ def extract_s1_registry_strings(rom: bytes) -> list[dict]:
 
 def extract_short_menu_labels(rom: bytes) -> list[dict]:
     """はい / いいえ and similar short UI labels (local / mid-ROM pools only)."""
-    from .seed_translate import MENU_LABEL_SEEDS
     from .jp_pcs import CHAR_TO_BYTE
+    from .policy import enrich_default_module, enrich_seed_originals
 
-    wanted = set(MENU_LABEL_SEEDS.keys())
+    wanted = enrich_seed_originals("短标菜单")
+    if not wanted:
+        return []
+    from .extract_pipeline import module_defaults
+
+    cat = enrich_default_module("短标菜单") or module_defaults()["ui"]
     out: list[dict] = []
     seen: set[int] = set()
     lz_spans = trusted_lz_spans(rom)
@@ -875,7 +861,7 @@ def extract_short_menu_labels(rom: bytes) -> list[dict]:
                     "byte_length": len(needle),
                     "original_hex": needle.hex(" "),
                     "original": label,
-                    "category": "标题与主菜单",
+                    "category": cat,
                 }
             )
     return out
@@ -943,26 +929,25 @@ def _encode_decoded_jp_needle(text: str) -> bytes | None:
     return bytes(raw)
 
 
-# Exact JP originals for save/power / report-write cluster (decode form).
-_SAVE_POWER_PROMPT_SEEDS: tuple[str, ...] = (
-    "ポケモンレポートに かきこみますか？",
-    "まえに かかれた レポートに\nうえから かいても いいですか？",
-    "ポケモンレポートに かきこんでいます\nでんげんを きらないで ください",
-    "ポケモンレポートに かきこんでいます    \nでんげんを きらないで ください      ",
-    "\\01 は\nレポートに しっかり かきのこした！",
-    "べつの ぼうけんの\nレポートが かかれています！\n\nうえから かいても いいですか？",
-    "ここまでの レポートを かきしるしています！\nでんげんを きらないでください",
-)
-
-
 def extract_save_power_prompts(rom: bytes) -> list[dict]:
     """Save / battery / report-write prompts (UI pool + dialogue-bank copies).
 
-    Finds seed needles and any FF-terminated body matching
-    :func:`policy.is_save_power_prompt` in known banks; keeps sites with at
-    least one ``ptr_source_ok`` pointer (save class shares UI low-ROM tables).
+    Scan bands + lexicon seed flag: ``extract/config.json`` → ``enrich.存档与电源``.
+    Module id is left unset — Build stamps via ``modules.json`` geo_ranges.
     """
-    from .policy import is_save_power_prompt
+    from .config_loader import get_active_game_id, load_custom_translations
+    from .policy import (
+        enrich_block,
+        enrich_scan_bands,
+        enrich_seed_from_lexicon,
+        matches_content_class,
+    )
+
+    enrich_name = "存档与电源"
+    bands = enrich_scan_bands(enrich_name)
+    if not bands:
+        return []
+    content_class = str(enrich_block(enrich_name).get("content_class") or enrich_name)
 
     out: list[dict] = []
     seen: set[int] = set()
@@ -991,35 +976,29 @@ def extract_save_power_prompts(rom: bytes) -> list[dict]:
                 "byte_length": len(needle),
                 "original_hex": needle.hex(" "),
                 "original": text,
-                "category": "存档与电源",
-                "module": "存档与电源",
             }
         )
 
-    seeds = list(dict.fromkeys(_SAVE_POWER_PROMPT_SEEDS))
-    for label in seeds:
-        needle = _encode_decoded_jp_needle(label)
-        if not needle:
-            continue
-        start = 0
-        limit = min(len(rom), 0x800000)
-        while True:
-            off = rom.find(needle, start, limit)
-            if off < 0:
-                break
-            start = off + 1
-            _add(off, label, needle)
+    if enrich_seed_from_lexicon(enrich_name):
+        game_id = get_active_game_id() or ""
+        ct = load_custom_translations(game_id) if game_id else {}
+        seeds = [k for k in ct if matches_content_class(k, content_class)]
+        for label in seeds:
+            needle = _encode_decoded_jp_needle(label)
+            if not needle:
+                continue
+            start = 0
+            limit = min(len(rom), 0x800000)
+            while True:
+                off = rom.find(needle, start, limit)
+                if off < 0:
+                    break
+                start = off + 1
+                _add(off, label, needle)
 
-    # Morph scan in dialogue + UI save banks (catches variants / pad widths).
-    for lo, hi in (
-        (0x197000, 0x198000),
-        (0x1EC000, 0x1ED000),
-        (0x3EB800, 0x3EBF00),
-        (0x3DC000, 0x3DC200),
-        (0x3E9900, 0x3E9B00),
-    ):
+    for lo, hi in bands:
         a = lo
-        end = min(hi, len(rom))
+        end = min(hi + 1, len(rom))
         while a < end:
             if rom[a] == 0xFF:
                 a += 1
@@ -1029,7 +1008,7 @@ def extract_save_power_prompts(rom: bytes) -> list[dict]:
                 a += 1
                 continue
             text = decode_pcs(raw)
-            if is_save_power_prompt(text):
+            if matches_content_class(text, content_class):
                 _add(a, text, raw)
             a += len(raw)
 
@@ -1173,41 +1152,21 @@ def extract_axvj(
     include_scripts: bool = True,
     script_limit: int = 0,
 ) -> Path:
-    """Extract all AXVJ texts (unified, no module filter) and write JSON.
+    """Extract texts via ``extract/config.json`` pipeline and write JSON.
 
     ``modules`` is ignored and kept only for call-site compatibility.
     """
+    from .extract_pipeline import run_extract_pipeline
+
     rom = Path(rom_path).read_bytes()
+    gid = game_id or get_active_game_id() or "AXVJ"
+    entries = run_extract_pipeline(
+        rom,
+        game_id=gid,
+        include_scripts=include_scripts,
+        script_limit=script_limit,
+    )
 
-    entries: list[dict] = []
-    seen_addr: set[str] = set()
-
-    def add_all(items: list[dict]):
-        for e in items:
-            addr = e.get("address")
-            if addr in seen_addr:
-                continue
-            seen_addr.add(addr)
-            entries.append(e)
-
-    add_all(extract_species_names(rom))
-    add_all(extract_move_names(rom))
-    add_all(extract_ability_names(rom))
-    add_all(extract_item_names(rom))
-    add_all(extract_item_descriptions(rom))
-    add_all(extract_nature_names(rom))
-    add_all(extract_type_names(rom))
-    add_all(extract_ui_block(rom))
-    add_all(extract_option_menu(rom))
-    add_all(extract_fc_prefixed_ui(rom))
-    add_all(extract_battle_hud_labels(rom))
-    add_all(extract_battle_prompt_pool(rom))
-    add_all(extract_summary_ui_pool(rom))
-    add_all(extract_short_menu_labels(rom))
-    if include_scripts:
-        add_all(extract_script_pointers(rom, limit=script_limit))
-
-    gid = game_id or "AXVJ"
     from .modules import stamp_entry_module
 
     for e in entries:

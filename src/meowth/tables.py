@@ -116,6 +116,8 @@ def extract_fixed_table(
 
 def extract_species_names(rom: bytes) -> list[dict]:
     c = species_names_cfg()
+    if not c or "offset" not in c:
+        return []
     return extract_fixed_table(
         rom, offset=c["offset"], stride=c["stride"], count=c["count"],
         module=c.get("module") or "物种名", id_prefix="pkmn",
@@ -124,6 +126,8 @@ def extract_species_names(rom: bytes) -> list[dict]:
 
 def extract_move_names(rom: bytes) -> list[dict]:
     c = move_names_cfg()
+    if not c or "offset" not in c:
+        return []
     return extract_fixed_table(
         rom, offset=c["offset"], stride=c["stride"], count=c["count"],
         module=c.get("module") or "招式名", id_prefix="move",
@@ -132,6 +136,8 @@ def extract_move_names(rom: bytes) -> list[dict]:
 
 def extract_ability_names(rom: bytes) -> list[dict]:
     c = ability_names_cfg()
+    if not c or "offset" not in c:
+        return []
     return extract_fixed_table(
         rom, offset=c["offset"], stride=c["stride"], count=c["count"],
         module=c.get("module") or "特性名", id_prefix="ability",
@@ -140,6 +146,8 @@ def extract_ability_names(rom: bytes) -> list[dict]:
 
 def extract_type_names(rom: bytes) -> list[dict]:
     c = type_names_cfg()
+    if not c or "offset" not in c:
+        return []
     return extract_fixed_table(
         rom, offset=c["offset"], stride=c["stride"], count=c["count"],
         module=c.get("module") or "属性名", id_prefix="type",
@@ -148,6 +156,8 @@ def extract_type_names(rom: bytes) -> list[dict]:
 
 def extract_item_names(rom: bytes) -> list[dict]:
     c = item_data_cfg()
+    if not c or "offset" not in c:
+        return []
     BASE_VAL = base()
     mid = c.get("module") or "道具名"
     entries: list[dict] = []
@@ -177,6 +187,8 @@ def extract_item_names(rom: bytes) -> list[dict]:
 
 def extract_item_descriptions(rom: bytes) -> list[dict]:
     c = item_data_cfg()
+    if not c or "offset" not in c:
+        return []
     BASE_VAL = base()
     mid = "道具说明"
     entries: list[dict] = []
@@ -223,6 +235,8 @@ def extract_item_descriptions(rom: bytes) -> list[dict]:
 
 def extract_nature_names(rom: bytes) -> list[dict]:
     c = nature_names_cfg()
+    if not c or "table" not in c:
+        return []
     BASE_VAL = base()
     mid = c.get("module") or "性格名"
     entries: list[dict] = []

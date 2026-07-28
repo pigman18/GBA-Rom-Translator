@@ -46,7 +46,7 @@ PokeRSFontChsNormal                    equ FontChsNormal
 PokeRSFontChsSmall                     equ FontChsSmall
 ; JP Font3 body (GetGlyphTilePointers type3) — do NOT overlay Latin Sym here
 gFont3JapaneseGlyphs                   equ 0x081B6D2C
-; Sym punct: free ROM after Small; drawn via PrintNextChar_C (2bpp→CHS4)
+; Sym punct: free ROM after Small; Font3 8x16 4bpp U+L (not 16x16 2bpp)
 PokeRSFontChsSymAddress                equ 0x091E0000
 ; IWRAM ChineseTileState @ 0x0203FFF8 (8B):
 ; +0 char_base +1 write_op +2 base_tx +3 last_adv +4 pitch_key(u16) +6 chs_px(u16)

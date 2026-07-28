@@ -38,6 +38,14 @@
 
 ## JP via CHS（与 F9 共用落点；禁止回落原版）
 
-详情页昵称·亲代·数字与中文标签曾双通道抢池 →「汉字替换」。  
-**可印 PCS（1..0xF6）一律**经 `GetGlyphTilePointers` 取原版字模（**统一 2bpp×32B**，勿对日文字库走 1bpp），再走 `DrawGlyph_Chinese_Adv(..., 8)`；**禁止**交回 `FontFuncTable`。  
-指针空则跳过墨水仍 `return 1`。跨窗 `pitch_key` 复位。**不靠再调 tile 带。**
+详情页昵称·亲代·数字与中文标签曾双通道抢池 →「汉字替换」（**已解**，见根目录 `技术文档.md` §7.1）。
+
+**可印 PCS（1..0xF6）一律**经 `GetGlyphTilePointers` 取原版字模，再走 `DrawGlyph_Chinese_Adv(..., 8)`；**禁止**交回 `FontFuncTable`。
+
+| 项 | 约定 |
+|----|------|
+| AXVJ ABI | `(font, glyph, &upper, &lower)` 4 参（**无** language；误传 `LANGUAGE_JAPANESE` 会把 glyph 固定成 1 → 全日文空白） |
+| font 3/4/5 | 32B 阴影字模（0/E/F）→ TL/BL |
+| font 0/1/2/6 | 8B 1bpp → 扩成 0xF 后再走 CopyGlyph2bpp（勿对 1bpp 直接当 32B 拷） |
+| 取模失败 | `return 0` 交回原版（禁止空画 `return 1`） |
+| 跨窗 | `pitch_key` 复位；**不靠再调 tile 带**修替换 |

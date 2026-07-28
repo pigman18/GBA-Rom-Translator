@@ -32,9 +32,9 @@
 #define ADDR_PHRASE_OFFSETS        0x08810000u
 #define ADDR_PHRASE_TABLE          0x08820000u
 #define ADDR_FONT_CHS_NORMAL       0x09000000u
-/* Sym punct bank (9×64B 2bpp), after Small @ 0x09100000+0xE0000.
- * NOT overlaid on JP Font3 — AXVJ Font3 is type3 packed, Latin Sym layout
- * does not apply at 0x081B6D2C. */
+/* Sym punct bank (9×64B), after Small @ 0x09100000+0xE0000.
+ * Font3 layout: upper+lower 8×8 @4bpp-index (0/E/F), NOT 16×16 2bpp.
+ * Drawn via PrintNextChar_C → DrawGlyph_Chinese_Adv(..., 8). */
 #define ADDR_FONT_CHS_SYM          0x091E0000u
 #define SYM_GLYPH_BASE             0x36u
 #define SYM_GLYPH_COUNT            9u

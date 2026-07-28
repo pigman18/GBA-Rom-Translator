@@ -45,62 +45,28 @@ static const uint8_t *glyph_ptr(uint16_t index)
     return (const uint8_t *)(ADDR_FONT_CHS_NORMAL + ((uint32_t)index << 7));
 }
 
-/* Sym bank: 16×16 2bpp (64B). CHS draw wants 128B TL/BL/TR/BR 4bpp (0/E/F). */
-static uint8_t sym_pix2(const uint8_t *g64, unsigned x, unsigned y)
-{
-    unsigned bitpos = y * 16u + x;
-    uint8_t byte = g64[bitpos >> 2];
-    unsigned shift = (bitpos & 3u) * 2u;
-    return (uint8_t)((byte >> shift) & 3u);
-}
-
-static void put_nib4(uint8_t *tile32, unsigned x, unsigned y, uint8_t nib)
-{
-    unsigned bi = y * 4u + x / 2u;
-    if (x & 1u)
-        tile32[bi] = (uint8_t)((tile32[bi] & 0xF0u) | (nib & 0x0Fu));
-    else
-        tile32[bi] = (uint8_t)((tile32[bi] & 0x0Fu) | ((nib & 0x0Fu) << 4));
-}
-
-static uint8_t sym_val_to_nib(uint8_t v)
-{
-    if (v >= 3u)
-        return 0x0Fu; /* ink */
-    if (v == 2u)
-        return 0x0Eu; /* shadow */
-    return 0;
-}
-
-static void sym64_to_chs128(uint8_t out[128], const uint8_t *g64)
-{
-    unsigned i, x, y;
-    for (i = 0; i < 128u; i++)
-        out[i] = 0;
-    for (y = 0; y < 16u; y++) {
-        for (x = 0; x < 16u; x++) {
-            uint8_t nib = sym_val_to_nib(sym_pix2(g64, x, y));
-            uint8_t *tile;
-            if (y < 8u)
-                tile = out + ((x < 8u) ? 0x00u : 0x40u);
-            else
-                tile = out + ((x < 8u) ? 0x20u : 0x60u);
-            put_nib4(tile, x & 7u, y & 7u, nib);
-        }
-    }
-}
-
+/*
+ * Sym bank (9×64B @ ADDR_FONT_CHS_SYM): Font3-layout 8×16 —
+ * upper 32B + lower 32B of 4bpp-index tiles (nibble 0/E/F).
+ * NOT 16×16 packed 2bpp — that mis-decode vertically stretches 。？.
+ */
 static int draw_sym_punct(TextPrinter *win, uint32_t cur_char)
 {
     const uint8_t *src;
     uint8_t tmp[128];
+    unsigned i;
 
     if (cur_char < SYM_GLYPH_BASE || cur_char >= SYM_GLYPH_BASE + SYM_GLYPH_COUNT)
         return 0;
     src = (const uint8_t *)(ADDR_FONT_CHS_SYM
                             + (cur_char - SYM_GLYPH_BASE) * 64u);
-    sym64_to_chs128(tmp, src);
-    DrawGlyph_Chinese(win, tmp);
+    for (i = 0; i < 128u; i++)
+        tmp[i] = 0;
+    for (i = 0; i < 32u; i++) {
+        tmp[0x00 + i] = src[i];
+        tmp[0x20 + i] = src[32u + i];
+    }
+    DrawGlyph_Chinese_Adv(win, tmp, 8u);
     return 1;
 }
 

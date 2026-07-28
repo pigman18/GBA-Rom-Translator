@@ -59,16 +59,12 @@ uint8_t GetStringWidthChinese_Full(TextPrinter *win, const uint8_t *s)
                 continue;
             }
         }
-        /* JP fixed cell 8; control FA–FE skip via length 1 (best-effort). */
+        /* JP fixed cell 8; Sym punct also left-8 (draw_sym_punct, no 12px spill). */
         if (c >= 0xFA) {
             i++;
             continue;
         }
-        /* Sym punct drawn via CHS 12px path (PrintNextChar_C). */
-        if (c >= SYM_GLYPH_BASE && c < SYM_GLYPH_BASE + SYM_GLYPH_COUNT)
-            width = (uint8_t)((width + CHS_GLYPH_ADVANCE_PX) & 0xFF);
-        else
-            width = (uint8_t)((width + 8) & 0xFF);
+        width = (uint8_t)((width + 8) & 0xFF);
         i++;
     }
     return width;

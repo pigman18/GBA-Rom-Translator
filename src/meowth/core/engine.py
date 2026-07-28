@@ -977,6 +977,7 @@ class TranslationEngine:
         from ..extract import (
             extract_option_menu,
             extract_s1_registry_strings,
+            extract_save_power_prompts,
             extract_short_menu_labels,
             extract_ui_block,
         )
@@ -995,6 +996,7 @@ class TranslationEngine:
             extract_ui_block(rom_bytes)
             + extract_option_menu(rom_bytes)
             + extract_short_menu_labels(rom_bytes)
+            + extract_save_power_prompts(rom_bytes)
             + extract_s1_registry_strings(rom_bytes)
         )
         for e in _enrich_list:

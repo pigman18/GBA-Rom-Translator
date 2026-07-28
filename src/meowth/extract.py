@@ -881,6 +881,161 @@ def extract_short_menu_labels(rom: bytes) -> list[dict]:
     return out
 
 
+def _encode_decoded_jp_needle(text: str) -> bytes | None:
+    """Encode Meowth-decoded JP text (real ``\\n``, ``\\01``, ``\\CC…``) to PCS+FF."""
+    from .jp_pcs import CHAR_TO_BYTE
+    from .pcs_codes import fc_arg_count
+
+    raw = bytearray()
+    i = 0
+    n = len(text)
+    while i < n:
+        if text.startswith("\n\n", i):
+            raw.append(0xFB)
+            i += 2
+            continue
+        if text[i] == "\n":
+            raw.append(0xFE)
+            i += 1
+            continue
+        if text.startswith("\\l", i):
+            raw.append(0xFA)
+            i += 2
+            continue
+        if text.startswith("\\p", i):
+            raw.append(0xFB)
+            i += 2
+            continue
+        if text.startswith("\\CC", i):
+            hexpart = text[i + 3 :]
+            j = 0
+            while j < len(hexpart) and hexpart[j] in "0123456789abcdefABCDEF":
+                j += 1
+            if j < 2 or j % 2:
+                return None
+            try:
+                args = bytes.fromhex(hexpart[:j])
+            except ValueError:
+                return None
+            if not args:
+                return None
+            cmd = args[0]
+            need = 1 + fc_arg_count(cmd)
+            if len(args) < need:
+                return None
+            raw.append(0xFC)
+            raw.extend(args[:need])
+            i += 3 + need * 2
+            continue
+        if text[i] == "\\" and i + 3 <= n and all(
+            c in "0123456789abcdefABCDEF" for c in text[i + 1 : i + 3]
+        ):
+            raw.append(0xFD)
+            raw.append(int(text[i + 1 : i + 3], 16))
+            i += 3
+            continue
+        b = CHAR_TO_BYTE.get(text[i])
+        if b is None:
+            return None
+        raw.append(b)
+        i += 1
+    raw.append(0xFF)
+    return bytes(raw)
+
+
+# Exact JP originals for save/power / report-write cluster (decode form).
+_SAVE_POWER_PROMPT_SEEDS: tuple[str, ...] = (
+    "ポケモンレポートに かきこみますか？",
+    "まえに かかれた レポートに\nうえから かいても いいですか？",
+    "ポケモンレポートに かきこんでいます\nでんげんを きらないで ください",
+    "ポケモンレポートに かきこんでいます    \nでんげんを きらないで ください      ",
+    "\\01 は\nレポートに しっかり かきのこした！",
+    "べつの ぼうけんの\nレポートが かかれています！\n\nうえから かいても いいですか？",
+    "ここまでの レポートを かきしるしています！\nでんげんを きらないでください",
+)
+
+
+def extract_save_power_prompts(rom: bytes) -> list[dict]:
+    """Save / battery / report-write prompts (UI pool + dialogue-bank copies).
+
+    Finds seed needles and any FF-terminated body matching
+    :func:`policy.is_save_power_prompt` in known banks; keeps sites with at
+    least one ``ptr_source_ok`` pointer (save class shares UI low-ROM tables).
+    """
+    from .policy import is_save_power_prompt
+
+    out: list[dict] = []
+    seen: set[int] = set()
+    lz_spans = trusted_lz_spans(rom)
+
+    def _add(off: int, text: str, needle: bytes) -> None:
+        if off in seen:
+            return
+        if off < SCRIPT_BANK_MIN or TITLE_LZ_BAND[0] <= off < TITLE_LZ_BAND[1]:
+            return
+        ptrs = [
+            p
+            for p in _ptrs_to(rom, off, limit=16)
+            if _axvj_ptr_source_ok(rom, p, off, lz_spans=lz_spans)
+        ]
+        if not ptrs:
+            return
+        seen.add(off)
+        out.append(
+            {
+                "id": f"axvj_{BASE + off:08X}",
+                "address": f"0x{BASE + off:08X}",
+                "pointer_sources": [f"0x{BASE + p:08X}" for p in ptrs],
+                "pointer_addresses": [f"0x{BASE + p:08X}" for p in ptrs],
+                "is_pointer_based": True,
+                "byte_length": len(needle),
+                "original_hex": needle.hex(" "),
+                "original": text,
+                "category": "存档与电源",
+                "module": "存档与电源",
+            }
+        )
+
+    seeds = list(dict.fromkeys(_SAVE_POWER_PROMPT_SEEDS))
+    for label in seeds:
+        needle = _encode_decoded_jp_needle(label)
+        if not needle:
+            continue
+        start = 0
+        limit = min(len(rom), 0x800000)
+        while True:
+            off = rom.find(needle, start, limit)
+            if off < 0:
+                break
+            start = off + 1
+            _add(off, label, needle)
+
+    # Morph scan in dialogue + UI save banks (catches variants / pad widths).
+    for lo, hi in (
+        (0x197000, 0x198000),
+        (0x1EC000, 0x1ED000),
+        (0x3EB800, 0x3EBF00),
+        (0x3DC000, 0x3DC200),
+        (0x3E9900, 0x3E9B00),
+    ):
+        a = lo
+        end = min(hi, len(rom))
+        while a < end:
+            if rom[a] == 0xFF:
+                a += 1
+                continue
+            raw = read_pcs(rom, a, 512)
+            if not raw:
+                a += 1
+                continue
+            text = decode_pcs(raw)
+            if is_save_power_prompt(text):
+                _add(a, text, raw)
+            a += len(raw)
+
+    return out
+
+
 def _clear_failed_zh(entry: dict) -> bool:
     """Clear known failed LLM stubs. Returns True if cleared."""
     from .seed_translate import looks_like_failed_zh_translation

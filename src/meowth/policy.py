@@ -409,6 +409,65 @@ def ptr_in_known_ui_band(ptr_off: int, string_off: int) -> bool:
     return False
 
 
+def is_save_power_prompt(text: str) -> bool:
+    """True for save / battery / RTC / report-write system prompts.
+
+    Domain class (not address list): engine + dialogue-bank copies of
+    「レポートかきこみ」「でんげんをきらない」 etc.
+    """
+    if not text:
+        return False
+    compact = (
+        text.replace(" ", "")
+        .replace("\u3000", "")
+        .replace("\n", "")
+        .replace("\r", "")
+    )
+    if "でんげんを" in compact and "きらない" in compact:
+        return True
+    if "ポケモンレポート" in compact and "かきこみ" in compact:
+        return True
+    if "レポート" in compact and (
+        "かきこみ" in compact
+        or "かきしる" in compact
+        or "かきのこ" in compact
+        or "かかれた" in compact
+        or "かかれています" in compact
+    ):
+        return True
+    if "バックアップ" in compact and (
+        "カートリッジ" in compact
+        or "きのう" in compact
+        or "セーブ" in compact
+    ):
+        return True
+    if ("ＲＴＣ" in text or "RTC" in text.upper()) and (
+        "リセット" in compact or "じかん" in compact
+    ):
+        return True
+    if "ゲームない" in compact and "じかん" in compact:
+        return True
+    if "ずかん" in compact and "セーブ" in compact:
+        return True
+    if "うえから" in compact and "かいて" in compact and "レポート" in compact:
+        return True
+    return False
+
+
+def is_save_power_prompt_at(rom: bytes | bytearray, string_off: int) -> bool:
+    """Decode PCS at ``string_off`` and test :func:`is_save_power_prompt`."""
+    from .extract import read_pcs
+    from .jp_pcs import decode_pcs
+
+    raw = read_pcs(bytes(rom), string_off, 512)
+    if not raw:
+        return False
+    try:
+        return is_save_power_prompt(decode_pcs(raw))
+    except Exception:
+        return False
+
+
 def ptr_source_ok(
     rom: bytes | bytearray,
     ptr_off: int,
@@ -424,7 +483,8 @@ def ptr_source_ok(
 
     UI chrome bodies (config UI banks ∪ dump high-UI geo) may be referenced
     from tables inside ``GFX_PTR_SOURCE_DENY`` or low-ROM menus; aligned
-    sites are allowed for that body class.
+    sites are allowed for that body class. Save/power prompts share that
+    low-ROM table pattern (dialogue-bank duplicates of UI pool strings).
     """
     from .extract import ptr_in_trusted_lz, trusted_lz_spans
 
@@ -438,18 +498,20 @@ def ptr_source_ok(
     if is_local_pool_ptr(ptr_off, string_off):
         return True
     ui_body = string_in_ui_text_bank(string_off) or string_in_option_band(string_off)
-    if in_ranges(ptr_off, GFX_PTR_SOURCE_DENY()) and not ui_body:
+    save_body = (not ui_body) and is_save_power_prompt_at(rom, string_off)
+    chrome_body = ui_body or save_body
+    if in_ranges(ptr_off, GFX_PTR_SOURCE_DENY()) and not chrome_body:
         return False
     spans = lz_spans if lz_spans is not None else trusted_lz_spans(rom)
     # False LZ streams often cover real UI chrome pointer tables.
-    if ptr_in_trusted_lz(ptr_off, spans) and not ui_body:
+    if ptr_in_trusted_lz(ptr_off, spans) and not chrome_body:
         return False
     if is_loadword_text_ptr(rom, ptr_off):
         return True
     if strict:
         return False
-    if ui_body and (ptr_off & 3) == 0 and ptr_off >= 0x6000:
-        # UI chrome class: trust aligned ptr tables (incl. gfx-deny / low ROM).
+    if chrome_body and (ptr_off & 3) == 0 and ptr_off >= 0x6000:
+        # UI / save-power chrome: trust aligned ptr tables (incl. low ROM).
         return True
     if (
         (ptr_off & 3) == 0
@@ -689,13 +751,15 @@ def filter_pointer_sources(
         ui_body = string_in_ui_text_bank(text_address) or string_in_option_band(
             text_address
         )
+        save_body = (not ui_body) and is_save_power_prompt_at(rom, text_address)
+        chrome_body = ui_body or save_body
         # Local pools + UI chrome / name-table ptrs often sit in gfx-deny banks.
         if (
             in_ranges(ptr_addr, GFX_PTR_SOURCE_DENY())
             and ptr_addr not in TRAINER_UI_PTR_ALLOW
             and not class_ptr
             and not local_pool
-            and not ui_body
+            and not chrome_body
             and not facility_like
         ):
             continue

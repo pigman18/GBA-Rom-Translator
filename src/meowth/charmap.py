@@ -24,15 +24,8 @@ _DEFAULT_CHS_LEADS = [[1, 5], [7, 26], [28, 30]]
 _DEFAULT_ESCAPE_BYTES = bytes([0xF9, 0x00])
 _DEFAULT_IDEOSPACE = bytes([0x01, 0xF7])
 _DEFAULT_PUNCT_MAP: dict[str, int] = {
-    "！": 171,
-    "!": 171,
-    "？": 172,
-    "?": 172,
-    "。": 173,
-    "，": 184,
-    ",": 184,
-    "：": 240,
-    ":": 240,
+    # 全角标点通过 charmap.txt 多字节映射 + F9 escape 走 Normal 字库渲染，
+    # 不再映射到拉丁单字节槽 (JP ROM Font3 乱序布局导致错字)
     "『": 177,
     "』": 178,
     "「": 179,

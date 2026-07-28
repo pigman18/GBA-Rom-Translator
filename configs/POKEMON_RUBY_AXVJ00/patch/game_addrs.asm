@@ -42,6 +42,10 @@ HackFunctionAddresses                  equ GameBinAddresses  ; 旧名兼容
 ; PhraseOffsets / PhraseTable：短语表标签（.org 固定址），勿 equ 同名
 FontChsNormal                          equ 0x09000000
 FontChsSmall                           equ 0x09100000
+PokeRSFontChsNormal                    equ FontChsNormal
+PokeRSFontChsSmall                     equ FontChsSmall
+; Font3 glyph 基地址 (JP ROM - GetGlyphTilePointers 反推)
+gFont3LatinGlyphs                      equ 0x081B6D2C
 ; +0 u16 char_base +2 write_op +3 base_tx +4 next_abs +6 chs_px(u16 pixel)
 ChineseTileState                       equ 0x0203FFF8
 ChineseTileCursor                      equ 0x0203FFFC

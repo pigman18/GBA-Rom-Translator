@@ -54,8 +54,16 @@ ChineseTileState                       equ 0x0203FFF8
 ChineseTileCursor                      equ 0x0203FFFC
 CHS_ESCAPE                             equ 0xF9
 
-; --- Healthbox (TODO GDB: Δ=-0x68 from US, need verification) ---
-UpdateNickInHealthbox                  equ 0x08045138
+; --- Healthbox ---
+; JP nick 遮罩：CpuSet 共享长度池 0x04000008→0x04000006（见 HookInOrigin/UpdateNickInHealthbox.s）
+; 勿用美版 0x080451A0 / 错误 Δ 0x08045138（JP 上该址不是本函数）
+UpdateNickInHealthbox                  equ 0x08042B14
+UpdateNickInHealthbox_Alt1             equ 0x080415A0
+UpdateNickInHealthbox_Alt2             equ 0x08042408
+UpdateNickInHealthbox_Pool             equ 0x08042C38
+UpdateNickInHealthbox_Alt1_Pool        equ 0x08041760
+UpdateNickInHealthbox_Alt2_Pool        equ 0x08042620
+; Safari（本轮不启用；址仍为待核猜测）
 UpdateSafariBallsTextInHealthbox       equ 0x08045848
 UpdateLeftNoOfBallsTextOnHealthbox     equ 0x08045930
 

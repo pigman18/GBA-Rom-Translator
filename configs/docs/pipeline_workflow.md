@@ -94,7 +94,7 @@ configs/POKEMON_RUBY_AXVJ00/
 | `DrawChineseGlyph4bpp` | (扩展区) | ✅ 激活 | Menu: charBase2+font3→2D；战斗→线性。见 [`CHS_TILE_LAYOUT.md`](CHS_TILE_LAYOUT.md) |
 | `GetWindowAttribute` | 0x0800414C | ✅ 激活 | font 相关 width×2（清窗辅助） |
 | `GetStringWidth` | 0x08004CCC | ❌ 禁用 | BL 超范围未解决；F9 测宽未挂 |
-| `UpdateNickInHealthbox` | 0x08045138 | ❌ 禁用 | 地址待 GDB 确认 |
+| `UpdateNickInHealthbox` | 0x08042B14（+ Alt1/Alt2 池） | ✅ nick 遮罩 32→24 | `src/battle/UpdateNickInHealthbox/`；非美版 0x451A0 |
 | `UpdateSafariBallsTextInHealthbox` | 0x08045848 | ❌ 禁用 | 地址待 GDB 确认 |
 | `UpdateLeftNoOfBallsTextOnHealthbox` | 0x08045930 | ❌ 禁用 | 地址待 GDB 确认 |
 | `PrintDisplayMonInfo` | 0x08098188 | ❌ 禁用 | 地址待 GDB 确认 |

@@ -22,6 +22,34 @@ else:
     DEFAULT_ARMIPS = None
 
 _GAME_BIN_MAX = 0x10000  # 不得超过 PhraseOffsets @ 0x08810000
+_GAME_BIN_VMA = 0x08800000
+_ROM_LOAD_ADDR = 0x08000000
+
+
+def _verify_game_bin_embedded(rom_path: Path, game_bin: Path, vma: int = _GAME_BIN_VMA) -> None:
+    """Ensure armips output ROM contains exactly the just-built game.bin.
+
+    Prevents half-new ROMs (e.g. nick pools patched but stale C at 0x08800000).
+    """
+    if not game_bin.is_file():
+        raise RuntimeError(f"game.bin missing for embed check: {game_bin}")
+    bin_data = game_bin.read_bytes()
+    if not bin_data:
+        raise RuntimeError(f"game.bin empty: {game_bin}")
+    rom = rom_path.read_bytes()
+    file_off = vma - _ROM_LOAD_ADDR
+    if file_off < 0 or file_off + len(bin_data) > len(rom):
+        raise RuntimeError(
+            f"game.bin embed out of range: vma=0x{vma:08X} off=0x{file_off:X} "
+            f"bin={len(bin_data)} rom={len(rom)}"
+        )
+    embedded = rom[file_off : file_off + len(bin_data)]
+    if embedded != bin_data:
+        first = next((i for i, (a, b) in enumerate(zip(embedded, bin_data)) if a != b), 0)
+        raise RuntimeError(
+            f"ROM @0x{vma:08X} does not match out/game.bin "
+            f"(first diff @+0x{first:X}; refuse stale C / half-new build)"
+        )
 
 
 def _find_arm_gcc() -> Path:
@@ -111,6 +139,7 @@ def _build_game_bin(patch_dir: Path) -> Path:
     obj_dir.mkdir(parents=True, exist_ok=True)
     src_root = patch_dir / "src"
     pnc = src_root / "text" / "PrintNextChar"
+    nick = src_root / "battle" / "UpdateNickInHealthbox"
     ld = patch_dir / "link" / "game.ld"
     cflags = [
         "-mthumb", "-mcpu=arm7tdmi", "-ffreestanding", "-O2", "-fno-builtin",
@@ -118,27 +147,30 @@ def _build_game_bin(patch_dir: Path) -> Path:
     ]
     objs: list[Path] = []
 
-    entry_s = pnc / "entry.s"
-    entry_o = obj_dir / "entry.o"
-    r = subprocess.run(
-        [str(gcc), "-mthumb", "-mcpu=arm7tdmi", "-ffreestanding",
-         "-x", "assembler-with-cpp", "-c", str(entry_s), "-o", str(entry_o)],
-        capture_output=True, text=True,
-    )
-    if r.returncode != 0:
-        raise RuntimeError(f"汇编 entry.s 失败:\n{r.stderr}\n{r.stdout}")
-    objs.append(entry_o)
+    def _asm(src: Path, obj: Path) -> None:
+        r = subprocess.run(
+            [str(gcc), "-mthumb", "-mcpu=arm7tdmi", "-ffreestanding",
+             "-x", "assembler-with-cpp", "-c", str(src), "-o", str(obj)],
+            capture_output=True, text=True,
+        )
+        if r.returncode != 0:
+            raise RuntimeError(f"汇编 {src.name} 失败:\n{r.stderr}\n{r.stdout}")
+        objs.append(obj)
 
-    for name in ("print_next_char", "draw_glyph", "draw_scene", "get_string_width"):
-        src = pnc / f"{name}.c"
-        obj = obj_dir / f"{name}.o"
+    def _c(src: Path, obj: Path) -> None:
         r = subprocess.run(
             [str(gcc), *cflags, str(src), "-o", str(obj)],
             capture_output=True, text=True,
         )
         if r.returncode != 0:
-            raise RuntimeError(f"编译 {name}.c 失败:\n{r.stderr}\n{r.stdout}")
+            raise RuntimeError(f"编译 {src.name} 失败:\n{r.stderr}\n{r.stdout}")
         objs.append(obj)
+
+    _asm(pnc / "entry.s", obj_dir / "entry.o")
+    for name in ("print_next_char", "draw_glyph", "draw_scene", "get_string_width"):
+        _c(pnc / f"{name}.c", obj_dir / f"{name}.o")
+    _asm(nick / "entry.s", obj_dir / "nick_entry.o")
+    _c(nick / "update_nick_in_healthbox.c", obj_dir / "update_nick_in_healthbox.o")
 
     elf = out_dir / "game.elf"
     r = subprocess.run(
@@ -358,7 +390,7 @@ def apply_font_patch(
     shutil.copy2(rom_path, build_dir / "baserom.gba")
 
     # C 逻辑 → game.bin，再交给 armips .incbin
-    _build_game_bin(build_dir)
+    game_bin = _build_game_bin(build_dir)
 
     root_armips = Path(__file__).resolve().parent.parent.parent / "tools" / ("armips.exe" if _system == "Windows" else "armips")
     if root_armips.exists():
@@ -392,6 +424,12 @@ def apply_font_patch(
             patched = [f for f in gba_files if f.stem != "baserom"][0]
     if not patched.exists():
         raise RuntimeError(f"Font patch output not found: {patched}")
+
+    _verify_game_bin_embedded(patched, game_bin)
+    # Keep patch/out/game.bin in sync with what was just burned into the ROM.
+    src_out = src_dir / "out" / "game.bin"
+    src_out.parent.mkdir(parents=True, exist_ok=True)
+    shutil.copy2(game_bin, src_out)
 
     shutil.copy2(patched, output_path)
     return output_path

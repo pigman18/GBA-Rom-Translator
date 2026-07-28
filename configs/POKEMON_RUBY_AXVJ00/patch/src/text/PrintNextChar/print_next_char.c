@@ -96,12 +96,9 @@ static void draw_phrase(TextPrinter *win, uint16_t code)
 /**
  * PrintNextChar_C — CJK + JP-via-CHS (ProcessCurrentChar hook).
  *
- * F9: Chinese sideload / phrase.
- * Printable PCS (1..0xF6): ALWAYS CHS allocator — never fall back to
- * original FontFuncTable (dual-path VRAM clash / 「汉字替换」).
- *
+ * F9: Chinese sideload / phrase (skipped when textMode==2 → FontFunc).
+ * Printable PCS: JP-via-CHS except textMode==2 (FontFunc[2] healthbox).
  * AXVJ GetGlyphTilePointers is 4-arg (font, glyph, &u, &l) — no language.
- * Font 3/4/5: 32B shadowed tiles (0/E/F). Font 0/1/2/6: 8B 1bpp → expand.
  */
 /* 1bpp row bytes → 32B 4bpp-index tile with ink=0xF (CopyGlyph2bpp-ready). */
 static void expand_1bpp_tile(const uint8_t *src8, uint8_t *dst32)
@@ -131,6 +128,10 @@ static int draw_jp_via_chs(TextPrinter *win, uint32_t cur_char)
     unsigned i;
 
     if (cur_char == 0 || cur_char >= 0xF7)
+        return 0;
+
+    /* textMode 2 = FontFunc[2] bold/healthbox; CHS would write wrong VRAM. */
+    if (scene_is_battle_interface_dest(win))
         return 0;
 
     font = win_u8(win, WIN_FONTNUM_REAL);
@@ -163,11 +164,15 @@ int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
 {
     ensure_linear_tile_bump(win);
 
+    /* Bold/healthbox: no CHS (incl. sym); FontFunc[2] owns the blit. */
+    if (scene_is_battle_interface_dest(win))
+        return 0;
+
     if (draw_sym_punct(win, cur_char))
         return 1;
 
     if (cur_char != CHS_ESCAPE) {
-        /* Printable → CHS only. Controls (0 / FA+) → original. */
+        /* Printable → JP-via-CHS. Controls → original. */
         return draw_jp_via_chs(win, cur_char);
     }
 

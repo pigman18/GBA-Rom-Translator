@@ -126,14 +126,22 @@ int scene_battle_force_linear(TextPrinter *win)
 }
 
 /**
- * JP/digit PCS share the CHS tile allocator (glyph from vanilla font).
- * Always attempt for printable RegularGlyph — gate used to require Mode2
- * menu pool / chs_session and silently fell back to dual-path (详情无改善).
+ * AXVJ RenderTextHandleBold (0x08002CC0) forces textMode=2; FontFunc[2]
+ * blits via win+0x20 into eBattleInterfaceGfxBuffer (healthbox nick/HP).
+ * Dest-range gate alone did not fire in-product; textMode==2 is the signal.
+ * Summary/dialogue use other modes → JP-via-CHS.
+ */
+int scene_is_battle_interface_dest(TextPrinter *win)
+{
+    return win_u8(win, WIN_TEXTMODE) == 2u;
+}
+
+/**
+ * JP/digit PCS share the CHS tile allocator except FontFunc[2] bold path.
  */
 int scene_jp_via_chs(TextPrinter *win)
 {
-    (void)win;
-    return 1;
+    return !scene_is_battle_interface_dest(win);
 }
 
 int scene_keep_linear_16(TextPrinter *win)

@@ -60,6 +60,12 @@
 #define WIN_CURSOR_TILE_X   0x1B
 #define WIN_CURSOR_Y        0x1C
 #define WIN_CURSOR_TILE_Y   0x1D
+/* JP RenderTextHandleBold (0x08002CC0): dest buffer ptr (FontFunc[2] blit). */
+#define WIN_TILE_DATA       0x20
+
+/* eBattleInterfaceGfxBuffer (AXVJ literal). Docs/ref only — gate is textMode==2. */
+#define ADDR_BATTLE_IF_GFX  0x02020004u
+#define BATTLE_IF_GFX_SIZE  0x1000u
 
 /* 8 bytes at IWRAM end (0x0203FFF8..FFFF). */
 struct ChineseTileState {
@@ -200,6 +206,7 @@ int  scene_menu_wants_mode2(TextPrinter *win);
 int  scene_is_shop_desc(TextPrinter *win);
 int  scene_is_party_footer(TextPrinter *win);
 int  scene_jp_via_chs(TextPrinter *win);
+int  scene_is_battle_interface_dest(TextPrinter *win);
 void scene_mode2_apply(TextPrinter *win, int *x, int *y, int *band, int *origin);
 int  scene_battle_force_linear(TextPrinter *win);
 int  scene_keep_linear_16(TextPrinter *win);

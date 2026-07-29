@@ -28,7 +28,7 @@ def tj():
                     cn_text = cn_cell.get_text(strip=True)
                     if jp_text and cn_text and jp_text != cn_text:
                         result[jp_text] = cn_text
-    with open('custom_translations/图鉴.json', 'w', encoding='utf-8') as f:
+    with open('图鉴.json', 'w', encoding='utf-8') as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
     print(f"图鉴抓取完成: {len(result)}")
 
@@ -53,7 +53,7 @@ def zs():
                     cn_text = cn_cell.get_text(strip=True)
                     if jp_text and cn_text and jp_text != cn_text:
                         result[jp_text] = cn_text
-    with open('custom_translations/招式.json', 'w', encoding='utf-8') as f:
+    with open('招式.json', 'w', encoding='utf-8') as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
     print(f"招式列表抓取完成: {len(result)}")
 
@@ -78,7 +78,7 @@ def tx():
                     cn_text = cn_cell.get_text(strip=True)
                     if jp_text and cn_text and jp_text != cn_text:
                         result[jp_text] = cn_text
-    with open('custom_translations/特性.json', 'w', encoding='utf-8') as f:
+    with open('特性.json', 'w', encoding='utf-8') as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
     print(f"特性列表抓取完成: {len(result)}")
 
@@ -103,7 +103,7 @@ def dj():
                     cn_text = cn_cell.get_text(strip=True)
                     if jp_text and cn_text and jp_text != cn_text:
                         result[jp_text] = cn_text
-    with open('custom_translations/道具.json', 'w', encoding='utf-8') as f:
+    with open('道具.json', 'w', encoding='utf-8') as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
     print(f"道具列表抓取完成: {len(result)}")
 
@@ -128,13 +128,37 @@ def dd():
                     cn_text = cn_cell.get_text(strip=True)
                     if jp_text and cn_text and jp_text != cn_text:
                         result[jp_text] = cn_text
-    with open('custom_translations/地点.json', 'w', encoding='utf-8') as f:
+    with open('地点.json', 'w', encoding='utf-8') as f:
         json.dump(result, f, ensure_ascii=False, indent=2)
     print(f"地点列表抓取完成: {len(result)}")
 
+### 抓取性格列表
+def xg():
+    # 目标页面
+    url = "https://wiki.52poke.com/wiki/性格"
+    resp = requests.get(url, headers=headers, timeout=15)
+    soup = BeautifulSoup(resp.text, 'html.parser')
+    result = {}
+    tables = soup.find_all('table', class_='sortable')
+    table = tables[0]
+    rows = table.find_all('tr')
+    for row in rows[1:]:  # 跳过表头
+        cells = row.find_all()
+        if len(cells) >= 3:
+            # 日文在第二列，简体中文在第一列
+            jp_cell = cells[1]  # 日文假名
+            cn_cell = cells[0]  # 简体中文
+            jp_text = jp_cell.get_text(strip=True)
+            cn_text = cn_cell.get_text(strip=True)
+            if jp_text and cn_text and jp_text != cn_text:
+                result[jp_text] = cn_text
+    with open('性格.json', 'w', encoding='utf-8') as f:
+        json.dump(result, f, ensure_ascii=False, indent=2)
+    print(f"性格列表抓取完成: {len(result)}")
 
-tj()
-zs()
-tx()
-dj()
-dd()
+# tj()
+# zs()
+# tx()
+# dj()
+# dd()
+xg()

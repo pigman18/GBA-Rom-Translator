@@ -1,25 +1,16 @@
 """字库/补丁阶段：armips 打 hook + game.bin + 字库。
 
-``patch/`` 消费 ``font/`` 字形与 F9 转义；armips 前用 arm-none-eabi-gcc
-把 ``c/`` 编成 ``game.bin``（装入 GameBinAddresses）。
+``patch/`` 消费 ``font/`` 字形与 F9 转义；armips 前由 ``build.bat``
+把 ``src/`` 编成 ``game.bin``（装入 GameBinAddresses）。
 """
 
-import os
-import platform
 import shutil
 import subprocess
+import sys
 from pathlib import Path
 from typing import Any
 
 from .config_loader import get_charmap_path, get_game_patch_dir, game_config_dir
-
-_system = platform.system()
-if _system == "Windows":
-    DEFAULT_ARMIPS = None  # will try local tools/armips.exe first
-elif _system == "Darwin":
-    DEFAULT_ARMIPS = None
-else:
-    DEFAULT_ARMIPS = None
 
 _GAME_BIN_MAX = 0x10000  # 不得超过 PhraseOffsets @ 0x08810000
 _GAME_BIN_VMA = 0x08800000
@@ -50,177 +41,6 @@ def _verify_game_bin_embedded(rom_path: Path, game_bin: Path, vma: int = _GAME_B
             f"ROM @0x{vma:08X} does not match out/game.bin "
             f"(first diff @+0x{first:X}; refuse stale C / half-new build)"
         )
-
-
-def _find_arm_gcc() -> Path:
-    """查找 arm-none-eabi-gcc；找不到则提示安装 Arm GNU Toolchain。"""
-    which = shutil.which("arm-none-eabi-gcc")
-    if which:
-        return Path(which)
-    candidates: list[Path] = []
-    if _system == "Windows":
-        for base in (
-            Path(r"C:\Program Files (x86)"),
-            Path(r"C:\Program Files"),
-            Path(r"C:\devkitPro\devkitARM\bin"),
-        ):
-            if not base.exists():
-                continue
-            if base.name == "bin":
-                candidates.append(base / "arm-none-eabi-gcc.exe")
-            else:
-                candidates.extend(base.glob("Arm GNU Toolchain*/**/arm-none-eabi-gcc.exe"))
-                candidates.extend(base.glob("GNU Arm*/**/arm-none-eabi-gcc.exe"))
-    else:
-        for p in (
-            Path("/opt/devkitpro/devkitARM/bin/arm-none-eabi-gcc"),
-            Path("/usr/bin/arm-none-eabi-gcc"),
-        ):
-            candidates.append(p)
-    for c in candidates:
-        if c.is_file():
-            return c
-    raise RuntimeError(
-        "未找到 arm-none-eabi-gcc。请安装 Arm GNU Toolchain："
-        "winget install Arm.GnuArmEmbeddedToolchain（或 devkitARM），"
-        "并确保 arm-none-eabi-gcc 在 PATH 中。"
-    )
-
-
-def _build_game_bin(patch_dir: Path) -> Path:
-    """编译 patch/src → out/game.bin（VMA 0x08800000）。
-
-    优先 ``make``；Windows 无 make 时直接调 gcc/objcopy。
-    """
-    out_dir = patch_dir / "out"
-    out_bin = out_dir / "game.bin"
-    makefile = patch_dir / "Makefile"
-    if makefile.is_file():
-        make_cmd = shutil.which("make") or shutil.which("mingw32-make")
-        if make_cmd:
-            env = os.environ.copy()
-            gcc = _find_arm_gcc()
-            env["PATH"] = str(gcc.parent) + os.pathsep + env.get("PATH", "")
-            result = subprocess.run(
-                [make_cmd, "-C", str(patch_dir), "all"],
-                capture_output=True,
-                text=True,
-                env=env,
-            )
-            if result.returncode != 0:
-                raise RuntimeError(
-                    f"make game.bin 失败:\n{result.stderr}\n{result.stdout}"
-                )
-            if out_bin.is_file():
-                if out_bin.stat().st_size >= _GAME_BIN_MAX:
-                    raise RuntimeError(
-                        f"game.bin 过大 ({out_bin.stat().st_size} >= {_GAME_BIN_MAX})"
-                    )
-                _write_game_syms(out_dir / "game.map", out_dir / "game_syms.asm")
-                return out_bin
-
-    gcc = _find_arm_gcc()
-    bindir = gcc.parent
-    stem = gcc.name
-    if stem.lower().endswith(".exe"):
-        stem = stem[:-4]
-    if stem.endswith("-gcc"):
-        prefix = stem[:-3]  # arm-none-eabi-
-    elif stem.endswith("gcc"):
-        prefix = stem[:-3]
-    else:
-        prefix = "arm-none-eabi-"
-    ext = ".exe" if _system == "Windows" else ""
-    objcopy = bindir / f"{prefix}objcopy{ext}"
-    if not objcopy.is_file():
-        raise RuntimeError(f"gcc 同目录未找到 objcopy: {objcopy}")
-
-    obj_dir = out_dir / "obj"
-    obj_dir.mkdir(parents=True, exist_ok=True)
-    src_root = patch_dir / "src"
-    pnc = src_root / "text" / "PrintNextChar"
-    nick = src_root / "battle" / "UpdateNickInHealthbox"
-    ld = patch_dir / "link" / "game.ld"
-    cflags = [
-        "-mthumb", "-mcpu=arm7tdmi", "-ffreestanding", "-O2", "-fno-builtin",
-        "-Wall", f"-I{src_root}", "-nostdlib", "-c",
-    ]
-    objs: list[Path] = []
-
-    def _asm(src: Path, obj: Path) -> None:
-        r = subprocess.run(
-            [str(gcc), "-mthumb", "-mcpu=arm7tdmi", "-ffreestanding",
-             "-x", "assembler-with-cpp", "-c", str(src), "-o", str(obj)],
-            capture_output=True, text=True,
-        )
-        if r.returncode != 0:
-            raise RuntimeError(f"汇编 {src.name} 失败:\n{r.stderr}\n{r.stdout}")
-        objs.append(obj)
-
-    def _c(src: Path, obj: Path) -> None:
-        r = subprocess.run(
-            [str(gcc), *cflags, str(src), "-o", str(obj)],
-            capture_output=True, text=True,
-        )
-        if r.returncode != 0:
-            raise RuntimeError(f"编译 {src.name} 失败:\n{r.stderr}\n{r.stdout}")
-        objs.append(obj)
-
-    _asm(pnc / "entry.s", obj_dir / "entry.o")
-    for name in ("print_next_char", "draw_glyph", "draw_scene", "get_string_width"):
-        _c(pnc / f"{name}.c", obj_dir / f"{name}.o")
-    _asm(nick / "entry.s", obj_dir / "nick_entry.o")
-    _c(nick / "update_nick_in_healthbox.c", obj_dir / "update_nick_in_healthbox.o")
-
-    elf = out_dir / "game.elf"
-    r = subprocess.run(
-        [
-            str(gcc), "-mthumb", "-mcpu=arm7tdmi", "-nostdlib",
-            f"-T{ld}", f"-Wl,-Map={out_dir / 'game.map'}",
-            "-o", str(elf), *[str(o) for o in objs],
-        ],
-        capture_output=True, text=True,
-    )
-    if r.returncode != 0:
-        raise RuntimeError(f"链接 game.elf 失败:\n{r.stderr}\n{r.stdout}")
-
-    r = subprocess.run(
-        [str(objcopy), "-O", "binary", str(elf), str(out_bin)],
-        capture_output=True, text=True,
-    )
-    if r.returncode != 0:
-        raise RuntimeError(f"objcopy game.bin 失败:\n{r.stderr}\n{r.stdout}")
-    if not out_bin.is_file():
-        raise RuntimeError("未生成 out/game.bin")
-    if out_bin.stat().st_size >= _GAME_BIN_MAX:
-        raise RuntimeError(
-            f"game.bin 过大 ({out_bin.stat().st_size} >= {_GAME_BIN_MAX})"
-        )
-    _write_game_syms(out_dir / "game.map", out_dir / "game_syms.asm")
-    return out_bin
-
-
-def _write_game_syms(map_path: Path, out_asm: Path) -> None:
-    """Export linker symbols for armips (GetStringWidthChinese thin-shell)."""
-    syms: dict[str, int] = {}
-    if map_path.is_file():
-        for line in map_path.read_text(encoding="utf-8", errors="replace").splitlines():
-            # "                0x08800040                PrintNextChar_C"
-            parts = line.strip().split()
-            if len(parts) >= 2 and parts[0].startswith("0x"):
-                name = parts[-1]
-                if name in ("GetStringWidthChinese", "PrintNextChar"):
-                    try:
-                        syms[name] = int(parts[0], 16)
-                    except ValueError:
-                        pass
-    lines = [
-        "; Auto-generated from out/game.map — do not edit",
-        f"GetStringWidthChinese                   equ 0x{syms.get('GetStringWidthChinese', 0x08800000):08X}",
-        "",
-    ]
-    out_asm.parent.mkdir(parents=True, exist_ok=True)
-    out_asm.write_text("\n".join(lines), encoding="utf-8")
 
 
 def _generate_addrs_asm(cfg: dict[str, Any], output_path: Path, game_id: str = "") -> None:
@@ -389,14 +209,17 @@ def apply_font_patch(
 
     shutil.copy2(rom_path, build_dir / "baserom.gba")
 
-    # C 逻辑 → game.bin，再交给 armips .incbin
-    game_bin = _build_game_bin(build_dir)
+    # game.bin 由 build.bat 编译；Python 侧不涉及 C 组件
+    game_bin = build_dir / "out" / "game.bin"
 
-    root_armips = Path(__file__).resolve().parent.parent.parent / "tools" / ("armips.exe" if _system == "Windows" else "armips")
-    if root_armips.exists():
-        armips_path = root_armips
+    # armips: 只管 main.asm
+    armips_exe = "armips.exe" if sys.platform == "win32" else "armips"
     if armips_path is None:
-        local_armips = build_dir / "tools" / ("armips.exe" if _system == "Windows" else "armips")
+        root_armips = Path(__file__).resolve().parent.parent.parent / "tools" / armips_exe
+        if root_armips.exists():
+            armips_path = root_armips
+    if armips_path is None:
+        local_armips = build_dir / "tools" / armips_exe
         if local_armips.exists():
             armips_path = local_armips
     if armips_path is None:

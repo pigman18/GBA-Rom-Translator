@@ -16,11 +16,12 @@
 
 ## Armips 汇编验证（不依赖翻译文本）
 ```powershell
-# 编译 C 源码 → out/game.bin + out/game_syms.asm，再用 armips 打补丁
-cd "C:\code\GBA-Rom-Translator"
-python -c "import sys; sys.path.insert(0, 'src'); from pathlib import Path; from meowth.font_patch import _build_game_bin; _build_game_bin(Path('configs/POKEMON_RUBY_AXVJ00/patch'))"
-Copy-Item "C:\code\gba\roms\origin\POKEMON_RUBY_AXVJ00.gba" -Destination "configs/POKEMON_RUBY_AXVJ00/patch/baserom.gba"
-.\tools\armips.exe configs/POKEMON_RUBY_AXVJ00/patch/main.asm
+# 编译 C 源码 → out/game.bin + out/game_syms.asm（需 arm-none-eabi-gcc 在 PATH）
+cd "C:\code\gba\configs\POKEMON_RUBY_AXVJ00\patch"
+.\build.bat
+# 再用 armips 打补丁（验证汇编 hook 层）
+Copy-Item "C:\code\gba\roms\origin\POKEMON_RUBY_AXVJ00.gba" -Destination "baserom.gba"
+..\..\..\tools\armips.exe main.asm
 ```
 
 ## Meowth 完整流水线验证（需要 BDF 字库 + 种子翻译，不需要 API Key）

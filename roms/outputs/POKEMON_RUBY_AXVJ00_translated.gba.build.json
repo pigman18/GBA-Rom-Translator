@@ -1,10 +1,10 @@
 {
-  "build_id": "0.4.5+20260730T135823.dbfb315ca22c",
+  "build_id": "0.4.5+20260730T201636.dbfb315ca22c",
   "package_version": "0.4.5",
-  "timestamp_utc": "2026-07-30T13:58:23Z",
+  "timestamp_utc": "2026-07-30T20:16:36Z",
   "game": "POKEMON_RUBY_AXVJ00",
   "output_rom": "C:\\code\\GBA-Rom-Translator\\roms\\outputs\\POKEMON_RUBY_AXVJ00_translated.gba",
-  "output_rom_sha256": "261ae8a6be9ea65580730524c77c73cca3ed4245df136f0a4c4604cc90d26e91",
+  "output_rom_sha256": "2b0ca6336d2b3baa9068c7daa1ce8b13dd4c859660ec214613910280c26ff374",
   "patch_root": "C:/code/GBA-Rom-Translator/configs/POKEMON_RUBY_AXVJ00/patch",
   "patch_tree_sha256": "dbfb315ca22c35931cf429057e54401a25149a3413dfb4988f87e076d898a84e",
   "patch_file_count": 73,
@@ -93,9 +93,9 @@
   },
   "inject_stats": {
     "in_place": 17,
-    "relocated": 3989,
+    "relocated": 4376,
     "skipped": 0,
-    "entry_count": 4975,
+    "entry_count": 4894,
     "name_tables": {
       "move_names": {
         "written": 1,
@@ -112,11 +112,8 @@
         "lits_safe": 3
       },
       "item_data": {
-        "written": 1,
-        "ptr_patched": 1,
-        "mul_patched": 1,
-        "lits_total": 14,
-        "lits_safe": 1
+        "lits_total": 0,
+        "lits_safe": 0
       }
     },
     "modules": [
@@ -160,8 +157,8 @@
       "include": "",
       "exclude": "",
       "omit_band": "",
-      "before": 4975,
-      "after": 4975,
+      "before": 4894,
+      "after": 4894,
       "omit_range": null
     }
   },

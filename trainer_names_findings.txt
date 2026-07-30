@@ -1,0 +1,407 @@
+
+======================================================================
+ROM: POKEMON_FIRE_BPRJ00 (POKEMON_FIRE_BPRJ00.gba)  size=0x1000000
+======================================================================
+
+Searching for trainer name strings in PCS encoding:
+  タケシ: PCS=60595cff -> 3 hits: 0x19C306,0x19CB93,0x20139C
+  カスミ: PCS=565d70ff -> 3 hits: 0x19C367,0x19CBB6,0x2013BC
+  マチス: PCS=6f615dff -> 4 hits: 0x19C3BF,0x19CBDD,0x2013DC...
+  エリカ: PCS=547856ff -> 4 hits: 0x19C428,0x19CBFF,0x19CC0A...
+  サカキ: PCS=5b5657ff -> 6 hits: 0x19C803,0x19CD46,0x19CD5A...
+  カツラ: PCS=566277ff -> 3 hits: 0x19C544,0x19CC5E,0x20143C
+  ナツメ: PCS=656272ff -> 4 hits: 0x19C4EC,0x19CC43,0x19CC47...
+  シゲル: PCS=5c8a79ff -> 1 hits: 0x1A9E78
+  カンナ: PCS=567e65ff -> 5 hits: 0x19C5BA,0x19CC7B,0x19CC7F...
+  シバ: PCS=5c96ff -> 5 hits: 0x19C618,0x19CC9F,0x19CCA2...
+  ワタル: PCS=7c6079ff -> 5 hits: 0x19C6D4,0x19CCE4,0x19CCE8...
+
+Total unique name string locations: 43
+
+Searching for pointer tables (stride=4, min 10 entries)...
+  None found with stride=4. Trying stride=8...
+
+  Table at 0x421D64..0x421DC0: 5 entries (stride=8)
+    String range: 0x19CB93..0x19CBC4
+    [  0] 0x421D64 -> 0x19CB93 = タケシ
+    [  1] 0x421D6C -> 0x19CB9C = しょうねん
+    [  2] 0x421D74 -> 0x19CBA7 = ポケモンジャ-ナル
+    [  3] 0x421D7C -> 0x19CBB6 = カスミ
+    [  4] 0x421D84 -> 0x19CBBF = せいねん
+
+  Table at 0x421DE0..0x421E2C: 7 entries (stride=8)
+    String range: 0x19CC43..0x19CC89
+    [  0] 0x421DE0 -> 0x19CC43 = ナツメ
+    [  1] 0x421DE8 -> 0x19CC4B = ポケモンジャ-ナル
+    [  2] 0x421DF0 -> 0x19CC59 = かんばん
+    [  3] 0x421DF8 -> 0x19CC62 = ヨシアキ
+    [  4] 0x421E00 -> 0x19CC6C = しゃしん
+    [  5] 0x421E08 -> 0x19CC7B = カンナ
+    [  4] 0x421E00 -> 0x19CC6C = しゃしん
+    [  5] 0x421E08 -> 0x19CC7B = カンナ
+    [  6] 0x421E10 -> 0x19CC83 = おじいさん
+
+JSON: {
+  "0x421D64": {
+    "table_offset_hex": "0x421D64",
+    "table_end_hex": "0x421DC0",
+    "entries": 5,
+    "stride": 8,
+    "string_start_hex": "0x19CB93",
+    "string_end_hex": "0x19CBC4"
+  },
+  "0x421DE0": {
+    "table_offset_hex": "0x421DE0",
+    "table_end_hex": "0x421E2C",
+    "entries": 7,
+    "stride": 8,
+    "string_start_hex": "0x19CC43",
+    "string_end_hex": "0x19CC89"
+  }
+}
+
+String data clusters (2):
+  0x19CB93..0x19CCA2: 12 name hits
+    0x19CB93: タケシ
+    0x19CB97: せいねん
+    0x19CB9C: しょうねん
+    0x19CBA2: おじさん
+    0x19CBA7: ポケモンジャ-ナル
+    0x19CBB1: かんばん
+    0x19CBB6: カスミ
+    0x19CBBA: ヨウヘイ
+    0x19CBBF: せいねん
+    0x19CBC4: カップルのじょせい
+    0x19CBCE: ポケモンジャ-ナル
+    0x19CBD8: かんばん
+  0x20137C..0x2013FC: 5 name hits
+    0x20137C: ワタル
+    0x201380:   て て       き   お   3Aまくあエ ヤタケシ
+    0x2013A0:             き   い   [F4]Aまくあエゥユカスミ
+    0x2013C0:   に         き   い   とBまくあエ ヨマチス
+    0x2013E0:   に ぬ       き   う   ゃBまくあエゥラエリカ
+    0x201400:   な ぬ       き   う   トBまくあエ リキョウ
+
+======================================================================
+ROM: POKEMON_LEAF_BPGJ00 (POKEMON_LEAF_BPGJ00.gba)  size=0x1000000
+======================================================================
+
+Searching for trainer name strings in PCS encoding:
+  タケシ: PCS=60595cff -> 3 hits: 0x19C2E2,0x19CB6F,0x201378
+  カスミ: PCS=565d70ff -> 3 hits: 0x19C343,0x19CB92,0x201398
+  マチス: PCS=6f615dff -> 4 hits: 0x19C39B,0x19CBB9,0x2013B8...
+  エリカ: PCS=547856ff -> 4 hits: 0x19C404,0x19CBDB,0x19CBE6...
+  サカキ: PCS=5b5657ff -> 6 hits: 0x19C7DF,0x19CD22,0x19CD36...
+  カツラ: PCS=566277ff -> 3 hits: 0x19C520,0x19CC3A,0x201418
+  ナツメ: PCS=656272ff -> 4 hits: 0x19C4C8,0x19CC1F,0x19CC23...
+  シゲル: PCS=5c8a79ff -> 1 hits: 0x1A9E54
+  カンナ: PCS=567e65ff -> 5 hits: 0x19C596,0x19CC57,0x19CC5B...
+  シバ: PCS=5c96ff -> 5 hits: 0x19C5F4,0x19CC7B,0x19CC7E...
+  ワタル: PCS=7c6079ff -> 5 hits: 0x19C6B0,0x19CCC0,0x19CCC4...
+
+Total unique name string locations: 43
+
+Searching for pointer tables (stride=4, min 10 entries)...
+  None found with stride=4. Trying stride=8...
+
+  Table at 0x421CEC..0x421D48: 5 entries (stride=8)
+    String range: 0x19CB6F..0x19CBA0
+    [  0] 0x421CEC -> 0x19CB6F = タケシ
+    [  1] 0x421CF4 -> 0x19CB78 = しょうねん
+    [  2] 0x421CFC -> 0x19CB83 = ポケモンジャ-ナル
+    [  3] 0x421D04 -> 0x19CB92 = カスミ
+    [  4] 0x421D0C -> 0x19CB9B = せいねん
+
+  Table at 0x421D68..0x421DB4: 7 entries (stride=8)
+    String range: 0x19CC1F..0x19CC65
+    [  0] 0x421D68 -> 0x19CC1F = ナツメ
+    [  1] 0x421D70 -> 0x19CC27 = ポケモンジャ-ナル
+    [  2] 0x421D78 -> 0x19CC35 = かんばん
+    [  3] 0x421D80 -> 0x19CC3E = ヨシアキ
+    [  4] 0x421D88 -> 0x19CC48 = しゃしん
+    [  5] 0x421D90 -> 0x19CC57 = カンナ
+    [  4] 0x421D88 -> 0x19CC48 = しゃしん
+    [  5] 0x421D90 -> 0x19CC57 = カンナ
+    [  6] 0x421D98 -> 0x19CC5F = おじいさん
+
+JSON: {
+  "0x421CEC": {
+    "table_offset_hex": "0x421CEC",
+    "table_end_hex": "0x421D48",
+    "entries": 5,
+    "stride": 8,
+    "string_start_hex": "0x19CB6F",
+    "string_end_hex": "0x19CBA0"
+  },
+  "0x421D68": {
+    "table_offset_hex": "0x421D68",
+    "table_end_hex": "0x421DB4",
+    "entries": 7,
+    "stride": 8,
+    "string_start_hex": "0x19CC1F",
+    "string_end_hex": "0x19CC65"
+  }
+}
+
+String data clusters (2):
+  0x19CB6F..0x19CC7E: 12 name hits
+    0x19CB6F: タケシ
+    0x19CB73: せいねん
+    0x19CB78: しょうねん
+    0x19CB7E: おじさん
+    0x19CB83: ポケモンジャ-ナル
+    0x19CB8D: かんばん
+    0x19CB92: カスミ
+    0x19CB96: ヨウヘイ
+    0x19CB9B: せいねん
+    0x19CBA0: カップルのじょせい
+    0x19CBAA: ポケモンジャ-ナル
+    0x19CBB4: かんばん
+  0x201358..0x2013D8: 5 name hits
+    0x201358: ワタル
+    0x20135C:   て て       き   お   ィAまくあエ ヤタケシ
+    0x20137C:             き   い   VAまくあエゥユカスミ
+    0x20139C:   に         き   い   [F0]Aまくあエ ヨマチス
+    0x2013BC:   に ぬ       き   う   たBまくあエゥラエリカ
+    0x2013DC:   な ぬ       き   う   ぞBまくあエ リキョウ
+
+======================================================================
+ROM: POKEMON_RUBY_AXVJ00 (POKEMON_RUBY_AXVJ00.gba)  size=0x800000
+======================================================================
+
+Searching for trainer name strings in PCS encoding:
+  ダイゴ: PCS=91528bff -> 2 hits: 0x1C7678,0x3EABCB
+  ミツル: PCS=706279ff -> 7 hits: 0x1C8D78,0x1C9E98,0x1C9EB8...
+  マツブサ: PCS=6f62985bff -> 4 hits: 0x1C9358,0x1C97B8,0x1C97D8...
+  アオギリ: PCS=51558878ff -> 4 hits: 0x1C4CB8,0x1C50D8,0x1C50F8...
+  ユウキ: PCS=755357ff -> 13 hits: 0x1C8D98,0x1C8DB8,0x1C8DD8...
+  ハルカ: PCS=6a7956ff -> 13 hits: 0x1C8EB8,0x1C8ED8,0x1C8EF8...
+  アスナ: PCS=515d65ff -> 1 hits: 0x1C6E18
+  センリ: PCS=5e7e78ff -> 1 hits: 0x1C6E38
+  ナギ: PCS=6588ff -> 5 hits: 0x1C6E58,0x3EABD3,0x799176...
+  ツツジ: PCS=62628dff -> 1 hits: 0x1C6DB8
+  ムロ: PCS=717bff -> 1 hits: 0x3EAD5F
+  トウキ: PCS=645357ff -> 2 hits: 0x1C6DD8,0x3EABCF
+  テッセン: PCS=63a05e7eff -> 1 hits: 0x1C6DF8
+  ラン: PCS=777eff -> 5 hits: 0x1C64F9,0x1C6E7B,0x1CA536...
+  カゲツ: PCS=568a62ff -> 1 hits: 0x1C6D38
+  プリム: PCS=9d7871ff -> 2 hits: 0x1C6D78,0x3EABDA
+  ユウ: PCS=7553ff -> 1 hits: 0x205382
+
+Total unique name string locations: 64
+
+Searching for pointer tables (stride=4, min 10 entries)...
+  None found with stride=4. Trying stride=8...
+  No pointer tables found.
+
+String data clusters (3):
+  0x1C6DB8..0x1C6E7B: 7 name hits
+    0x1C6DB8: ツツジ
+    0x1C6DBC:   す す       き   い   ざらふくあの ぶトウキ
+    0x1C6DDC:   に に       き   い   シらふくあの べテッセン
+    0x1C6DFD:  に に       き   う   ワらふくあのゥぼアスナ
+    0x1C6E1C:   な な       き   う   ?らふくあの ぱセンリ
+    0x1C6E3C:   な な       き   う   hらふくあのゥぴナギ
+    0x1C6E5B:    な な       き   え   しりふくうのあぷフウとラン
+    0x1C6E7E: な な な な あ き   い   ぴりふくあの ぺミクリ
+  0x1C8D78..0x1C8FB8: 19 name hits
+    0x1C8D78: ミツル
+    0x1C8D7C:   に に       き   お   フげふく ん  ユウキ
+    0x1C8D9C:             き   あ   Bげふく ん  ユウキ
+    0x1C8DBC:             き   う   Jげふく ん  ユウキ
+    0x1C8DDC:             き   う   hげふく ん  ユウキ
+    0x1C8DFC:             さ   あ   [F4]げふく ん  ユウキ
+    0x1C8E1C:             き   う   げふく ん  ユウキ
+    0x1C8E3C:             き   う   とごふく ん  ユウキ
+    0x1C8E5C:             き   あ   わごふく ん  ユウキ
+    0x1C8E7C:             き   う   ゃごふく ん  ユウキ
+    0x1C8E9C:             き   う   ぴごふく んゥあハルカ
+    0x1C8EBC:             き   あ   トごふく んゥあハルカ
+  0x1C9E98..0x1C9FD8: 11 name hits
+    0x1C9E98: ミツル
+    0x1C9E9C:             き   あ   ヤどふくあん ちミツル
+    0x1C9EBC:   に に       き   お   ワどふくあん ちミツル
+    0x1C9EDC:   に に       き   お   Rどふくあん ちミツル
+    0x1C9EFC:   に に       き   お   ふばふくあん ちミツル
+    0x1C9F1C:   に に       き   お   フばふく ん  ユウキ
+    0x1C9F3C:             き   え   Bばふく ん  ユウキ
+    0x1C9F5C:             き   え   hばふく ん  ユウキ
+    0x1C9F7C:             き   え   ばふく んゥあハルカ
+    0x1C9F9C:             き   え   ふびふく んゥあハルカ
+    0x1C9FBC:             き   え   ざびふく んゥあハルカ
+    0x1C9FDC:             き   え   シびふく むさかヨシノリ
+
+======================================================================
+ROM: POKEMON_SAPP_AXPJ00 (POKEMON_SAPP_AXPJ00.gba)  size=0x800000
+======================================================================
+
+Searching for trainer name strings in PCS encoding:
+  ダイゴ: PCS=91528bff -> 2 hits: 0x1C7608,0x3EABB3
+  ミツル: PCS=706279ff -> 7 hits: 0x1C8D08,0x1C9E28,0x1C9E48...
+  マツブサ: PCS=6f62985bff -> 4 hits: 0x1C92E8,0x1C9748,0x1C9768...
+  アオギリ: PCS=51558878ff -> 4 hits: 0x1C4C48,0x1C5068,0x1C5088...
+  ユウキ: PCS=755357ff -> 13 hits: 0x1C8D28,0x1C8D48,0x1C8D68...
+  ハルカ: PCS=6a7956ff -> 13 hits: 0x1C8E48,0x1C8E68,0x1C8E88...
+  アスナ: PCS=515d65ff -> 1 hits: 0x1C6DA8
+  センリ: PCS=5e7e78ff -> 1 hits: 0x1C6DC8
+  ナギ: PCS=6588ff -> 5 hits: 0x1C6DE8,0x3EABBB,0x799176...
+  ツツジ: PCS=62628dff -> 1 hits: 0x1C6D48
+  ムロ: PCS=717bff -> 1 hits: 0x3EAD47
+  トウキ: PCS=645357ff -> 2 hits: 0x1C6D68,0x3EABB7
+  テッセン: PCS=63a05e7eff -> 1 hits: 0x1C6D88
+  ラン: PCS=777eff -> 5 hits: 0x1C6489,0x1C6E0B,0x1CA4C6...
+  カゲツ: PCS=568a62ff -> 1 hits: 0x1C6CC8
+  プリム: PCS=9d7871ff -> 2 hits: 0x1C6D08,0x3EABC2
+  ユウ: PCS=7553ff -> 1 hits: 0x205312
+
+Total unique name string locations: 64
+
+Searching for pointer tables (stride=4, min 10 entries)...
+  None found with stride=4. Trying stride=8...
+  No pointer tables found.
+
+String data clusters (3):
+  0x1C6D48..0x1C6E0B: 7 name hits
+    0x1C6D48: ツツジ
+    0x1C6D4C:   す す       き   い   Rよふくあの ぶトウキ
+    0x1C6D6C:   に に       き   い   xよふくあの べテッセン
+    0x1C6D8D:  に に       き   う   しらふくあのゥぼアスナ
+    0x1C6DAC:   な な       き   う   ざらふくあの ぱセンリ
+    0x1C6DCC:   な な       き   う   フらふくあのゥぴナギ
+    0x1C6DEB:    な な       き   え   ピらふくうのあぷフウとラン
+    0x1C6E0E: な な な な あ き   い   hらふくあの ぺミクリ
+  0x1C8D08..0x1C8F48: 19 name hits
+    0x1C8D08: ミツル
+    0x1C8D0C:   に に       き   お   ぐふく ん  ユウキ
+    0x1C8D2C:             き   あ   ぴげふく ん  ユウキ
+    0x1C8D4C:             き   う   エげふく ん  ユウキ
+    0x1C8D6C:             き   う   フげふく ん  ユウキ
+    0x1C8D8C:             さ   あ   ャげふく ん  ユウキ
+    0x1C8DAC:             き   う   ザげふく ん  ユウキ
+    0x1C8DCC:             き   う   3げふく ん  ユウキ
+    0x1C8DEC:             き   あ   Bげふく ん  ユウキ
+    0x1C8E0C:             き   う   Jげふく ん  ユウキ
+    0x1C8E2C:             き   う   hげふく んゥあハルカ
+    0x1C8E4C:             き   あ   [F4]げふく んゥあハルカ
+  0x1C9E28..0x1C9F68: 11 name hits
+    0x1C9E28: ミツル
+    0x1C9E2C:             き   あ   えどふくあん ちミツル
+    0x1C9E4C:   に に       き   お   しどふくあん ちミツル
+    0x1C9E6C:   に に       き   お   シどふくあん ちミツル
+    0x1C9E8C:   に に       き   お   ?どふくあん ちミツル
+    0x1C9EAC:   に に       き   お   どふく ん  ユウキ
+    0x1C9ECC:             き   え   ぴばふく ん  ユウキ
+    0x1C9EEC:             き   え   フばふく ん  ユウキ
+    0x1C9F0C:             き   え   ザばふく んゥあハルカ
+    0x1C9F2C:             き   え   ?ばふく んゥあハルカ
+    0x1C9F4C:             き   え   Rばふく んゥあハルカ
+    0x1C9F6C:             き   え   xばふく むさかヨシノリ
+
+======================================================================
+ROM: Pokemon Emerald Version(JP) (Pokemon Emerald Version(JP).gba)  size=0x1000000
+======================================================================
+
+Searching for trainer name strings in PCS encoding:
+  ダイゴ: PCS=91528bff -> 3 hits: 0x2E9CC0,0x5CA9E8,0x5F7393
+  ミツル: PCS=706279ff -> 7 hits: 0x2E7920,0x2E8A40,0x2E8A60...
+  マツブサ: PCS=6f62985bff -> 4 hits: 0x2E8360,0x2E8380,0x2E9400...
+  アオギリ: PCS=51558878ff -> 2 hits: 0x2E3C80,0x5C8C44
+  ユウキ: PCS=755357ff -> 17 hits: 0x2E7940,0x2E7960,0x2E7980...
+  ハルカ: PCS=6a7956ff -> 17 hits: 0x2E7A60,0x2E7A80,0x2E7AA0...
+  オダマキ: PCS=55916f57ff -> 1 hits: 0x5C8C6B
+  アスナ: PCS=515d65ff -> 5 hits: 0x2E59C0,0x2E9A00,0x2E9A20...
+  センリ: PCS=5e7e78ff -> 5 hits: 0x2E59E0,0x2E9A80,0x2E9AA0...
+  ナギ: PCS=6588ff -> 8 hits: 0x2E5A00,0x2E9B00,0x2E9B20...
+  ツツジ: PCS=62628dff -> 5 hits: 0x2E5960,0x2E9880,0x2E98A0...
+  ムロ: PCS=717bff -> 1 hits: 0x5CAA0B
+  トウキ: PCS=645357ff -> 6 hits: 0x2E5980,0x2E9900,0x2E9920...
+  テッセン: PCS=63a05e7eff -> 5 hits: 0x2E59A0,0x2E9980,0x2E99A0...
+  ラン: PCS=777eff -> 10 hits: 0x2E5A23,0x2E9B83,0x2E9BA3...
+  カゲツ: PCS=568a62ff -> 1 hits: 0x2E58E0
+  プリム: PCS=9d7871ff -> 2 hits: 0x2E5920,0x5CA9F7
+  ユウ: PCS=7553ff -> 1 hits: 0x560F7F
+  エニシダ: PCS=54665c91ff -> 1 hits: 0x5F73CA
+  コゴミ: PCS=5a8b70ff -> 1 hits: 0x2E9D40
+  ソウタロウ: PCS=5f53607b53ff -> 1 hits: 0x2E7FA0
+
+Total unique name string locations: 103
+
+Searching for pointer tables (stride=4, min 10 entries)...
+  None found with stride=4. Trying stride=8...
+  No pointer tables found.
+
+String data clusters (6):
+  0x2E5960..0x2E5A23: 7 name hits
+    0x2E5960: ツツジ
+    0x2E5964:   す す       き   う   ? んくうみ るトウキ
+    0x2E5984:   に に       き   う   h んくうみ れテッセン
+    0x2E59A5:  に に       き   え   しあんくうみゥろアスナ
+    0x2E59C4:   な な       き   え   ぴあんくうみ わセンリ
+    0x2E59E4:   な な       き   え   ザあんくうみゥをナギ
+    0x2E5A03:    な な       ぬ   お   Rあんくうみあんフウとラン
+    0x2E5A26: な な な な あ き   え   ふいんくうみ ぁアダン
+  0x2E7920..0x2E7B60: 19 name hits
+    0x2E7920: ミツル
+    0x2E7924:   て て       き   お   フてんく ぇ びユウキ
+    0x2E7944:             き   あ   Bてんく ぇ びユウキ
+    0x2E7964:             き   う   Jてんく ぇ びユウキ
+    0x2E7984:             き   う   hてんく ぇ びユウキ
+    0x2E79A4:             さ   あ   [F4]てんく ぇ びユウキ
+    0x2E79C4:             き   う   てんく ぇ びユウキ
+    0x2E79E4:             き   う   ととんく ぇ びユウキ
+    0x2E7A04:             き   あ   わとんく ぇ びユウキ
+    0x2E7A24:             き   う   ゃとんく ぇ びユウキ
+    0x2E7A44:             き   う   ぴとんく ぇゥぶハルカ
+    0x2E7A64:             き   あ   トとんく ぇゥぶハルカ
+  0x2E8A40..0x2E8B80: 11 name hits
+    0x2E8A40: ミツル
+    0x2E8A44:             き   あ   hへんくあぇ ばミツル
+    0x2E8A64:   て て       き   お   pへんくあぇ ばミツル
+    0x2E8A84:   て て       き   お   ゃほんくあぇ ばミツル
+    0x2E8AA4:   て て       き   お   ャほんくあぇ ばミツル
+    0x2E8AC4:   て て       き   お   Zほんく ぇ びユウキ
+    0x2E8AE4:             き   え   やまんく ぇ びユウキ
+    0x2E8B04:             き   え   でまんく ぇ びユウキ
+    0x2E8B24:             き   え   トまんく ぇゥぶハルカ
+    0x2E8B44:             き   え   ャまんく ぇゥぶハルカ
+    0x2E8B64:             き   え   3まんく ぇゥぶハルカ
+    0x2E8B84:             き   え   Jまんく らさがヨシノリ
+  0x2E9840..0x2E9BE3: 30 name hits
+    0x2E9840: ハルカ
+    0x2E9844:             き   い   ゃよんく ぇゥぶハルカ
+    0x2E9864:             き   い   でよんくうみゥりツツジ
+    0x2E9884:   て て て   あ き   え   エよんくうみゥりツツジ
+    0x2E98A4:   て て て   あ き   お   デよんくうみゥりツツジ
+    0x2E98C4:   て て て   あ き   お   pよんくうみゥりツツジ
+    0x2E98E4:   て て て   あ き   か   ゃらんくうみ るトウキ
+    0x2E9904:   て て て   あ き   え   デらんくうみ るトウキ
+    0x2E9924:   て て て   あ き   え   Zらんくうみ るトウキ
+    0x2E9944:   て て て   あ き   お   とりんくうみ るトウキ
+    0x2E9964:   て て て   あ き   か   トりんくうみ れテッセン
+    0x2E9985:  て て て   あ き   え   Jりんくうみ れテッセン
+  0x5C8C44..0x5C8C6B: 5 name hits
+    0x5C8C44: アオギリ
+    0x5C8C49: マツブサ
+    0x5C8C4E: カイオ-ガ
+    0x5C8C54: グラ-ドン
+    0x5C8C5A: ユウキ
+    0x5C8C5E: ハルカ
+    0x5C8C62: タマゴ
+    0x5C8C66: ポケモン
+    0x5C8C6B: オダマキ
+    0x5C8C70: さいしょから はじめる
+    0x5C8C7C: つづきから はじめる
+    0x5C8C87: せっていを かえる
+  0x5CA9E8..0x5CAA0B: 5 name hits
+    0x5CA9E8: ダイゴ
+    0x5CA9EC: トウキ
+    0x5CA9F0: ナギ
+    0x5CA9F3: フヨウ
+    0x5CA9F7: プリム
+    0x5CA9FB: トウカ
+    0x5CA9FF: カイナ
+    0x5CAA03: ミシロ
+    0x5CAA07: ミナモ
+    0x5CAA0B: ムロ
+    0x5CAA0E: さんか する
+    0x5CAA15: せつめいをきく

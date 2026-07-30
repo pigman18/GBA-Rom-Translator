@@ -1,14 +1,14 @@
 {
   "_meta": {
-    "label": "POKEMON_SAPP_AXPJ00 module_map",
+    "label": "POKEMON_RUBY_AXVJ00 module_map",
     "address_space": "file_offset",
     "match_rule": "smallest fuzzy span first; band fully inside",
     "address_family": "RS",
-    "game_codes": "AXPJ",
+    "game_codes": "AXVJ",
     "taxonomy": "MODULE_TAXONOMY.md",
     "note": "default=true（除物种名/姓名输入/默认名字/其它组与未归类）。名表+界面+剧情由 measure_module_spans.py 实测；支持 ranges 多段（战斗短标签 / 散落商店簇）；道路与洞窟为对话库兜底。",
     "source": "AXVJ 名表/道具表实测；红蓝共用语义与地址族",
-    "rom_id": "POKEMON_SAPP_AXPJ00",
+    "rom_id": "POKEMON_RUBY_AXVJ00",
     "measured_by": "measure_module_spans.py"
   },
   "modules": [
@@ -19,7 +19,7 @@
       "default": true,
       "description": "属性名短表（单字注入需谨慎）",
       "start": "0x1CBB0C",
-      "end": "0x1CBB65"
+      "end": "0x1CBB61"
     },
     {
       "id": "性格名",
@@ -27,8 +27,8 @@
       "group": "词条",
       "default": true,
       "description": "性格名表/指针体",
-      "start": "0x3971E8",
-      "end": "0x39724B"
+      "start": "0x397168",
+      "end": "0x3971E3"
     },
     {
       "id": "特性名",
@@ -37,7 +37,7 @@
       "default": true,
       "description": "特性名固定表",
       "start": "0x1CBC44",
-      "end": "0x1CBEB3"
+      "end": "0x1CBEAC"
     },
     {
       "id": "物种名",
@@ -46,7 +46,7 @@
       "default": false,
       "description": "物种名固定表",
       "start": "0x1CA354",
-      "end": "0x1CACFB"
+      "end": "0x1CACF6"
     },
     {
       "id": "招式名",
@@ -55,7 +55,7 @@
       "default": true,
       "description": "招式名固定表",
       "start": "0x1CACFC",
-      "end": "0x1CB813"
+      "end": "0x1CB80C"
     },
     {
       "id": "训练家类名",
@@ -63,17 +63,147 @@
       "group": "词条",
       "default": true,
       "description": "Trainer class 名表",
-      "start": "0x0",
-      "end": "0x0"
+      "start": "0x3E0808",
+      "end": "0x3EE982",
+      "ranges": [
+        {
+          "start": "0x3E0808",
+          "end": "0x3E09E4"
+        },
+        {
+          "start": "0x3E15B8",
+          "end": "0x3E17A8"
+        },
+        {
+          "start": "0x3E208C",
+          "end": "0x3E212E"
+        },
+        {
+          "start": "0x3E2C64",
+          "end": "0x3E2DDB"
+        },
+        {
+          "start": "0x3E2E7C",
+          "end": "0x3E2EE7"
+        },
+        {
+          "start": "0x3E3F31",
+          "end": "0x3E3F5F"
+        },
+        {
+          "start": "0x3E5EFC",
+          "end": "0x3E5F3E"
+        },
+        {
+          "start": "0x3E6564",
+          "end": "0x3E659D"
+        },
+        {
+          "start": "0x3E666C",
+          "end": "0x3E673D"
+        },
+        {
+          "start": "0x3E67D4",
+          "end": "0x3E6C36"
+        },
+        {
+          "start": "0x3E6F84",
+          "end": "0x3E7000"
+        },
+        {
+          "start": "0x3E70A8",
+          "end": "0x3E71A4"
+        },
+        {
+          "start": "0x3E8180",
+          "end": "0x3E823A"
+        },
+        {
+          "start": "0x3E89B4",
+          "end": "0x3E8A43"
+        },
+        {
+          "start": "0x3E99B7",
+          "end": "0x3E9A03"
+        },
+        {
+          "start": "0x3E9AD6",
+          "end": "0x3E9AF8"
+        },
+        {
+          "start": "0x3E9ECB",
+          "end": "0x3EA101"
+        },
+        {
+          "start": "0x3EABEF",
+          "end": "0x3EAD1F"
+        },
+        {
+          "start": "0x3EADE3",
+          "end": "0x3EAE0F"
+        },
+        {
+          "start": "0x3EB179",
+          "end": "0x3EB411"
+        },
+        {
+          "start": "0x3EB536",
+          "end": "0x3EB596"
+        },
+        {
+          "start": "0x3EBF04",
+          "end": "0x3EC053"
+        },
+        {
+          "start": "0x3EC60C",
+          "end": "0x3EC699"
+        },
+        {
+          "start": "0x3EC794",
+          "end": "0x3EC7E4"
+        },
+        {
+          "start": "0x3ECEC4",
+          "end": "0x3ED00B"
+        },
+        {
+          "start": "0x3ED4A0",
+          "end": "0x3ED565"
+        },
+        {
+          "start": "0x3ED7B0",
+          "end": "0x3ED976"
+        },
+        {
+          "start": "0x3EDFB4",
+          "end": "0x3EE03F"
+        },
+        {
+          "start": "0x3EE2B8",
+          "end": "0x3EE34A"
+        },
+        {
+          "start": "0x3EE424",
+          "end": "0x3EE4D6"
+        },
+        {
+          "start": "0x3EE650",
+          "end": "0x3EE6C7"
+        },
+        {
+          "start": "0x3EE91C",
+          "end": "0x3EE982"
+        }
+      ]
     },
     {
       "id": "地点名",
       "label": "词条·地点",
       "group": "词条",
       "default": true,
-      "description": "地图/地区名表（若独立）",
-      "start": "0x0",
-      "end": "0x0"
+      "description": "地图/地区名表（连续PCS串，指针表0x3BEF54/8字节步长/88条目）",
+      "start": "0x3BEC94",
+      "end": "0x3BEEC0"
     },
     {
       "id": "道具名",
@@ -81,8 +211,8 @@
       "group": "词条",
       "default": true,
       "description": "道具结构内名称字段",
-      "start": "0x39A648",
-      "end": "0x39DCA7"
+      "start": "0x39A670",
+      "end": "0x39DB18"
     },
     {
       "id": "道具说明",
@@ -91,7 +221,7 @@
       "default": true,
       "description": "道具描述指针目标",
       "start": "0x3984DC",
-      "end": "0x39A643"
+      "end": "0x39A61C"
     },
     {
       "id": "招式说明",
@@ -99,17 +229,17 @@
       "group": "说明",
       "default": true,
       "description": "招式说明",
-      "start": "0x0",
-      "end": "0x0"
+      "start": "0x1D366C",
+      "end": "0x1D58A9"
     },
     {
       "id": "特性说明",
       "label": "说明·特性",
       "group": "说明",
       "default": true,
-      "description": "特性说明",
-      "start": "0x0",
-      "end": "0x0"
+      "description": "特性说明（连续PCS串，非指针表）",
+      "start": "0x1CBE57",
+      "end": "0x1CC40C"
     },
     {
       "id": "图鉴条目",
@@ -126,8 +256,8 @@
       "group": "剧情",
       "default": true,
       "description": "家园镇、选角、博士开场",
-      "start": "0x149300",
-      "end": "0x156292"
+      "start": "0x152CD7",
+      "end": "0x1973B3"
     },
     {
       "id": "早期城镇",
@@ -135,8 +265,8 @@
       "group": "剧情",
       "default": true,
       "description": "前期城镇/道馆主线",
-      "start": "0x148243",
-      "end": "0x165A17"
+      "start": "0x148ABC",
+      "end": "0x17D0A7"
     },
     {
       "id": "中期城镇",
@@ -144,8 +274,8 @@
       "group": "剧情",
       "default": true,
       "description": "中期城镇主线",
-      "start": "0x145DBC",
-      "end": "0x15C6AF"
+      "start": "0x145E3C",
+      "end": "0x197115"
     },
     {
       "id": "后期与联盟",
@@ -153,8 +283,8 @@
       "group": "剧情",
       "default": true,
       "description": "后期城镇、联盟、冠军",
-      "start": "0x15FBCE",
-      "end": "0x1782C8"
+      "start": "0x146FA4",
+      "end": "0x19692C"
     },
     {
       "id": "岛屿或通关后",
@@ -162,8 +292,18 @@
       "group": "剧情",
       "default": true,
       "description": "七岛/开拓区等（有则开）",
-      "start": "0x0",
-      "end": "0x0"
+      "start": "0x17817E",
+      "end": "0x178FFE",
+      "ranges": [
+        {
+          "start": "0x17817E",
+          "end": "0x17834D"
+        },
+        {
+          "start": "0x1786E6",
+          "end": "0x178FFE"
+        }
+      ]
     },
     {
       "id": "道路与洞窟",
@@ -171,8 +311,8 @@
       "group": "剧情",
       "default": true,
       "description": "路线、迷宫、洞窟类地图串",
-      "start": "0x100000",
-      "end": "0x1DFFFF"
+      "start": "0x1076E1",
+      "end": "0x1DC0FE"
     },
     {
       "id": "宝可梦中心",
@@ -203,42 +343,8 @@
       "group": "设施",
       "default": true,
       "description": "买卖与商店提示",
-      "start": "0x1466D7",
-      "end": "0x3EA120",
-      "ranges": [
-        {
-          "start": "0x1466D7",
-          "end": "0x146757"
-        },
-        {
-          "start": "0x1491C5",
-          "end": "0x149245"
-        },
-        {
-          "start": "0x14BFEC",
-          "end": "0x14C095"
-        },
-        {
-          "start": "0x160318",
-          "end": "0x160398"
-        },
-        {
-          "start": "0x1623CE",
-          "end": "0x16244E"
-        },
-        {
-          "start": "0x18067A",
-          "end": "0x1807C3"
-        },
-        {
-          "start": "0x1814B8",
-          "end": "0x1815DC"
-        },
-        {
-          "start": "0x3E9EC0",
-          "end": "0x3EA120"
-        }
-      ]
+      "start": "0x149205",
+      "end": "0x18159C"
     },
     {
       "id": "电脑与仓库",
@@ -246,20 +352,48 @@
       "group": "设施",
       "default": true,
       "description": "PC/仓库菜单与提示",
-      "start": "0x1804D9",
-      "end": "0x3EB4C0",
+      "start": "0x160E49",
+      "end": "0x3EB4BD",
       "ranges": [
         {
-          "start": "0x1804D9",
-          "end": "0x1809F7"
+          "start": "0x160E49",
+          "end": "0x161614"
         },
         {
-          "start": "0x3EB120",
-          "end": "0x3EB1A0"
+          "start": "0x161F95",
+          "end": "0x16200B"
         },
         {
-          "start": "0x3EB400",
-          "end": "0x3EB4C0"
+          "start": "0x17003B",
+          "end": "0x1708C3"
+        },
+        {
+          "start": "0x17E0AE",
+          "end": "0x17E38F"
+        },
+        {
+          "start": "0x180531",
+          "end": "0x180663"
+        },
+        {
+          "start": "0x1808CB",
+          "end": "0x180C25"
+        },
+        {
+          "start": "0x182120",
+          "end": "0x18279F"
+        },
+        {
+          "start": "0x18943E",
+          "end": "0x189620"
+        },
+        {
+          "start": "0x196768",
+          "end": "0x196967"
+        },
+        {
+          "start": "0x3EB41C",
+          "end": "0x3EB4BD"
         }
       ]
     },
@@ -269,8 +403,8 @@
       "group": "设施",
       "default": true,
       "description": "联机/Wifi/神秘礼物",
-      "start": "0x182E9F",
-      "end": "0x18333D"
+      "start": "0x145ECD",
+      "end": "0x18ECF5"
     },
     {
       "id": "标准脚本串",
@@ -278,8 +412,8 @@
       "group": "设施",
       "default": true,
       "description": "obtain/yes-no/告示牌等模板串",
-      "start": "0x0",
-      "end": "0x0"
+      "start": "0x163248",
+      "end": "0x1637BA"
     },
     {
       "id": "标题与主菜单",
@@ -287,8 +421,8 @@
       "group": "界面",
       "default": true,
       "description": "标题、继续/新游戏等",
-      "start": "0x3E8840",
-      "end": "0x3EA400"
+      "start": "0x140014",
+      "end": "0x7DE99C"
     },
     {
       "id": "存档与电源",
@@ -296,8 +430,50 @@
       "group": "界面",
       "default": true,
       "description": "存档损坏、电池等系统提示",
-      "start": "0x0",
-      "end": "0x0"
+      "start": "0x100702",
+      "end": "0x7ADE03",
+      "ranges": [
+        {
+          "start": "0x100702",
+          "end": "0x100862"
+        },
+        {
+          "start": "0x10AD85",
+          "end": "0x10AE02"
+        },
+        {
+          "start": "0x3AED24",
+          "end": "0x3AED4D"
+        },
+        {
+          "start": "0x5A352C",
+          "end": "0x5A357A"
+        },
+        {
+          "start": "0x6C14DC",
+          "end": "0x6C15AB"
+        },
+        {
+          "start": "0x6F62C4",
+          "end": "0x6F631A"
+        },
+        {
+          "start": "0x7108FC",
+          "end": "0x710A3A"
+        },
+        {
+          "start": "0x735428",
+          "end": "0x735486"
+        },
+        {
+          "start": "0x778FD0",
+          "end": "0x779003"
+        },
+        {
+          "start": "0x7ADDD0",
+          "end": "0x7ADE03"
+        }
+      ]
     },
     {
       "id": "设置选项",
@@ -314,8 +490,8 @@
       "group": "界面",
       "default": true,
       "description": "口袋标签、关闭等短 UI",
-      "start": "0x3E9AF4",
-      "end": "0x3EB170"
+      "start": "0x3E9B34",
+      "end": "0x3EB130"
     },
     {
       "id": "状态界面",
@@ -323,8 +499,8 @@
       "group": "界面",
       "default": true,
       "description": "宝可梦详情页标签（非图鉴条目）",
-      "start": "0x3EA742",
-      "end": "0x3EA7EA"
+      "start": "0x3EA782",
+      "end": "0x3EA7AA"
     },
     {
       "id": "开始菜单",
@@ -341,18 +517,8 @@
       "group": "战斗",
       "default": true,
       "description": "战斗主菜单短串（PCS或图块另册）",
-      "start": "0x350800",
-      "end": "0x3DBFFF",
-      "ranges": [
-        {
-          "start": "0x350800",
-          "end": "0x350F00"
-        },
-        {
-          "start": "0x3D0000",
-          "end": "0x3DBFFF"
-        }
-      ]
+      "start": "0x1E04BF",
+      "end": "0x3EA74A"
     },
     {
       "id": "战斗提示",
@@ -360,8 +526,8 @@
       "group": "战斗",
       "default": true,
       "description": "战斗短提示",
-      "start": "0x3DC000",
-      "end": "0x3DD7FF"
+      "start": "0x3DC994",
+      "end": "0x3DCAEE"
     },
     {
       "id": "战斗报文",
@@ -369,8 +535,26 @@
       "group": "战斗",
       "default": true,
       "description": "战斗字符串大表",
-      "start": "0x0",
-      "end": "0x0"
+      "start": "0x157D2C",
+      "end": "0x16E6BD",
+      "ranges": [
+        {
+          "start": "0x157D2C",
+          "end": "0x15854D"
+        },
+        {
+          "start": "0x1637BA",
+          "end": "0x1644F7"
+        },
+        {
+          "start": "0x16A774",
+          "end": "0x16A9C9"
+        },
+        {
+          "start": "0x16E519",
+          "end": "0x16E6BD"
+        }
+      ]
     },
     {
       "id": "对战设施",
@@ -378,8 +562,8 @@
       "group": "战斗",
       "default": true,
       "description": "对战塔等（Emerald更重）",
-      "start": "0x0",
-      "end": "0x0"
+      "start": "0x1792B8",
+      "end": "0x179383"
     },
     {
       "id": "登场与胜负白",
@@ -387,8 +571,8 @@
       "group": "训练家",
       "default": true,
       "description": "登场/胜/负文本池",
-      "start": "0x0",
-      "end": "0x0"
+      "start": "0x148334",
+      "end": "0x190323"
     },
     {
       "id": "训练家名",
@@ -405,8 +589,26 @@
       "group": "图鉴",
       "default": true,
       "description": "搜索/模式等UI；条目正文归图鉴条目",
-      "start": "0x0",
-      "end": "0x0"
+      "start": "0x15A1F0",
+      "end": "0x3F1BD9",
+      "ranges": [
+        {
+          "start": "0x15A1F0",
+          "end": "0x15A980"
+        },
+        {
+          "start": "0x1656FE",
+          "end": "0x165BCA"
+        },
+        {
+          "start": "0x1962EE",
+          "end": "0x196753"
+        },
+        {
+          "start": "0x3F1AA6",
+          "end": "0x3F1BD9"
+        }
+      ]
     },
     {
       "id": "姓名输入",
@@ -414,8 +616,8 @@
       "group": "起名",
       "default": false,
       "description": "五十音/键盘；政策常整类留日",
-      "start": "0x3E8C16",
-      "end": "0x3E8C50"
+      "start": "0x3E9816",
+      "end": "0x3E9846"
     },
     {
       "id": "默认名字",
@@ -423,8 +625,110 @@
       "group": "起名",
       "default": false,
       "description": "男/女默认名列表",
-      "start": "0x0",
-      "end": "0x0"
+      "start": "0x3E1384",
+      "end": "0x3EF76F",
+      "ranges": [
+        {
+          "start": "0x3E1384",
+          "end": "0x3E1386"
+        },
+        {
+          "start": "0x3E17AC",
+          "end": "0x3E17CA"
+        },
+        {
+          "start": "0x3E51EC",
+          "end": "0x3E51FF"
+        },
+        {
+          "start": "0x3E531C",
+          "end": "0x3E532F"
+        },
+        {
+          "start": "0x3E6414",
+          "end": "0x3E6431"
+        },
+        {
+          "start": "0x3E65B4",
+          "end": "0x3E65D0"
+        },
+        {
+          "start": "0x3E67B8",
+          "end": "0x3E67D0"
+        },
+        {
+          "start": "0x3E6C58",
+          "end": "0x3E6C70"
+        },
+        {
+          "start": "0x3E6E82",
+          "end": "0x3E6EBD"
+        },
+        {
+          "start": "0x3E815C",
+          "end": "0x3E817C"
+        },
+        {
+          "start": "0x3E941D",
+          "end": "0x3E9423"
+        },
+        {
+          "start": "0x3E9652",
+          "end": "0x3E9685"
+        },
+        {
+          "start": "0x3E995B",
+          "end": "0x3E9965"
+        },
+        {
+          "start": "0x3E9AFD",
+          "end": "0x3E9B03"
+        },
+        {
+          "start": "0x3EAC22",
+          "end": "0x3EAC5B"
+        },
+        {
+          "start": "0x3EACDE",
+          "end": "0x3EAD4C"
+        },
+        {
+          "start": "0x3EAE19",
+          "end": "0x3EAE44"
+        },
+        {
+          "start": "0x3EB36C",
+          "end": "0x3EB3A3"
+        },
+        {
+          "start": "0x3EBE97",
+          "end": "0x3EBEAD"
+        },
+        {
+          "start": "0x3EC6A8",
+          "end": "0x3EC6AD"
+        },
+        {
+          "start": "0x3EC7E8",
+          "end": "0x3EC7F0"
+        },
+        {
+          "start": "0x3ECCC8",
+          "end": "0x3ECCDB"
+        },
+        {
+          "start": "0x3ECE04",
+          "end": "0x3ECE6C"
+        },
+        {
+          "start": "0x3EE9A0",
+          "end": "0x3EE9A8"
+        },
+        {
+          "start": "0x3EF75C",
+          "end": "0x3EF76F"
+        }
+      ]
     },
     {
       "id": "赛事娱乐",
@@ -432,8 +736,8 @@
       "group": "其它",
       "default": false,
       "description": "华丽大赛/地下等（多见于RS/Emerald）",
-      "start": "0x0",
-      "end": "0x0"
+      "start": "0x14676E",
+      "end": "0x3EABDE"
     },
     {
       "id": "高风险混杂",
@@ -441,8 +745,8 @@
       "group": "其它",
       "default": false,
       "description": "与图形/选宠同页等易黑屏宽带；默认关",
-      "start": "0x0",
-      "end": "0x0"
+      "start": "0x18C094",
+      "end": "0x18C224"
     }
   ],
   "unassigned": {

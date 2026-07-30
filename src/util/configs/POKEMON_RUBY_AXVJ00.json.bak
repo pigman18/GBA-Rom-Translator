@@ -7,8 +7,8 @@
     "game_codes": "AXVJ",
     "taxonomy": "MODULE_TAXONOMY.md",
     "note": "default=true（除物种名/姓名输入/默认名字/其它组与未归类）。名表+界面+剧情由 measure_module_spans.py 实测；支持 ranges 多段（战斗短标签 / 散落商店簇）；道路与洞窟为对话库兜底。",
-    "source": "adapted from Ruby RS family; table addresses may be wrong for Emerald/FRLG",
-    "rom_id": "POKEMON_FIRE_BPRJ00",
+    "source": "AXVJ 名表/道具表实测；红蓝共用语义与地址族",
+    "rom_id": "POKEMON_RUBY_AXVJ00",
     "measured_by": "measure_module_spans.py"
   },
   "modules": [
@@ -201,9 +201,9 @@
       "label": "词条·地点",
       "group": "词条",
       "default": true,
-      "description": "地图/地区名表（指针表0x3B8834/4字节/78条目指向0x3B5A48+）",
-      "start": "0x3B5A48",
-      "end": "0x3B5CB6"
+      "description": "地图/地区名表（若独立）",
+      "start": "0x0",
+      "end": "0x0"
     },
     {
       "id": "道具名",
@@ -229,17 +229,17 @@
       "group": "说明",
       "default": true,
       "description": "招式说明",
-      "start": "0x214474",
-      "end": "0x216159"
+      "start": "0x0",
+      "end": "0x0"
     },
     {
       "id": "特性说明",
       "label": "说明·特性",
       "group": "说明",
       "default": true,
-      "description": "特性说明（连续PCS串，非指针表）",
-      "start": "0x20C4F7",
-      "end": "0x20CAAC"
+      "description": "特性说明",
+      "start": "0x0",
+      "end": "0x0"
     },
     {
       "id": "图鉴条目",

@@ -131,8 +131,8 @@ static int draw_jp_via_chs(TextPrinter *win, uint32_t cur_char)
         return 0;
 
     /* textMode 2 = FontFunc[2] bold/healthbox; CHS would write wrong VRAM. */
-    if (scene_is_battle_interface_dest(win))
-        return 0;
+//    if (scene_is_battle_interface_dest(win))
+//        return 0;
 
     font = win_u8(win, WIN_FONTNUM_REAL);
     /* 0x0B is fontNum; if aliased garbage (>6), fall back to shadowed. */

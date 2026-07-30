@@ -1,0 +1,90 @@
+{
+  "build_id": "0.4.5+20260722T130551.28f50e2c0d99",
+  "package_version": "0.4.5",
+  "timestamp_utc": "2026-07-22T13:05:51Z",
+  "game": "POKEMON_RUBY_AXVJ00",
+  "output_rom": "C:\\code\\gba\\roms\\outputs\\test_phrase3.gba",
+  "output_rom_sha256": "9e3a2b2a127434f9daf2b2ac6385af0925f969eeff26cd856f91ed9cd99087d3",
+  "patch_root": "C:/code/gba/tools/Meowth-GBA-Translator-JP/configs/POKEMON_RUBY_AXVJ00",
+  "patch_tree_sha256": "28f50e2c0d99ff0b4616af7a2d3d8d534d9971d696e65ef9dcad6194c07ea78c",
+  "patch_file_count": 24,
+  "patch_files": {
+    "charmap.txt": "ee320fed7decdee8d74cb18208df23ab7d4d25b21f19a1e8b2554390f41ede6a",
+    "custom_translations/README.md": "e3b0c44298fc1c149afbf4c8996fb92427ae41e4649b934ca495991b7852b855",
+    "custom_translations/图鉴.json": "e3c8c2e7c1798b79f679bf95147d5bb7533defcd470254eb99ae789c0258adb3",
+    "custom_translations/地点.json": "4521c659998afe1141bdb89562e2eed9e095ec4bd9e9b05af279c82fc8d9d766",
+    "custom_translations/属性.json": "7df5ccf1cbe683f81404c5a950cfe8418f4cc4623f49bf1103aaa95c9ad4c42e",
+    "custom_translations/招式.json": "9c1c7b26d5fa49da4829d641bf580e429a326c6e17b92cd3e8e78a3ddd8cb29c",
+    "custom_translations/特性.json": "232029535a1eb821ef84e40482709e8f290314283bee2790c480f0c2a0392422",
+    "custom_translations/道具.json": "8078b7fac70ccbb0aea39dccdc82e75c2e197c8bccab623bdb9ab88a069e21ca",
+    "game.json": "d9083597f98b1ac2f22501d078a0215d79764e1faf8b469b484200adfcee4136",
+    "graphic/fonts.s": "026d1b527f8eb9f3261591e7688ac4ee648f11e5115df7fec9a2c3b99822f8ff",
+    "include/ArmipsBSMacros.asm": "9befa18e9700821533e2e443f155b28515d3050fcecd4b1a9461e0c55e3b74d6",
+    "include/ArmipsMacros.asm": "5c5245f3b51d24fe0ab7e272eaa287c3f5d48e051e8ff822b2bf081eefb7105d",
+    "include/axvj_addrs.asm": "bb020938421157d2f5b7297de750d79cfadf773427e68386a498fc27ca0fe23d",
+    "main.asm": "7fbba1eefba037bbcb0722c124b6665fcdcb8a89eb98dbff3bb19560f632f81c",
+    "src/HackFunction/ChineseGlyphDispatch.s": "b7328953e9bcc1ae38c5e79142e3873c8f6d1a09c43146bf4e86a10bd99c8598",
+    "src/HackFunction/CustomCallViaR2.s": "77f0aac123aad387cb5df45f99033215d53d1ec73c97f4d4dd456d8996d86ca3",
+    "src/HackFunction/CustomFontFunc.s": "e427ee9d5464608208703459aaea492035e0ec10437313462d5c7fe80f58b19c",
+    "src/HackFunction/DrawChineseGlyph4bpp.s": "35534d4e771b8409828ec862fb4bc7ea6966bd64d7cc3a2ba064e281a8d51f5c",
+    "src/HackFunction/GetStringWidthChinese.s": "7628e4330883d1849996e88b183d6539be13cac38a3be06d142c379d2dbee430",
+    "src/HackFunction/SummaryBodyResetHook.s": "02b86ee514c2432df1a554feb340551f6b0e68bd2c6669f63e149442a455da2f",
+    "src/HookInOrigin/ProcessCurrentChar.s": "0cefc9266c12b7c61d64da6ac619344bf716f9fc33f91e76b0b3e8230ba3ac74",
+    "strings/testText.s": "ed2aeb72eaf83c0667b5a4e17bd42904aac9ed7291ff7d178b22617477b1b12c",
+    "tools/armips.exe": "d32bb9a35c6a1bccacd1c049ef0491651efaf16adf57e629ea47d19db980695a",
+    "wiki.py": "065818dc50ab06574b16f8b03169daeab4d29ed91171c178b0b638dd7304d42a"
+  },
+  "key_src_sha256": {
+    "src/meowth/policy.py": "aa9f062f1af006a28582ba5183823782aca306fc3b8c9607d4799fdeffa792f4",
+    "src/meowth/seed_translate.py": "e9038010b713ac127606e9d0ce5160127ff221d5f2df99149bbac61a9d23f07a",
+    "src/meowth/rom_writer.py": "4bf5fc6b85365091c17be8b3caeb285fa2c8f7bb0ab63318f0fb5d0c95978ce7",
+    "src/meowth/font_patch.py": "1952d3d55ad3914dd817b8a13f47ce1387e339e6cd8fa695236bcb6d43977791",
+    "src/meowth/core/engine.py": "aa640e2185370a59122a7e102ed22c9b2228cdda632c10e1769ba7b6956a1162",
+    "src/meowth/table_patch.py": "d6e4434ee7594332a608a2626ec0345b6b42611fa45651c6a0a1f44457aff18f"
+  },
+  "inject_stats": {
+    "in_place": 17,
+    "relocated": 281,
+    "skipped": 0,
+    "entry_count": 1266,
+    "name_tables": {
+      "species_names": {
+        "written": 1,
+        "ptr_patched": 58,
+        "mul_patched": 58,
+        "lits_total": 67,
+        "lits_safe": 58
+      },
+      "move_names": {
+        "written": 1,
+        "ptr_patched": 43,
+        "mul_patched": 43,
+        "lits_total": 43,
+        "lits_safe": 43
+      },
+      "item_data": {
+        "written": 1,
+        "ptr_patched": 1,
+        "mul_patched": 1,
+        "lits_total": 14,
+        "lits_safe": 1
+      }
+    },
+    "modules": [
+      "招式1",
+      "招式3",
+      "道具1",
+      "道具2",
+      "道具3"
+    ],
+    "geo": {
+      "include": "",
+      "exclude": "",
+      "omit_band": "",
+      "before": 1266,
+      "after": 1266,
+      "omit_range": null
+    }
+  },
+  "notes": ""
+}

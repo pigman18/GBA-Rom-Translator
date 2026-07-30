@@ -1,6 +1,6 @@
 {
   "_meta": {
-    "exported_by": "dump_addr_bands.py",
+    "exported_by": "text_patcher.py",
     "match_rule": "smallest span first; full-band inside, else clip intersection against ranges (dump merges)",
     "band_count": 3919,
     "module_band_counts": {

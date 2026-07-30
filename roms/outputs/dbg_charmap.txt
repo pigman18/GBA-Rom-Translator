@@ -1,0 +1,60 @@
+charmap config:
+{
+  "charmap_path": "charmap.txt",
+  "escape": true,
+  "punct_map": {
+    "！": 171,
+    "!": 171,
+    "？": 172,
+    "?": 172,
+    "。": 173,
+    "，": 184,
+    ",": 184,
+    "：": 240,
+    ":": 240,
+    "『": 177,
+    "』": 178,
+    "「": 179,
+    "」": 180,
+    "‥": 176,
+    "…": 176,
+    "ー": 174,
+    "・": 175
+  },
+  "chinese_leads": [
+    [
+      1,
+      5
+    ],
+    [
+      7,
+      26
+    ],
+    [
+      28,
+      30
+    ]
+  ],
+  "escape_bytes": [
+    249,
+    0
+  ],
+  "ideospace_bytes": [
+    1,
+    247
+  ]
+}
+charmap_path raw: 'charmap.txt'
+cwd: C:\code\gba\tools\Meowth-GBA-Translator-JP
+cwd + rel: C:\code\gba\tools\Meowth-GBA-Translator-JP\charmap.txt exists=False
+Found charmaps (**/charmap.txt):
+  work\POKEMON_RUBY_AXVJ00\charmap.txt
+  work\POKEMON_RUBY_AXVJ00\build\charmap.txt
+  configs\POKEMON_RUBY_AXVJ00\charmap.txt
+Found charmaps (**/charmap.*):
+  work\POKEMON_RUBY_AXVJ00\charmap.txt
+  work\POKEMON_RUBY_AXVJ00\build\charmap.txt
+  src\meowth\charmap.py
+  src\meowth\__pycache__\charmap.cpython-314.pyc
+  src\meowth\binaries\macos\lib\encodings\charmap.py
+  configs\POKEMON_RUBY_AXVJ00\charmap.txt

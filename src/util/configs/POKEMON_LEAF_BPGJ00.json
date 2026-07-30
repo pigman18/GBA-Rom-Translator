@@ -1,0 +1,382 @@
+{
+  "_meta": {
+    "label": "POKEMON_LEAF_BPGJ00 module_map",
+    "address_space": "file_offset",
+    "match_rule": "smallest fuzzy span first; band fully inside",
+    "address_family": "FRLG",
+    "game_codes": "BPGJ",
+    "taxonomy": "MODULE_TAXONOMY.md",
+    "note": "default=true（除物种名/姓名输入/默认名字/其它组与未归类）。line_width 不在 dump 配置，见 Meowth translate/modules.inject.json（默认20）。",
+    "source": "BPGJ/BPRJ 指针槽实测；名表用外包络兼容火叶约 +0x24 偏差",
+    "rom_id": "POKEMON_LEAF_BPGJ00"
+  },
+  "modules": [
+    {
+      "id": "属性名",
+      "label": "词条·属性",
+      "group": "词条",
+      "default": true,
+      "description": "属性名短表（单字注入需谨慎）",
+      "start": "0x20C050",
+      "end": "0x20C0CD"
+    },
+    {
+      "id": "性格名",
+      "label": "词条·性格",
+      "group": "词条",
+      "default": true,
+      "description": "性格名表/指针体",
+      "start": "0x3DEF00",
+      "end": "0x3DF0FF"
+    },
+    {
+      "id": "特性名",
+      "label": "词条·特性",
+      "group": "词条",
+      "default": true,
+      "description": "特性名固定表",
+      "start": "0x20C250",
+      "end": "0x20C4EB"
+    },
+    {
+      "id": "物种名",
+      "label": "词条·物种",
+      "group": "词条",
+      "default": false,
+      "description": "物种名固定表",
+      "start": "0x203C94",
+      "end": "0x204677"
+    },
+    {
+      "id": "招式名",
+      "label": "词条·招式",
+      "group": "词条",
+      "default": true,
+      "description": "招式名固定表",
+      "start": "0x20463C",
+      "end": "0x205177"
+    },
+    {
+      "id": "训练家类名",
+      "label": "词条·训练家类",
+      "group": "词条",
+      "default": true,
+      "description": "Trainer class 名表",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "地点名",
+      "label": "词条·地点",
+      "group": "词条",
+      "default": true,
+      "description": "地图/地区名表（若独立）",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "道具名",
+      "label": "词条·道具",
+      "group": "词条",
+      "default": true,
+      "description": "道具结构内名称字段",
+      "start": "0x3A0568",
+      "end": "0x3A418F"
+    },
+    {
+      "id": "道具说明",
+      "label": "说明·道具",
+      "group": "说明",
+      "default": true,
+      "description": "道具描述指针目标",
+      "start": "0x39C000",
+      "end": "0x3A0567"
+    },
+    {
+      "id": "招式说明",
+      "label": "说明·招式",
+      "group": "说明",
+      "default": true,
+      "description": "招式说明",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "特性说明",
+      "label": "说明·特性",
+      "group": "说明",
+      "default": true,
+      "description": "特性说明",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "图鉴条目",
+      "label": "说明·图鉴条目",
+      "group": "说明",
+      "default": true,
+      "description": "图鉴正文",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "开场家园",
+      "label": "剧情·开场家园",
+      "group": "剧情",
+      "default": true,
+      "description": "家园镇、选角、博士开场",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "早期城镇",
+      "label": "剧情·早期城镇",
+      "group": "剧情",
+      "default": true,
+      "description": "前期城镇/道馆主线",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "中期城镇",
+      "label": "剧情·中期城镇",
+      "group": "剧情",
+      "default": true,
+      "description": "中期城镇主线",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "后期与联盟",
+      "label": "剧情·后期联盟",
+      "group": "剧情",
+      "default": true,
+      "description": "后期城镇、联盟、冠军",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "岛屿或通关后",
+      "label": "剧情·通关后",
+      "group": "剧情",
+      "default": true,
+      "description": "七岛/开拓区等（有则开）",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "道路与洞窟",
+      "label": "剧情·道路洞窟",
+      "group": "剧情",
+      "default": true,
+      "description": "路线、迷宫、洞窟类地图串",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "宝可梦中心",
+      "label": "设施·宝可梦中心",
+      "group": "设施",
+      "default": true,
+      "description": "护士、治疗、标准对白",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "商店",
+      "label": "设施·商店",
+      "group": "设施",
+      "default": true,
+      "description": "买卖与商店提示",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "电脑与仓库",
+      "label": "设施·电脑",
+      "group": "设施",
+      "default": true,
+      "description": "PC/仓库菜单与提示",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "缆线与通信",
+      "label": "设施·通信",
+      "group": "设施",
+      "default": true,
+      "description": "联机/Wifi/神秘礼物",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "标准脚本串",
+      "label": "设施·标准脚本",
+      "group": "设施",
+      "default": true,
+      "description": "obtain/yes-no/告示牌等模板串",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "标题与主菜单",
+      "label": "界面·标题主菜单",
+      "group": "界面",
+      "default": true,
+      "description": "标题、继续/新游戏等",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "存档与电源",
+      "label": "界面·存档",
+      "group": "界面",
+      "default": true,
+      "description": "存档损坏、电池等系统提示",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "设置选项",
+      "label": "界面·设置",
+      "group": "界面",
+      "default": true,
+      "description": "选项菜单",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "背包界面",
+      "label": "界面·背包",
+      "group": "界面",
+      "default": true,
+      "description": "口袋标签、关闭等短 UI",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "状态界面",
+      "label": "界面·状态",
+      "group": "界面",
+      "default": true,
+      "description": "宝可梦详情页标签（非图鉴条目）",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "开始菜单",
+      "label": "界面·开始菜单",
+      "group": "界面",
+      "default": true,
+      "description": "图鉴/宝可梦/背包/保存/退出等",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "战斗菜单",
+      "label": "战斗·菜单",
+      "group": "战斗",
+      "default": true,
+      "description": "战斗主菜单短串（PCS或图块另册）",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "战斗提示",
+      "label": "战斗·提示",
+      "group": "战斗",
+      "default": true,
+      "description": "战斗短提示",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "战斗报文",
+      "label": "战斗·报文",
+      "group": "战斗",
+      "default": true,
+      "description": "战斗字符串大表",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "对战设施",
+      "label": "战斗·对战设施",
+      "group": "战斗",
+      "default": true,
+      "description": "对战塔等（Emerald更重）",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "登场与胜负白",
+      "label": "训练家·对白",
+      "group": "训练家",
+      "default": true,
+      "description": "登场/胜/负文本池",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "训练家名",
+      "label": "训练家·名称",
+      "group": "训练家",
+      "default": true,
+      "description": "训练家个体名（若与类名分表）",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "图鉴界面",
+      "label": "图鉴·界面",
+      "group": "图鉴",
+      "default": true,
+      "description": "搜索/模式等UI；条目正文归图鉴条目",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "姓名输入",
+      "label": "起名·输入",
+      "group": "起名",
+      "default": false,
+      "description": "五十音/键盘；政策常整类留日",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "默认名字",
+      "label": "起名·默认名",
+      "group": "起名",
+      "default": false,
+      "description": "男/女默认名列表",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "赛事娱乐",
+      "label": "其它·赛事",
+      "group": "其它",
+      "default": false,
+      "description": "华丽大赛/地下等（多见于RS/Emerald）",
+      "start": "0x0",
+      "end": "0x0"
+    },
+    {
+      "id": "高风险混杂",
+      "label": "其它·高风险",
+      "group": "其它",
+      "default": false,
+      "description": "与图形/选宠同页等易黑屏宽带；默认关",
+      "start": "0x0",
+      "end": "0x0"
+    }
+  ],
+  "unassigned": {
+    "id": "未归类",
+    "label": "其它·未归类",
+    "group": "其它",
+    "default": false,
+    "description": "dump 带未完全落入任何模块模糊区间"
+  }
+}

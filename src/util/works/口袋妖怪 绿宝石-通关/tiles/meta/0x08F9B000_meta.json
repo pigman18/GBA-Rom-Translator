@@ -1,0 +1,124 @@
+{
+  "name": "0x08F9B000",
+  "rom_address": "0x08F9B000",
+  "format": "4bpp",
+  "compression": "lz77_swap",
+  "raw_size": 5888,
+  "sprite_size_px": [
+    32,
+    16
+  ],
+  "sprite_count": 23,
+  "tile_size_px": [
+    8,
+    8
+  ],
+  "tiles_per_sprite": 8,
+  "tile_order": "row_major",
+  "palette": {
+    "rom_address": "0x087EF412",
+    "format": "gbapal555",
+    "bank_count": 3,
+    "colors_per_bank": 16
+  },
+  "pointer_sources": [
+    {
+      "address": "0x0861CFBC",
+      "label": ""
+    }
+  ],
+  "sprites": [
+    {
+      "index": 0,
+      "file": "0x08F9B000_00.png"
+    },
+    {
+      "index": 1,
+      "file": "0x08F9B000_01.png"
+    },
+    {
+      "index": 2,
+      "file": "0x08F9B000_02.png"
+    },
+    {
+      "index": 3,
+      "file": "0x08F9B000_03.png"
+    },
+    {
+      "index": 4,
+      "file": "0x08F9B000_04.png"
+    },
+    {
+      "index": 5,
+      "file": "0x08F9B000_05.png"
+    },
+    {
+      "index": 6,
+      "file": "0x08F9B000_06.png"
+    },
+    {
+      "index": 7,
+      "file": "0x08F9B000_07.png"
+    },
+    {
+      "index": 8,
+      "file": "0x08F9B000_08.png"
+    },
+    {
+      "index": 9,
+      "file": "0x08F9B000_09.png"
+    },
+    {
+      "index": 10,
+      "file": "0x08F9B000_10.png"
+    },
+    {
+      "index": 11,
+      "file": "0x08F9B000_11.png"
+    },
+    {
+      "index": 12,
+      "file": "0x08F9B000_12.png"
+    },
+    {
+      "index": 13,
+      "file": "0x08F9B000_13.png"
+    },
+    {
+      "index": 14,
+      "file": "0x08F9B000_14.png"
+    },
+    {
+      "index": 15,
+      "file": "0x08F9B000_15.png"
+    },
+    {
+      "index": 16,
+      "file": "0x08F9B000_16.png"
+    },
+    {
+      "index": 17,
+      "file": "0x08F9B000_17.png"
+    },
+    {
+      "index": 18,
+      "file": "0x08F9B000_18.png"
+    },
+    {
+      "index": 19,
+      "file": "0x08F9B000_19.png"
+    },
+    {
+      "index": 20,
+      "file": "0x08F9B000_20.png"
+    },
+    {
+      "index": 21,
+      "file": "0x08F9B000_21.png"
+    },
+    {
+      "index": 22,
+      "file": "0x08F9B000_22.png"
+    }
+  ]
+}

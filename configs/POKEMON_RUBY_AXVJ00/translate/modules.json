@@ -28,13 +28,13 @@
       "缆线与通信": 0,
       "标准脚本串": 0,
       "标题与主菜单": 22,
-      "存档与电源": 5,
+      "存档与电源": 0,
       "设置选项": 5,
       "背包界面": 21,
       "状态界面": 0,
       "开始菜单": 7,
       "战斗菜单": 73,
-      "战斗提示": 19,
+      "战斗提示": 18,
       "战斗报文": 0,
       "对战设施": 0,
       "登场与胜负白": 0,
@@ -44,7 +44,7 @@
       "默认名字": 0,
       "赛事娱乐": 0,
       "高风险混杂": 0,
-      "未归类": 2624
+      "未归类": 2622
     },
     "source_module_map_meta": {
       "label": "POKEMON_RUBY_AXVJ00 module_map",
@@ -59,9 +59,9 @@
       "measured_by": "measure_module_spans.py"
     },
     "rom_id": "POKEMON_RUBY_AXVJ00",
-    "source_rom_path": "C:\\code\\gba\\tools\\roms\\origin\\POKEMON_RUBY_AXVJ00.gba",
+    "source_rom_path": "C:\\code\\GBA-Rom-Translator\\roms\\origin\\POKEMON_RUBY_AXVJ00.gba",
     "game_code": "AXVJ",
-    "module_map": "C:\\code\\gba\\tools\\G3宝可梦解包\\configs\\POKEMON_RUBY_AXVJ00.json"
+    "module_map": "C:\\code\\GBA-Rom-Translator\\src\\util\\configs\\POKEMON_RUBY_AXVJ00.json"
   },
   "modules": {
     "属性名": {
@@ -4953,7 +4953,7 @@
       "default": true,
       "description": "联机/Wifi/神秘礼物",
       "addr_bands": [],
-      "offset": 1584729,
+      "offset": 1584799,
       "end": 1585981
     },
     "标准脚本串": {
@@ -5066,72 +5066,7 @@
       "group": "界面",
       "default": true,
       "description": "存档损坏、电池等系统提示",
-      "addr_bands": [
-        [
-          "0x1EC5FF",
-          "0x1EC641"
-        ],
-        [
-          "0x3DC0C3",
-          "0x3DC0E4"
-        ],
-        [
-          "0x3EBCB9",
-          "0x3EBDBE"
-        ],
-        [
-          "0x3EBB59",
-          "0x3EBCA7"
-        ],
-        [
-          "0x3EBE2B",
-          "0x3EBE50"
-        ]
-      ],
-      "geo_ranges": [
-        [
-          "0x3EBB59",
-          "0x3EBCA7"
-        ],
-        [
-          "0x3EBCB9",
-          "0x3EBDBE"
-        ],
-        [
-          "0x3EBE2B",
-          "0x3EBE50"
-        ],
-        [
-          "0x3DC0C3",
-          "0x3DC0E4"
-        ],
-        [
-          "0x1978F5",
-          "0x197907"
-        ],
-        [
-          "0x197908",
-          "0x197927"
-        ],
-        [
-          "0x197928",
-          "0x19794B"
-        ],
-        [
-          "0x19794C",
-          "0x197963"
-        ],
-        [
-          "0x197974",
-          "0x19799D"
-        ],
-        [
-          "0x1EC5FF",
-          "0x1EC641"
-        ]
-      ],
-      "offset": 1669365,
-      "end": 4111952
+      "addr_bands": []
     },
     "设置选项": {
       "label": "界面·设置",
@@ -5624,10 +5559,6 @@
       "addr_bands": [
         [
           "0x3DC000",
-          "0x3DC0C2"
-        ],
-        [
-          "0x3DC0E5",
           "0x3DC250"
         ],
         [
@@ -5919,7 +5850,7 @@
         ],
         [
           "0x1EC5CC",
-          "0x1EC5FE"
+          "0x1EC641"
         ],
         [
           "0x1EC648",
@@ -9231,18 +9162,10 @@
         ],
         [
           "0x3EB5AE",
-          "0x3EBB58"
-        ],
-        [
-          "0x3EBCA8",
-          "0x3EBCB8"
+          "0x3EBDBE"
         ],
         [
           "0x3EBDC0",
-          "0x3EBE2A"
-        ],
-        [
-          "0x3EBE51",
           "0x3EBE6F"
         ],
         [

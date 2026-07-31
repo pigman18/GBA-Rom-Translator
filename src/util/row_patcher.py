@@ -439,6 +439,58 @@ def scan_pointer_sources(rom: bytes, target_offset: int,
     return sources
 
 
+def _find_palette_via_pointers(rom: bytes, tile_ptr_offset: int) -> tuple:
+    """
+    通过指针表找到调色板。
+    逻辑: 找到指向 tile data 的指针，然后在同一指针表中找附近的 palette 指针。
+    返回 (palette_offset, banks, compression) 或 (None, 0, None)。
+    """
+    tile_gba = offset_to_gba_address(tile_ptr_offset)
+    tile_bytes = struct.pack("<I", tile_gba)
+
+    # 搜索指向 tile data 的指针
+    for i in range(0, len(rom) - 3, 4):
+        if rom[i:i + 4] == tile_bytes:
+            # 找到了 tile 指针在 ROM 中的位置
+            # 检查同一"表"中的其他指针 (前后各 0x20 字节，更精确)
+            table_start = max(0, i - 0x20)
+            table_end = min(len(rom), i + 0x20)
+            candidates = []
+            for j in range(table_start, table_end, 4):
+                if j == i:
+                    continue
+                ptr_val = struct.unpack("<I", rom[j:j + 4])[0]
+                # 检查是否是有效的 GBA 地址
+                if 0x08000000 <= ptr_val < 0x0A000000:
+                    ptr_off = ptr_val - 0x08000000
+                    if ptr_off >= len(rom):
+                        continue
+                    # 检查是否是 LZ77 压缩的 palette
+                    if rom[ptr_off] == 0x10:
+                        dst_size = rom[ptr_off + 1] | (rom[ptr_off + 2] << 8) | (rom[ptr_off + 3] << 16)
+                        if dst_size in [96, 64, 32, 128]:
+                            for swap in [False, True]:
+                                try:
+                                    dec = lz77_decompress(rom[ptr_off:], swap=swap)
+                                    if dec and len(dec) == dst_size and _is_valid_gba555(dec):
+                                        comp = "lz77_swap" if swap else "lz77"
+                                        # 优先选择第一个颜色为黑色的调色板 (更可能是正确的)
+                                        if dec[0] == 0 and dec[1] == 0:
+                                            return ptr_off, dst_size // 32, comp
+                                        candidates.append((ptr_off, dst_size // 32, comp, 0))
+                                except Exception:
+                                    continue
+                    # 检查是否是未压缩的 palette (96 bytes, 3 banks)
+                    elif ptr_off + 96 <= len(rom):
+                        chunk = rom[ptr_off:ptr_off + 96]
+                        if _is_valid_gba555(chunk):
+                            candidates.append((ptr_off, 3, "none", 0))
+            # 返回最佳候选 (第一个颜色为黑色的优先)
+            if candidates:
+                return candidates[0][:3]
+    return None, 0, None
+
+
 def patch_pointer(rom: bytearray, ptr_offset: int, new_gba_addr: int):
     """覆写 ROM 中的指针值。"""
     rom[ptr_offset:ptr_offset + 4] = struct.pack("<I", new_gba_addr)
@@ -562,11 +614,15 @@ def _is_valid_gba555(data: bytes) -> bool:
     """检查数据是否像 GBA555 调色板。"""
     if len(data) < 32 or len(data) % 2 != 0:
         return False
+    has_non_zero = False
     for i in range(0, len(data), 2):
         val = data[i] | (data[i + 1] << 8)
         if val > 0x7FFF:
             return False
-    return True
+        if val != 0:
+            has_non_zero = True
+    # 必须有至少一些非零颜色 (排除全零数据)
+    return has_non_zero
 
 
 def _find_palette_near(rom: bytes, target_offset: int,
@@ -598,6 +654,24 @@ def _find_palette_near(rom: bytes, target_offset: int,
                 # 检查是否像 palette (第一个颜色通常是 0x0000)
                 if chunk[0] == 0 and chunk[1] == 0:
                     candidates.append((off, len(chunk) // 2, "none"))
+
+    # 如果附近没找到，搜索整个 ROM (只搜索 LZ77 压缩的 palette)
+    if not candidates:
+        for off in range(0, len(rom) - 4, 4):  # 4字节对齐加速
+            if rom[off] != 0x10:
+                continue
+            dst_size = rom[off + 1] | (rom[off + 2] << 8) | (rom[off + 3] << 16)
+            if dst_size not in pal_sizes:
+                continue
+            for swap in [False, True]:
+                try:
+                    dec = lz77_decompress(rom[off:], swap=swap)
+                    if dec and len(dec) == dst_size and _is_valid_gba555(dec):
+                        comp = "lz77_swap" if swap else "lz77"
+                        candidates.append((off, dst_size, comp))
+                        break
+                except Exception:
+                    continue
 
     if not candidates:
         return None, 0, None
@@ -708,6 +782,10 @@ def probe_data(rom: bytes, search_data: bytes) -> list:
             pal_off, pal_banks, pal_comp = _find_palette_near(rom, data_offset)
             ptrs = scan_pointer_sources(rom, data_offset)
 
+            # 如果附近找不到调色板，尝试通过指针表查找
+            if pal_off is None and ptrs:
+                pal_off, pal_banks, pal_comp = _find_palette_via_pointers(rom, data_offset)
+
             results.append({
                 "match_offset": match_offset,
                 "match_in_decomp": sub_offset,
@@ -739,6 +817,10 @@ def probe_data(rom: bytes, search_data: bytes) -> list:
                 w, h, count = _infer_sprite_size(decomp_size, bpp)
                 pal_off, pal_banks, pal_comp = _find_palette_near(rom, data_offset)
                 ptrs = scan_pointer_sources(rom, data_offset)
+
+                # 如果附近找不到调色板，尝试通过指针表查找
+                if pal_off is None and ptrs:
+                    pal_off, pal_banks, pal_comp = _find_palette_via_pointers(rom, data_offset)
 
                 results.append({
                     "match_offset": match_offset,
@@ -1021,7 +1103,7 @@ def cmd_import(args):
             rom[write_offset:write_offset + len(compressed)] = compressed
             if len(compressed) < original_compressed_size:
                 rom[write_offset + len(compressed):
-                     write_offset + original_compressed_size] = \
+                    write_offset + original_compressed_size] = \
                     b"\x00" * (original_compressed_size - len(compressed))
             print(f"原地写入: offset=0x{write_offset:08X}")
         else:
@@ -1149,6 +1231,127 @@ def cmd_probe(args):
 
 
 # ─────────────────────────────────────────────
+# Scan Palettes 命令
+# ─────────────────────────────────────────────
+
+def cmd_scan_palettes(args):
+    """扫描整个 ROM 寻找调色板。"""
+    rom_path = Path(args.rom)
+    rom = rom_path.read_bytes()
+    target_size = args.size
+    max_results = args.max
+
+    print(f"扫描 ROM: {rom_path.name} ({len(rom)} bytes)")
+    print(f"目标调色板大小: {target_size} bytes ({target_size // 2} 色)")
+    print()
+
+    # 预计算所有指针目标 (优化搜索)
+    print("构建指针索引...")
+    ptr_targets = set()
+    for i in range(0, len(rom) - 3, 4):
+        val = struct.unpack("<I", rom[i:i+4])[0]
+        if 0x08000000 <= val < 0x0A000000:
+            ptr_targets.add(val - 0x08000000)
+
+    pal_sizes = [target_size] if target_size in [32, 64, 96, 128] else [96, 64, 32, 128]
+    candidates = []
+
+    # 1. 扫描 LZ77 压缩的调色板
+    print("扫描 LZ77 压缩调色板...")
+    for off in range(0, len(rom) - 4, 4):
+        if rom[off] != 0x10:
+            continue
+        dst_size = rom[off + 1] | (rom[off + 2] << 8) | (rom[off + 3] << 16)
+        if dst_size not in pal_sizes:
+            continue
+        for swap in [False, True]:
+            try:
+                dec = lz77_decompress(rom[off:], swap=swap)
+                if dec and len(dec) == dst_size and _is_valid_gba555(dec):
+                    comp = "lz77_swap" if swap else "lz77"
+                    if dec[0] == 0 and dec[1] == 0:
+                        unique = len(set(dec[i:i+2] for i in range(0, len(dec), 2)))
+                        if unique >= 3:
+                            has_ptr = off in ptr_targets
+                            candidates.append((off, dst_size, comp, has_ptr))
+                    break
+            except Exception:
+                continue
+
+    # 2. 扫描未压缩的调色板
+    print("扫描未压缩调色板...")
+    for off in range(0, len(rom) - target_size, 4):
+        chunk = rom[off:off + target_size]
+        if chunk[0] != 0 or chunk[1] != 0:
+            continue
+        if _is_valid_gba555(chunk):
+            unique = len(set(chunk[i:i+2] for i in range(0, len(chunk), 2)))
+            if unique >= 3:
+                has_ptr = off in ptr_targets
+                candidates.append((off, target_size, "none", has_ptr))
+
+    # 3. 排序: 有指针引用的优先，然后按地址
+    candidates.sort(key=lambda x: (not x[3], x[0]))
+
+    # 分离 LZ77 和未压缩
+    lz77_cands = [c for c in candidates if c[2] != "none"]
+    raw_cands = [c for c in candidates if c[2] == "none"]
+
+    print(f"\n找到 {len(candidates)} 个调色板候选")
+    print(f"  LZ77 压缩: {len(lz77_cands)} 个 (其中 {sum(1 for c in lz77_cands if c[3])} 个有指针)")
+    print(f"  未压缩: {len(raw_cands)} 个 (其中 {sum(1 for c in raw_cands if c[3])} 个有指针)")
+    print()
+
+    # 优先显示 LZ77 压缩的 (更可能是游戏数据)
+    shown = 0
+    if lz77_cands:
+        print("LZ77 压缩调色板:")
+        for off, size, comp, has_ptr in lz77_cands[:max_results]:
+            gba_addr = offset_to_gba_address(off)
+            try:
+                data = lz77_decompress(rom[off:], swap=(comp == "lz77_swap"))[:16]
+            except:
+                data = b'\x00' * 16
+            colors = []
+            for j in range(0, min(8, len(data)), 2):
+                val = data[j] | (data[j+1] << 8)
+                r = (val & 0x1F) << 3
+                g = ((val >> 5) & 0x1F) << 3
+                b = ((val >> 10) & 0x1F) << 3
+                colors.append(f"({r},{g},{b})")
+            color_str = " ".join(colors)
+            ptr_marker = " [PTR]" if has_ptr else ""
+            print(f"  [{shown+1:2d}] 0x{gba_addr:08X} ({comp:9s}) {color_str}{ptr_marker}")
+            shown += 1
+        print()
+
+    # 然后显示未压缩的
+    if raw_cands and shown < max_results:
+        print("未压缩调色板:")
+        for off, size, comp, has_ptr in raw_cands[:max_results - shown]:
+            gba_addr = offset_to_gba_address(off)
+            data = rom[off:off + min(16, size)]
+            colors = []
+            for j in range(0, min(8, len(data)), 2):
+                val = data[j] | (data[j+1] << 8)
+                r = (val & 0x1F) << 3
+                g = ((val >> 5) & 0x1F) << 3
+                b = ((val >> 10) & 0x1F) << 3
+                colors.append(f"({r},{g},{b})")
+            color_str = " ".join(colors)
+            ptr_marker = " [PTR]" if has_ptr else ""
+            print(f"  [{shown+1:2d}] 0x{gba_addr:08X} (none     ) {color_str}{ptr_marker}")
+            shown += 1
+
+    if len(candidates) > max_results:
+        print(f"\n  ... 还有 {len(candidates) - max_results} 个候选")
+
+    if candidates:
+        print(f"\n使用方法:")
+        print(f"  python row_patcher.py probe {rom_path} --hex-file data.txt --palette 0x{offset_to_gba_address(candidates[0][0]):08X}")
+
+
+# ─────────────────────────────────────────────
 # CLI
 # ─────────────────────────────────────────────
 
@@ -1207,6 +1410,14 @@ def main():
     p_probe.add_argument("--hex-file", help="包含 hex 字符串的文件路径")
     p_probe.add_argument("--palette", help="手动指定调色板 GBA 地址")
 
+    # ── scan-palettes ──
+    p_scan = sub.add_parser("scan-palettes", help="扫描 ROM 中所有调色板")
+    p_scan.add_argument("rom", help="ROM 文件路径")
+    p_scan.add_argument("--size", type=int, default=96,
+                        help="调色板大小 (32/64/96/128, 默认 96)")
+    p_scan.add_argument("--max", type=int, default=20,
+                        help="最多显示几个 (默认 20)")
+
     args = parser.parse_args()
 
     if args.command == "export":
@@ -1215,6 +1426,8 @@ def main():
         cmd_import(args)
     elif args.command == "probe":
         cmd_probe(args)
+    elif args.command == "scan-palettes":
+        cmd_scan_palettes(args)
 
 
 if __name__ == "__main__":

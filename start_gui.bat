@@ -1,5 +1,4 @@
 @echo off
-REM Meowth-AXVJ — JP ROM binary inject (primary product path)
 cd /d "%~dp0"
 
 if exist "venv\Scripts\activate.bat" (

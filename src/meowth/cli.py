@@ -225,9 +225,15 @@ def build(rom_path, translations, output, source, target):
     default=None,
     help="CJK BDF bitmap font; builds work fonts and keeps them (no default-bin overwrite)",
 )
+@click.option(
+    "--tiles-dir",
+    type=click.Path(dir_okay=True, path_type=Path),
+    default=None,
+    help="Tiles dir (row_patcher export output); patches graphics after translate",
+)
 @_modules_option
 @add_provider_options
-def full(rom_path, output_dir, work_dir, source, target, seed_only, bdf_font_path, modules,
+def full(rom_path, output_dir, work_dir, source, target, seed_only, bdf_font_path, tiles_dir, modules,
          provider, api_base, api_key, api_key_env, model):
     """Run full pipeline: extract -> translate -> build ROM."""
     from .modules import parse_modules_csv
@@ -254,6 +260,7 @@ def full(rom_path, output_dir, work_dir, source, target, seed_only, bdf_font_pat
         seed_only=seed_only,
         seed_first=True,
         bdf_font_path=bdf_font_path,
+        tiles_dir=tiles_dir,
         game=game if game != "unknown" else "firered",
         **kwargs
     )

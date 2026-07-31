@@ -3,6 +3,7 @@
   extract/ → extract
   font/ → font
   translate/ → translate
+  tiles/ → tiles (row_patcher import)
   patch/ → patch (armips)
   inject/ → inject (RomWriter)
   modules live under translate/ (scope UI), not a run stage.
@@ -16,6 +17,7 @@ STAGES: list[tuple[str, str, str]] = [
     ("extract", "extract", "抽取"),
     ("font", "font", "字库"),
     ("translate", "translate", "翻译"),
+    ("tiles", "tiles", "贴图"),
     ("patch", "patch", "补丁"),
     ("inject", "inject", "回写"),
 ]

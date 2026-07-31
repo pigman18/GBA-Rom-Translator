@@ -64,6 +64,12 @@ class TranslationConfig:
     # Font path (BDF file for font build)
     bdf_font_path: Path | None = None
 
+    # Tiles dir (row_patcher export output: *_meta.json + *.png/*.raw).
+    # When set, the pipeline runs a tiles stage AFTER build_rom and patches the
+    # final ROM (must not run before: armips font incbin at 0x09000000 would
+    # overwrite relocated tiles).
+    tiles_dir: Path | None = None
+
     # AXVJ modules (GUI checkboxes): ui / script_early / birch_pool / …
     # See modules.modules. Only checked modules are translated/injected.
     modules: list[str] | None = None
@@ -98,6 +104,10 @@ class TranslationConfig:
         translation = data.get("translation", {})
         api = translation.get("api", {})
 
+        tiles_dir = translation.get("tiles_dir")
+        if tiles_dir:
+            tiles_dir = Path(tiles_dir)
+
         return cls(
             source_lang=translation.get("source_language", "en"),
             target_lang=translation.get("target_language", "zh-Hans"),
@@ -107,6 +117,7 @@ class TranslationConfig:
             model=translation.get("model"),
             batch_size=translation.get("batch_size", 30),
             max_workers=translation.get("max_workers", 10),
+            tiles_dir=tiles_dir,
         )
 
     @classmethod
@@ -154,4 +165,5 @@ class TranslationConfig:
             modules=self.modules,
             seed_first=self.seed_first,
             seed_only=self.seed_only,
+            tiles_dir=self.tiles_dir or toml_config.tiles_dir,
         )

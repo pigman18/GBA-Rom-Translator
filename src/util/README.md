@@ -29,6 +29,7 @@ python row_patcher.py export <ROM> <地址> [选项]
 | `--count` | sprite 数量 |
 | `--compression` | 压缩: `auto` (默认), `lz77`, `lz77_swap`, `none` |
 | `--palette` | 调色板 GBA 地址 |
+| `--bank-list` | 每个 sprite 使用的调色板 bank 索引 (逗号分隔, 如 `0,0,1,1,...`)。不指定时所有 sprite 用 bank0 |
 | `--pointers` | 指针源地址 (可多个) |
 | `--no-scan` | 禁用自动指针扫描 |
 | `-o` | 输出目录 |
@@ -36,10 +37,11 @@ python row_patcher.py export <ROM> <地址> [选项]
 **示例:**
 
 ```bash
-# 导出 Ruby JP type icons (32x16, 23个, lz77_swap 压缩)
+# 导出 Ruby JP type icons (32x16, 23个, lz77_swap 压缩, 按每图标调色板 bank 上色)
 python row_patcher.py export ROMS/POKEMON_RUBY_AXVJ00.gba 0x087EE9C8 \
   --format 4bpp --sprite-size 32x16 --count 23 \
-  --compression lz77_swap --palette 0x087EF450
+  --compression lz77_swap --palette 0x087EF450 \
+  --bank-list 0,0,1,1,0,0,2,1,0,2,0,1,2,0,1,1,2,0,0,1,1,2,0
 
 # 导出到指定目录
 python row_patcher.py export ROMS/rom.gba 0x087EE9C8 \
@@ -90,8 +92,13 @@ python row_patcher.py import ROMS/POKEMON_RUBY_AXVJ00.gba \
 ### 探测 (probe)
 
 ```bash
-python row_patcher.py probe <ROM> --bin <bin文件> | --hex <hex字符串>
+python row_patcher.py probe <ROM> --bin <bin文件> | --hex <hex字符串> | --hex-file <hex文件>
 ```
+
+自动分析匹配数据：压缩格式、bpp、sprite 尺寸/数量、调色板地址与 bank 数、指针源。
+若 sprite 使用多个调色板 bank（如属性图标每图标一个 bank），probe 会自动扫描
+OAM 调色板槽号表（13~15）并输出 `--bank-list`，保证建议的 export 命令颜色正确。
+也可用 `--palette` 手动覆盖调色板地址。
 
 在 ROM 中搜索数据，自动检测参数并生成 export 命令。支持两种输入：
 - `--bin`: mgba 导出的 .bin 文件 (推荐)

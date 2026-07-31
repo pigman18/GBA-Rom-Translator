@@ -71,51 +71,93 @@ def lz77_decompress(data: bytes, swap: bool = False) -> bytes:
     return bytes(dst)
 
 
+def _lz77_find_matches(data: bytes) -> list:
+    """为每个位置查找候选匹配 (len 3..18, dist <= 0xFFF)。
+
+    返回与 data 等长的列表，每项为 [(len, dist), ...] 或 None。
+    每个位置最多保留 _LZ77_MAX_MATCHES 个 (按 len 降序)。
+    """
+    n = len(data)
+    matches = [None] * n
+    if n < 6:
+        return matches
+    table = {}
+    for i in range(n - 2):
+        table.setdefault(data[i:i + 3], []).append(i)
+    for i in range(n - 2):
+        cands = table.get(data[i:i + 3])
+        if not cands:
+            continue
+        best = []
+        for j in cands:
+            if j >= i:
+                break
+            dist = i - j
+            if dist > 0xFFF:
+                continue
+            m = 0
+            maxl = min(18, n - i)
+            while m < maxl and data[j + m] == data[i + m]:
+                m += 1
+            if m >= 3:
+                if not best or m > best[-1][0]:
+                    best.append((m, dist))
+                    if len(best) > _LZ77_MAX_MATCHES:
+                        best.pop(0)
+        if best:
+            matches[i] = best
+    return matches
+
+
+_LZ77_MAX_MATCHES = 12
+
+
 def lz77_compress(data: bytes, swap: bool = False) -> bytes:
     """
-    LZ77 压缩。
-    使用贪心前瞻匹配: 在已输出数据中查找最长匹配。
-    最小匹配长度: 3 字节。
+    LZ77 压缩 (最优解析)。
+
+    用动态规划在字面量与回引之间选择代价最小的解析，使输出尽量小，
+    以便能放回原始数据槽 (避免触发搬迁导致游戏读不到新数据)。
+    最小匹配长度: 3 字节；最大 18；距离上限 0xFFF。
     """
     if not data:
         return struct.pack("<I", 0x10) + b"\x00\x00\x00"
 
     dst_size = len(data)
-    compressed = bytearray()
+    matches = _lz77_find_matches(data)
 
+    # DP: dp[i] = 编码 data[i:] 的最小字节数 (含 flag 字节均摊 1/8)
+    INF = float("inf")
+    dp = [INF] * (dst_size + 1)
+    dp[dst_size] = 0
+    choice = [None] * dst_size
+    flag_cost = 1 / 8
+    for i in range(dst_size - 1, -1, -1):
+        best = dp[i + 1] + 1 + flag_cost
+        bestc = (0, 1, 0)  # (kind, length, dist); kind 0=literal 1=match
+        for (m, dist) in matches[i] or []:
+            c = dp[i + m] + 2 + flag_cost
+            if c < best:
+                best = c
+                bestc = (1, m, dist)
+        dp[i] = best
+        choice[i] = bestc
+
+    # 重建输出
+    compressed = bytearray()
     src = 0
     while src < dst_size:
         flag_pos = len(compressed)
         compressed.append(0)
         flags = 0
-
         for bit in range(8):
             if src >= dst_size:
                 break
-
-            best_len = 0
-            best_dist = 0
-
-            max_dist = min(src, 0xFFF)
-            if max_dist > 0:
-                search_start = src - max_dist
-                window = data[search_start:src]
-
-                for wpos in range(len(window)):
-                    match_len = 0
-                    while (match_len < 18 and
-                           src + match_len < dst_size and
-                           wpos + match_len < len(window) and
-                           window[wpos + match_len] == data[src + match_len]):
-                        match_len += 1
-                    if match_len >= 3 and match_len > best_len:
-                        best_len = match_len
-                        best_dist = src - (search_start + wpos)
-
-            if best_len >= 3:
+            kind, length, dist = choice[src]
+            if kind:
                 flags |= (0x80 >> bit)
-                length_field = best_len - 3
-                dist_field = best_dist - 1
+                length_field = length - 3
+                dist_field = dist - 1
                 if swap:
                     lo = ((length_field & 0xF) << 4) | ((dist_field >> 8) & 0xF)
                     hi = dist_field & 0xFF
@@ -124,11 +166,10 @@ def lz77_compress(data: bytes, swap: bool = False) -> bytes:
                     hi = ((length_field & 0xF) << 4) | ((dist_field >> 8) & 0xF)
                 compressed.append(lo)
                 compressed.append(hi)
-                src += best_len
+                src += length
             else:
                 compressed.append(data[src])
                 src += 1
-
         compressed[flag_pos] = flags
 
     header = struct.pack("<I", 0x10 | (dst_size << 8))
@@ -272,17 +313,19 @@ def encode_tiles_4bpp_from_raw(images: list[Image.Image], width_tiles: int,
                     for col in range(0, 8, 2):
                         p0 = img.getpixel((tx + col, ty + row))
                         p1 = img.getpixel((tx + col + 1, ty + row))
-                        idx0 = _find_nearest_color(p0[:3], palette) if p0[3] > 0 else 0
-                        idx1 = _find_nearest_color(p1[:3], palette) if p1[3] > 0 else 0
+                        idx0 = _find_nearest_color(p0[:3], palette, exclude_index_zero=True) if p0[3] > 0 else 0
+                        idx1 = _find_nearest_color(p1[:3], palette, exclude_index_zero=True) if p1[3] > 0 else 0
                         byte = ((idx1 & 0xF) << 4) | (idx0 & 0xF)
                         result.append(byte)
     return bytes(result)
 
 
-def _find_nearest_color(rgb, palette):
+def _find_nearest_color(rgb, palette, exclude_index_zero=False):
     best_idx = 0
     best_dist = float("inf")
-    for i, (r, g, b) in enumerate(palette):
+    start = 1 if exclude_index_zero else 0
+    for i in range(start, len(palette)):
+        r, g, b = palette[i]
         dist = (rgb[0] - r) ** 2 + (rgb[1] - g) ** 2 + (rgb[2] - b) ** 2
         if dist < best_dist:
             best_dist = dist
@@ -290,6 +333,64 @@ def _find_nearest_color(rgb, palette):
             if dist == 0:
                 break
     return best_idx
+
+
+def _color_distance(c1, c2):
+    """平方欧氏 RGB 距离，越小越相似。"""
+    return (c1[0] - c2[0]) ** 2 + (c1[1] - c2[1]) ** 2 + (c1[2] - c2[2]) ** 2
+
+
+def match_palette_color(rgb, palette):
+    """在调色板中寻找与 rgb 最相似的颜色 (RGB 距离最小)。
+
+    返回 (index, dist): index 为最近调色板条目，dist 为平方距离。
+    """
+    best_idx = 0
+    best_dist = float("inf")
+    for i, pc in enumerate(palette):
+        d = _color_distance(rgb, pc)
+        if d < best_dist:
+            best_dist = d
+            best_idx = i
+            if d == 0:
+                break
+    return best_idx, best_dist
+
+
+def normalize_images_to_palette(images, palette, threshold=None):
+    """按相似度把 PNG 的不透明像素吸附到调色板最近色。
+
+    - alpha=0 的像素不处理 (保持透明)。
+    - 不透明像素: 若最近调色板颜色距离 <= threshold (未设则总是吸附) 则替换为调色板色；
+      否则保留原色。
+    - 返回 (new_images, stats)。stats["changed"] 为被改像素数，
+      stats["remaps"] 为 [(原色, 调色板色, 次数), ...] (按次数降序)。
+    """
+    new_images = []
+    changed = 0
+    remaps = {}
+    for img in images:
+        img = img.convert("RGBA")
+        px = img.load()
+        for y in range(img.height):
+            for x in range(img.width):
+                r, g, b, a = px[x, y]
+                if a == 0:
+                    continue
+                idx, dist = match_palette_color((r, g, b), palette)
+                if threshold is not None and dist > threshold:
+                    continue
+                nr, ng, nb = palette[idx]
+                if (nr, ng, nb) != (r, g, b):
+                    px[x, y] = (nr, ng, nb, 255)
+                    changed += 1
+                    remaps[((r, g, b), (nr, ng, nb))] = remaps.get(((r, g, b), (nr, ng, nb)), 0) + 1
+        new_images.append(img)
+    stats = {
+        "changed": changed,
+        "remaps": sorted(remaps.items()),
+    }
+    return new_images, stats
 
 
 # ─────────────────────────────────────────────
@@ -404,7 +505,10 @@ def find_free_space(rom: bytearray, needed: int, start: int = 0x09000000,
     """
     start_off = gba_address_to_offset(start) if start >= 0x08000000 else start
     if start_off >= len(rom):
-        return start
+        # start 已在文件之外: 直接追加到文件末尾 (调用者负责扩展 ROM)。
+        # 不要返回 start 本身 —— 如 0x09000000 处于 16MB 边界，超出原卡带容量时
+        # 游戏/模拟器读不到，会导致图标花屏/崩溃。
+        return offset_to_gba_address(len(rom))
 
     run_start = -1
     for i in range(start_off, len(rom)):
@@ -416,11 +520,12 @@ def find_free_space(rom: bytearray, needed: int, start: int = 0x09000000,
         else:
             run_start = -1
 
-    free_end = len(rom)
-    free_needed = free_end - start_off
-    if free_needed >= needed:
-        return start
-    return offset_to_gba_address(free_end)
+    # No contiguous run of `needed` fill bytes found from start onward.
+    # Fall back to appending at the end of the file (caller extends ROM).
+    # NOTE: never return `start` here — on a post-build ROM that region may
+    # already hold data (e.g. font incbin at 0x09000000) and returning it
+    # would silently corrupt that data.
+    return offset_to_gba_address(len(rom))
 
 
 def scan_pointer_sources(rom: bytes, target_offset: int,
@@ -437,6 +542,41 @@ def scan_pointer_sources(rom: bytes, target_offset: int,
         if rom[i:i + 4] == target_bytes:
             sources.append(offset_to_gba_address(i))
     return sources
+
+
+def detect_palette_bank_table(rom: bytes, sprite_count: int,
+                              bank_count: int = 3) -> tuple:
+    """
+    尝试自动定位"每个 sprite 使用哪个调色板 bank"的表。
+
+    背景: 有些图集 (如 Ruby/Sapphire/Emerald 的属性图标) 中，每个 sprite
+    用调色板的不同 bank 上色，但表里存的是 OAM 调色板槽号 (通常 13~15，
+    对应归一化 bank 0~2)，而不是归一化索引。像素 nibble 本身推不出 bank，
+    必须找这张运行时表。
+
+    启发式: 在 ROM 中搜索一段连续 `sprite_count` 字节、4 字节对齐、
+    每个字节都在 [base, base+bank_count-1] 区间、且两侧不是同区间的表。
+    优先从 OAM 槽号 base=13 开始 (RSE 属性图标惯例)，其次尝试 base=0。
+    只接受唯一命中的 base，避免误报。
+
+    返回 (offset, base, bank_list) 或 (None, None, None)。
+    """
+    n = len(rom)
+    for base in (13, 0):
+        lo, hi = base, base + bank_count - 1
+        found = []
+        for off in range(0, n - sprite_count, 4):
+            window = rom[off:off + sprite_count]
+            if all(lo <= b <= hi for b in window):
+                prev_ok = (off == 0) or not (lo <= rom[off - 1] <= hi)
+                next_ok = (off + sprite_count >= n) or not (lo <= rom[off + sprite_count] <= hi)
+                if prev_ok and next_ok:
+                    found.append(off)
+        if len(found) == 1:
+            off = found[0]
+            bank_list = [rom[off + i] - base for i in range(sprite_count)]
+            return off, base, bank_list
+    return None, None, None
 
 
 def _find_palette_via_pointers(rom: bytes, tile_ptr_offset: int) -> tuple:
@@ -786,6 +926,8 @@ def probe_data(rom: bytes, search_data: bytes) -> list:
             if pal_off is None and ptrs:
                 pal_off, pal_banks, pal_comp = _find_palette_via_pointers(rom, data_offset)
 
+            bank_off, bank_base, bank_list = detect_palette_bank_table(rom, count, pal_banks)
+
             results.append({
                 "match_offset": match_offset,
                 "match_in_decomp": sub_offset,
@@ -802,6 +944,9 @@ def probe_data(rom: bytes, search_data: bytes) -> list:
                 "palette_banks": pal_banks,
                 "palette_compression": pal_comp,
                 "pointer_sources": ptrs,
+                "bank_table_addr": offset_to_gba_address(bank_off) if bank_off is not None else None,
+                "bank_base": bank_base,
+                "bank_list": bank_list,
             })
         else:
             # 直接在 ROM 中找到的匹配
@@ -822,6 +967,8 @@ def probe_data(rom: bytes, search_data: bytes) -> list:
                 if pal_off is None and ptrs:
                     pal_off, pal_banks, pal_comp = _find_palette_via_pointers(rom, data_offset)
 
+                bank_off, bank_base, bank_list = detect_palette_bank_table(rom, count, pal_banks)
+
                 results.append({
                     "match_offset": match_offset,
                     "match_in_decomp": None,
@@ -838,6 +985,9 @@ def probe_data(rom: bytes, search_data: bytes) -> list:
                     "palette_banks": pal_banks,
                     "palette_compression": pal_comp,
                     "pointer_sources": ptrs,
+                    "bank_table_addr": offset_to_gba_address(bank_off) if bank_off is not None else None,
+                    "bank_base": bank_base,
+                    "bank_list": bank_list,
                 })
             else:
                 results.append({
@@ -940,9 +1090,31 @@ def cmd_export(args):
     count = int(args.count)
     tiles_per_sprite = tile_w * tile_h
 
+    # ── 可选：按 sprite 指定调色板 bank ──
+    bank_list = None
+    if args.bank_list:
+        bank_list = [int(x) for x in args.bank_list.split(",")]
+        if len(bank_list) != count:
+            print(f"警告: --bank-list 长度 {len(bank_list)} != --count {count}")
+            bank_list = (bank_list + [0] * count)[:count]
+
     # ── 切分 sprite 并保存 ──
-    images = decode_tiles(raw_data, bpp, tile_w, tile_h,
-                          count=count, palette=palette_flat)
+    if bank_list and palette_banks:
+        images = []
+        tile_size = {1: 8, 4: 32, 8: 64}[bpp]
+        bytes_per_sprite = tiles_per_sprite * tile_size
+        for i in range(count):
+            bank = bank_list[i]
+            if bank >= len(palette_banks):
+                print(f"警告: sprite {i} 指定 bank {bank} 超出可用 bank ({len(palette_banks)})，回退 bank0")
+                bank = 0
+            slice_data = raw_data[i * bytes_per_sprite:(i + 1) * bytes_per_sprite]
+            img = decode_tiles(slice_data, bpp, tile_w, tile_h,
+                               count=1, palette=palette_banks[bank])[0]
+            images.append(img)
+    else:
+        images = decode_tiles(raw_data, bpp, tile_w, tile_h,
+                              count=count, palette=palette_flat)
     for i, img in enumerate(images):
         png_path = output_dir / f"{prefix}_{i:02d}.png"
         img.save(png_path)
@@ -992,6 +1164,7 @@ def cmd_export(args):
             "bank_count": 3,
             "colors_per_bank": 16,
         } if args.palette else None,
+        "palette_bank_per_sprite": bank_list,
         "pointer_sources": pointer_sources,
         "sprites": [
             {"index": i, "file": f"{prefix}_{i:02d}.png"}
@@ -1008,10 +1181,65 @@ def cmd_export(args):
 # Import 命令
 # ─────────────────────────────────────────────
 
+def cmd_fix_palette(args):
+    """比较 PNG 与 meta 调色板内容，把相似颜色吸附到调色板条目并保存回 PNG。"""
+    tiles_dir = Path(args.tiles_dir)
+    meta_search_dir = tiles_dir / "meta" if (tiles_dir / "meta").is_dir() else tiles_dir
+    meta_files = sorted(meta_search_dir.glob("*_meta.json"))
+    if not meta_files:
+        print(f"错误: {meta_search_dir} 下未找到 *_meta.json")
+        sys.exit(1)
+
+    rom = Path(args.rom).read_bytes()
+    threshold = args.threshold
+    dry_run = args.dry_run
+
+    print(f"找到 {len(meta_files)} 个元数据文件 (threshold={threshold}, {'dry-run' if dry_run else '就地保存'})\n")
+
+    total_changed = 0
+    for meta_path in meta_files:
+        meta = json.loads(meta_path.read_text())
+        prefix = meta["rom_address"]
+
+        if not (meta.get("palette") and meta["palette"].get("rom_address")):
+            print(f"{prefix}: meta 未含调色板，跳过")
+            continue
+        pal_addr = int(meta["palette"]["rom_address"], 16)
+        pal_off = gba_address_to_offset(pal_addr)
+        pal_comp = detect_lz77(rom, pal_off)
+        if pal_comp in ("lz77", "lz77_swap"):
+            pal_data = lz77_decompress(bytes(rom[pal_off:]), swap=(pal_comp == "lz77_swap"))
+        else:
+            pal_data = bytes(rom[pal_off:pal_off + 96])
+        palette_flat = palette_to_rgb_list(pal_data, bank_count=3)
+
+        meta_changed = 0
+        for sp in meta.get("sprites", []):
+            png_file = tiles_dir / sp["file"]
+            if not png_file.exists():
+                print(f"  {sp['file']}: 不存在，跳过")
+                continue
+            img = Image.open(png_file).convert("RGBA")
+            new_imgs, stats = normalize_images_to_palette([img], palette_flat, threshold)
+            if stats["changed"]:
+                meta_changed += stats["changed"]
+                total_changed += stats["changed"]
+                print(f"  {sp['file']}: 调整 {stats['changed']} px")
+                for (fr, to), c in stats["remaps"]:
+                    print(f"      {fr} -> {to}  x{c}")
+                if not dry_run:
+                    new_imgs[0].save(png_file)
+        print(f"{prefix}: 共 {meta_changed} px" + (" (dry-run，未写入)" if dry_run else ""))
+        print()
+
+    print(f"全部完成，共 {total_changed} px 需要调整" + (" (dry-run，未写入)" if dry_run else ""))
+
+
 def cmd_import(args):
     tiles_dir = Path(args.tiles_dir)
     rom_path = Path(args.rom)
     rom = bytearray(rom_path.read_bytes())
+    args.snap_palette = not getattr(args, "no_snap_palette", False)
     output_path = Path(args.output) if args.output else rom_path.with_name(
         rom_path.stem + "_patched" + rom_path.suffix)
 
@@ -1064,6 +1292,14 @@ def cmd_import(args):
             elif png_file.exists():
                 img = Image.open(png_file).convert("RGBA")
                 if bpp == 4:
+                    if args.snap_palette and palette_flat:
+                        img, snap_stats = normalize_images_to_palette(
+                            [img], palette_flat, args.palette_threshold)
+                        img = img[0]
+                        if snap_stats["changed"]:
+                            print(f"  {png_file.name}: 颜色吸附 {snap_stats['changed']} px:")
+                            for (fr, to), c in snap_stats["remaps"]:
+                                print(f"      {fr} -> {to}  x{c}")
                     sprite_data = encode_tiles_4bpp_from_raw(
                         [img], tile_w, tile_h, palette_flat or [])
                 else:
@@ -1106,6 +1342,17 @@ def cmd_import(args):
                     write_offset + original_compressed_size] = \
                     b"\x00" * (original_compressed_size - len(compressed))
             print(f"原地写入: offset=0x{write_offset:08X}")
+
+            # ── 恢复指针到原地址 ──
+            # 若此前曾因数据放不下被搬迁过，指针还指向搬迁位置 (游戏读不到 ->
+            # 图标乱码/崩溃)。数据已回原位，必须把指针改回原地址。
+            for ptr_info in meta.get("pointer_sources", []):
+                ptr_addr = int(ptr_info["address"], 16)
+                ptr_off = gba_address_to_offset(ptr_addr)
+                orig_val = int(ptr_info.get("current_value", hex(addr)), 16)
+                if int.from_bytes(rom[ptr_off:ptr_off + 4], "little") != orig_val:
+                    patch_pointer(rom, ptr_off, orig_val)
+                    print(f"  指针恢复: 0x{ptr_addr:08X} → 0x{orig_val:08X}")
         else:
             # 新数据更大，需要找空闲区
             free_addr = find_free_space(rom, len(compressed))
@@ -1127,6 +1374,19 @@ def cmd_import(args):
                 ptr_off = gba_address_to_offset(ptr_addr)
                 patch_pointer(rom, ptr_off, free_addr)
                 print(f"  指针更新: 0x{ptr_addr:08X} → 0x{free_addr:08X}")
+
+        # ── 写入后自校验: 解压写入的数据，确认与源数据一致 ──
+        if compression in ("lz77", "lz77_swap"):
+            try:
+                written_raw = lz77_decompress(
+                    bytes(rom[write_offset:write_offset + len(compressed)]), swap=swap)
+                if written_raw != bytes(all_raw):
+                    print(f"错误: 0x{prefix} 写入后解压与源数据不一致！")
+                    sys.exit(1)
+                print(f"自校验通过: 0x{write_offset:08X} 处 {len(written_raw)} bytes 可正确还原")
+            except Exception as e:
+                print(f"错误: 0x{prefix} 写入后自校验失败: {e}")
+                sys.exit(1)
 
     # ── 保存 ──
     output_path.write_bytes(rom)
@@ -1189,6 +1449,9 @@ def cmd_probe(args):
         pal_comp = result["palette_compression"]
         ptrs = result["pointer_sources"]
         match_in_decomp = result.get("match_in_decomp")
+        bank_table_addr = result.get("bank_table_addr")
+        bank_list = result.get("bank_list")
+        bank_base = result.get("bank_base")
 
         # 使用手动指定的调色板覆盖自动检测结果
         if args.palette:
@@ -1209,6 +1472,9 @@ def cmd_probe(args):
             print(f"调色板: 0x{pal_off:08X} ({pal_banks} banks, {pal_comp})")
         else:
             print(f"调色板: 未找到! (需要手动指定 --palette)")
+        if bank_table_addr is not None and bank_list:
+            bank_str = ",".join(str(b) for b in bank_list)
+            print(f"调色板 bank 表: 0x{bank_table_addr:08X} (base={bank_base}) → [{bank_str}]")
         if ptrs:
             ptr_str = ", ".join(f"0x{p:08X}" for p in ptrs)
             print(f"指针源: {ptr_str}")
@@ -1222,6 +1488,8 @@ def cmd_probe(args):
         )
         if pal_off:
             cmd += f" --palette 0x{pal_off:08X}"
+        if bank_list:
+            cmd += f" --bank-list {','.join(str(b) for b in bank_list)}"
         if ptrs:
             ptr_args = " ".join(f"0x{p:08X}" for p in ptrs)
             cmd += f" --pointers {ptr_args}"
@@ -1390,6 +1658,7 @@ def main():
                           help="压缩格式 (默认: auto)")
     p_export.add_argument("--raw-size", help="原始数据大小 (bytes, 仅 none 压缩时使用)")
     p_export.add_argument("--palette", help="调色板 GBA 地址")
+    p_export.add_argument("--bank-list", help="每个 sprite 使用的调色板 bank 索引 (逗号分隔, 如 0,0,1,1,...)")
     p_export.add_argument("--pointers", nargs="*", help="指针源 GBA 地址列表")
     p_export.add_argument("--no-scan", action="store_true",
                           help="禁用自动指针扫描")
@@ -1401,6 +1670,20 @@ def main():
     p_import.add_argument("rom", help="ROM 文件路径")
     p_import.add_argument("tiles_dir", help="tiles 目录路径")
     p_import.add_argument("-o", "--output", help="输出 ROM 路径 (默认: xxx_patched.gba)")
+    p_import.add_argument("--no-snap-palette", action="store_true",
+                          help="导入时不对 PNG 颜色做调色板相似度吸附 (默认开启)")
+    p_import.add_argument("--palette-threshold", type=int, default=None,
+                          help="相似度阈值 (平方 RGB 距离)，超过则保留原色不吸附 (默认无限制)")
+
+    # ── fix-palette ──
+    p_fix = sub.add_parser("fix-palette",
+                           help="比较 PNG 与 meta 调色板，把相似颜色吸附到调色板条目")
+    p_fix.add_argument("rom", help="ROM 文件路径 (用于读取调色板)")
+    p_fix.add_argument("tiles_dir", help="tiles 目录路径")
+    p_fix.add_argument("--threshold", type=int, default=None,
+                       help="相似度阈值 (平方 RGB 距离)，超过则保留原色 (默认无限制)")
+    p_fix.add_argument("--dry-run", action="store_true",
+                       help="只打印将被替换的颜色，不写入 PNG")
 
     # ── probe ──
     p_probe = sub.add_parser("probe", help="在 ROM 中搜索数据并自动检测参数")
@@ -1424,6 +1707,8 @@ def main():
         cmd_export(args)
     elif args.command == "import":
         cmd_import(args)
+    elif args.command == "fix-palette":
+        cmd_fix_palette(args)
     elif args.command == "probe":
         cmd_probe(args)
     elif args.command == "scan-palettes":

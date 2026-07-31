@@ -21,9 +21,35 @@
     "bank_count": 3,
     "colors_per_bank": 16
   },
+  "palette_bank_per_sprite": [
+    0,
+    0,
+    1,
+    1,
+    0,
+    0,
+    2,
+    1,
+    0,
+    2,
+    0,
+    1,
+    2,
+    0,
+    1,
+    1,
+    2,
+    0,
+    0,
+    1,
+    1,
+    2,
+    0
+  ],
   "pointer_sources": [
     {
       "address": "0x0839747C",
+      "current_value": "0x087EE9C8",
       "label": ""
     }
   ],

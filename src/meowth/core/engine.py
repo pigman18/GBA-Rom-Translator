@@ -1083,10 +1083,80 @@ class TranslationEngine:
             # patch + inject stage callbacks emitted inside build_rom
             output_rom = output_dir / f"{rom_path.stem}_translated.gba"
             result = self.build_rom(rom_path, translated_path, output_rom)
+
+            # tiles stage (after translate / after build): import row_patcher
+            # PNG/raw edits into the final ROM. Must run AFTER the font patch:
+            # armips main.asm incbins the font at 0x09000000, and row_patcher's
+            # free-space search defaults to the same 0x09000000 — running tiles
+            # first relocates oversized tile data there, then the font patch
+            # overwrites it (乱码).
+            if self.config.tiles_dir or self._default_tiles_dir(rom_path).is_dir():
+                self.callbacks.on_stage_change("tiles", "started")
+                result = self._run_tiles(result, work_dir)
+                self.callbacks.on_stage_change("tiles", "completed")
             return result
         except Exception as e:
             self.callbacks.on_error(e)
             raise
+
+    def _default_tiles_dir(self, rom_path: Path) -> Path:
+        """Default tiles dir: configs/<game_id>/tiles, else row_patcher's
+        legacy export dir src/util/works/{romId}/tiles."""
+        from ..config_loader import game_config_dir
+
+        try:
+            cfg_tiles = game_config_dir(self.config.game or rom_path.stem) / "tiles"
+            if cfg_tiles.is_dir():
+                return cfg_tiles
+        except Exception:
+            pass
+        return (
+            Path(__file__).resolve().parent.parent.parent / "util" / "works"
+            / rom_path.stem / "tiles"
+        )
+
+    def _run_tiles(self, rom_path: Path, work_dir: Path) -> Path:
+        """Tiles stage: run row_patcher import on the built ROM, in place.
+
+        Reads PNG/raw edits from ``config.tiles_dir`` (fallback to row_patcher's
+        default works dir) and patches them into ``rom_path`` (the build_rom
+        output), returning the same path. Must run after build_rom — the font
+        patch incbins fonts at 0x09000000, which collides with row_patcher's
+        default free-space relocation address.
+        """
+        tiles_dir = self.config.tiles_dir or self._default_tiles_dir(rom_path)
+        if not tiles_dir.is_dir():
+            self._log("info", f"tiles dir not found, skipping: {tiles_dir}")
+            return rom_path
+        meta_dir = tiles_dir / "meta" if (tiles_dir / "meta").is_dir() else tiles_dir
+        meta_files = sorted(meta_dir.glob("*_meta.json"))
+        if not meta_files:
+            self._log("info", f"no *_meta.json in tiles dir, skipping: {meta_dir}")
+            return rom_path
+
+        tile_rom = rom_path.with_name(rom_path.stem + "_tiles" + rom_path.suffix)
+        script = (
+            Path(__file__).resolve().parent.parent.parent / "util" / "row_patcher.py"
+        )
+        args = [
+            sys.executable,
+            str(script),
+            "import",
+            str(rom_path),
+            str(tiles_dir),
+            "-o",
+            str(tile_rom),
+        ]
+        self._log("info", f"tiles: {len(meta_files)} meta(s) -> {tile_rom.name}")
+        r = subprocess.run(args, capture_output=True, text=True, timeout=180)
+        if r.returncode != 0:
+            raise RuntimeError(
+                f"row_patcher import failed:\n{r.stdout}\n{r.stderr}"
+            )
+        self._log("info", f"tiles patched: {tile_rom.name}")
+        # row_patcher writes to *_tiles.gba; keep the canonical output path
+        tile_rom.replace(rom_path)
+        return rom_path
 
     def _extract_texts(self, rom_path: Path, output_dir: Path) -> Path:
         """Extract texts using the game backend."""

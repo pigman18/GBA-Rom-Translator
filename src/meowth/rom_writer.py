@@ -375,15 +375,23 @@ class RomWriter:
                     f"text_target_ok rejected (LZ band / unsafe address)"
                 )
             if is_pointer_based and pointer_sources:
-                self._write_relocated(
-                    rom, encoded, pointer_sources,
-                    expected_target=address,
-                    category=category,
-                    original=original,
-                    lz_spans=getattr(self, "_axvj_lz_spans", None),
-                )
-                stats["relocated"] += 1
-                return
+                try:
+                    self._write_relocated(
+                        rom, encoded, pointer_sources,
+                        expected_target=address,
+                        category=category,
+                        original=original,
+                        lz_spans=getattr(self, "_axvj_lz_spans", None),
+                    )
+                    stats["relocated"] += 1
+                    return
+                except RuntimeError as e:
+                    # Pointer in LZ/gfx-deny region (policy refuses relocate):
+                    # fall back to in-place so the text still lands instead of skip.
+                    print(
+                        f"  WARN {entry_id} @ 0x{address:X} (cat={category}): "
+                        f"relocate rejected ({e}); trying in-place"
+                    )
 
             # No verified pointers: in-place if it fits; never blanket search
             if address <= 0:
@@ -396,6 +404,15 @@ class RomWriter:
                     f"byte_length={original_length} invalid for in-place write"
                 )
             if len(encoded) > original_length:
+                # Slot too small even for a 5-byte F9 80 reference (<5B): keep the
+                # original text rather than truncting into a broken F9 sequence.
+                if original_length < 5:
+                    print(
+                        f"  SKIP {entry_id} @ 0x{address:X} (cat={category}): "
+                        f"slot {original_length}B < 5, auto-F9-80 cannot fit; keeping original"
+                    )
+                    stats["in_place"] += 1
+                    return
                 print(
                     f"  WARN {entry_id} @ 0x{address:X} (cat={category}): "
                     f"'{translated}' encoded {len(encoded)}B > slot {original_length}B, "
@@ -413,6 +430,13 @@ class RomWriter:
             stats["relocated"] += 1
         elif address > 0 and original_length > 0:
             if len(encoded) > original_length:
+                if original_length < 5:
+                    print(
+                        f"  WRITE {entry_id} @ 0x{address:X} (cat={category}): "
+                        f"slot {original_length}B < 5, keeping original"
+                    )
+                    stats["in_place"] += 1
+                    return
                 print(
                     f"  WARN {entry_id} @ 0x{address:X} (cat={category}): "
                     f"'{translated}' encoded {len(encoded)}B > slot {original_length}B, "

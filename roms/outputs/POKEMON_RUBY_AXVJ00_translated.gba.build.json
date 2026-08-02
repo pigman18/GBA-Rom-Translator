@@ -1,12 +1,12 @@
 {
-  "build_id": "0.4.5+20260801T072223.df01bdcb0101",
+  "build_id": "0.4.5+20260802T194023.dc53693a0662",
   "package_version": "0.4.5",
-  "timestamp_utc": "2026-08-01T07:22:23Z",
+  "timestamp_utc": "2026-08-02T19:40:23Z",
   "game": "POKEMON_RUBY_AXVJ00",
   "output_rom": "C:\\code\\GBA-Rom-Translator\\roms\\outputs\\POKEMON_RUBY_AXVJ00_translated.gba",
-  "output_rom_sha256": "f4d677e0965092e5cb0ed2ae70a9e44c9bcff78172a645b9d32b7546af8dc4b8",
+  "output_rom_sha256": "e0d14b3f2cf8af8ab49554345db5198c7451da785d9339bba2d8b782d9b339e1",
   "patch_root": "C:/code/GBA-Rom-Translator/configs/POKEMON_RUBY_AXVJ00/patch",
-  "patch_tree_sha256": "df01bdcb0101dec787d5daafeb18780fe4b824ef09c9b5525a31ff8f3c77e6fd",
+  "patch_tree_sha256": "dc53693a066296d673b9c320615679ccceb7378219f1f8df976e4c9f68776dec",
   "patch_file_count": 75,
   "patch_files": {
     ".gitignore": "e846bdff19d6f85c9bc402591091f8e043e0b74080478b2e502f2d0d00f559f8",
@@ -68,7 +68,7 @@
     "src/battle/UpdateNickInHealthbox/entry.s": "55e2880379ed8114a2582064719fb1f6f7d597155ec2021bf9d82b3c442dd0c6",
     "src/battle/UpdateNickInHealthbox/hook_origin.s": "a978d349a317511193bf399654aaf12f6512ff6aada3a1ba3c6a8dfe82375703",
     "src/battle/UpdateNickInHealthbox/update_nick_in_healthbox.c": "df8820e9a626a2557c26fac5b9cf289a1f50220f96f2ade8c2fffe1c26a51855",
-    "src/game.h": "b4218a8af57bcc91f572051355622d3e9a096e85edc2bac5501300b110e6d3d6",
+    "src/game.h": "9a81e9eee65ffae03eda795858d5256a3eaf6c0bde666c1969d93d08068a5588",
     "src/text/PrintNextChar/draw_glyph.c": "b2e84d7270b35b422644f6dceb2a3605aa90de3039cb342835b3ba516f9a1caf",
     "src/text/PrintNextChar/draw_scene.c": "2405064435a5ffe0404c69fa9234cfc068fff68fa648f4bd3702f263546cda86",
     "src/text/PrintNextChar/entry.s": "671d56f5ee596dcccf5d00e290f917497398f9830cc12d792da78bf34f3cd39d",
@@ -86,18 +86,18 @@
     "todo/update_safari_balls_text_in_healthbox.c": "7ef0d2bcc261bf7c62a119392d5585153364b44af8a12b0d047d7e8dfb6d7183"
   },
   "key_src_sha256": {
-    "src/meowth/policy.py": "26cf1fd887cc07c8f750fb0bca5ffeb110cba56c186d985f34087133e3d96c7f",
-    "src/meowth/seed_translate.py": "7861ccb14ab56b1db56e546b602639588e776266d23a2abd1ee2cf2798043734",
-    "src/meowth/rom_writer.py": "735cbcd9cd5ffd5a8a06dcac22011657618ef4ed2056d5fac4e591e575113814",
+    "src/meowth/policy.py": "e3f7be25fbe908157a3c6492ecde9353865b554b48218d5904e2fab681c1a4a9",
+    "src/meowth/seed_translate.py": "3f5952131892d44f5a5d777d771a45b83978291411387e10e3447fef04950846",
+    "src/meowth/rom_writer.py": "ba234942bd715d91e3cbe3c479778dc470e25e611c4e771d3f64b8c4cdca7be8",
     "src/meowth/font_patch.py": "ae17cd96dca364503971f30d0b1d3f21d71bdbd11d559d50b61abc33ea98a17a",
-    "src/meowth/core/engine.py": "24d891440508dd40a3171e014b6150df464e803c21101be176b56c37aef33533",
+    "src/meowth/core/engine.py": "f908379f0b9b2ddbf0c75ebee398c562f3addb0cba94c1e3712b11f114772e3f",
     "src/meowth/table_patch.py": "d689bbc286422e2b841945576e612704052d8d6e8ddb9d1a1532faed72e5aab5"
   },
   "inject_stats": {
-    "in_place": 676,
-    "relocated": 4088,
+    "in_place": 755,
+    "relocated": 773,
     "skipped": 0,
-    "entry_count": 5105,
+    "entry_count": 1715,
     "name_tables": {},
     "modules": [
       "属性名",
@@ -140,8 +140,8 @@
       "include": "",
       "exclude": "",
       "omit_band": "",
-      "before": 5105,
-      "after": 5105,
+      "before": 1715,
+      "after": 1715,
       "omit_range": null
     }
   },

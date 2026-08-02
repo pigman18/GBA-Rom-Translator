@@ -131,7 +131,7 @@ struct ChineseTileState {
 #define CHS_BATTLE_FIXED_BASE   0x280
 #define CHS_FONT_GLYPH_MAX      7168
 #define CHS_ESCAPE              0xF9
-#define CHS_PHRASE_DEFAULT      0x7F
+#define CHS_PHRASE_DEFAULT      0x80
 
 #define FONT_NORMAL_UNSHADOWED  0
 #define FONT_NORMAL_SHADOWED    3

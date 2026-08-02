@@ -3,7 +3,6 @@
     "note": "F9 00=侧载。F9 7F=短语表默认(auto几何)。write.op=0x01..0x7E（现用 02=footer 03=linear 04=slot）。裸 FA..FF=PCS。商店/状态等回几何，勿铺 op。"
   },
   "物种名": {
-    "read": { "type": "fixed_table", "stride": 6 },
     "write": {
       "stride": 24,
       "patch": "literal_ref_widen",
@@ -11,7 +10,6 @@
     }
   },
   "招式名": {
-    "read": { "type": "fixed_table", "stride": 8 },
     "write": {
       "type": "op",
       "op": "0x04",
@@ -21,30 +19,17 @@
     }
   },
   "特性名": {
-    "read": { "type": "fixed_table", "stride": 8 },
     "write": {
       "stride": 16,
       "patch": "literal_ref_widen",
       "widen": "mul8_to_mul16"
     }
   },
-  "属性名": {
-    "read": { "type": "fixed_table", "stride": 5 }
-  },
   "道具名": {
-    "read": {
-      "type": "struct_table",
-      "entry_size": 40,
-      "name_stride": 8,
-      "desc_ptr_offset": 16
-    },
     "write": {
       "stride": 16,
       "patch": "item"
     }
-  },
-  "性格名": {
-    "read": { "type": "ptr_table" }
   },
   "道具说明": {
     "line_width": 13
@@ -53,18 +38,30 @@
     "line_width": 5
   },
   "队伍底栏": {
-    "write": { "type": "op", "op": "0x02" }
+    "write": {
+      "type": "op",
+      "op": "0x02"
+    }
   },
   "队伍选项": {
     "line_width": 8
   },
   "战斗菜单": {
-    "write": { "type": "op", "op": "0x03" }
+    "write": {
+      "type": "op",
+      "op": "0x03"
+    }
   },
   "战斗提示": {
-    "write": { "type": "op", "op": "0x03" }
+    "write": {
+      "type": "op",
+      "op": "0x03"
+    }
   },
   "战斗报文": {
-    "write": { "type": "op", "op": "0x03" }
+    "write": {
+      "type": "op",
+      "op": "0x03"
+    }
   }
 }

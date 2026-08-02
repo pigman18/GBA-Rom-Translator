@@ -974,7 +974,7 @@ class TranslationEngine:
         that predates options-menu extract. Seeds (menu pad, house, options)
         must still land in the ROM.
         """
-        from ..extract_pipeline import build_enrich_ops, run_extract_pipeline
+        from ..extract_pipeline import extract_modules
         from ..policy import should_skip_zh_inject
         from ..seed_translate import seed_translate_entry
 
@@ -987,11 +987,8 @@ class TranslationEngine:
 
         rom_bytes = bytes(rom)
         game_id = self.config.game
-        _enrich_list = run_extract_pipeline(
-            rom_bytes,
-            game_id=game_id,
-            include_scripts=False,
-            ops=build_enrich_ops(game_id),
+        _enrich_list = extract_modules(
+            rom_bytes, game_id, hidden_only=True, include_scripts=False
         )
         for e in _enrich_list:
             addr = e.get("address") or ""
@@ -1268,14 +1265,20 @@ class TranslationEngine:
             except ValueError:
                 pass
 
-        phrases = sorted(
-            {self.charmap._sanitize(v) for v in self._custom_translations.values() if len(v) > 1},
-            key=lambda s: (len(s), s),
-        )
+        # Unified phrase set: lexicon + auto-switch phrases (both live in
+        # charmap._phrase_codes with contiguous codes so table matches code index).
+        pc = getattr(self.charmap, "_phrase_codes", None)
+        if pc:
+            entries = sorted(pc.items(), key=lambda kv: kv[1])
+            phrases = [s for s, _ in entries]
+        else:
+            phrases = sorted(
+                {self.charmap._sanitize(v) for v in self._custom_translations.values() if len(v) > 1},
+                key=lambda s: (len(s), s),
+            )
         if not phrases:
             return
 
-        MAX_PHRASE_CHARS = 8
         offsets: list[int] = []
         table_lines: list[str] = ['.align 4', 'PhraseTable:']
         byte_cursor = 0
@@ -1283,9 +1286,7 @@ class TranslationEngine:
             offsets.append(byte_cursor)
             glyphs: list[int] = []
             for ch in text:
-                if len(glyphs) >= MAX_PHRASE_CHARS:
-                    break
-                # Missing glyph → skip (never default 0=啊)
+                # Missing glyph → skip (never add 0=啊)
                 if ch not in char_index:
                     continue
                 glyphs.append(char_index[ch])
@@ -1466,6 +1467,61 @@ class TranslationEngine:
                     "info",
                     f"[短语] F9 XX 分配: {len(phrases)} 条码位 0x0000-0x{len(phrases)-1:04X} "
                     f"(默认通道 XX=7F；write.op 改 XX，范围 01..7E)",
+                )
+
+        # Auto-switch F9 00 → F9 80: register in-place entries whose per-char
+        # (F9 00) encoding would overflow the original slot. Their sanitized
+        # translated text is added to _phrase_codes with a continuing code, so
+        # the encoder collapses them to F9 80 <code> (5B, always fits a >=5 slot)
+        # and they land in the unified PhraseTable. Recorded to extra for review.
+        self._auto_phrase_extra: list[dict] = []
+        if is_cjk_language(self.config.target_lang) and data:
+            import re as _re_auto
+            from ..config_loader import F9_PHRASE_DEFAULT as _f9_default
+
+            _pc = self.charmap._phrase_codes
+            _raw_enc = self.charmap.encode  # pre-wrap: raw per-char encode
+            _PCS_AUTO_RE = _re_auto.compile(
+                r"\\(?:CC[0-9A-Fa-f]{2,}|btn[0-9A-Fa-f]{2}|[0-9A-Fa-f]{2}|[pnlr.])"
+            )
+            _all_inject = []
+            for tbl in data.get("tables") or []:
+                for en in tbl.get("entries") or []:
+                    if "translated" in en:
+                        _all_inject.append(en)
+            _all_inject.extend(en for en in data.get("free_texts") or [] if "translated" in en)
+
+            for en in _all_inject:
+                t = (en.get("translated") or "").strip('"')
+                o = (en.get("original") or "").strip('"')
+                if not t or t == o:
+                    continue
+                # in-place only (relocated text has no slot limit)
+                if en.get("is_pointer_based") or en.get("pointer_sources"):
+                    continue
+                bl = en.get("byte_length", 0)
+                if bl < 5:
+                    continue  # too small for even F9 80; keep original
+                if _PCS_AUTO_RE.search(t):
+                    continue  # runtime tokens must stay per-char
+                s = self.charmap._sanitize(t)
+                if s in _pc:
+                    continue
+                raw_len = len(_raw_enc(t))
+                if raw_len > bl:
+                    code = len(_pc)
+                    _pc[s] = code
+                    self._auto_phrase_extra.append({
+                        "original": o,
+                        "translated": t,
+                        "module": en.get("_axvj_module") or en.get("module"),
+                        "byte_length": bl,
+                        "raw_encoded_len": raw_len,
+                    })
+            if self._auto_phrase_extra:
+                self._log(
+                    "info",
+                    f"[短语] 自动进 F9 80: {len(self._auto_phrase_extra)} 条 (写法越槽 in-place)",
                 )
 
         # Wrap encode: full-text match → F9 7F <high> <low> FF (rom_writer may patch →op)
@@ -1765,6 +1821,30 @@ class TranslationEngine:
             )
             output_path = alt
         self._log("info", Messages.SAVED_ROM.format(path=output_path))
+
+        # Auto-switch review dump (view-only; not part of any pipeline stage).
+        auto_extra = getattr(self, "_auto_phrase_extra", None)
+        if auto_extra:
+            try:
+                from ..config_loader import stage_dir, STAGE_TRANSLATE
+
+                extra_path = stage_dir(self.config.game, STAGE_TRANSLATE) / "lexicon.extra.json"
+                extra_data = {
+                    "_meta": {
+                        "note": "自动进 F9 80 的译文（F9 00 逐字超出原槽位 in-place），仅查看；如需纳入正式翻译请手动提升到 lexicon/",
+                        "count": len(auto_extra),
+                    },
+                    "auto_phrases": auto_extra,
+                }
+                extra_path.parent.mkdir(parents=True, exist_ok=True)
+                extra_path.write_text(
+                    json.dumps(extra_data, ensure_ascii=False, indent=2),
+                    encoding="utf-8",
+                )
+                self._log("info", f"[短语] 自动进 F9 80 记录 → {extra_path.name} ({len(auto_extra)} 条)")
+            except Exception as e:
+                self._log("warning", f"lexicon.extra.json 写失败 (non-fatal): {e}")
+
         try:
             import os
 

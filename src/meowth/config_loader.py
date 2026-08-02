@@ -48,12 +48,12 @@ STAGE_MODULES = "modules"
 DEFAULT_LINE_WIDTH = 20
 
 # F9 channel protocol (AXVJ Chinese):
-#   F9 00 lead trail  — side glyph (auto)
-#   F9 7F hi lo       — phrase table (default; sticky=0 / geometry)
-#   F9 01..7E hi lo   — phrase + write.op sticky (02=footer 03=linear 04=slot)
+#   F9 00 01  — 旁载单字 (auto)
+#   F9 80 hi/lo — 短语表 (default; keep=0 / geometry)
+#   F9 01..7E hi lo — phrase + write.op sticky (02=footer 03=linear 04=slot)
 #   bare FA..FF       — PCS controls / EOS (NOT F9 channels)
 F9_SIDE_GLYPH = 0x00
-F9_PHRASE_DEFAULT = 0x7F
+F9_PHRASE_DEFAULT = 0x80
 F9_OP_MIN = 0x01
 F9_OP_MAX = 0x7E
 F9_EOS = 0xFF
@@ -79,7 +79,7 @@ def _parse_write_op_value(raw: Any) -> int | None:
     if not (F9_OP_MIN <= val <= F9_OP_MAX):
         raise ValueError(
             f"write.op must be 0x{F9_OP_MIN:02X}..0x{F9_OP_MAX:02X} "
-            f"(got 0x{val:02X}; 0x00=side, 0x7F=default phrase, "
+            f"(got 0x{val:02X}; 0x00=side, 0x80=default phrase, "
             f"0xFA..0xFF=PCS — not F9 channels)"
         )
     return val
@@ -113,6 +113,44 @@ _INJECT_TO_TABLE_KEY = {
     "道具名": "item_data",
     "性格名": "nature_names",
 }
+
+# Fields that may live on a module entry in v2 ``translate/modules.json``
+# (migrated from modules.inject.json) and feed inject-style readers.
+_INJECT_MODULE_KEYS = (
+    "read",
+    "write",
+    "layout",
+    "line_width",
+    "chs_stride",
+    "patch_type",
+    "widen_fn",
+)
+
+
+def _v2_extraction(game_id: str) -> dict[str, Any]:
+    """Top-level scan/policy/modules_defaults/enrich from v2 modules.json."""
+    raw = _read_json(stage_dir(game_id, STAGE_TRANSLATE) / "modules.json")
+    if not isinstance(raw, dict):
+        return {}
+    meta = raw.get("_meta") or {}
+    if meta.get("schema") != "v2":
+        return {}
+    out: dict[str, Any] = {}
+    scan = raw.get("scan")
+    if isinstance(scan, dict):
+        for k in ("script_bank_min", "script_text_ptr_opcodes", "encoding", "trusted_lz_bands"):
+            if k in scan:
+                out[k] = scan[k]
+    pol = raw.get("policy")
+    if isinstance(pol, dict):
+        for k in ("reject", "allow", "content_classes"):
+            if k in pol:
+                out[k] = pol[k]
+    if "modules_defaults" in raw:
+        out["modules_defaults"] = raw["modules_defaults"]
+    if "enrich" in raw:
+        out["enrich"] = raw["enrich"]
+    return out
 
 
 def set_active_game_id(game_id: str | None) -> None:
@@ -223,19 +261,35 @@ def load_game_identity(game_id: str) -> dict[str, Any]:
 
 
 def load_modules_inject(game_id: str = "") -> dict[str, dict[str, Any]]:
-    """``translate/modules.inject.json`` keyed by module id (skips ``_meta``)."""
+    """Inject config keyed by module id (skips ``_meta``).
+
+    v2: read/write/line_width live on ``translate/modules.json`` module
+    entries; legacy ``modules.inject.json`` fills any gaps.
+    """
     gid = game_id or _active_game_id
     if not gid:
         return {}
     if gid in _modules_inject_cache:
         return _modules_inject_cache[gid]
 
+    out: dict[str, dict[str, Any]] = {}
+    raw_v2 = _read_json(stage_dir(gid, STAGE_TRANSLATE) / "modules.json")
+    mods_v2 = raw_v2.get("modules") if isinstance(raw_v2, dict) else None
+    if isinstance(mods_v2, dict):
+        for mid, meta in mods_v2.items():
+            if not isinstance(meta, dict):
+                continue
+            inj = {k: meta[k] for k in _INJECT_MODULE_KEYS if k in meta}
+            if inj:
+                out[mid] = inj
+
     raw = _read_json(stage_dir(gid, STAGE_TRANSLATE) / "modules.inject.json")
-    out = {
-        k: v
-        for k, v in raw.items()
-        if k != "_meta" and isinstance(v, dict)
-    }
+    for k, v in raw.items():
+        if k == "_meta" or not isinstance(v, dict):
+            continue
+        merged = dict(v)
+        merged.update(out.get(k, {}))
+        out[k] = merged
     _modules_inject_cache[gid] = out
     return out
 
@@ -304,15 +358,38 @@ def tables_from_modules_inject(game_id: str = "") -> dict[str, Any]:
         write = _inject_write_block(cfg)
         key = _INJECT_TO_TABLE_KEY.get(mid) or mid
         entry: dict[str, Any] = {"module": mid}
-        typ = layout.get("type") or layout.get("kind") or "fixed_table"
+        mod_meta = mods.get(mid) or {}
+        typ = (
+            mod_meta.get("type")
+            or layout.get("type")
+            or layout.get("kind")
+            or "fixed_table"
+        )
         if typ == "item_struct":
             typ = "struct_table"
+        # v3: scan/needle/prefix/pointer/hidden modules carry no name-table
+        # extractor — they scan their own bands/needles. Legacy ``addr_bands``
+        # also scanned bands. Only stride/ptr_stride/struct assemble tables here.
+        if typ in (
+            "addr_bands",
+            "scan",
+            "needle",
+            "prefix",
+            "pointer",
+            "desc_table",
+        ):
+            continue
+        if typ == "stride":
+            typ = "fixed_table"
+        elif typ == "ptr_stride":
+            typ = "ptr_table"
+        elif typ == "struct":
+            typ = "struct_table"
 
-        mod_meta = mods.get(mid) or {}
         offset = _parse_file_offset(
-            mod_meta.get("offset")
-            if mod_meta.get("offset") is not None
-            else mod_meta.get("start")
+            mod_meta.get("start")
+            if mod_meta.get("start") is not None
+            else mod_meta.get("offset")
         )
         end = _parse_file_offset(mod_meta.get("end"))
         # Legacy: offset still in inject read/layout
@@ -429,6 +506,13 @@ def load_game_config(game_id: str) -> dict[str, Any]:
         geo = dict(identity.get("extraction") or {})
     if geo:
         profile["extraction"] = geo
+    # v2 modules.json carries scan/policy/modules_defaults/enrich on top level;
+    # when present they override/supply the extraction profile keys.
+    v2 = _v2_extraction(game_id)
+    if v2:
+        merged = dict(geo or {})
+        merged.update(v2)
+        profile["extraction"] = merged
 
     tables = tables_from_modules_inject(game_id)
     if not tables:

@@ -73,6 +73,19 @@ def _normalize_ws(s: str) -> str:
     return re.sub(r"\s+", " ", s.strip())
 
 
+_FULLWIDTH_DIGITS = str.maketrans("０１２３４５６７８９", "0123456789")
+
+
+def _seed_route_name(compact: str) -> str | None:
+    """Fullwidth-digit route names: １０１ばんどうろ → 101号道路."""
+    m = re.fullmatch(r"([０-９]+)ばん(どうろ|すいどう)", compact)
+    if not m:
+        return None
+    num = m.group(1).translate(_FULLWIDTH_DIGITS)
+    kind = "道路" if m.group(2) == "どうろ" else "水路"
+    return f"{num}号{kind}"
+
+
 def seed_translate_entry(original: str) -> str | None:
     key = _normalize_ws(original.replace("\n", "").replace("\r", ""))
     compact = key.replace(" ", "")
@@ -110,6 +123,9 @@ def seed_translate_entry(original: str) -> str | None:
     compact_gloss = _compact_glossary()
     if compact in compact_gloss:
         return compact_gloss[compact]
+    route = _seed_route_name(compact)
+    if route:
+        return route
     return None
 
 

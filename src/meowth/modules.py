@@ -49,7 +49,8 @@ def list_module_meta(game_id: str = "") -> list[dict[str, Any]]:
         if meta.get("star"):
             badge += "*"
         label = meta.get("label", mid)
-        bands = meta.get("addr_bands", [])
+        read = meta.get("read") or {}
+        bands = read.get("addr_bands") or meta.get("addr_bands", [])
         out.append(
             {
                 "id": mid,
@@ -96,9 +97,10 @@ def _module_geo_bands(meta: dict[str, Any]) -> list[tuple[int, int]]:
 
     Prefer tight ``geo_ranges`` (configured multi-ranges) when present so UI
     pools and nurse slices beat a neighbor's merged string band. Otherwise
-    use dumped ``addr_bands``. When only those are present, do **not** also
-    add the coarse offset/end envelope — multi-range UI modules would
-    otherwise swallow mid-ROM tables between disjoint pools.
+    use dumped ``addr_bands`` (v2 lives under ``read.addr_bands``). When only
+    those are present, do **not** also add the coarse offset/end envelope —
+    multi-range UI modules would otherwise swallow mid-ROM tables between
+    disjoint pools.
     """
     out: list[tuple[int, int]] = []
     for key in ("geo_ranges", "addr_bands"):
@@ -110,7 +112,16 @@ def _module_geo_bands(meta: dict[str, Any]) -> list[tuple[int, int]]:
                 out.append((lo, hi))
         if out:
             return out
-    off = meta.get("offset")
+    read = meta.get("read") or {}
+    for b in read.get("scan_addr_bands") or read.get("addr_bands") or []:
+        if not isinstance(b, (list, tuple)) or len(b) < 2:
+            continue
+        lo, hi = _parse_addr(b[0]), _parse_addr(b[1])
+        if lo is not None and hi is not None and hi >= lo:
+            out.append((lo, hi))
+    if out:
+        return out
+    off = meta.get("start") if meta.get("start") is not None else meta.get("offset")
     end = meta.get("end")
     if off is not None and end is not None:
         try:

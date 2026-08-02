@@ -86,15 +86,8 @@ def _ptrs_to(rom: bytes, addr: int, limit: int = 16) -> list[int]:
 
 
 def _classify_ui(addr: int, text: str) -> str:
-    """IME gojuon → ime module; chrome/buttons → ui module (from config)."""
-    from .extract_pipeline import module_defaults
-
-    md = module_defaults()
-    if _is_ime_gojuon_row(text):
-        return md["ime"] or md["ui"]
-    if UI_RANGE[0] <= addr < UI_RANGE[1] or IME_RANGE[0] <= addr < IME_RANGE[1]:
-        return md["ui"]
-    return md["unclassified"]
+    """Legacy tag kept for non-module UI walks; module stamping supersedes it."""
+    return ""
 
 
 def extract_ui_block(rom: bytes) -> list[dict]:
@@ -182,8 +175,6 @@ def extract_option_menu(rom: bytes) -> list[dict]:
         if not ptrs:
             a = eos + 1
             continue
-        from .extract_pipeline import module_defaults
-
         entries.append(
             {
                 "id": f"axvj_{BASE + a:08X}",
@@ -195,7 +186,6 @@ def extract_option_menu(rom: bytes) -> list[dict]:
                 "original_hex": rom[a : eos + 1].hex(" "),
                 "original": text,
                 "translated": "",
-                "category": module_defaults()["ui"],
             }
         )
         a = eos + 1
@@ -345,13 +335,7 @@ def extract_script_pointers(
         off += step
     _ = min_ptr_source
 
-    from .extract_pipeline import module_defaults
-    from .policy import enrich_default_module, is_enrich_seed_label
-
     entries: list[dict] = []
-    md = module_defaults()
-    ui_mod = enrich_default_module("短标菜单") or md["ui"]
-    story_mod = md["story"]
     for so, ptrs in sorted(hits.items()):
         s = read_pcs(rom, so, max_len + 1)
         assert s
@@ -364,16 +348,9 @@ def extract_script_pointers(
         if _is_ime_gojuon_row(text):
             continue
         body_len = len(s) - 1
-        # Policy: include anything that is not false-text; categorize only.
         allow_so = any(p in _EARLY_SCRIPT_PTR_ALLOWLIST for p in use)
         if not allow_so and not _looks_like_translatable(text, body_len):
             continue
-        if body_len <= 16 and text.count("\n") == 0 and "\\l" not in text:
-            seed_hit = is_enrich_seed_label(text, "短标菜单", "选项菜单")
-            ptr_ui = any(_ptr_in_known_ui_band(p, so) for p in use)
-            cat = ui_mod if (seed_hit or ptr_ui) else story_mod
-        else:
-            cat = story_mod
         entries.append(
             {
                 "id": f"axvj_{BASE + so:08X}",
@@ -385,7 +362,6 @@ def extract_script_pointers(
                 "original_hex": s.hex(" "),
                 "original": text,
                 "translated": "",
-                "category": cat,
             }
         )
         if limit and len(entries) >= limit:
@@ -436,10 +412,6 @@ def extract_fc_prefixed_ui(rom: bytes) -> list[dict]:
             if not ptrs:
                 a = eos + 1
                 continue
-            # Battle / safari fight chrome vs generic colored UI — config rules
-            from .policy import module_for_original
-
-            cat = module_for_original(text, enrich_name="FC彩窗")
             entries.append(
                 {
                     "id": f"axvj_{BASE + a:08X}",
@@ -451,7 +423,6 @@ def extract_fc_prefixed_ui(rom: bytes) -> list[dict]:
                     "original_hex": raw.hex(" "),
                     "original": text,
                     "translated": "",
-                    "category": cat,
                 }
             )
             a = eos + 1
@@ -552,7 +523,6 @@ def extract_summary_ui_pool(rom: bytes) -> list[dict]:
     bands = enrich_scan_bands("状态背包")
     if not labels or not bands:
         return []
-    from .policy import module_for_original
 
     out: list[dict] = []
     seen: set[int] = set()
@@ -585,7 +555,6 @@ def extract_summary_ui_pool(rom: bytes) -> list[dict]:
             if not ptrs:
                 continue
             seen.add(off)
-            cat = module_for_original(label, enrich_name="状态背包")
             out.append(
                 {
                     "id": f"axvj_{BASE + off:08X}",
@@ -597,7 +566,6 @@ def extract_summary_ui_pool(rom: bytes) -> list[dict]:
                     "original_hex": needle.hex(" "),
                     "original": label,
                     "translated": "",
-                    "category": cat,
                 }
             )
     return out
@@ -608,7 +576,6 @@ def extract_battle_prompt_pool(rom: bytes) -> list[dict]:
     from .policy import (
         enrich_keep_any_contains,
         enrich_scan_bands,
-        module_for_original,
         _text_compact,
     )
 
@@ -668,7 +635,6 @@ def extract_battle_prompt_pool(rom: bytes) -> list[dict]:
             a = eos + 1
             continue
         seen.add(a)
-        cat = module_for_original(text, enrich_name="战斗提示")
         out.append(
             {
                 "id": f"axvj_{BASE + a:08X}",
@@ -680,7 +646,6 @@ def extract_battle_prompt_pool(rom: bytes) -> list[dict]:
                 "original_hex": raw.hex(" "),
                 "original": text,
                 "translated": "",
-                "category": cat,
             }
         )
         a = eos + 1
@@ -781,10 +746,6 @@ def extract_s1_registry_strings(rom: bytes) -> list[dict]:
         ]
         if not ptrs:
             ptrs = [ptr_off]
-        from .extract_pipeline import module_defaults
-
-        md = module_defaults()
-        cat = md["story"] if ptr_off in BIRCH_PTR_ALLOW else md["ui"]
         entries.append(
             {
                 "id": f"axvj_{BASE + so:08X}",
@@ -796,7 +757,6 @@ def extract_s1_registry_strings(rom: bytes) -> list[dict]:
                 "original_hex": s.hex(" "),
                 "original": text,
                 "translated": "",
-                "category": cat,
             }
         )
     return entries
@@ -805,14 +765,11 @@ def extract_s1_registry_strings(rom: bytes) -> list[dict]:
 def extract_short_menu_labels(rom: bytes) -> list[dict]:
     """はい / いいえ and similar short UI labels (local / mid-ROM pools only)."""
     from .jp_pcs import CHAR_TO_BYTE
-    from .policy import enrich_default_module, enrich_seed_originals
+    from .policy import enrich_seed_originals
 
     wanted = enrich_seed_originals("短标菜单")
     if not wanted:
         return []
-    from .extract_pipeline import module_defaults
-
-    cat = enrich_default_module("短标菜单") or module_defaults()["ui"]
     out: list[dict] = []
     seen: set[int] = set()
     lz_spans = trusted_lz_spans(rom)
@@ -861,7 +818,6 @@ def extract_short_menu_labels(rom: bytes) -> list[dict]:
                     "byte_length": len(needle),
                     "original_hex": needle.hex(" "),
                     "original": label,
-                    "category": cat,
                 }
             )
     return out
@@ -1015,6 +971,131 @@ def extract_save_power_prompts(rom: bytes) -> list[dict]:
     return out
 
 
+def _strip_text_prefix(raw: bytes) -> bytes:
+    """Strip leading line/colour-control bytes to reach the text body.
+
+    ``0x00`` is a line prefix, ``\\CC`` = ``0xFC`` + 2 colour bytes, and
+    ``0xF7..0xFF`` are colour control codes. A string whose first byte is
+    such a control byte is real text, not padding.
+    """
+    i = 0
+    n = len(raw)
+    while i < n:
+        b = raw[i]
+        if b == 0x00:
+            i += 1
+        elif b == 0xFC and i + 3 < n:
+            i += 3
+        elif 0xF7 <= b <= 0xFE:
+            i += 1
+        else:
+            break
+    return raw[i:]
+
+
+def scan_addr_bands(rom: bytes, bands: list) -> list[dict]:
+    """Scan file-offset ``bands`` (pairs [lo, hi]) for JP text.
+
+    Returns entries tagged ``is_pointer_based``/``pointer_sources``.
+    ``bands`` may be int or ``"0x…"`` string pairs.  Shared kernel for the
+    module-driven extractor and the legacy ``addr_bands.json`` op.
+    """
+    if not bands:
+        return []
+
+    def _parse(v: object) -> int:
+        if isinstance(v, int):
+            return v
+        s = str(v).strip().lower().replace("0x", "")
+        return int(s, 16) if s else 0
+
+    n = len(rom)
+    ptr_index: dict[int, list[int]] = {}
+    o = 0
+    while o + 4 <= n:
+        v = struct.unpack_from("<I", rom, o)[0]
+        if BASE <= v < BASE + n:
+            so = v - BASE
+            if so >= 0x100000 and so < n:
+                ptr_index.setdefault(so, []).append(o)
+        o += 4
+
+    out: list[dict] = []
+    seen: set[int] = set()
+    for lo_s, hi_s in bands:
+        lo, hi = _parse(lo_s), _parse(hi_s)
+        if hi < lo:
+            continue
+        a = lo
+        while a <= hi:
+            b = rom[a]
+            if b == 0xFF or b == 0x00 or b >= 0xF7:
+                a += 1
+                continue
+            raw = read_pcs(rom, a, 512)
+            if raw is None:
+                a += 1
+                continue
+            end = a + len(raw) - 1
+            if looks_like_jp_text(raw):
+                text = decode_pcs(raw)
+                if _looks_like_translatable(text, len(raw)):
+                    if (
+                        a < SCRIPT_BANK_MIN
+                        or TITLE_LZ_BAND[0] <= a < TITLE_LZ_BAND[1]
+                    ):
+                        a = end + 1
+                        continue
+                    if a in seen:
+                        a = end + 1
+                        continue
+                    ptrs = list(ptr_index.get(a, []))
+                    seen.add(a)
+                    entry: dict = {
+                        "id": f"axvj_{BASE + a:08X}",
+                        "address": f"0x{BASE + a:08X}",
+                        "original": text,
+                        "original_hex": raw.hex(" "),
+                        "byte_length": len(raw),
+                        "is_pointer_based": bool(ptrs),
+                    }
+                    if ptrs:
+                        entry["pointer_sources"] = [
+                            f"0x{BASE + q:08X}" for q in ptrs
+                        ]
+                        entry["pointer_addresses"] = [
+                            f"0x{BASE + q:08X}" for q in ptrs
+                        ]
+                    else:
+                        entry["pointer_sources"] = []
+                    out.append(entry)
+            a = end + 1
+    return out
+
+
+def extract_addr_bands_pool(rom: bytes, path: str = "") -> list[dict]:
+    """通用提取：按 text_patcher 导出的 ``addr_bands.json`` 扫描全部文本带。
+
+    ``addr_bands.json`` 是 file_offset 文本区间（``text_patcher.py export`` 产物，
+    默认 ``src/util/works/<game_id>/addr_bands.json``，可被 config step ``path`` 覆盖）。
+    每个命中点：有指针源 → ``is_pointer_based=True`` + ``pointer_sources``（relocate 注入）；
+    无指针 → ``is_pointer_based=False``（in-place 候选，交给 build 判断）。
+    与既有 op 的条目在 ``run_extract_pipeline`` 按 address 去重。
+    """
+    gid = (get_active_game_id() or "").strip() or "POKEMON_RUBY_AXVJ00"
+    if not path:
+        path = str(
+            Path(__file__).resolve().parents[2]
+            / "src" / "util" / "works" / gid / "addr_bands.json"
+        )
+    bands_path = Path(path)
+    if not bands_path.is_file():
+        return []
+    doc = json.loads(bands_path.read_text(encoding="utf-8"))
+    bands = doc.get("addr_bands") or []
+    return scan_addr_bands(rom, bands)
+
+
 def _clear_failed_zh(entry: dict) -> bool:
     """Clear known failed LLM stubs. Returns True if cleared."""
     from .seed_translate import looks_like_failed_zh_translation
@@ -1152,20 +1233,14 @@ def extract_axvj(
     include_scripts: bool = True,
     script_limit: int = 0,
 ) -> Path:
-    """Extract texts via ``extract/config.json`` pipeline and write JSON.
-
-    ``modules`` is ignored and kept only for call-site compatibility.
-    """
-    from .extract_pipeline import run_extract_pipeline
+    """Extract texts via v3 module-driven extraction (scan/table + hidden UI)."""
+    from .extract_pipeline import extract_modules
 
     rom = Path(rom_path).read_bytes()
     gid = game_id or get_active_game_id() or "AXVJ"
-    entries = run_extract_pipeline(
-        rom,
-        game_id=gid,
-        include_scripts=include_scripts,
-        script_limit=script_limit,
-    )
+    # All discovery is config-driven (modules.json declares scan + UI scanners);
+    # ``extract_modules`` stamps each entry with its module id and dedupes.
+    entries = extract_modules(rom, gid, include_scripts=include_scripts, verbose=True)
 
     from .modules import stamp_entry_module
 

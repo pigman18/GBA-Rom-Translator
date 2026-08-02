@@ -10,11 +10,35 @@ from typing import Any, Callable
 from .config_loader import get_active_game_id
 from .policy import _cfg
 
+# Historic AXVJ pipeline used when config has no ``pipeline`` key (v2
+# modules.json drops it; discovery is data-driven per module instead).
+_DEFAULT_PIPELINE = [
+    {"op": "fixed_table", "table": "species_names"},
+    {"op": "fixed_table", "table": "move_names"},
+    {"op": "fixed_table", "table": "ability_names"},
+    {"op": "fixed_table", "table": "item_names"},
+    {"op": "fixed_table", "table": "item_descriptions"},
+    {"op": "fixed_table", "table": "nature_names"},
+    {"op": "fixed_table", "table": "type_names"},
+    {"op": "ui_block"},
+    {"op": "option_menu"},
+    {"op": "fc_prefixed_ui"},
+    {"op": "battle_hud"},
+    {"op": "battle_prompt"},
+    {"op": "summary_ui"},
+    {"op": "short_menu"},
+    {"op": "save_power"},
+    {"op": "script_pointers"},
+    {"op": "addr_bands"},
+]
+
 
 def extract_pipeline(game_id: str = "") -> list[dict[str, Any]]:
-    """Ordered ops from ``extract/config.json`` → ``pipeline``."""
+    """Ordered ops from ``extract/config.json`` → ``pipeline`` (or default)."""
     gid = (game_id or get_active_game_id() or "").strip()
-    raw = _cfg(gid).get("pipeline") or []
+    raw = _cfg(gid).get("pipeline")
+    if not raw:
+        raw = _DEFAULT_PIPELINE
     return [dict(x) for x in raw if isinstance(x, dict) and x.get("op")]
 
 
@@ -32,17 +56,6 @@ def build_enrich_ops(game_id: str = "") -> list[dict[str, Any]]:
             {"op": "s1_registry"},
         ]
     return [dict(x) for x in raw if isinstance(x, dict) and x.get("op")]
-
-
-def module_defaults(game_id: str = "") -> dict[str, str]:
-    """Story/UI/IME category ids from config (no engine-hardcoded Chinese)."""
-    block = _cfg(game_id).get("modules_defaults") or {}
-    return {
-        "story": str(block.get("story") or ""),
-        "ui": str(block.get("ui") or ""),
-        "ime": str(block.get("ime") or ""),
-        "unclassified": str(block.get("unclassified") or ""),
-    }
 
 
 def _run_fixed_table(rom: bytes, table: str) -> list[dict]:
@@ -98,6 +111,8 @@ def _dispatch_op(
         return E.extract_save_power_prompts(rom)
     if op == "s1_registry":
         return E.extract_s1_registry_strings(rom)
+    if op == "addr_bands":
+        return E.extract_addr_bands_pool(rom, path=str(step.get("path") or ""))
     if op == "script_pointers":
         if not include_scripts:
             return []
@@ -153,3 +168,159 @@ def run_extract_pipeline(
             seen.add(addr)
             entries.append(e)
     return entries
+
+
+# ---------------------------------------------------------------------------
+# Module-driven extraction (v2): each module declares its type.
+#   type=addr_bands (default) → scan the module's own read.addr_bands
+#   type=fixed_table / struct_table / ptr_table → table extractor
+# Global UI scanners (short_menu, save_power, …) stay pipeline ops and are
+# combined with the module-driven entries by address.
+# ---------------------------------------------------------------------------
+
+_MODULE_TABLE_EXTRACTOR = {
+    "物种名": "species_names",
+    "招式名": "move_names",
+    "特性名": "ability_names",
+    "属性名": "type_names",
+    "道具名": "item_data",
+    "道具说明": "item_descriptions",
+    "性格名": "nature_names",
+}
+
+
+def module_driven_ops(game_id: str = "") -> list[dict[str, Any]]:
+    """Pipeline ops NOT owned by module-driven extraction (global UI scanners)."""
+    return [
+        dict(op)
+        for op in extract_pipeline(game_id)
+        if op.get("op") not in ("fixed_table", "addr_bands")
+    ]
+
+
+def _bands_from_read(read: dict[str, Any]) -> list:
+    """v3 scan bands live at ``read.scan_addr_bands``; keep v2 ``addr_bands`` / top-level as fallback."""
+    return (
+        read.get("scan_addr_bands")
+        or read.get("addr_bands")
+        or []
+    )
+
+
+# Hidden UI modules (v3): module_id → existing global scanner (still config-driven
+# via policy/game blocks for enrich internals). Plain ``scan/stride/…`` deferred below.
+_UI_EXTRACTOR = {
+    "选项菜单扫描": "option_menu",
+    "FC彩窗扫描": "fc_prefixed_ui",
+    "战斗HUD采集": "battle_hud",
+    "短标菜单采集": "short_menu",
+    "状态背包采集": "summary_ui",
+    "战斗提示扫描": "battle_prompt",
+    "存档提示扫描": "save_power",
+    "主脚本指针": "script_pointers",
+}
+
+
+def _run_ui_op(rom: bytes, op: str) -> list[dict]:
+    from . import extract as E
+
+    return {
+        "option_menu": E.extract_option_menu,
+        "fc_prefixed_ui": E.extract_fc_prefixed_ui,
+        "battle_hud": E.extract_battle_hud_labels,
+        "short_menu": E.extract_short_menu_labels,
+        "summary_ui": E.extract_summary_ui_pool,
+        "battle_prompt": E.extract_battle_prompt_pool,
+        "save_power": E.extract_save_power_prompts,
+        "script_pointers": E.extract_script_pointers,
+    }.get(op, lambda _: [])(rom)
+
+
+def _stamp_entry_module(e: dict, mid: str) -> None:
+    e.setdefault("module", mid)
+    e.setdefault("_axvj_module", mid)
+
+
+def extract_modules(
+    rom: bytes,
+    game_id: str = "",
+    *,
+    include_scripts: bool = True,
+    hidden_only: bool = False,
+    verbose: bool = False,
+) -> list[dict]:
+    """Per-module extraction keyed by each module's v3 ``type`` / ``read``.
+
+    Profile entry ``"type":"scan"`` → scan the module's own
+    ``read.scan_addr_bands`` bands; ``stride``/``ptr_stride``/``struct`` →
+    the matching ``tables`` extractor (config-driven offset/stride/count);
+    hidden UI modules (needle/prefix/pointer) → existing global UI scanners.
+    When ``verbose``, per-module hit counts are printed for audit.
+    """
+    from . import tables as T
+    from .config_loader import load_modules
+    from .extract import scan_addr_bands
+
+    gid = (game_id or get_active_game_id() or "").strip()
+    table_dispatch = {
+        "species_names": T.extract_species_names,
+        "move_names": T.extract_move_names,
+        "ability_names": T.extract_ability_names,
+        "type_names": T.extract_type_names,
+        "item_data": T.extract_item_names,
+        "item_descriptions": T.extract_item_descriptions,
+        "nature_names": T.extract_nature_names,
+    }
+
+    def stamp(e: dict, mid: str):
+        e.setdefault("module", mid)
+        e.setdefault("_axvj_module", mid)
+
+    mods = load_modules(gid)
+    out: list[dict] = []
+    seen: set[str] = set()
+    counts: dict[str, int] = {}
+    for mid, m in mods.items():
+        if hidden_only and not m.get("hidden"):
+            continue
+        read = m.get("read") or {}
+        rtype = str(m.get("type") or read.get("type") or "scan")
+        start_n = len(out)
+
+        # Hidden UI modules → reuse existing global scanners.
+        if rtype in ("needle", "prefix", "pointer") and mid in _UI_EXTRACTOR:
+            op = _UI_EXTRACTOR[mid]
+            for e in _run_ui_op(rom, op):
+                if op == "script_pointers" and not include_scripts:
+                    continue
+                addr = e.get("address") or ""
+                if addr and addr in seen:
+                    continue
+                if addr:
+                    seen.add(addr)
+                _stamp_entry_module(e, mid)
+                out.append(e)
+            counts[mid] = len(out) - start_n
+            continue
+
+        if rtype in ("addr_bands", "scan"):
+            bands = _bands_from_read(read) or m.get("addr_bands") or []
+            if not bands:
+                continue
+            for e in scan_addr_bands(rom, bands):
+                _stamp_entry_module(e, mid)
+                out.append(e)
+            counts[mid] = len(out) - start_n
+            continue
+
+        fn = table_dispatch.get(_MODULE_TABLE_EXTRACTOR.get(mid) or "")
+        if fn:
+            for e in fn(rom):
+                _stamp_entry_module(e, mid)
+                out.append(e)
+            counts[mid] = len(out) - start_n
+    if verbose:
+        print(f"[抽取] 模块命中汇总 ({len(out)} 条):")
+        for mid in sorted(counts):
+            print(f"[抽取]   {mid}: {counts[mid]}")
+    return out

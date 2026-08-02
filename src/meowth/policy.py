@@ -170,24 +170,73 @@ def OPTION_MENU_BAND() -> tuple:
 
 
 def enrich_scan_bands(name: str, game_id: str = "") -> tuple[tuple[int, int], ...]:
-    """``extract/config.json`` → ``enrich.<name>.addr_bands``."""
+    """``enrich.<name>.addr_bands`` — from modules.json hidden 模块 (单源).
+
+    v3 起 hidden 采集模块通过 ``enrich`` 字段声明其对应的 game.json enrich 名，
+    并在 ``read.scan_addr_bands`` 承载扫描带；game.json ``extraction.enrich`` 已弃用。
+    """
+    from .config_loader import load_modules
+    from .modules import _module_geo_bands
+
+    gid = _resolve_game_id(game_id)
+    for mid, meta in (load_modules(gid) or {}).items():
+        if meta.get("enrich") == name and meta.get("hidden"):
+            bands = _module_geo_bands(meta)
+            if bands:
+                return tuple(bands)
     return _bands_from_cfg("enrich", name, fallback=[], game_id=game_id)
 
 
+def _enrich_hidden_block(name: str, game_id: str = "") -> dict[str, Any]:
+    """Hidden module's ``read`` dict for enrich ``name`` (v3 source)."""
+    from .config_loader import load_modules
+
+    gid = _resolve_game_id(game_id)
+    for mid, meta in (load_modules(gid) or {}).items():
+        if meta.get("enrich") == name and meta.get("hidden"):
+            return dict((meta.get("read") or {}))
+    return {}
+
+
+def _iter_hidden_modules(game_id: str = ""):
+    """Yield hidden module metas for ``game_id`` (empty if none)."""
+    from .config_loader import load_modules
+
+    gid = _resolve_game_id(game_id)
+    mods = load_modules(gid) or {}
+    return [m for m in mods.values() if m.get("hidden")]
+
+
 def enrich_seed_from_lexicon(name: str, game_id: str = "") -> bool:
-    block = (_cfg(game_id).get("enrich") or {}).get(name) or {}
-    return bool(block.get("seed_from_lexicon", False))
+    return bool(enrich_block(name, game_id).get("seed_from_lexicon", False))
 
 
 def enrich_seed_originals(name: str, game_id: str = "") -> tuple[str, ...]:
-    """Optional JP needle list under ``enrich.<name>.seed_originals``."""
+    """JP needle list — 优先 hidden 模块 ``read.seed_originals``, 回退 game.json."""
+    raw = _enrich_hidden_block(name, game_id).get("seed_originals")
+    if raw:
+        return tuple(str(x) for x in raw)
     block = (_cfg(game_id).get("enrich") or {}).get(name) or {}
-    raw = block.get("seed_originals") or []
-    return tuple(str(x) for x in raw)
+    raw2 = block.get("seed_originals") or []
+    return tuple(str(x) for x in raw2)
 
 
 def enrich_block(name: str, game_id: str = "") -> dict[str, Any]:
-    return dict((_cfg(game_id).get("enrich") or {}).get(name) or {})
+    """Enrich ``name`` config — hidden module ``read`` (v3 单源), else game.json.
+
+    Post-migration the rich decision keys (classify_rules / module_by_original /
+    default_module / seed_from_lexicon / content_class) live on the matching
+    hidden module's ``read``; game.json ``extraction.enrich`` is deprecated but
+    still honored as belt-and-braces until fully purged.
+    """
+    hidden = _enrich_hidden_block(name, game_id)
+    merged = dict(hidden)
+    legacy = (_cfg(game_id).get("enrich") or {}).get(name) or {}
+    # read keys are authoritative; game.json fills anything not moved yet.
+    for k, v in legacy.items():
+        if k not in merged and k not in ("description",):
+            merged[k] = v
+    return merged
 
 
 def enrich_module_by_original(name: str, game_id: str = "") -> dict[str, str]:
@@ -210,6 +259,17 @@ def enrich_keep_any_contains(name: str, game_id: str = "") -> tuple[str, ...]:
 
 
 def content_class_spec(name: str, game_id: str = "") -> dict[str, Any]:
+    """``any_of`` rule spec for a content class — hidden module ``read`` (单源).
+
+    A hidden module whose ``read.content_class == name`` may carry the clause
+    list on ``read.content_class_rules`` (v3 move). Falls back to game.json
+    ``content_classes[name]`` until purged.
+    """
+    for meta in _iter_hidden_modules(game_id):
+        r = meta.get("read") or {}
+        rules = r.get("content_class_rules")
+        if r.get("content_class") == name and rules:
+            return {"any_of": [dict(x) for x in rules if isinstance(x, dict)]}
     return dict((_cfg(game_id).get("content_classes") or {}).get(name) or {})
 
 

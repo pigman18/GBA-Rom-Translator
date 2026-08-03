@@ -16,7 +16,7 @@
 - 入口：`drawGlyph12()` ← Font_Patch **8+4** + ROM `CopyGlyph2bppTo4bpp`（IWRAM 拼好再 32-bit 拷 VRAM；禁止对 VRAM 字节写，否则半字镜像→重影）
 - 取字：`base + (index << 7)`
 - 步进：`CHS_GLYPH_ADVANCE_PX = 12`
-- 落点：[`draw_glyph.c`](../configs/POKEMON_RUBY_AXVJ00/patch/src/text/PrintNextChar/draw_glyph.c)
+- 落点：[`draw_glyph.c`](../configs/POKEMON_RUBY_AXVJ00/hook/src/text/PrintNextChar/draw_glyph.c)
 - **Linear 地板**：野外/说明 `0x100`，商店说明 `0x228`（见 `CHS_TILE_LAYOUT.md`）；无 `next_abs` sticky
 - **调色**：`CopyGlyph(C,E,D)` → `15→C` / `14→E` / `0→D`；右缘填 D，不碰左缘
 - **Mode2**：vanilla `origin+2`；`MENU_BAND` 仅 left≥20 **且** y≥13（存档屏禁止误进）

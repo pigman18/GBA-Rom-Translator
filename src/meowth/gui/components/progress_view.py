@@ -1,12 +1,9 @@
 """Progress view: horizontal stage timeline aligned with config packs.
 
-  extract/ → extract
-  font/ → font
-  translate/ → translate
-  tiles/ → tiles (row_patcher import)
-  patch/ → patch (armips)
-  inject/ → inject (RomWriter)
-  modules live under translate/ (scope UI), not a run stage.
+  translate/ → translate (extract + fonts + texts)
+  tile/ → tile (row_patcher sprite import)
+  hook/ → hook (ARMIPS function injection)
+  build → build (abstract: text injection + pack, no config folder)
 """
 
 from __future__ import annotations
@@ -14,12 +11,10 @@ from __future__ import annotations
 import customtkinter as ctk
 
 STAGES: list[tuple[str, str, str]] = [
-    ("extract", "extract", "抽取"),
-    ("font", "font", "字库"),
     ("translate", "translate", "翻译"),
-    ("tiles", "tiles", "贴图"),
-    ("patch", "patch", "补丁"),
-    ("inject", "inject", "回写"),
+    ("tile", "tile", "贴图"),
+    ("hook", "hook", "注入"),
+    ("build", "build", "打包"),
 ]
 
 

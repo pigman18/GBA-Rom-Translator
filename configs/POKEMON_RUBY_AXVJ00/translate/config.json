@@ -18,5 +18,76 @@
       "やめる"
     ],
     "prefixes": []
+  },
+  "reject": {
+    "title_gfx_sites": {
+      "sites": [
+        "0x78EA4",
+        "0x78F74",
+        "0x78FD0",
+        "0x79094",
+        "0x79240",
+        "0x79244",
+        "0x7924C",
+        "0x79250",
+        "0x79258",
+        "0x79260",
+        "0x79268",
+        "0x79270",
+        "0x79274",
+        "0x79278",
+        "0x7927C",
+        "0x7951C",
+        "0x79524",
+        "0x1379D0",
+        "0x137A24",
+        "0x137A40",
+        "0x1214B8",
+        "0x36D684"
+      ],
+      "description": "标题/Pokenav/开始菜单的图形指针站点，S1指针分类+S5 RewriteGate拒绝"
+    },
+    "pointer_target": {
+      "addr_bands": [
+        [
+          "0x0836D000",
+          "0x08370000"
+        ]
+      ],
+      "description": "指针目标地址拒绝范围（标题LZ区，内存空间），S5 RewriteGate拒绝"
+    }
+  },
+  "allow": {
+    "birch_early_pool": {
+      "sites": [
+        "0x7968",
+        "0x79B8",
+        "0x7AFC",
+        "0x7B44",
+        "0x7D34",
+        "0x7F44",
+        "0x80BC",
+        "0x82CC",
+        "0x8454"
+      ],
+      "description": "博士开场对话Thumb文字池指针站点，S5 allowlist（低ROM文字池放行）"
+    },
+    "trainer_ui": {
+      "sites": [
+        "0x13E1F0",
+        "0x13E204",
+        "0x3A3310",
+        "0x3A331C",
+        "0x397B3C",
+        "0x3A68B0"
+      ],
+      "description": "训练师卡/确认/返回等中ROM UI指针站点，S1 allowlist（GFX拒绝区例外放行）"
+    }
+  },
+  "gojuon_extra": {
+    "values": [
+      "やゆよわをん"
+    ],
+    "description": "IME五十音行额外匹配串，is_ime_gojuon_row判定"
   }
 }

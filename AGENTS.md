@@ -3,6 +3,7 @@
 ## 核心守则
 - **单任务原则**：做一件事时，不动任何已跑通的东西。新增/修改只针对目标文件，不影响其他逻辑。
 - **听命令**：用户明确要求的必须照做。不要自己觉得"够了"就擅自简化或改方案。
+- **模式纪律**：用户通过 Plan 模式让我提前规划的，可以自由发挥；通过 Build 模式直接让我修复某个 BUG 时，**只专注该 BUG，不得擅自扩展到无关内容**（尤其不要深究"不影响运行、不在验收范围"的内部实现）。确有关联的发现，最多在完成后一句话提及，不主动展开。
 
 # Build Rules
 
@@ -16,8 +17,8 @@
 
 ## Armips 汇编验证（不依赖翻译文本）
 ```powershell
-# 编译 C 源码 → configs/<ROM>\patch\out\game.bin + game_syms.asm（需 arm-none-eabi-gcc 在 PATH）
-cd "configs\POKEMON_RUBY_AXVJ00\patch"
+# 编译 C 源码 → configs/<ROM>\hook\out\game.bin + game_syms.asm（需 arm-none-eabi-gcc 在 PATH）
+cd "configs\POKEMON_RUBY_AXVJ00\hook"
 .\build.bat
 # 再用 armips 打补丁（验证汇编 hook 层）
 Copy-Item "..\..\roms\origin\POKEMON_RUBY_AXVJ00.gba" -Destination "baserom.gba"

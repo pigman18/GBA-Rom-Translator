@@ -40,9 +40,11 @@ _active_game_id: str | None = None
 STAGE_EXTRACT = "extract"
 STAGE_TABLES = "tables"  # legacy folder name only
 STAGE_TRANSLATE = "translate"
-STAGE_FONT = "font"
-STAGE_PATCH = "patch"
-STAGE_INJECT = "inject"
+STAGE_FONT = "translate"  # font config lives under translate/font.config.json
+FONT_CONFIG_FILE = "font.config.json"
+STAGE_PATCH = "hook"
+STAGE_HOOK = "hook"
+STAGE_INJECT = "translate"  # inject policy merged into translate/config.json
 STAGE_MODULES = "modules"
 
 DEFAULT_LINE_WIDTH = 20
@@ -525,7 +527,7 @@ def load_game_config(game_id: str) -> dict[str, Any]:
     # No global translate line_width — default 20 at use sites
     profile["line_width"] = DEFAULT_LINE_WIDTH
 
-    font_cfg = load_stage_config(game_id, STAGE_FONT)
+    font_cfg = load_font_config(game_id)
     patch_cfg = load_stage_config(game_id, STAGE_PATCH)
     legacy_fp = dict(identity.get("font_patch") or {})
     fp: dict[str, Any] = {}
@@ -615,7 +617,7 @@ def load_font_config(game_id: str = "") -> dict[str, Any]:
     gid = game_id or _active_game_id
     if not gid:
         return {}
-    return load_stage_config(gid, STAGE_FONT)
+    return _read_json(stage_dir(gid, STAGE_TRANSLATE) / FONT_CONFIG_FILE)
 
 
 def load_policy(game_id: str = "") -> dict[str, Any]:

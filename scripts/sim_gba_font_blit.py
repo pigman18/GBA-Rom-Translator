@@ -1,7 +1,7 @@
 #!/usr/bin/env python3
 """Offline GBA Chinese font blit simulator (Linear 8+4).
 
-Mirrors configs/POKEMON_RUBY_AXVJ00/patch/src/text/PrintNextChar/draw_glyph.c
+Mirrors configs/POKEMON_RUBY_AXVJ00/hook/src/text/PrintNextChar/draw_glyph.c
 so we can tell pack-vs-draw bugs without mGBA.
 
 Outputs under work/font_sim/:
@@ -63,7 +63,7 @@ def default_paths() -> tuple[Path, Path, Path]:
         / "fonts"
         / "PokeRSFontChsNormal(0xE0000).bin"
     )
-    charmap = ROOT / "configs" / game / "font" / "charmap.txt"
+    charmap = ROOT / "configs" / game / "translate" / "charmap.txt"
     out_dir = ROOT / "work" / "font_sim"
     return bin_path, charmap, out_dir
 

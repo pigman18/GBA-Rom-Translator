@@ -37,7 +37,7 @@ Build 会：打字库、按 **翻译模块** 注入（默认安全集 `ui+script
 | S6 PostRestore | 误伤回滚 | `restore_false_gfx_pointers` |
 | Version | 产物是谁？ | `.build.json` / 补丁树哈希 |
 
-字库补丁：`main.asm` + `out/game.bin` + `game_addrs.asm`；源码 `patch/src/`（`game.h` + `text/PrintNextChar/`）。  
+字库补丁：`main.asm` + `out/game.bin` + `game_addrs.asm`；源码 `hook/src/`（`game.h` + `text/PrintNextChar/`）。  
 构建需 **arm-none-eabi-gcc**；见 [`HOOKS.md`](../configs/docs/HOOKS.md)。  
 布局与踩坑记录见 [`configs/POKEMON_RUBY_AXVJ00/docs/CHS_TILE_LAYOUT.md`](../configs/POKEMON_RUBY_AXVJ00/docs/CHS_TILE_LAYOUT.md)。  
 **不** hook ClearWindow / StringLength / TitleMenu。

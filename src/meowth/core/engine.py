@@ -1039,10 +1039,10 @@ class TranslationEngine:
         return out
 
     def run_full(self) -> Path:
-        """Run full pipeline: extract → font → translate → build_rom(patch→inject).
+        """Run full pipeline: translate → tile → hook → build.
 
-        Stage packs under configs/<game_id>/: modules, extract,
-        translate (modules.json + modules.inject.json), font, patch, inject.
+        Stage packs under configs/<game_id>/: game.json, translate/,
+        tile/, hook/. ``build`` is abstract (armips + injection, no folder).
         """
         rom_path = self.config.rom_path
         output_dir = self.config.output_dir
@@ -1053,56 +1053,46 @@ class TranslationEngine:
             raise ValueError("output_dir is required in config")
 
         try:
-            self.callbacks.on_stage_change("extract", "started")
+            # --- translate stage: extract texts + build fonts + translate ---
+            self.callbacks.on_stage_change("translate", "started")
             texts_path = self._extract_texts(rom_path, work_dir)
-            self.callbacks.on_stage_change("extract", "completed")
 
-            # Load custom translations early so font stage can build phrase map
             from ..config_loader import load_custom_translations
             self._custom_translations = load_custom_translations(self.config.game)
 
-            self.callbacks.on_stage_change("font", "started")
             self._fonts_from_bdf = False
             if self.config.bdf_font_path and is_cjk_language(self.config.target_lang):
                 self._build_font_from_bdf(work_dir)
-                # Phrase table (and fill missing bins); keep BDF bins only if build succeeded.
                 self._ensure_default_fonts(
                     work_dir, overwrite_bins=not bool(self._fonts_from_bdf)
                 )
             elif is_cjk_language(self.config.target_lang):
                 self._ensure_default_fonts(work_dir)
-            self.callbacks.on_stage_change("font", "completed")
 
-            self.callbacks.on_stage_change("translate", "started")
             translated_path = self.translate_texts(texts_path, work_dir / "texts_translated.json")
             self.callbacks.on_stage_change("translate", "completed")
 
-            # patch + inject stage callbacks emitted inside build_rom
-            output_rom = output_dir / f"{rom_path.stem}_translated.gba"
-            result = self.build_rom(rom_path, translated_path, output_rom)
-
-            # tiles stage (after translate / after build): import row_patcher
-            # PNG/raw edits into the final ROM. Must run AFTER the font patch:
-            # armips main.asm incbins the font at 0x09000000, and row_patcher's
-            # free-space search defaults to the same 0x09000000 — running tiles
-            # first relocates oversized tile data there, then the font patch
-            # overwrites it (乱码).
+            # --- tile stage: patch sprites on a ROM copy (input untouched) ---
+            base_rom = rom_path
             if self.config.tiles_dir or self._default_tiles_dir(rom_path).is_dir():
-                self.callbacks.on_stage_change("tiles", "started")
-                result = self._run_tiles(result, work_dir)
-                self.callbacks.on_stage_change("tiles", "completed")
-            return result
+                self.callbacks.on_stage_change("tile", "started")
+                base_rom = self._run_tiles(rom_path, work_dir)
+                self.callbacks.on_stage_change("tile", "completed")
+
+            # --- hook + build stages: emitted inside build_rom ---
+            output_rom = output_dir / f"{rom_path.stem}_translated.gba"
+            return self.build_rom(base_rom, translated_path, output_rom)
         except Exception as e:
             self.callbacks.on_error(e)
             raise
 
     def _default_tiles_dir(self, rom_path: Path) -> Path:
-        """Default tiles dir: configs/<game_id>/tiles, else row_patcher's
+        """Default tiles dir: configs/<game_id>/tile, else row_patcher's
         legacy export dir src/util/works/{romId}/tiles."""
         from ..config_loader import game_config_dir
 
         try:
-            cfg_tiles = game_config_dir(self.config.game or rom_path.stem) / "tiles"
+            cfg_tiles = game_config_dir(self.config.game or rom_path.stem) / "tile"
             if cfg_tiles.is_dir():
                 return cfg_tiles
         except Exception:
@@ -1131,7 +1121,8 @@ class TranslationEngine:
             self._log("info", f"no *_meta.json in tiles dir, skipping: {meta_dir}")
             return rom_path
 
-        tile_rom = rom_path.with_name(rom_path.stem + "_tiles" + rom_path.suffix)
+        tile_rom = Path(work_dir) / f"{rom_path.stem}_tiles{rom_path.suffix}"
+        tile_rom.parent.mkdir(parents=True, exist_ok=True)
         script = (
             Path(__file__).resolve().parent.parent.parent / "util" / "row_patcher.py"
         )
@@ -1151,9 +1142,9 @@ class TranslationEngine:
                 f"row_patcher import failed:\n{r.stdout}\n{r.stderr}"
             )
         self._log("info", f"tiles patched: {tile_rom.name}")
-        # row_patcher writes to *_tiles.gba; keep the canonical output path
-        tile_rom.replace(rom_path)
-        return rom_path
+        # row_patcher writes to *_tiles.gba; return it as the tile-patched base
+        # for build_rom (input ROM stays untouched).
+        return tile_rom
 
     def _extract_texts(self, rom_path: Path, output_dir: Path) -> Path:
         """Extract texts using the game backend."""
@@ -1469,21 +1460,17 @@ class TranslationEngine:
                     f"(默认通道 XX=7F；write.op 改 XX，范围 01..7E)",
                 )
 
-        # Auto-switch F9 00 → F9 80: register in-place entries whose per-char
-        # (F9 00) encoding would overflow the original slot. Their sanitized
-        # translated text is added to _phrase_codes with a continuing code, so
-        # the encoder collapses them to F9 80 <code> (5B, always fits a >=5 slot)
-        # and they land in the unified PhraseTable. Recorded to extra for review.
+        # Auto-switch F9 00 → F9 80: register entries whose per-char (F9 00)
+        # encoding would overflow the original slot. Content is irrelevant here —
+        # a slot overflow (raw F9 00 byte length > byte_length) means the text
+        # cannot fit in place, so we simply reserve a phrase code. Whether the
+        # PhraseTable can later render control bytes is decided there, not here.
         self._auto_phrase_extra: list[dict] = []
         if is_cjk_language(self.config.target_lang) and data:
-            import re as _re_auto
             from ..config_loader import F9_PHRASE_DEFAULT as _f9_default
 
             _pc = self.charmap._phrase_codes
             _raw_enc = self.charmap.encode  # pre-wrap: raw per-char encode
-            _PCS_AUTO_RE = _re_auto.compile(
-                r"\\(?:CC[0-9A-Fa-f]{2,}|btn[0-9A-Fa-f]{2}|[0-9A-Fa-f]{2}|[pnlr.])"
-            )
             _all_inject = []
             for tbl in data.get("tables") or []:
                 for en in tbl.get("entries") or []:
@@ -1496,14 +1483,9 @@ class TranslationEngine:
                 o = (en.get("original") or "").strip('"')
                 if not t or t == o:
                     continue
-                # in-place only (relocated text has no slot limit)
-                if en.get("is_pointer_based") or en.get("pointer_sources"):
-                    continue
                 bl = en.get("byte_length", 0)
                 if bl < 5:
                     continue  # too small for even F9 80; keep original
-                if _PCS_AUTO_RE.search(t):
-                    continue  # runtime tokens must stay per-char
                 s = self.charmap._sanitize(t)
                 if s in _pc:
                     continue
@@ -1526,21 +1508,14 @@ class TranslationEngine:
 
         # Wrap encode: full-text match → F9 7F <high> <low> FF (rom_writer may patch →op)
         # else F9 00 per-char (side font, auto write).
-        # Never phrase-collapse strings with PCS runtime/color tokens (\0F, \CC…)
-        # — that drops FD/FC bytes so nick/player expand becomes 啊 garbage.
-        import re as _re_enc
-
         from ..config_loader import F9_EOS, F9_PHRASE_DEFAULT
 
-        _PCS_TOKEN_RE = _re_enc.compile(
-            r"\\(?:CC[0-9A-Fa-f]{2,}|btn[0-9A-Fa-f]{2}|[0-9A-Fa-f]{2}|[pnlr.])"
-        )
         _orig_encode = self.charmap.encode
 
         def _encode(text):
             s = self.charmap._sanitize(text)
             pc = getattr(self.charmap, "_phrase_codes", None)
-            if pc and s in pc and not _PCS_TOKEN_RE.search(s):
+            if pc and s in pc:
                 code = pc[s]
                 return bytes([
                     0xF9,
@@ -1571,8 +1546,8 @@ class TranslationEngine:
             rom = writer.expand_rom(rom)
             self._log("info", Messages.ROM_EXPANDED.format(size=len(rom) // (1024 * 1024)))
 
-        # --- patch stage: ARMIPS only (same build_rom pass as inject) ---
-        self.callbacks.on_stage_change("patch", "started")
+        # --- hook stage: ARMIPS only (same build_rom pass as build) ---
+        self.callbacks.on_stage_change("hook", "started")
         if is_cjk_language(self.config.target_lang):
             self._log("info", Messages.APPLYING_FONT_PATCH)
 
@@ -1594,10 +1569,10 @@ class TranslationEngine:
             self._log("info", Messages.FONT_PATCH_APPLIED)
         else:
             self._log("info", Messages.SKIPPING_FONT_PATCH.format(lang=self.config.target_lang))
-        self.callbacks.on_stage_change("patch", "completed")
+        self.callbacks.on_stage_change("hook", "completed")
 
-        # --- inject stage: RomWriter text injection ---
-        self.callbacks.on_stage_change("inject", "started")
+        # --- build stage: RomWriter text injection + save ---
+        self.callbacks.on_stage_change("build", "started")
 
         # Collect all entries
         all_entries = []
@@ -1756,7 +1731,7 @@ class TranslationEngine:
         def _inject_progress(cur: int, total: int) -> None:
             self._log("info", f"Inject progress {cur}/{total}")
             self.callbacks.on_progress(
-                "inject", cur, total, f"Inject {cur}/{total}"
+                "build", cur, total, f"Inject {cur}/{total}"
             )
 
         if self._feature("name_tables"):
@@ -1826,22 +1801,17 @@ class TranslationEngine:
         auto_extra = getattr(self, "_auto_phrase_extra", None)
         if auto_extra:
             try:
-                from ..config_loader import stage_dir, STAGE_TRANSLATE
-
-                extra_path = stage_dir(self.config.game, STAGE_TRANSLATE) / "lexicon.extra.json"
+                extra_path = (game_work or Path(self.config.work_dir) / self.config.game) / "lexicon.extra.json"
                 extra_data = {
-                    "_meta": {
-                        "note": "自动进 F9 80 的译文（F9 00 逐字超出原槽位 in-place），仅查看；如需纳入正式翻译请手动提升到 lexicon/",
-                        "count": len(auto_extra),
-                    },
-                    "auto_phrases": auto_extra,
+                    e.get("original") or "": e.get("translated") or ""
+                    for e in auto_extra
                 }
                 extra_path.parent.mkdir(parents=True, exist_ok=True)
                 extra_path.write_text(
                     json.dumps(extra_data, ensure_ascii=False, indent=2),
                     encoding="utf-8",
                 )
-                self._log("info", f"[短语] 自动进 F9 80 记录 → {extra_path.name} ({len(auto_extra)} 条)")
+                self._log("info", f"[短语] 自动进 F9 80 记录 → {extra_path} ({len(extra_data)} 条)")
             except Exception as e:
                 self._log("warning", f"lexicon.extra.json 写失败 (non-fatal): {e}")
 
@@ -1872,5 +1842,5 @@ class TranslationEngine:
             )
         except Exception as e:
             self._log("warning", f"Build record failed (non-fatal): {e}")
-        self.callbacks.on_stage_change("inject", "completed")
+        self.callbacks.on_stage_change("build", "completed")
         return output_path

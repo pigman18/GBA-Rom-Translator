@@ -21,16 +21,19 @@
  * 若用 F9 00 ll tt 侧载一个汉字占 4 字节，8 字节槽最多 2 汉字。
  * 短语表将"文本存储"和"字段引用"解耦：
  *   字段槽（8B）：F9 <op> hi lo FF          → 4 字节引用
- *   PhraseTable：count + u16 glyph_idx[n]   → 最多 8 汉字
- * 查找路径：draw_phrase(code) →
- *   PhraseOffsets[code]（u16 数组 @ 0x08810000）
+ *   PhraseTable 条目 = F9 00 字节流（charmap.encode，含 \n→0xFE/\p→0xFB
+ *   等控码）+ 终止符 F9 7F 00 00。
+ * 查找路径：F9 <op> hi lo（op=0x80/write.op）→
+ *   PhraseOffsets[code]（u32 数组 @ 0x08810000）
  *   → PhraseTable + offset（条目 @ 0x08820000）
- *   → 逐字形渲染（DrawGlyph_Chinese × count）
- * layout: .org 0x08810000 → offsets （u16[code_max], sentinel = total_size）
- *         .org 0x08820000 → entries  ({u8 count, u8 pad, u16 idx[count]})
+ *   → 回放：切换 WIN_TEXT_PTR/INDEX 到条目数据，由游戏 ProcessCurrentChar
+ *     逐字符回放（F9 00 侧载、单字节标点、换行/分页/变量全走游戏原分发）。
+ * layout: .org 0x08810000 → offsets（u32[code_max], sentinel = total_size）
+ *         .org 0x08820000 → entries  (bytes + F9 7F 00 00)
  */
 #define ADDR_PHRASE_OFFSETS        0x08810000u
 #define ADDR_PHRASE_TABLE          0x08820000u
+#define CHS_PHRASE_END             0x7Fu  /* 短语数据终止符 op（write.op 01..7E 之外） */
 #define ADDR_FONT_CHS_NORMAL       0x09000000u
 /* Sym punct bank (9×64B), after Small @ 0x09100000+0xE0000.
  * Font3 layout: upper+lower 8×8 @4bpp-index (0/E/F), NOT 16×16 2bpp.
@@ -76,6 +79,23 @@ struct ChineseTileState {
     uint16_t pitch_key;  /* +4 window fingerprint for pitch_reset */
     uint16_t chs_px;     /* +6 pixel X in pitch run */
 };
+
+/*
+ * 短语回放状态（变体A，IWRAM 固定址 0x0203FFE0..FFE7）：
+ * 进入短语时保存外层 (ptr,index)，遇终止符 F9 CHS_PHRASE_END 00 00 恢复。
+ * 区域在 ChineseTileState (0x0203FFF8) 之下，需实测确认空闲。
+ */
+#define ADDR_PHRASE_REPLAY_STATE 0x0203FFE0u
+
+struct PhraseReplayState {
+    uint32_t saved_ptr;    /* +0 外层 WIN_TEXT_PTR */
+    uint16_t saved_index;  /* +4 外层 WIN_TEXT_INDEX（token 之后） */
+    uint8_t  active;       /* +6 1 = 正在回放短语 */
+    uint8_t  pad;          /* +7 */
+};
+
+#define phrase_replay_state() \
+    ((volatile struct PhraseReplayState *)ADDR_PHRASE_REPLAY_STATE)
 
 /*
  * GBA 硬件以 8×8 tile 为单位（4bpp / tile 32B）。中文字模存储为 16×16
@@ -155,6 +175,13 @@ static inline void win_set_u16(TextPrinter *w, unsigned off, uint16_t v)
 {
     w[off] = (uint8_t)(v & 0xFF);
     w[off + 1] = (uint8_t)(v >> 8);
+}
+static inline void win_set_u32(TextPrinter *w, unsigned off, uint32_t v)
+{
+    w[off] = (uint8_t)(v & 0xFF);
+    w[off + 1] = (uint8_t)(v >> 8);
+    w[off + 2] = (uint8_t)(v >> 16);
+    w[off + 3] = (uint8_t)(v >> 24);
 }
 static inline uint8_t *win_template(TextPrinter *w)
 {

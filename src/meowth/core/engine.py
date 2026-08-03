@@ -1226,72 +1226,78 @@ class TranslationEngine:
             else:
                 self._log("info", f"Default fonts synced: {copied} files -> {fonts_dir}")
 
-        # Generate phrase lookup table (PhraseLengths + PhraseChars) for armips
-        # lexicon (translate/) → phrase_data; font/charmap indexes glyphs; patch links them.
+        # Generate phrase lookup table for armips: lexicon (translate/) + auto-switch
+        # → phrase_data.asm. 每条目为 F9 00 字节流（charmap.encode，含控码），
+        # 运行时回放逐字符渲染；offsets u32 根治 u16 64KB 截断。
         if not self._custom_translations:
             return
         charmap_txt = get_charmap_path(self.config.game)
         if not charmap_txt.exists():
             self._log("warning", "charmap.txt not found, skipping phrase table")
             return
-        def _lead_adjust(charmap_val: int) -> int:
-            """Convert charmap encoding value to font glyph index (ARM lead adjustment)."""
-            lead = (charmap_val >> 8) & 0xFF
-            trail = charmap_val & 0xFF
-            if lead < 0x01 or lead > 0x1E or lead == 0x06 or lead == 0x1B:
-                return 0
-            adj = lead - 1
-            if lead >= 6: adj -= 1
-            if lead >= 0x1B: adj -= 1
-            return (adj << 8) | trail
-
-        char_index: dict[str, int] = {}
-        for line in charmap_txt.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line or "=" not in line:
-                continue
-            idx_str, ch = line.split("=", 1)
-            try:
-                char_index[ch] = _lead_adjust(int(idx_str, 16))
-            except ValueError:
-                pass
-
-        # Unified phrase set: lexicon + auto-switch phrases (both live in
-        # charmap._phrase_codes with contiguous codes so table matches code index).
+        # 生成短语表：每条目 = F9 00 字节流（含 \n→0xFE/\p→0xFB 等控码）+ 终止符 F9 7F 00 00。
+        # 运行时回放（变体A）：F9 <op> hi lo → 切换 WIN_TEXT_PTR 到短语数据逐字符回放。
+        # offsets 为 u32（PhraseOffsets @0x08810000），根治 u16 64KB 截断。
+        raw_encode = getattr(self, "_charmap_raw_encode", None) or self.charmap.encode
+        raw_by_code = getattr(self, "_charmap_phrase_raw", None) or {}
         pc = getattr(self.charmap, "_phrase_codes", None)
+
+        phrase_list: list[tuple[int, str]] = []
         if pc:
-            entries = sorted(pc.items(), key=lambda kv: kv[1])
-            phrases = [s for s, _ in entries]
+            phrase_list = [
+                (code, raw_by_code.get(s, s))
+                for s, code in sorted(pc.items(), key=lambda kv: kv[1])
+            ]
         else:
-            phrases = sorted(
+            seen: set[str] = set()
+            for s in sorted(
                 {self.charmap._sanitize(v) for v in self._custom_translations.values() if len(v) > 1},
                 key=lambda s: (len(s), s),
-            )
-        if not phrases:
+            ):
+                if s in seen:
+                    continue
+                seen.add(s)
+                raw = next(
+                    (v for v in self._custom_translations.values() if self.charmap._sanitize(v) == s),
+                    s,
+                )
+                phrase_list.append((len(seen) - 1, raw))
+        if not phrase_list:
             return
+
+        from ..config_loader import CHS_PHRASE_END
+
+        if len(phrase_list) >= 0x4000:
+            raise RuntimeError(
+                f"[短语] PhraseOffsets u32 区超限：{len(phrase_list)} 条 ≥ 16384 "
+                f"(0x08810000..0x0881FFFF 共 64KB)，需扩展 offsets 存放区"
+            )
 
         offsets: list[int] = []
         table_lines: list[str] = ['.align 4', 'PhraseTable:']
         byte_cursor = 0
-        for text in phrases:
+        for code, raw in phrase_list:
             offsets.append(byte_cursor)
-            glyphs: list[int] = []
-            for ch in text:
-                # Missing glyph → skip (never add 0=啊)
-                if ch not in char_index:
-                    continue
-                glyphs.append(char_index[ch])
-            n = len(glyphs)
-            table_lines.append(f'  .byte {n}, 0     ; char_count={n}, padding')
-            for idx in glyphs:
-                table_lines.append(f'  .halfword 0x{idx:04X}')
-            byte_cursor += 2 + n * 2  # {u8 count, u8 pad, u16[n]}
+            enc = raw_encode(raw)
+            if enc.endswith(b'\xFF'):
+                enc = enc[:-1]
+            if enc:
+                table_lines.append(
+                    '  .byte ' + ', '.join(f'0x{b:02X}' for b in enc)
+                    + f'   ; code=0x{code:04X}'
+                )
+            else:
+                # 空短语：仅写终止符 F9 7F 00 00（4B），与 byte_cursor += 0 + 4 对齐；
+                # 曾在此多写一个 0x00 使条目 5B，导致后续偏移累积漂移 -1。
+                table_lines.append(f'  ; code=0x{code:04X} (empty, terminator only)')
+            table_lines.append(f'  .byte 0xF9, 0x{CHS_PHRASE_END:02X}, 0x00, 0x00   ; phrase end')
+            byte_cursor += len(enc) + 4
         offsets.append(byte_cursor)  # sentinel = total size
 
         # Fixed VMA for C (game.h ADDR_PHRASE_*); must match game_addrs.asm
         asm_lines = ['.org 0x08810000', '.align 2', 'PhraseOffsets:']
         for off in offsets:
-            asm_lines.append(f'  .halfword {off}')
+            asm_lines.append(f'  .word {off}')
         asm_lines.append('')
         asm_lines.append('.org 0x08820000')
         asm_lines.extend(table_lines)
@@ -1299,8 +1305,8 @@ class TranslationEngine:
         phrase_asm = fonts_dir / "phrase_data.asm"
         phrase_asm.write_text('\n'.join(asm_lines), encoding="utf-8")
         self._log("info",
-                  f"[短语] PhraseTable {len(phrases)} 条, {byte_cursor}B data + {len(offsets)*2}B offsets"
-                  f" -> {phrase_asm.name}")
+                  f"[短语] PhraseTable {len(phrase_list)} 条, {byte_cursor}B data + "
+                  f"{len(offsets)*4}B offsets(u32) -> {phrase_asm.name}")
 
     def _build_font_from_bdf(self, work_dir: Path | None = None):
         """Generate font .bin from config's BDF path or auto-detect."""
@@ -1511,6 +1517,24 @@ class TranslationEngine:
         from ..config_loader import F9_EOS, F9_PHRASE_DEFAULT
 
         _orig_encode = self.charmap.encode
+
+        # 保留原始 encode（F9 00 字节流，含 \n→0xFE/\p→0xFB 等控码）+ code→原文映射，
+        # 供短语表字节流生成（变体A：短语数据走逐字符回放，支持 \n）。
+        self._charmap_raw_encode = _orig_encode
+        _phrase_raw: dict[int, str] = {}
+        _pcs = getattr(self.charmap, "_phrase_codes", None) or {}
+        for _v in self._custom_translations.values():
+            _s = self.charmap._sanitize(_v)
+            _c = _pcs.get(_s)
+            if _c is not None and _c not in _phrase_raw:
+                _phrase_raw[_c] = _v
+        for _en in getattr(self, "_auto_phrase_extra", None) or []:
+            _t = (_en.get("translated") or "").strip('"')
+            _s = self.charmap._sanitize(_t)
+            _c = _pcs.get(_s)
+            if _c is not None and _c not in _phrase_raw:
+                _phrase_raw[_c] = _t
+        self._charmap_phrase_raw = _phrase_raw
 
         def _encode(text):
             s = self.charmap._sanitize(text)

@@ -22,16 +22,35 @@ int GetStringWidth_Chinese(TextPrinter *win, const uint8_t *s,
             return 1;
         }
 
-        /* F9 XX hi lo — phrase: count * per-glyph width */
+        /* F9 XX hi lo — phrase: walk encoded byte stream for width */
         {
             uint16_t code = (uint16_t)((s[i + 2] << 8) | s[i + 3]);
-            const uint16_t *offsets = (const uint16_t *)ADDR_PHRASE_OFFSETS;
+            const uint32_t *offsets = (const uint32_t *)ADDR_PHRASE_OFFSETS;
             const uint8_t *table = (const uint8_t *)ADDR_PHRASE_TABLE;
-            uint8_t count = table[offsets[code]];
-            int add = (font == FONT_NORMAL_UNSHADOWED || font == FONT_NORMAL_SHADOWED)
-                          ? (count * CHS_GLYPH_ADVANCE_PX)
-                          : (count * 8 + count * 2);
-            *width = (uint8_t)((*width + add) & 0xFF);
+            const uint8_t *p = table + offsets[code];
+            int add = 0, max_add = 0;
+            for (;;) {
+                uint8_t c = *p++;
+                if (c == CHS_ESCAPE) {
+                    if (p[0] == CHS_PHRASE_END)
+                        break;
+                    if (p[0] == 0) {   /* F9 00 ll tt */
+                        add += glyph_px;
+                        p += 3;
+                    }
+                    continue;
+                }
+                if (c == 0xFE) {       /* newline: per-line width, keep max */
+                    if (add > max_add) max_add = add;
+                    add = 0;
+                    continue;
+                }
+                if (c >= 0xFA)         /* other controls: no advance */
+                    continue;
+                add += 8;
+            }
+            if (add > max_add) max_add = add;
+            *width = (uint8_t)((*width + max_add) & 0xFF);
             *index = (uint16_t)(i + 4);
             return 1;
         }

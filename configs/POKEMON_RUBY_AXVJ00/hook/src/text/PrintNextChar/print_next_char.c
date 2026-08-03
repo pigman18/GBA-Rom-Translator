@@ -71,26 +71,37 @@ static int draw_sym_punct(TextPrinter *win, uint32_t cur_char)
 }
 
 /*
- * 短语表渲染入口。
+ * 短语回放入口（变体A）。
  * 调用时机：解析到 F9 <op> hi lo（phrase 模式），code = (hi << 8) | lo。
- * 1. PhraseOffsets[code]（u16 @ 0x08810000）→ 条目偏移
- * 2. PhraseTable[offset]（@ 0x08820000）→ {u8 count, u8 pad, u16 idx[count]}
- * 3. 逐字渲染：glyph_ptr(idx) → DrawGlyph_Chinese（12px advance / glyph）
- * 短语表与 F9 00（单字侧载）共享同一渲染后端，区别仅在于字形来源：
- *   F9 00：glyph_ptr(pack_glyph_index(lead, trail))
- *   F9 7F/op：glyph_ptr(phrase_indices[i])
+ * 1. PhraseOffsets[code]（u32 @ 0x08810000）→ 条目偏移
+ * 2. PhraseTable[offset]（@ 0x08820000）→ F9 00 字节流 + 终止符 F9 7F 00 00
+ * 3. 切换 WIN_TEXT_PTR/INDEX 到条目数据并保存外层，由游戏 ProcessCurrentChar
+ *    逐字符回放：F9 00 侧载（本 hook）、单字节标点/JP（本 hook）、
+ *    0xFE 换行 / 0xFB 分页 / 0xFC 等待 / 0xFD 变量（游戏原分发）。
+ * 命中终止符 F9 7F 00 00 → 恢复外层，原槽尾 FF 照常结束（无二次 FF）。
  */
-static void draw_phrase(TextPrinter *win, uint16_t code)
+static void phrase_open(TextPrinter *win, uint16_t code)
 {
-    const uint16_t *offsets = (const uint16_t *)ADDR_PHRASE_OFFSETS;
+    const uint32_t *offsets = (const uint32_t *)ADDR_PHRASE_OFFSETS;
     const uint8_t *table = (const uint8_t *)ADDR_PHRASE_TABLE;
-    uint16_t off = offsets[code];
-    const uint8_t *entry = table + off;
-    uint8_t count = entry[0];
-    const uint16_t *indices = (const uint16_t *)(entry + 2);
+    volatile struct PhraseReplayState *rp = phrase_replay_state();
+    uint32_t off = offsets[code];
 
-    for (uint8_t i = 0; i < count; i++)
-        DrawGlyph_Chinese(win, glyph_ptr(indices[i]));
+    rp->saved_ptr = win_u32(win, WIN_TEXT_PTR);
+    rp->saved_index = win_u16(win, WIN_TEXT_INDEX);
+    rp->active = 1;
+    win_set_u32(win, WIN_TEXT_PTR, (uint32_t)(uintptr_t)(table + off));
+    win_set_u16(win, WIN_TEXT_INDEX, 0);
+}
+
+static int phrase_end(TextPrinter *win)
+{
+    volatile struct PhraseReplayState *rp = phrase_replay_state();
+
+    win_set_u32(win, WIN_TEXT_PTR, rp->saved_ptr);
+    win_set_u16(win, WIN_TEXT_INDEX, rp->saved_index);
+    rp->active = 0;
+    return 1;
 }
 
 /**
@@ -183,7 +194,9 @@ int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
         uint8_t op = p[0];
 
         if (op == 0) {
-            if (index == 1)
+            /* 普通槽首字（index==1）清残留 write_op；短语回放中第一条 F9 00
+             * 也是 index==1，但 write_op 已由短语 op 设定，必须保留。 */
+            if (index == 1 && !phrase_replay_state()->active)
                 chinese_tile_state()->write_op = 0;
             {
                 uint8_t lead = p[1];
@@ -202,14 +215,20 @@ int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
 
         {
             volatile struct ChineseTileState *st = chinese_tile_state();
+            volatile struct PhraseReplayState *rp = phrase_replay_state();
             uint16_t code;
+
+            if (op == CHS_PHRASE_END && rp->active) {
+                /* 短语终止符 → 恢复外层指针继续原槽（槽尾 FF 正常结束） */
+                return phrase_end(win);
+            }
             if (op == CHS_PHRASE_DEFAULT)
                 st->write_op = 0;
             else
                 st->write_op = op;
             code = (uint16_t)((p[1] << 8) | p[2]);
             win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(index + 3));
-            draw_phrase(win, code);
+            phrase_open(win, code);
             return 1;
         }
     }

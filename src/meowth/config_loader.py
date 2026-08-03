@@ -59,6 +59,8 @@ F9_PHRASE_DEFAULT = 0x80
 F9_OP_MIN = 0x01
 F9_OP_MAX = 0x7E
 F9_EOS = 0xFF
+# 短语数据终止符 op（数据区仅会出现 F9 00，F9 7F 无碰撞）
+CHS_PHRASE_END = 0x7F
 
 WRITE_TYPE_OP = "op"
 WRITE_TYPE_APPEND = "append"  # alias: type=append / append="0x02"

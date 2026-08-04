@@ -16,14 +16,6 @@
       "\\n"
     ]
   },
-  "skip": {
-    "originals": [
-      "？？？",
-      "？？？？？",
-      "やめる"
-    ],
-    "prefixes": []
-  },
   "reject": {
     "title_gfx_sites": {
       "sites": [

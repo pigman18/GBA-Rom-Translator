@@ -3,7 +3,7 @@
   "schema": "v3",
   "rom_id": "POKEMON_RUBY_AXVJ00",
   "game_code": "AXVJ",
-  "note": "由 config-driven scan 驱动；UI 扫描器为 hidden 模块"
+  "note": "由 config-driven scan 驱动；UI 扫描器为 hidden 模块。inject_body 由 type 派生：stride/struct=fixed_slot（可 F900→F980 升槽）；scan/pointer/stride_ptr 等=trusted_ptr（整串 F900+relocate，不自动升槽）。见 docs/模块参数定义.md"
  },
  "modules": {
   "属性名": {

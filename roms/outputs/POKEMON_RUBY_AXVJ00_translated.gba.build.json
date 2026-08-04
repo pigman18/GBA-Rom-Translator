@@ -1,10 +1,10 @@
 {
-  "build_id": "0.4.5+20260804T034004.5f38f8de8938",
+  "build_id": "0.4.5+20260804T040037.5f38f8de8938",
   "package_version": "0.4.5",
-  "timestamp_utc": "2026-08-04T03:40:04Z",
+  "timestamp_utc": "2026-08-04T04:00:37Z",
   "game": "POKEMON_RUBY_AXVJ00",
   "output_rom": "C:\\code\\GBA-Rom-Translator\\roms\\outputs\\POKEMON_RUBY_AXVJ00_translated.gba",
-  "output_rom_sha256": "9459d324fc157a828a4a2ef139dfd27dc6fd8ebfb6cfefb066d36e40e5df70f5",
+  "output_rom_sha256": "6560b31aea4c0d4afec68debdcf92f69d7be47014ded76f123abaf5151df0755",
   "patch_root": "C:/code/GBA-Rom-Translator/configs/POKEMON_RUBY_AXVJ00/hook",
   "patch_tree_sha256": "5f38f8de8938efd10fb82c87e5cdca40e2eb6a69667d3d6295571062bb3aadda",
   "patch_file_count": 68,
@@ -83,16 +83,17 @@
     "src/meowth/seed_translate.py": "3f5952131892d44f5a5d777d771a45b83978291411387e10e3447fef04950846",
     "src/meowth/rom_writer.py": "decfe61fd7a79120250ec5dc74ee4514242a71fc8b74ffd9b6f316aac6abfeda",
     "src/meowth/font_patch.py": "ae17cd96dca364503971f30d0b1d3f21d71bdbd11d559d50b61abc33ea98a17a",
-    "src/meowth/core/engine.py": "ca11c84d6952c4fa90b4eab8f6d1565aa61a4a0196847d3092d5d382f751e057",
+    "src/meowth/core/engine.py": "318a2bc87c75e1d0b22363452c516f2bdb08b684d2511e989221b3e94f2f542a",
     "src/meowth/table_patch.py": "998a417b554c225d991706004f1989b29b084d4c9f1f8dad5a88f3e0ea9b8c12"
   },
   "inject_stats": {
-    "in_place": 2364,
+    "in_place": 2750,
     "relocated": 3511,
     "skipped": 0,
-    "entry_count": 6255,
+    "entry_count": 6641,
     "name_tables": {},
     "modules": [
+      "物种名",
       "属性名",
       "性格名",
       "特性名",
@@ -133,8 +134,8 @@
       "include": "",
       "exclude": "",
       "omit_band": "",
-      "before": 6255,
-      "after": 6255,
+      "before": 6641,
+      "after": 6641,
       "omit_range": null
     }
   },

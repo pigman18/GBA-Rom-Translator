@@ -1448,17 +1448,16 @@ class TranslationEngine:
                 )
 
 
-        # Auto-switch F9 00 → F9 80: register entries whose per-char (F9 00)
-        # encoding would overflow the original slot. Content is irrelevant here —
-        # a slot overflow (raw F9 00 byte length > byte_length) means the text
-        # cannot fit in place, so we simply reserve a phrase code. Whether the
-        # PhraseTable can later render control bytes is decided there, not here.
+        # Auto-switch F9 00 → F9 80: ONLY fixed-slot modules (stride/struct).
+        # Trusted-ptr modules (scan/剧情/…) keep full F9 00 and relocate.
+        # See docs/模块参数定义.md inject_body / module_is_fixed_slot.
         self._auto_phrase_extra: list[dict] = []
         if is_cjk_language(self.config.target_lang) and data:
-            from ..config_loader import F9_PHRASE_DEFAULT as _f9_default
+            from ..modules import module_is_fixed_slot
 
             _pc = self.charmap._phrase_codes
             _raw_enc = self.charmap.encode  # pre-wrap: raw per-char encode
+            _gid = self.config.game
             _all_inject = []
             for tbl in data.get("tables") or []:
                 for en in tbl.get("entries") or []:
@@ -1470,6 +1469,9 @@ class TranslationEngine:
                 t = (en.get("translated") or "").strip('"')
                 o = (en.get("original") or "").strip('"')
                 if not t or t == o:
+                    continue
+                mid = en.get("_axvj_module") or en.get("module")
+                if not module_is_fixed_slot(_gid, mid):
                     continue
                 bl = en.get("byte_length", 0)
                 if bl < 5:
@@ -1484,14 +1486,15 @@ class TranslationEngine:
                     self._auto_phrase_extra.append({
                         "original": o,
                         "translated": t,
-                        "module": en.get("_axvj_module") or en.get("module"),
+                        "module": mid,
                         "byte_length": bl,
                         "raw_encoded_len": raw_len,
                     })
             if self._auto_phrase_extra:
                 self._log(
                     "info",
-                    f"[短语] 自动进 F9 80: {len(self._auto_phrase_extra)} 条 (写法越槽 in-place)",
+                    f"[短语] 自动进 F9 80: {len(self._auto_phrase_extra)} 条 "
+                    f"(仅定长槽 stride/struct 越槽)",
                 )
 
         # Wrap encode: full-text match → F9 80 <high> <low> FF (rom_writer may patch →op)
@@ -1788,9 +1791,9 @@ class TranslationEngine:
 
         # Auto-switch review dump (view-only; not part of any pipeline stage).
         auto_extra = getattr(self, "_auto_phrase_extra", None)
+        extra_path = (game_work or Path(self.config.work_dir) / self.config.game) / "lexicon.extra.json"
         if auto_extra:
             try:
-                extra_path = (game_work or Path(self.config.work_dir) / self.config.game) / "lexicon.extra.json"
                 extra_data = {
                     e.get("original") or "": e.get("translated") or ""
                     for e in auto_extra
@@ -1803,6 +1806,13 @@ class TranslationEngine:
                 self._log("info", f"[短语] 自动进 F9 80 记录 → {extra_path} ({len(extra_data)} 条)")
             except Exception as e:
                 self._log("warning", f"lexicon.extra.json 写失败 (non-fatal): {e}")
+        else:
+            # Drop stale auto-upgrade dump from prior builds.
+            try:
+                if extra_path.is_file():
+                    extra_path.unlink()
+            except OSError:
+                pass
 
         try:
             import os

@@ -16,6 +16,10 @@ from typing import Any
 
 from .config_loader import load_modules
 
+# Types whose text body lives in a fixed-length ROM slot.
+# Only these may auto-upgrade F9 00 → F9 80 on byte_length overflow.
+FIXED_SLOT_TYPES = frozenset({"stride", "struct"})
+
 
 def _get_modules(game_id: str) -> dict[str, dict[str, Any]]:
     gid = (game_id or "").strip()
@@ -37,6 +41,28 @@ def _get_modules(game_id: str) -> dict[str, dict[str, Any]]:
 
 def list_modules(game_id: str = "") -> list[str]:
     return list(_get_modules(game_id).keys())
+
+
+def module_type(game_id: str, module_id: str | None) -> str:
+    """Return modules.json ``type`` for ``module_id``, or empty string."""
+    if not module_id:
+        return ""
+    try:
+        meta = _get_modules(game_id).get(module_id) or {}
+    except ValueError:
+        return ""
+    return str(meta.get("type") or "").strip()
+
+
+def module_is_fixed_slot(game_id: str, module_id: str | None) -> bool:
+    """True if module text is a fixed-length slot (may auto F9 00 → F9 80).
+
+    ``stride`` / ``struct`` → fixed_slot. ``scan`` / ``pointer`` / ``stride_ptr``
+    / ``ptr_stride`` / needle / prefix → trusted_ptr (relocate, no auto upgrade).
+    See docs/模块参数定义.md inject_body.
+    """
+    typ = module_type(game_id, module_id)
+    return typ in FIXED_SLOT_TYPES
 
 
 def list_module_meta(game_id: str = "") -> list[dict[str, Any]]:

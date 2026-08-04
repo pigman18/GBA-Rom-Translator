@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import json
 import re
+from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
@@ -18,15 +19,17 @@ BASE = 0x08000000
 
 # 算法非法权重（命中一项从 score 扣除；权重越大越致命）
 WEIGHTS: dict[str, int] = {
+    "thumb_code": 40,    # capstone 反汇编：高比例字节为 Thumb 指令（代码/数据区）
     "jp_text": 30,       # original_hex 字节流不是合法 FF 结尾日文
     "garbage_jp": 30,    # original 字符串含半角假名/符号/乱序假名
     "arm_code": 30,      # original_hex 含 Thumb 指令字节组合
-    "byte_profile": 15,  # 0x00 / 控制字节比例过高（数据而非文本）
+    "byte_profile": 15,  # 0x00 填充比例过高（数据而非文本）
+    "repeat": 15,        # 2 字节重复模式（像素/压缩数据特征）
     "terminator": 15,    # 不以 FF/FB/FE 结尾
     "length": 15,        # byte_length 越界
     "overlap": 10,       # 与相邻条目地址差 <=2（同一文本错位副本）
     "ptr_odd": 15,       # 指针源含奇数地址（Thumb 函数指针）
-    "lz_span": 30,       # 地址落在 LZ10 压缩区（需 ROM）
+    "lz_span": 30,       # 地址处是完整 LZ77 压缩流（需 ROM）
     "orig_rom": 30,      # 原 ROM 该地址字节不是文本流（需 ROM）
 }
 
@@ -85,6 +88,93 @@ def _arm_code(bs: bytes) -> bool:
             n += 1  # beq/bne 短分支
         i += 2
     return n >= 2
+
+
+def _thumb_code(rom: bytes, off: int | None, length: int) -> bool:
+    """capstone 反汇编：若高比例字节连续解出 Thumb 指令 → 代码/数据区。
+
+    来自 capstone 反汇编引擎。长日文文本覆盖率也可能很高（Thumb 几乎
+    任意 2 字节都是合法指令），因此只作辅助信号，不单独触发可疑。
+    """
+    if off is None or off >= len(rom):
+        return False
+    seg = rom[off : off + min(length or 48, 160)]
+    if len(seg) < 16:
+        return False
+    try:
+        from capstone import Cs, CS_ARCH_ARM, CS_MODE_THUMB
+
+        md = Cs(CS_ARCH_ARM, CS_MODE_THUMB)
+        insns = list(md.disasm(seg, 0x08000000 + off))
+    except Exception:
+        return False
+    if not insns:
+        return False
+    covered = sum(i.size for i in insns)
+    return covered / len(seg) > 0.8 and len(insns) >= 8
+
+
+def _repeat_pattern(bs: bytes) -> bool:
+    """2 字节重复模式：像素/tile 数据常有 `xx yy xx yy` 周期重复，文本没有。"""
+    if len(bs) < 8:
+        return False
+    pairs = [bs[i : i + 2] for i in range(0, len(bs) - 1, 2)]
+    if not pairs:
+        return False
+    top = max(Counter(pairs).values())
+    return top >= len(pairs) * 0.4
+
+
+def _lz77_span(rom: bytes, off: int | None) -> bool:
+    """完整 LZ77 解压校验（移植 pret/pokeemerald gbagfx lz.c）。
+
+    标准 LZ77 或 lz77_swap（字节对交换，宝石版图像格式）。比简单
+    ``_lz10_span`` 严格：完整解压到声明的 dest_size 才算命中，因此
+    ``0x10`` 开头的日文文本不会误判。
+    """
+    if off is None or off >= len(rom):
+        return False
+
+    def try_decompress(data: bytes, start: int) -> bool:
+        if start + 4 > len(data) or data[start] != 0x10:
+            return False
+        dest_size = data[start + 1] | (data[start + 2] << 8) | (data[start + 3] << 16)
+        if dest_size < 0x40 or dest_size > 0x40000:
+            return False
+        sp = start + 4
+        dp = 0
+        while sp < len(data):
+            flags = data[sp]
+            sp += 1
+            for _ in range(8):
+                if flags & 0x80:
+                    if sp + 1 >= len(data):
+                        return False
+                    block_size = (data[sp] >> 4) + 3
+                    block_dist = (((data[sp] & 0xF) << 8) | data[sp + 1]) + 1
+                    sp += 2
+                    if dp - block_dist < 0:
+                        return False
+                    if dp + block_size > dest_size:
+                        block_size = dest_size - dp
+                    dp += block_size
+                else:
+                    if sp >= len(data):
+                        return False
+                    sp += 1
+                    dp += 1
+                if dp == dest_size:
+                    return True
+                flags <<= 1
+        return False
+
+    if try_decompress(rom, off):
+        return True
+    # lz77_swap：压缩流字节对交换后按标准 LZ77 解压
+    swapped = bytearray(rom[off:])
+    for i in range(0, len(swapped) - 1, 2):
+        swapped[i], swapped[i + 1] = swapped[i + 1], swapped[i]
+    return try_decompress(bytes(swapped), 0)
 
 
 def _byte_profile(bs: bytes) -> bool:
@@ -213,13 +303,16 @@ def check_texts(
         off = _entry_off(e)
         length = e.get("byte_length", 0)
 
-        # 权威判定通过（结尾控制符 + 0x00 密度低）即视为正常文本。
-        # 辅助算法对正常文本易误判（省略号 b0 b0、高字节 >=0x31、
-        # 0x10 开头、ptr_odd 等），只在权威失败时计入加重。
+        # 权威判定：结尾控制符 + 0x00 密度低 = 正常文本。
+        # 辅助算法（thumb_code/arm/byte_profile/overlap…）对正常文本易误判
+        # （省略号 b0 b0、高字节 >=0x31、0x10 开头、ptr_odd、长文本反汇编），
+        # 只在权威异常时计入加重。
         if _authoritative(bs, rom, off, length):
             scored.append((e, hits, 100))
             continue
 
+        if _thumb_code(rom, off, length):
+            hits.append("thumb_code")
         if bs and not looks_like_jp_text(bs):
             hits.append("jp_text")
         if not _orig_rom_text(rom, off, length):
@@ -230,6 +323,8 @@ def check_texts(
             hits.append("arm_code")
         if _byte_profile(bs):
             hits.append("byte_profile")
+        if _repeat_pattern(bs):
+            hits.append("repeat")
         if _terminator(bs):
             hits.append("terminator")
         if _length(e):
@@ -238,7 +333,7 @@ def check_texts(
             hits.append("overlap")
         if _ptr_odd(e):
             hits.append("ptr_odd")
-        if off is not None and _lz10_span(rom, off) is not None:
+        if _lz77_span(rom, off):
             hits.append("lz_span")
 
         score = max(0, 100 - sum(WEIGHTS[h] for h in hits))

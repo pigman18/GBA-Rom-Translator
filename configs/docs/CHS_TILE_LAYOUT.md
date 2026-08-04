@@ -7,7 +7,7 @@
 | F9 XX | 含义 |
 |-------|------|
 | `F9 00` | 侧载单字 |
-| `F9 7F hi lo` | 默认短语表（auto 几何） |
+| `F9 80 hi lo` | 默认短语表（auto 几何；表内为 F9 00+PCS 流） |
 | `F9 01..7E` | `write.op`（02=footer / 03=linear / 04=slot）——**上层 inject 配置不变** |
 | 裸 `FA..FF` | PCS 控制/串尾，禁止作 F9 通道 |
 
@@ -33,7 +33,7 @@
 | 战斗菜单·提示·报文 | `0x03` | Linear |
 | 招式名 | `0x04` | Linear / 固定槽 |
 
-**phrase_auto（F9 7F）只清 sticky（+2），不清 linear HW（+4）。**  
+**phrase_auto（F9 80）只清 sticky（+2），不清 linear HW（+4）。**  
 **勿在 `DrawGlyph_Chinese` 预同步 `char_base`。**
 
 ## JP via CHS（与 F9 共用落点）

@@ -129,7 +129,7 @@ alwaysApply: true
 ### 必须
 
 - 当轮只做用户点名的事；「挖新」= 新模块 ID + category + 地址带台账（`docs/MODULE_BANDS.md`），**不动**旧闸门/旧针表/默认勾选。
-- 改完程序：用户授权打包时按 [`PACK_ROM.md`](../tools/Meowth-GBA-Translator-JP/docs/PACK_ROM.md) 代跑；无授权不擅自打。默认跳过的模块（物种名/姓名输入等）勿擅自加回 `--modules`。
+- 改完程序：用户授权打包时按 [`PACK_ROM.md`](../docs/PACK_ROM.md) 代跑；无授权不擅自打。默认跳过的模块（姓名输入等）勿擅自加回 `--modules`；**物种名已在标准打包中包含**。
 - 「缩小范围」= **地址带 / 模块勾选**，不是关剧本域。
 - 黑屏类验证（若用户要求代理测）= 工作副本 + 本地 Lua `emu:setKeys` 按 A + 看屏；禁止键盘 API。
 - 说「已回滚」前必须具备其一：同 sha 的 bak ROM 已恢复到用户路径，或完整快照（key_src 全文件 + extract + modules + 译文 JSON + 模块列表）已对齐且用户验收通过。否则说 **回不了 / 缺备份**。

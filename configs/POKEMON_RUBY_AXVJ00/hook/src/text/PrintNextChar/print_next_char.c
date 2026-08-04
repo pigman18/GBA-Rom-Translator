@@ -71,26 +71,18 @@ static int draw_sym_punct(TextPrinter *win, uint32_t cur_char)
 }
 
 /*
- * 短语表渲染入口。
- * 调用时机：解析到 F9 <op> hi lo（phrase 模式），code = (hi << 8) | lo。
- * 1. PhraseOffsets[code]（u16 @ 0x08810000）→ 条目偏移
- * 2. PhraseTable[offset]（@ 0x08820000）→ {u8 count, u8 pad, u16 idx[count]}
- * 3. 逐字渲染：glyph_ptr(idx) → DrawGlyph_Chinese（12px advance / glyph）
- * 短语表与 F9 00（单字侧载）共享同一渲染后端，区别仅在于字形来源：
- *   F9 00：glyph_ptr(pack_glyph_index(lead, trail))
- *   F9 7F/op：glyph_ptr(phrase_indices[i])
+ * F9 80 / F9 <op>：切到 PhraseTable 字节流，复用 F9 00 与原版控制符。
+ * 流格式：F9 00 lead trail × N + FE/FB/… + FF（由 engine 生成）。
  */
-static void draw_phrase(TextPrinter *win, uint16_t code)
+static void redirect_phrase_stream(TextPrinter *win, uint16_t code)
 {
-    const uint16_t *offsets = (const uint16_t *)ADDR_PHRASE_OFFSETS;
+    const uint32_t *offsets = (const uint32_t *)ADDR_PHRASE_OFFSETS;
     const uint8_t *table = (const uint8_t *)ADDR_PHRASE_TABLE;
-    uint16_t off = offsets[code];
-    const uint8_t *entry = table + off;
-    uint8_t count = entry[0];
-    const uint16_t *indices = (const uint16_t *)(entry + 2);
+    uint32_t off = offsets[code];
+    const uint8_t *stream = table + off;
 
-    for (uint8_t i = 0; i < count; i++)
-        DrawGlyph_Chinese(win, glyph_ptr(indices[i]));
+    win_set_u32(win, WIN_TEXT_PTR, (uint32_t)(uintptr_t)stream);
+    win_set_u16(win, WIN_TEXT_INDEX, 0);
 }
 
 /**
@@ -183,8 +175,13 @@ int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
         uint8_t op = p[0];
 
         if (op == 0) {
-            if (index == 1)
-                chinese_tile_state()->write_op = 0;
+            /* 串首 F9 00 清 sticky；PhraseTable 流内首字勿清（保留 F9 op 的 write_op）。 */
+            {
+                uint32_t tptr = win_u32(win, WIN_TEXT_PTR);
+                if (index == 1
+                    && (tptr < ADDR_PHRASE_TABLE || tptr >= ADDR_FONT_CHS_NORMAL))
+                    chinese_tile_state()->write_op = 0;
+            }
             {
                 uint8_t lead = p[1];
                 uint8_t trail = p[2];
@@ -208,8 +205,8 @@ int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
             else
                 st->write_op = op;
             code = (uint16_t)((p[1] << 8) | p[2]);
-            win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(index + 3));
-            draw_phrase(win, code);
+            /* Abandon slot ref; next ProcessCurrentChar reads the stream. */
+            redirect_phrase_stream(win, code);
             return 1;
         }
     }

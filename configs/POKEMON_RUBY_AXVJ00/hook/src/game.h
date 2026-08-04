@@ -21,13 +21,13 @@
  * 若用 F9 00 ll tt 侧载一个汉字占 4 字节，8 字节槽最多 2 汉字。
  * 短语表将"文本存储"和"字段引用"解耦：
  *   字段槽（8B）：F9 <op> hi lo FF          → 4 字节引用
- *   PhraseTable：count + u16 glyph_idx[n]   → 最多 8 汉字
- * 查找路径：draw_phrase(code) →
- *   PhraseOffsets[code]（u16 数组 @ 0x08810000）
- *   → PhraseTable + offset（条目 @ 0x08820000）
- *   → 逐字形渲染（DrawGlyph_Chinese × count）
- * layout: .org 0x08810000 → offsets （u16[code_max], sentinel = total_size）
- *         .org 0x08820000 → entries  ({u8 count, u8 pad, u16 idx[count]})
+ *   PhraseTable：F9 00×N + FE/FB… + FF      → 展开侧载流（含控制符）
+ * 查找路径：F9 80/op →
+ *   PhraseOffsets[code]（u32 数组 @ 0x08810000）
+ *   → PhraseTable + offset（字节流 @ 0x08820000）
+ *   → 切 WIN_TEXT_PTR 到流，复用 F9 00 / 原版控制符路径
+ * layout: .org 0x08810000 → offsets （u32[code_max], sentinel = total_size）
+ *         .org 0x08820000 → streams （PCS bytes ending in FF）
  */
 #define ADDR_PHRASE_OFFSETS        0x08810000u
 #define ADDR_PHRASE_TABLE          0x08820000u
@@ -155,6 +155,13 @@ static inline void win_set_u16(TextPrinter *w, unsigned off, uint16_t v)
 {
     w[off] = (uint8_t)(v & 0xFF);
     w[off + 1] = (uint8_t)(v >> 8);
+}
+static inline void win_set_u32(TextPrinter *w, unsigned off, uint32_t v)
+{
+    w[off] = (uint8_t)(v & 0xFF);
+    w[off + 1] = (uint8_t)((v >> 8) & 0xFF);
+    w[off + 2] = (uint8_t)((v >> 16) & 0xFF);
+    w[off + 3] = (uint8_t)((v >> 24) & 0xFF);
 }
 static inline uint8_t *win_template(TextPrinter *w)
 {

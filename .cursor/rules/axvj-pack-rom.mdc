@@ -5,12 +5,13 @@ alwaysApply: true
 
 # AXVJ：授权即打包
 
-标准命令与默认跳过模块清单见 [`tools/Meowth-GBA-Translator-JP/docs/PACK_ROM.md`](../../tools/Meowth-GBA-Translator-JP/docs/PACK_ROM.md)。
+标准命令与默认模块清单见 [`docs/PACK_ROM.md`](../../docs/PACK_ROM.md)。
 
 ## 必须
 
-- 用户说打 rom / 打包 / build / 出 ROM，或粘贴 `PACK_ROM.md` 命令 → **当场代跑流水线**。
-- 默认跳过：`物种名`、`姓名输入`、`默认名字`、`赛事娱乐`、`高风险混杂`、`未归类`（已在 `modules.json` `default: false`）。
+- 用户说打 rom / 打包 / build / 出 ROM，或粘贴 `PACK_ROM.md` 命令 → **当场代跑流水线**（默认 `--seed-only`）。
+- 默认跳过：`姓名输入`、`默认名字`、`赛事娱乐`、`高风险混杂`、`未归类`（`modules.json` `default: false`）。
+- **默认包含 `物种名`**（已在 `PACK_ROM.md` 的 `--modules` 中）。
 
 ## 禁止
 

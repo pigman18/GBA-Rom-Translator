@@ -269,11 +269,6 @@ def layout_texts(
                     ))
                 write_offset += len(table_bin)
 
-    # ---- PCS token regex (for phrase safety check) ----
-    _PCS_TOKEN_RE = re.compile(
-        r"\\(?:CC[0-9A-Fa-f]{2,}|btn[0-9A-Fa-f]{2}|[0-9A-Fa-f]{2}|[pnlr.])"
-    )
-
     # ---- main text injection loop ----
     baseline = bytes(rom) if is_armips else b""
     rom_ba = bytearray(rom)
@@ -306,9 +301,10 @@ def layout_texts(
             translated = _prepare_zh_text(translated, line_width=lw)
 
         # ---- encode with phrase codes (same as build_rom) ----
+        # PhraseTable stores expanded F9 00+PCS streams, so \\n/controls are OK.
         sanitized = charmap._sanitize(translated)
         phrase_codes = getattr(charmap, "_phrase_codes", None)
-        if phrase_codes and sanitized in phrase_codes and not _PCS_TOKEN_RE.search(sanitized):
+        if phrase_codes and sanitized in phrase_codes:
             code = phrase_codes[sanitized]
             encoded = bytes([
                 0xF9,
@@ -618,15 +614,13 @@ def run_layout(
         for code, s in enumerate(phrases):
             charmap._phrase_codes[s] = code
 
-        _PCS_TOKEN_RE = re.compile(
-            r"\\(?:CC[0-9A-Fa-f]{2,}|btn[0-9A-Fa-f]{2}|[0-9A-Fa-f]{2}|[pnlr.])"
-        )
         _orig_encode = charmap.encode
+        charmap._sideload_encode = _orig_encode
 
         def _encode(text):
             s = charmap._sanitize(text)
             pc = getattr(charmap, "_phrase_codes", None)
-            if pc and s in pc and not _PCS_TOKEN_RE.search(s):
+            if pc and s in pc:
                 code = pc[s]
                 return bytes([
                     0xF9,

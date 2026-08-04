@@ -51,7 +51,7 @@ DEFAULT_LINE_WIDTH = 20
 
 # F9 channel protocol (AXVJ Chinese):
 #   F9 00 01  — 旁载单字 (auto)
-#   F9 80 hi/lo — 短语表 (default; keep=0 / geometry)
+#   F9 80 hi/lo — 短语表 (default; keep=0 / geometry; 表内为 F9 00+PCS 流)
 #   F9 01..7E hi lo — phrase + write.op sticky (02=footer 03=linear 04=slot)
 #   bare FA..FF       — PCS controls / EOS (NOT F9 channels)
 F9_SIDE_GLYPH = 0x00
@@ -91,7 +91,7 @@ def module_write_op(game_id: str, module_id: str | None) -> int | None:
     """Return F9 phrase-channel byte, or None if module has no ``write.type=op``.
 
     When set, phrase encoding becomes ``F9 <op> hi lo``.
-    ``F9 00`` / default ``F9 7F`` keep auto write unless patched.
+    ``F9 00`` / default ``F9 80`` keep auto write unless patched.
     Op must be in ``0x01..0x7E``.
     """
     if not module_id:
@@ -461,7 +461,7 @@ def tables_from_modules_inject(game_id: str = "") -> dict[str, Any]:
 
 
 def module_write_type_code(game_id: str, module_id: str | None) -> int | None:
-    """Alias of ``module_write_op`` (None = phrase keeps default F9 7F)."""
+    """Alias of ``module_write_op`` (None = phrase keeps default F9 80)."""
     return module_write_op(game_id, module_id)
 
 

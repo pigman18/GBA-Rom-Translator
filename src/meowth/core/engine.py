@@ -1226,38 +1226,16 @@ class TranslationEngine:
             else:
                 self._log("info", f"Default fonts synced: {copied} files -> {fonts_dir}")
 
-        # Generate phrase lookup table (PhraseLengths + PhraseChars) for armips
-        # lexicon (translate/) → phrase_data; font/charmap indexes glyphs; patch links them.
+        # PhraseTable: expanded PCS streams (F9 00×N + FE/FB/… + FF).
+        # PrintNextChar redirects to the stream and reuses F9 00 / vanilla controls.
         if not self._custom_translations:
             return
-        charmap_txt = get_charmap_path(self.config.game)
-        if not charmap_txt.exists():
-            self._log("warning", "charmap.txt not found, skipping phrase table")
-            return
-        def _lead_adjust(charmap_val: int) -> int:
-            """Convert charmap encoding value to font glyph index (ARM lead adjustment)."""
-            lead = (charmap_val >> 8) & 0xFF
-            trail = charmap_val & 0xFF
-            if lead < 0x01 or lead > 0x1E or lead == 0x06 or lead == 0x1B:
-                return 0
-            adj = lead - 1
-            if lead >= 6: adj -= 1
-            if lead >= 0x1B: adj -= 1
-            return (adj << 8) | trail
+        # Must not use F9 80 phrase wrap (installed in _build_rom).
+        sideload_encode = getattr(self.charmap, "_sideload_encode", None)
+        if sideload_encode is None:
+            sideload_encode = self.charmap.encode
 
-        char_index: dict[str, int] = {}
-        for line in charmap_txt.read_text(encoding="utf-8").splitlines():
-            line = line.strip()
-            if not line or "=" not in line:
-                continue
-            idx_str, ch = line.split("=", 1)
-            try:
-                char_index[ch] = _lead_adjust(int(idx_str, 16))
-            except ValueError:
-                pass
-
-        # Unified phrase set: lexicon + auto-switch phrases (both live in
-        # charmap._phrase_codes with contiguous codes so table matches code index).
+        # Unified phrase set: lexicon + auto-switch (contiguous codes = table index).
         pc = getattr(self.charmap, "_phrase_codes", None)
         if pc:
             entries = sorted(pc.items(), key=lambda kv: kv[1])
@@ -1270,37 +1248,46 @@ class TranslationEngine:
         if not phrases:
             return
 
+        MAX_PHRASE_STREAM = 512
         offsets: list[int] = []
         table_lines: list[str] = ['.align 4', 'PhraseTable:']
         byte_cursor = 0
+        truncated = 0
         for text in phrases:
             offsets.append(byte_cursor)
-            glyphs: list[int] = []
-            for ch in text:
-                # Missing glyph → skip (never add 0=啊)
-                if ch not in char_index:
-                    continue
-                glyphs.append(char_index[ch])
-            n = len(glyphs)
-            table_lines.append(f'  .byte {n}, 0     ; char_count={n}, padding')
-            for idx in glyphs:
-                table_lines.append(f'  .halfword 0x{idx:04X}')
-            byte_cursor += 2 + n * 2  # {u8 count, u8 pad, u16[n]}
+            stream = bytearray(sideload_encode(text))
+            if not stream or stream[-1] != 0xFF:
+                stream.append(0xFF)
+            if len(stream) > MAX_PHRASE_STREAM:
+                stream = stream[: MAX_PHRASE_STREAM - 1]
+                stream.append(0xFF)
+                truncated += 1
+            for i in range(0, len(stream), 16):
+                chunk = stream[i : i + 16]
+                hex_bytes = ", ".join(f"0x{b:02X}" for b in chunk)
+                suffix = f"  ; {len(stream)}B" if i == 0 else ""
+                table_lines.append(f"  .byte {hex_bytes}{suffix}")
+            byte_cursor += len(stream)
         offsets.append(byte_cursor)  # sentinel = total size
 
         # Fixed VMA for C (game.h ADDR_PHRASE_*); must match game_addrs.asm
-        asm_lines = ['.org 0x08810000', '.align 2', 'PhraseOffsets:']
+        # Stream table can exceed 64KB → offsets must be u32 (.word), hook uint32_t*.
+        asm_lines = ['.org 0x08810000', '.align 4', 'PhraseOffsets:']
         for off in offsets:
-            asm_lines.append(f'  .halfword {off}')
+            asm_lines.append(f'  .word {off}')
         asm_lines.append('')
         asm_lines.append('.org 0x08820000')
         asm_lines.extend(table_lines)
 
         phrase_asm = fonts_dir / "phrase_data.asm"
         phrase_asm.write_text('\n'.join(asm_lines), encoding="utf-8")
-        self._log("info",
-                  f"[短语] PhraseTable {len(phrases)} 条, {byte_cursor}B data + {len(offsets)*2}B offsets"
-                  f" -> {phrase_asm.name}")
+        msg = (
+            f"[短语] PhraseTable {len(phrases)} 条流, {byte_cursor}B data + "
+            f"{len(offsets) * 4}B offsets(u32) -> {phrase_asm.name}"
+        )
+        if truncated:
+            msg += f" ({truncated} 条截断至 {MAX_PHRASE_STREAM}B)"
+        self._log("info", msg)
 
     def _build_font_from_bdf(self, work_dir: Path | None = None):
         """Generate font .bin from config's BDF path or auto-detect."""
@@ -1457,8 +1444,9 @@ class TranslationEngine:
                 self._log(
                     "info",
                     f"[短语] F9 XX 分配: {len(phrases)} 条码位 0x0000-0x{len(phrases)-1:04X} "
-                    f"(默认通道 XX=7F；write.op 改 XX，范围 01..7E)",
+                    f"(默认通道 XX=80；write.op 改 XX，范围 01..7E)",
                 )
+
 
         # Auto-switch F9 00 → F9 80: register entries whose per-char (F9 00)
         # encoding would overflow the original slot. Content is irrelevant here —
@@ -1506,11 +1494,12 @@ class TranslationEngine:
                     f"[短语] 自动进 F9 80: {len(self._auto_phrase_extra)} 条 (写法越槽 in-place)",
                 )
 
-        # Wrap encode: full-text match → F9 7F <high> <low> FF (rom_writer may patch →op)
+        # Wrap encode: full-text match → F9 80 <high> <low> FF (rom_writer may patch →op)
         # else F9 00 per-char (side font, auto write).
         from ..config_loader import F9_EOS, F9_PHRASE_DEFAULT
 
         _orig_encode = self.charmap.encode
+        self.charmap._sideload_encode = _orig_encode  # PhraseTable streams use this
 
         def _encode(text):
             s = self.charmap._sanitize(text)

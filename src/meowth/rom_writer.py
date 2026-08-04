@@ -346,7 +346,7 @@ class RomWriter:
             raise ValueError(f"Entry {entry_id}: encoding failed for '{translated}': {e}") from e
 
         # write.type=op → phrase channel byte is the op (F9 <op> hi lo).
-        # Only rewrite default phrase channel (F9 7F); F9 00 side glyph stays.
+        # Only rewrite default phrase channel (F9 80); F9 00 side glyph stays.
         if self._is_armips and self.target_lang.startswith("zh") and len(encoded) >= 4:
             from .config_loader import F9_PHRASE_DEFAULT, module_write_op
 

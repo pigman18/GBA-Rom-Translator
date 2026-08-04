@@ -1,6 +1,34 @@
 /* F9-aware string width: Hanzi advance matches draw (CHS_GLYPH_ADVANCE_PX). */
 #include "game.h"
 
+/* Walk PhraseTable PCS stream: F9 00 → glyph_px; FA..FE skip; stop at FF. */
+static int phrase_stream_width(const uint8_t *stream, int glyph_px)
+{
+    int add = 0;
+    unsigned i = 0;
+
+    while (stream[i] != 0xFF) {
+        uint8_t c = stream[i];
+        if (c == CHS_ESCAPE) {
+            if (stream[i + 1] == 0) {
+                add += glyph_px;
+                i += 4; /* F9 00 lead trail */
+            } else {
+                /* Nested phrase ref inside stream — treat as 0 (should not occur). */
+                i += 4;
+            }
+            continue;
+        }
+        if (c >= 0xFA) {
+            i++;
+            continue;
+        }
+        add += 8;
+        i++;
+    }
+    return add;
+}
+
 int GetStringWidth_Chinese(TextPrinter *win, const uint8_t *s,
                            uint16_t *index, uint8_t *width)
 {
@@ -22,15 +50,13 @@ int GetStringWidth_Chinese(TextPrinter *win, const uint8_t *s,
             return 1;
         }
 
-        /* F9 XX hi lo — phrase: count * per-glyph width */
+        /* F9 XX hi lo — phrase stream width */
         {
             uint16_t code = (uint16_t)((s[i + 2] << 8) | s[i + 3]);
-            const uint16_t *offsets = (const uint16_t *)ADDR_PHRASE_OFFSETS;
+            const uint32_t *offsets = (const uint32_t *)ADDR_PHRASE_OFFSETS;
             const uint8_t *table = (const uint8_t *)ADDR_PHRASE_TABLE;
-            uint8_t count = table[offsets[code]];
-            int add = (font == FONT_NORMAL_UNSHADOWED || font == FONT_NORMAL_SHADOWED)
-                          ? (count * CHS_GLYPH_ADVANCE_PX)
-                          : (count * 8 + count * 2);
+            const uint8_t *stream = table + offsets[code];
+            int add = phrase_stream_width(stream, glyph_px);
             *width = (uint8_t)((*width + add) & 0xFF);
             *index = (uint16_t)(i + 4);
             return 1;

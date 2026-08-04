@@ -6,7 +6,7 @@ GUI checkboxes → translate/build only process checked modules.
 Authoritative file: ``configs/<game_id>/translate/modules.json``.
 Wrap width: ``translate/modules.inject.json`` → ``line_width`` (default 20).
 Write behavior: ``write.type=op`` + ``write.op`` (0x01..0x7E) → phrase ``F9 <op> hi lo``;
-default phrase channel is ``F9 7F`` (see ``module_write_op``).
+default phrase channel is ``F9 80`` (see ``module_write_op``).
 """
 
 from __future__ import annotations

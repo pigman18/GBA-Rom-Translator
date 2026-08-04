@@ -58,10 +58,13 @@
 
 - **现象**：全局文字变红、背景黑条/花屏、菜单光标消失。
 - **根因**（2026-08）：engine.py 的 PhraseOffsets 生成改用 `.word`（u32，4B/项），
-  但 hook `draw_phrase` 仍读 `uint16_t *offsets`（u16，2B/项）。
+  但 hook 仍读 `uint16_t *offsets`（u16，2B/项）。
   导致奇数 code 全部读到 0 → 指向第一条目 → 渲染垃圾字形 → VRAM 腐蚀 → 全局红字。
+- **现行**（F9 80 字节流表）：表体常 >64KB，**两侧均为 u32**：
+  engine `.word` ↔ hook `uint32_t *`。
 - **禁止**：单独改 engine.py 表生成或 hook 的 offsets 类型。两者必须同宽：
   engine 用 `.halfword` ↔ hook 用 `uint16_t *`，
   engine 用 `.word` ↔ hook 用 `uint32_t *`。
-- **自检**：改完跑 `python -c "import struct; rom=open('roms/outputs/POKEMON_RUBY_AXVJ00_translated.gba','rb').read(); off_as_u16=[struct.unpack_from('<H',rom,0x810000+i*2)[0] for i in range(4)]; print('offsets u16:', off_as_u16)"`
-  验证 offsets 步进正常且无零值交错。
+- **自检**：改完跑
+  `python -c "import struct; rom=open('roms/outputs/POKEMON_RUBY_AXVJ00_translated.gba','rb').read(); off=[struct.unpack_from('<I',rom,0x810000+i*4)[0] for i in range(4)]; print('offsets u32:', off)"`
+  验证 offsets 步进递增、无异常回绕。

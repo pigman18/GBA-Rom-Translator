@@ -434,7 +434,7 @@ def inject_name_tables(
         code = module_write_op(gid, mid) if gid else None
         if code is None:
             return raw
-        # F9 <op> hi lo … — op replaces default phrase channel (7F)
+        # F9 <op> hi lo … — op replaces default phrase channel (80)
         return bytes([0xF9, code & 0xFF]) + raw[2:]
 
     while write_offset % 4:

@@ -697,7 +697,85 @@ class TranslationEngine:
         output_path.write_text(
             json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
         )
+
+        # --- 翻译通路规划：决策 type + 编码 target_hex → translate.build.json ---
+        # translate 阶段不注入 ROM，只产出 build 中间产物；texts_translated.json
+        # 降级为翻译缓存文件。
+        try:
+            self._write_translate_build(data)
+        except Exception as e:  # pragma: no cover
+            self._log("warning", f"[翻译通路] translate.build.json 生成失败: {e}")
+
         return output_path
+
+    def _write_translate_build(self, data: dict) -> None:
+        """决策每条目的注入 type 并编码 target_hex，写 translate.build.json。
+
+        短语码（词典 + 自动 upgrade 预分配）在此阶段确定并写入 phrases，
+        build 阶段据此生成 PhraseTable 并按 type 注入。
+        """
+        from ..translate_plan import plan_entries
+
+        flat = data.get("entries") or []
+        if not flat:
+            return
+
+        # 分配词典短语码（build 阶段不再重新分配，共享同一码表）
+        self.charmap._phrase_codes = {}
+        if self._custom_translations:
+            phrases = sorted(
+                {
+                    self.charmap._sanitize(v)
+                    for v in self._custom_translations.values()
+                    if len(v) > 1
+                },
+                key=lambda s: (len(s), s),
+            )
+            for code, s in enumerate(phrases):
+                self.charmap._phrase_codes[s] = code
+
+        phrase_codes = self.charmap._phrase_codes
+        plans = plan_entries(flat, self.charmap, phrase_codes)
+
+        phrases_by_code = [None] * len(phrase_codes)
+        for s, code in phrase_codes.items():
+            phrases_by_code[code] = s
+
+        payload = {
+            "game_id": self.config.game,
+            "count": len(flat),
+            "phrases": phrases_by_code,
+            "entries": [
+                {
+                    "id": e.get("id", ""),
+                    "type": p["type"],
+                    "address": e.get("address", ""),
+                    "byte_length": e.get("byte_length", 0),
+                    "module": e.get("module") or e.get("_axvj_module") or "",
+                    "original": e.get("original", ""),
+                    "translated": e.get("translated", ""),
+                    "original_hex": e.get("original_hex", ""),
+                    "target_hex": p.get("target_hex", ""),
+                    "pointer_sources": p.get("pointer_sources") or [],
+                    "phrase_code": p.get("phrase_code"),
+                }
+                for e, p in zip(flat, plans)
+            ],
+        }
+        build_dir = Path(self.config.work_dir) / self.config.game
+        build_dir.mkdir(parents=True, exist_ok=True)
+        build_path = build_dir / "translate.build.json"
+        build_path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        from collections import Counter as _C
+
+        _types = _C(p["type"] for p in plans)
+        self._log(
+            "info",
+            "[翻译通路] translate.build.json → "
+            + ", ".join(f"{t}={n}" for t, n in _types.most_common()),
+        )
 
     def _translate_table(self, table: dict):
         """Translate a table's entries using glossary lookup."""
@@ -1529,8 +1607,26 @@ class TranslationEngine:
         )
 
         # Assign 2-byte codes (0x0000-0xFFFF) to custom_translation phrases (>1 char)
+        # 优先复用 translate 阶段的 translate.build.json phrases（含 upgrade 自动
+        # 分配短语），保证 PhraseTable 与 translate.build.json 的 f980 码一致。
         self.charmap._phrase_codes: dict[str, int] = {}
-        if self._custom_translations:
+        _bp_phrases: list | None = None
+        try:
+            _bp_path = (game_work or Path(self.config.work_dir) / self.config.game) / "translate.build.json"
+            if _bp_path.exists():
+                _bp_data = json.loads(_bp_path.read_text(encoding="utf-8"))
+                _bp_phrases = _bp_data.get("phrases") or []
+        except Exception:
+            _bp_phrases = None
+        if _bp_phrases:
+            for code, s in enumerate(_bp_phrases):
+                if s:
+                    self.charmap._phrase_codes[s] = code
+            self._log(
+                "info",
+                f"[短语] 复用 translate.build.json 码表: {len(_bp_phrases)} 条",
+            )
+        elif self._custom_translations:
             phrases = sorted(
                 {self.charmap._sanitize(v) for v in self._custom_translations.values() if len(v) > 1},
                 key=lambda s: (len(s), s),
@@ -1826,6 +1922,24 @@ class TranslationEngine:
 
         if self._feature("name_tables"):
             writer.axvj_name_tables = True
+
+        # --- 翻译通路：读 translate.build.json，把 plan（type/target_hex）附加到条目 ---
+        # rom_writer 据此按 type 注入；无 plan 的条目回退原逻辑。
+        try:
+            build_plan_path = (game_work or Path(self.config.work_dir) / self.config.game) / "translate.build.json"
+            if build_plan_path.exists():
+                _bp = json.loads(build_plan_path.read_text(encoding="utf-8"))
+                _plan_map = {e.get("id"): e for e in _bp.get("entries") or [] if e.get("type")}
+                for _entry in all_entries:
+                    _p = _plan_map.get(_entry.get("id"))
+                    if _p:
+                        _entry["_plan"] = _p
+                self._log(
+                    "info",
+                    f"[翻译通路] 载入 translate.build.json: {len(_plan_map)} 条决策",
+                )
+        except Exception as e:  # pragma: no cover
+            self._log("warning", f"[翻译通路] 载入 translate.build.json 失败: {e}")
 
         rom, stats = writer.inject_texts(
             rom, all_entries, on_progress=_inject_progress

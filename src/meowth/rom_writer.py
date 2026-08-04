@@ -342,8 +342,95 @@ class RomWriter:
 
         return rom, stats
 
+    def _process_planned_entry(
+        self, rom: bytearray, entry: dict, plan: dict, stats: dict
+    ) -> None:
+        """按 translate.build.json 的 type 注入（翻译通路）。
+
+        f980/upgrade → F9 80 短语引用写入原槽位（槽位不足则保留原文）
+        in_place     → target_hex 写入原地址
+        relocate     → target_hex 写入扩展区并改写指针（弱化指针验证）
+        keep         → 保留原文，日志打印
+        """
+        entry_id = entry.get("id", "?")
+        ptype = plan.get("type") or "keep"
+        category = plan.get("module") or entry.get("module") or ""
+        original = entry.get("original", "")
+
+        try:
+            target = bytes.fromhex((plan.get("target_hex") or "").replace(" ", ""))
+        except ValueError:
+            target = b""
+
+        address = int(entry.get("address", "0x0").replace("0x", ""), 16)
+        if address >= self.POINTER_OFFSET:
+            address -= self.POINTER_OFFSET
+        byte_length = entry.get("byte_length", 0) or 0
+
+        if ptype in ("f980", "upgrade"):
+            # F9 80 短语引用（5 字节），写入原槽位；槽位不足则保留原文
+            if byte_length >= len(target):
+                self._write_in_place_v2(rom, address, target, byte_length)
+                stats["in_place"] += 1
+            else:
+                print(
+                    f"  KEEP {entry_id} @ 0x{address:X} (cat={category}): "
+                    f"F9-80 {len(target)}B > slot {byte_length}B"
+                )
+                stats["kept"] = stats.get("kept", 0) + 1
+            return
+
+        if ptype == "in_place":
+            if len(target) <= byte_length:
+                self._write_in_place_v2(rom, address, target, byte_length)
+                stats["in_place"] += 1
+            else:
+                print(
+                    f"  KEEP {entry_id} @ 0x{address:X}: "
+                    f"in_place {len(target)}B > slot {byte_length}B"
+                )
+                stats["kept"] = stats.get("kept", 0) + 1
+            return
+
+        if ptype == "relocate":
+            ptrs = (
+                plan.get("pointer_sources")
+                or entry.get("pointer_addresses")
+                or entry.get("pointer_sources")
+                or []
+            )
+            if ptrs:
+                try:
+                    # expected_target=None → 走宽松指针改写（弱化 filter）
+                    self._write_relocated(
+                        rom, target, ptrs, category=category, original=original
+                    )
+                    stats["relocated"] += 1
+                    return
+                except RuntimeError as e:
+                    print(
+                        f"  WARN {entry_id} @ 0x{address:X}: "
+                        f"relocate failed ({e}); keep original"
+                    )
+            else:
+                print(
+                    f"  KEEP {entry_id} @ 0x{address:X}: "
+                    f"relocate planned but no pointer sources"
+                )
+            stats["kept"] = stats.get("kept", 0) + 1
+            return
+
+        # keep / 未知类型：保留原文
+        print(f"  KEEP {entry_id} @ 0x{address:X} (cat={category}): 保留原文 [{ptype}]")
+        stats["kept"] = stats.get("kept", 0) + 1
+
     def _process_entry_v2(self, rom: bytearray, entry: dict, stats: dict) -> None:
         """Process a single entry. Raises ValueError on any write failure."""
+        plan = entry.get("_plan")
+        if plan:
+            self._process_planned_entry(rom, entry, plan, stats)
+            return
+
         original = entry.get("original", "").strip('"')
         translated = entry.get("translated", "").strip('"')
 

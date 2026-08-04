@@ -936,51 +936,24 @@ def filter_pointer_sources(
         tlz = TITLE_LZ_BAND()
         if tlz[0] <= ptr_addr < tlz[1]:
             continue
-        # Facility clerks / PC UI: map-script pointers, not Thumb loadword.
-        facility_like = entry_group_in(_tag_entry, "设施")
+        # 弱化：不再按 GFX_PTR_SOURCE_DENY / min_pointer_source / 对齐 / 严格脚本
+        # 过滤指针源（回归 relocate 为主，模拟器白屏可查 translate.build.json 地址）。
+        # 保留：标题图形指针、标题 LZ、指针确实指向该文本、pointer_target 拒绝带。
         class_ptr = is_class_text_ptr(rom, ptr_addr, text_address)
         local_pool = is_local_pool_ptr(ptr_addr, text_address)
-        ui_body = string_in_ui_text_bank(text_address) or string_in_option_band(
-            text_address
-        )
-        save_body = (not ui_body) and is_save_power_prompt_at(rom, text_address)
-        chrome_body = ui_body or save_body
-        # Local pools + UI chrome / name-table ptrs often sit in gfx-deny banks.
-        if (
-            in_ranges(ptr_addr, GFX_PTR_SOURCE_DENY())
-            and ptr_addr not in TRAINER_UI_PTR_ALLOW
-            and not class_ptr
-            and not local_pool
-            and not chrome_body
-            and not facility_like
-        ):
-            continue
-
         script_like = entry_is_script_like(_tag_entry)
-        # Keep strict for open-world 剧情; facilities need mid-ROM event ptrs.
-        strict_script = script_like and not facility_like
         if ptr_addr in BIRCH_PTR_ALLOW:
             pass
         elif ptr_in_trusted_lz(ptr_addr, spans) and not class_ptr and not local_pool:
             if not ptr_source_ok(
-                rom, ptr_addr, text_address, lz_spans=spans, strict=strict_script
+                rom, ptr_addr, text_address, lz_spans=spans, strict=False
             ):
                 continue
-        if strict_script:
-            if not ptr_source_ok(
-                rom, ptr_addr, text_address, lz_spans=spans, strict=True
-            ):
-                continue
-        elif script_like and facility_like:
+        elif script_like:
             if not ptr_source_ok(
                 rom, ptr_addr, text_address, lz_spans=spans, strict=False
             ):
                 continue
-        elif ptr_addr < min_pointer_source and not class_ptr:
-            if not ptr_source_ok(rom, ptr_addr, text_address, lz_spans=spans):
-                continue
-        if not script_like and (ptr_addr & 3) and not local_pool:
-            continue
         # Brand literals: site/string class, not module id.
         if compact in brand_compact_skip() and ptr_addr >= 0x100000:
             continue

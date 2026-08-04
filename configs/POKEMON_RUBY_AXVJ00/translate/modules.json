@@ -746,7 +746,8 @@
      ]
     ]
    },
-   "start": "0x37E800"
+   "start": "0x37E800",
+   "no_relocate": true
   },
   "开场家园": {
    "label": "剧情·开场家园",
@@ -5632,7 +5633,8 @@
      ]
     ]
    },
-   "start": "0x3E89B4"
+   "start": "0x3E89B4",
+   "no_relocate": true
   },
   "存档与电源": {
    "label": "界面·存档",
@@ -7770,7 +7772,8 @@
      ]
     ]
    },
-   "start": "0x3F1AA6"
+   "start": "0x3F1AA6",
+   "no_relocate": true
   },
   "默认名字": {
    "label": "起名·默认名",

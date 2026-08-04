@@ -117,6 +117,64 @@ def main():
     _load_env()
 
 
+@main.command("check-texts")
+@click.argument("texts_json", type=click.Path(exists=True))
+@click.option("--rom", "rom_path", required=True, type=click.Path(exists=True),
+              help="原版 ROM（校验 game_id + LZ/原地址算法）")
+@click.option("--threshold", default=70, type=click.IntRange(0, 100),
+              help="评分阈值，低于此值的条目写入 texts_suspicious.json")
+@click.option("--top", default=20, type=int, help="终端显示的可疑条目数")
+@click.option("--dry-run", is_flag=True, help="只报告，不写任何文件")
+def check_texts(texts_json, rom_path, threshold, top, dry_run):
+    """校验 texts.json：多算法评分，把 score 写回原文件并导出可疑条目。
+
+    score 100=干净；低于 --threshold 的条目写到与 texts.json 同级的
+    ``texts_suspicious.json``（带 check_hits 命中算法列表）。
+    """
+    from collections import Counter
+    from .text_checker import check_texts as run_check
+
+    src = Path(texts_json)
+    report = run_check(
+        src, Path(rom_path), threshold=threshold, dry_run=dry_run
+    )
+    click.echo(f"texts.json : {src}")
+    click.echo(
+        f"ROM        : {rom_path}  (game_id={report['rom_game_id']}, match=OK)"
+    )
+    click.echo(
+        f"总评分     : {report['total_score']} / 100  (越接近 100 越干净)"
+    )
+    click.echo(
+        f"可疑条目   : {report['suspicious_count']} / {report['total_count']} "
+        f"(score < {threshold})"
+    )
+    if not dry_run:
+        click.echo(f"可疑输出   : {report['suspicious_path']}")
+
+    sus = report["suspicious"]
+    if sus:
+        click.echo(f"\nTop {min(top, len(sus))} 可疑条目:")
+        click.echo(f"  {'id':<22} {'address':<12} {'module':<10} {'score':>5}  hits")
+        for e, hits, score in sorted(sus, key=lambda x: x[2])[:top]:
+            click.echo(
+                f"  {e.get('id',''):<22} {e.get('address',''):<12} "
+                f"{(e.get('module') or ''):<10} {score:>5}  {','.join(hits)}"
+            )
+        mod_tot = Counter(e[0].get("module") for e in report["suspicious"])
+        click.echo("\n按模块统计（可疑数/总数）:")
+        all_mod = Counter()
+        try:
+            data = json.loads(src.read_text(encoding="utf-8"))
+            all_mod = Counter(e.get("module") for e in data.get("entries") or [])
+        except (OSError, ValueError):
+            pass
+        for m, n in mod_tot.most_common(10):
+            click.echo(f"  {m}: {n}/{all_mod.get(m, 0)}")
+    else:
+        click.echo("\n未发现可疑条目。")
+
+
 @main.command()
 @click.argument("rom_path", type=click.Path(exists=True))
 @click.option("-o", "--output", default=None, help="Output texts JSON path (default: work/<game_id>/texts.json)")

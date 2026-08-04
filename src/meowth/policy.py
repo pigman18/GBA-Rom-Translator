@@ -812,14 +812,6 @@ def is_garbage_jp(text: str) -> bool:
         return True
     if len(re.findall(r"[ぁ-ん]{1}\s+[ぁ-ん]{1}\s+", text)) >= 3:
         return True
-    # Half-width kana or symbols from code/data decoded through charmap
-    if re.search(r"[\u2640-\u2650\uff61-\uff9f]", text):
-        return True
-    # Fullwidth Latin scattered among kana (ARM code bytes look like this)
-    latin = re.findall(r"[\uff21-\uff3a\uff41-\uff5a]", text)
-    kana = sum(1 for ch in text if "\u3040" <= ch <= "\u30ff")
-    if len(latin) >= 1 and kana >= 4:
-        return True
     return False
 
 

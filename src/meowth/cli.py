@@ -1,5 +1,6 @@
 """Meowth CLI - GBA Pokemon translation tool."""
 
+import json
 from pathlib import Path
 
 import click
@@ -7,6 +8,16 @@ import click
 from .core import TranslationCallbacks, TranslationConfig, TranslationEngine
 from .languages import validate_language
 from .translator import PROVIDER_PRESETS
+
+
+def _default_translated_path(texts_json: Path) -> Path:
+    """Infer ``work/<game_id>/texts_translated.json`` from a texts JSON."""
+    try:
+        meta = json.loads(texts_json.read_text(encoding="utf-8"))
+    except (OSError, ValueError):
+        meta = {}
+    gid = meta.get("game_id") or meta.get("game") or "AXVJ"
+    return Path("work") / gid / "texts_translated.json"
 
 
 def _load_env():
@@ -108,7 +119,7 @@ def main():
 
 @main.command()
 @click.argument("rom_path", type=click.Path(exists=True))
-@click.option("-o", "--output", default="work/texts.json", help="Output texts JSON path")
+@click.option("-o", "--output", default=None, help="Output texts JSON path (default: work/<game_id>/texts.json)")
 @click.option("--source", default="en", help="Source language code (default: from config or en)")
 @click.option("--target", default="zh-Hans", help="Target language code (default: from config or zh-Hans)")
 @_modules_option
@@ -124,29 +135,38 @@ def extract(rom_path, output, source, target, modules):
     validate_language(target)
     if detect_game(Path(rom_path)) in list_available_games() and source == "en":
         source = "ja"
-    TranslationEngine.extract_texts(
-        Path(rom_path), Path(output), modules=parse_modules_csv(modules)
+    config = TranslationConfig(
+        source_lang=source,
+        target_lang=target,
+        rom_path=Path(rom_path),
     )
-    click.echo(f"Extracted: {output} (source={source})")
+    engine = TranslationEngine(config, CLICallbacks())
+    out = engine.extract_texts(
+        Path(rom_path),
+        Path(output) if output else None,
+        modules=parse_modules_csv(modules),
+    )
+    click.echo(f"Extracted: {out} (source={source})")
 
 
 @main.command("seed-translate")
 @click.argument("texts_json", type=click.Path(exists=True))
-@click.option("-o", "--output", default="work/texts_translated.json")
+@click.option("-o", "--output", default=None, help="Output path (default: work/<game_id>/texts_translated.json)")
 @click.option("--only-seeded", is_flag=True, help="Keep only entries that got a seed translation")
 def seed_translate(texts_json, output, only_seeded):
-    """Offline ja鈫抸h seed translations for AXVJ (no API key)."""
+    """Offline ja→zh seed translations for AXVJ (no API key)."""
     from .seed_translate import seed_translate_file
 
+    out = Path(output) if output else _default_translated_path(Path(texts_json))
     n_seed, n_total = seed_translate_file(
-        Path(texts_json), Path(output), only_seeded=only_seeded
+        Path(texts_json), out, only_seeded=only_seeded
     )
-    click.echo(f"Seeded {n_seed}/{n_total} -> {output}")
+    click.echo(f"Seeded {n_seed}/{n_total} -> {out}")
 
 
 @main.command()
 @click.argument("texts_json", type=click.Path(exists=True))
-@click.option("-o", "--output", default="work/texts_translated.json")
+@click.option("-o", "--output", default=None, help="Output path (default: work/<game_id>/texts_translated.json)")
 @click.option("--batch-size", default=30, help="Texts per LLM batch")
 @click.option("--workers", default=10, help="Parallel translation threads")
 @click.option("--source", default="en", help="Source language code (default: from config or en)")
@@ -185,8 +205,9 @@ def translate(texts_json, output, batch_size, workers, source, target, seed_only
         except FileNotFoundError:
             pass
     engine = TranslationEngine(config, CLICallbacks())
-    engine.translate_texts(Path(texts_json), Path(output))
-    click.echo(f"Translated: {output}")
+    out = Path(output) if output else _default_translated_path(Path(texts_json))
+    engine.translate_texts(Path(texts_json), out)
+    click.echo(f"Translated: {out}")
 
 
 @main.command()

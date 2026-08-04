@@ -311,7 +311,7 @@ class TranslationEngine:
 
     def _merge_prior_translations(self, data: dict) -> int:
         """Fill blanks from work_dir/texts_translated.json (GUI re-runs)."""
-        prior_path = Path(self.config.work_dir) / "texts_translated.json"
+        prior_path = Path(self.config.work_dir) / self.config.game / "texts_translated.json"
         if not prior_path.exists():
             return 0
         try:
@@ -486,7 +486,7 @@ class TranslationEngine:
             mid for mid, m in _get_modules(self.config.game).items()
             if m.get("dirty")
         }
-        prior_path = Path(self.config.work_dir) / "texts_translated.json"
+        prior_path = Path(self.config.work_dir) / self.config.game / "texts_translated.json"
         if prior_path.exists():
             try:
                 prior = json.loads(prior_path.read_text(encoding="utf-8"))
@@ -1069,7 +1069,9 @@ class TranslationEngine:
             elif is_cjk_language(self.config.target_lang):
                 self._ensure_default_fonts(work_dir)
 
-            translated_path = self.translate_texts(texts_path, work_dir / "texts_translated.json")
+            translated_path = self.translate_texts(
+                texts_path, work_dir / self.config.game / "texts_translated.json"
+            )
             self.callbacks.on_stage_change("translate", "completed")
 
             # --- tile stage: patch sprites on a ROM copy (input untouched) ---
@@ -1146,6 +1148,31 @@ class TranslationEngine:
         # for build_rom (input ROM stays untouched).
         return tile_rom
 
+    def extract_texts(
+        self,
+        rom_path: Path,
+        output_path: Path | None = None,
+        *,
+        modules: list[str] | None = None,
+    ) -> Path:
+        """Extract texts from ``rom_path`` into ``output_path``.
+
+        Defaults to ``work/<game_id>/texts.json``. Discovery is config-driven
+        (``configs/<game_id>/translate/modules.json``), so ``modules`` is only
+        a scope hint for backends that accept it.
+        """
+        from ..game_backends import detect_game, get_backend
+
+        game_id = detect_game(rom_path)
+        if game_id == "unknown":
+            raise ValueError(f"Unknown ROM: {rom_path}")
+        self.config.game = game_id
+        set_active_game_id(game_id)
+        if output_path is None:
+            output_path = Path(self.config.work_dir) / game_id / "texts.json"
+        backend = get_backend(game_id)
+        return backend.extract(rom_path, output_path, modules=modules)
+
     def _extract_texts(self, rom_path: Path, output_dir: Path) -> Path:
         """Extract texts using the game backend."""
         from ..game_backends import detect_game, get_backend
@@ -1155,7 +1182,7 @@ class TranslationEngine:
             raise ValueError(f"Unknown ROM: {rom_path}")
         self.config.game = game_id
         set_active_game_id(game_id)
-        output_path = output_dir / "texts.json"
+        output_path = output_dir / game_id / "texts.json"
         backend = get_backend(game_id)
         return backend.extract(rom_path, output_path, modules=self.config.modules)
 

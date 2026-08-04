@@ -221,17 +221,20 @@ def _orig_rom_text(rom: bytes, off: int | None, length: int) -> bool:
     return True
 
 
-def _authoritative(bs: bytes, rom: bytes, off: int | None, length: int) -> bool:
+def _authoritative(bs: bytes, rom: bytes | None, off: int | None, length: int) -> bool:
     """权威判定：字节流是正常文本（结尾控制符 + 0x00 密度低）。
 
     乱序假名垃圾（LZ/像素数据解码）0x00 密度高，正常日文文本空格
     占少数；短片假名文本（如 マユミのパソコン）0x00 低且以 FF 结尾。
+    ``rom`` 可为 None（无 ROM 时只用 original_hex 判定，跳过原 ROM 检查）。
     """
     if bs:
         if bs[-1] not in _TERMINATORS:
             return False
         if bs.count(0x00) > len(bs) * 0.25:
             return False
+    if rom is None:
+        return True
     return _orig_rom_text(rom, off, length)
 
 
@@ -259,38 +262,15 @@ def _compute_overlap(entries: list[dict]) -> set[int]:
     return marked
 
 
-def check_texts(
-    texts_path: Path,
-    rom_path: Path,
-    *,
-    threshold: int = 70,
-    dry_run: bool = False,
-) -> dict:
-    """校验 texts.json 并写回评分。
+def score_entries(
+    entries: list[dict], rom: bytes | None = None
+) -> list[tuple[dict, list[str], int]]:
+    """对条目列表评分，返回 ``[(entry, hits, score)]``。
 
-    - 校验 ``texts.json`` 的 game_id 与 ROM 一致（不一致报错）
-    - 每条目写 ``check_score``，顶层写 ``check_meta``
-    - score < threshold 的条目写入同级的 ``texts_suspicious.json``
-    - ``dry_run=True`` 只报告不写任何文件
+    纯计算、不改动 entry。``rom`` 为 None 时跳过需要 ROM 的算法
+    （thumb_code / lz_span / orig_rom），authoritative 只查 original_hex。
     """
-    texts_path = Path(texts_path)
-    data = json.loads(texts_path.read_text(encoding="utf-8"))
-    entries: list[dict] = data.get("entries") or []
-
-    from .game_backends import detect_game
-
-    rom_gid = detect_game(rom_path)
-    texts_gid = data.get("game_id") or data.get("game")
-    if texts_gid != rom_gid:
-        raise ValueError(
-            f"game_id mismatch: texts.json={texts_gid!r}, rom={rom_gid!r}"
-        )
-
-    rom = rom_path.read_bytes()
-    from .extract import _lz10_span
-
     overlap_set = _compute_overlap(entries)
-
     scored: list[tuple[dict, list[str], int]] = []
     for i, e in enumerate(entries):
         # 固定表（物种名/招式名等 stride 表）是配置声明的正常数据，跳过校验。
@@ -311,11 +291,11 @@ def check_texts(
             scored.append((e, hits, 100))
             continue
 
-        if _thumb_code(rom, off, length):
+        if rom is not None and _thumb_code(rom, off, length):
             hits.append("thumb_code")
         if bs and not looks_like_jp_text(bs):
             hits.append("jp_text")
-        if not _orig_rom_text(rom, off, length):
+        if rom is not None and not _orig_rom_text(rom, off, length):
             hits.append("orig_rom")
         if _garbage_jp(e.get("original") or ""):
             hits.append("garbage_jp")
@@ -333,53 +313,99 @@ def check_texts(
             hits.append("overlap")
         if _ptr_odd(e):
             hits.append("ptr_odd")
-        if _lz77_span(rom, off):
+        if rom is not None and _lz77_span(rom, off):
             hits.append("lz_span")
 
         score = max(0, 100 - sum(WEIGHTS[h] for h in hits))
         scored.append((e, hits, score))
+    return scored
 
-    for e, _hits, score in scored:
-        e["check_score"] = score
+
+def check_texts(
+    texts_path: Path,
+    rom_path: Path,
+    *,
+    threshold: int = 70,
+    dry_run: bool = False,
+) -> dict:
+    """校验 texts.json / texts_translated.json，生成拒绝清单。
+
+    - 校验 ``texts.json`` 的 game_id 与 ROM 一致（不一致报错）
+    - ``threshold <= 0`` 表示不启用校验（不生成文件）
+    - 生成 ``{原文件名}_reject_{阈值}.json``（与输入同级），只含
+      score < threshold 的条目（带 check_score / check_hits / _reject）
+      与 check_meta；**不改动输入文件**
+    - ``dry_run=True`` 只报告不写文件
+    """
+    texts_path = Path(texts_path)
+    data = json.loads(texts_path.read_text(encoding="utf-8"))
+    entries: list[dict] = data.get("entries") or []
+
+    from .game_backends import detect_game
+
+    rom_gid = detect_game(rom_path)
+    texts_gid = data.get("game_id") or data.get("game")
+    if texts_gid != rom_gid:
+        raise ValueError(
+            f"game_id mismatch: texts={texts_gid!r}, rom={rom_gid!r}"
+        )
+
+    reject_path = texts_path.with_name(f"{texts_path.stem}_reject_{threshold}.json")
+    if threshold <= 0:
+        return {
+            "total_score": 100.0,
+            "threshold": threshold,
+            "suspicious_count": 0,
+            "total_count": len(entries),
+            "suspicious": [],
+            "suspicious_path": reject_path,
+            "rom_game_id": rom_gid,
+            "dry_run": dry_run,
+            "disabled": True,
+        }
+
+    rom = rom_path.read_bytes()
+    scored = score_entries(entries, rom)
+    rejected = [(e, h, s) for e, h, s in scored if s < threshold]
 
     total_score = (
         round(sum(s for _, _, s in scored) / len(scored), 1) if scored else 100.0
     )
-    suspicious = [(e, h, s) for e, h, s in scored if s < threshold]
-
     check_meta = {
         "score": total_score,
         "threshold": threshold,
-        "suspicious_count": len(suspicious),
+        "rejected_count": len(rejected),
+        "total_count": len(scored),
         "rom_game_id": rom_gid,
         "match": texts_gid == rom_gid,
         "algorithms": list(WEIGHTS.keys()),
         "checked_at": datetime.now(timezone.utc).isoformat(),
     }
-    data["check_meta"] = check_meta
 
-    susp_path = texts_path.parent / "texts_suspicious.json"
     if not dry_run:
-        texts_path.write_text(
-            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
-        susp_payload = dict(data)
-        susp_payload["count"] = len(suspicious)
-        susp_payload["entries"] = [
-            dict(e, check_hits=h) for e, h, _s in suspicious
-        ]
-        susp_payload["check_meta"] = check_meta
-        susp_path.write_text(
-            json.dumps(susp_payload, ensure_ascii=False, indent=2), encoding="utf-8"
+        payload = {
+            "game": data.get("game"),
+            "game_id": texts_gid,
+            "source_lang": data.get("source_lang"),
+            "count": len(rejected),
+            "entries": [
+                dict(e, check_score=s, check_hits=h, _reject=True)
+                for e, h, s in rejected
+            ],
+            "check_meta": check_meta,
+        }
+        reject_path.write_text(
+            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
         )
 
     return {
         "total_score": total_score,
         "threshold": threshold,
-        "suspicious_count": len(suspicious),
+        "suspicious_count": len(rejected),
         "total_count": len(scored),
-        "suspicious": suspicious,
-        "suspicious_path": susp_path,
+        "suspicious": rejected,
+        "suspicious_path": reject_path,
         "rom_game_id": rom_gid,
         "dry_run": dry_run,
+        "disabled": False,
     }

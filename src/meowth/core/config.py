@@ -53,6 +53,10 @@ class TranslationConfig:
     batch_size: int = 30
     max_workers: int = 10
 
+    # 文本校验阈值：0=不启用；>0 时 score < threshold 的条目不翻译/不注入，
+    # 并生成 {原文件名}_reject_{threshold}.json 拒绝清单
+    check_threshold: int = 0
+
     # File paths
     rom_path: Path | None = None
     output_dir: Path = field(default_factory=_get_default_output_dir)

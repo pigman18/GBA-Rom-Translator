@@ -381,6 +381,19 @@ class TranslationEngine:
         """Translate extracted texts JSON with parallel workers."""
         data = json.loads(texts_path.read_text(encoding="utf-8"))
 
+        # 文本校验阈值：score < threshold 的条目标记 _reject，seed/LLM 跳过，
+        # 并生成 {原文件名}_reject_{阈值}.json（texts.json 侧，无 translated）。
+        threshold = getattr(self.config, "check_threshold", 0) or 0
+        if threshold > 0 and data.get("entries"):
+            rom_path = self.config.rom_path
+            if rom_path and Path(rom_path).exists():
+                reject_path = Path(texts_path).with_name(
+                    f"{Path(texts_path).stem}_reject_{threshold}.json"
+                )
+                self._apply_check_reject(
+                    data["entries"], Path(rom_path), threshold, reject_path, data
+                )
+
         # Reload custom translations (game ID may have changed since __init__)
         from ..config_loader import load_custom_translations
         self._custom_translations = load_custom_translations(self.config.game)
@@ -403,6 +416,8 @@ class TranslationEngine:
             held_failed = 0
             ct = self._custom_translations or {}
             for e in data.get("entries") or []:
+                if e.get("_reject"):
+                    continue
                 orig = e.get("original", "")
                 if self._usable_zh(orig, e.get("translated") or ""):
                     continue
@@ -444,6 +459,8 @@ class TranslationEngine:
 
             def _seed_or_hold(e: dict) -> None:
                 nonlocal seeded2, skipped_mod
+                if e.get("_reject"):
+                    return
                 mid = stamp_entry_module(e, game_id=self.config.game)
                 # Unresolved geo: keep existing translation; do not wipe / LLM
                 if mid is None:
@@ -595,6 +612,8 @@ class TranslationEngine:
         active = getattr(self, "_axvj_active_modules", None)
 
         def _needs_llm(e: dict) -> bool:
+            if e.get("_reject"):
+                return False
             orig = e.get("original") or ""
             tr = e.get("translated") or ""
             if tr.strip() and tr.strip() != orig.strip():
@@ -619,6 +638,8 @@ class TranslationEngine:
             ct = self._custom_translations or {}
             refilled = 0
             for e in free_texts:
+                if e.get("_reject"):
+                    continue
                 orig = e.get("original") or ""
                 if self._usable_zh(orig, e.get("translated") or ""):
                     continue
@@ -628,6 +649,8 @@ class TranslationEngine:
                     refilled += 1
             for table in data.get("tables") or []:
                 for e in table.get("entries") or []:
+                    if e.get("_reject"):
+                        continue
                     orig = e.get("original") or ""
                     if self._usable_zh(orig, e.get("translated") or ""):
                         continue
@@ -1173,6 +1196,69 @@ class TranslationEngine:
         backend = get_backend(game_id)
         return backend.extract(rom_path, output_path, modules=modules)
 
+    def _apply_check_reject(
+        self,
+        entries: list[dict],
+        rom_path: Path,
+        threshold: int,
+        reject_path: Path,
+        data: dict,
+    ) -> int:
+        """评分条目并把 score < threshold 的条目标记 ``_reject``。
+
+        同时写 ``{原文件名}_reject_{阈值}.json``（只含被拒条目 + check_meta），
+        不改动输入文件。返回被拒条目数。
+        """
+        from ..text_checker import score_entries
+
+        rom = rom_path.read_bytes()
+        scored = score_entries(entries, rom)
+        rejected: list[dict] = []
+        for e, hits, s in scored:
+            e["check_score"] = s
+            if s < threshold:
+                e["_reject"] = True
+                rejected.append(dict(e, check_hits=hits, _reject=True))
+
+        total = (
+            round(sum(s for _, _, s in scored) / len(scored), 1) if scored else 100.0
+        )
+        meta = {
+            "score": total,
+            "threshold": threshold,
+            "rejected_count": len(rejected),
+            "total_count": len(scored),
+            "rom_game_id": data.get("game_id") or data.get("game"),
+            "algorithms": sorted(
+                __import__("meowth.text_checker", fromlist=["WEIGHTS"]).WEIGHTS
+            ),
+            "checked_at": __import__("datetime").datetime.now(
+                __import__("datetime").timezone.utc
+            ).isoformat(),
+        }
+        reject_path.parent.mkdir(parents=True, exist_ok=True)
+        reject_path.write_text(
+            json.dumps(
+                {
+                    "game": data.get("game"),
+                    "game_id": data.get("game_id") or data.get("game"),
+                    "source_lang": data.get("source_lang"),
+                    "count": len(rejected),
+                    "entries": rejected,
+                    "check_meta": meta,
+                },
+                ensure_ascii=False,
+                indent=2,
+            ),
+            encoding="utf-8",
+        )
+        self._log(
+            "info",
+            f"[校验] 阈值 {threshold}: 拒绝 {len(rejected)}/{len(scored)} 条 "
+            f"→ {reject_path.name}",
+        )
+        return len(rejected)
+
     def _extract_texts(self, rom_path: Path, output_dir: Path) -> Path:
         """Extract texts using the game backend."""
         from ..game_backends import detect_game, get_backend
@@ -1430,6 +1516,19 @@ class TranslationEngine:
         data = json.loads(translations_path.read_text(encoding="utf-8"))
         data = convert_format(data)
 
+        # 文本校验阈值：score < threshold 的条目标记 _reject，注入时跳过，
+        # 并生成 {原文件名}_reject_{阈值}.json（含 translated 内容）。
+        threshold = getattr(self.config, "check_threshold", 0) or 0
+        if threshold > 0:
+            check_entries = [e for t in data.get("tables") or [] for e in t["entries"]] + list(data.get("free_texts") or [])
+            if check_entries:
+                reject_path = Path(translations_path).with_name(
+                    f"{Path(translations_path).stem}_reject_{threshold}.json"
+                )
+                self._apply_check_reject(
+                    check_entries, Path(original_rom), threshold, reject_path, data
+                )
+
         # Load game config (for charmap, expansion decision, font patch, etc.)
         cfg = {}
         fp_cfg = {}
@@ -1597,9 +1696,13 @@ class TranslationEngine:
         all_entries = []
         for table in data["tables"]:
             for entry in table["entries"]:
+                if entry.get("_reject"):
+                    continue
                 if "translated" in entry:
                     all_entries.append(entry)
         for entry in data["free_texts"]:
+            if entry.get("_reject"):
+                continue
             if "translated" in entry:
                 all_entries.append(entry)
 

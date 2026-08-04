@@ -1,10 +1,10 @@
 {
-  "build_id": "0.4.5+20260804T183128.5f38f8de8938",
+  "build_id": "0.4.5+20260804T150711.5f38f8de8938",
   "package_version": "0.4.5",
-  "timestamp_utc": "2026-08-04T18:31:28Z",
+  "timestamp_utc": "2026-08-04T15:07:11Z",
   "game": "POKEMON_RUBY_AXVJ00",
-  "output_rom": "C:\\code\\GBA-Rom-Translator\\roms\\outputs\\POKEMON_RUBY_AXVJ00_translated.gba",
-  "output_rom_sha256": "67f7709ec7ae4d1332f355c4c14810982dbe2c42fa59b23c983b4db4077a658d",
+  "output_rom": "C:\\code\\GBA-Rom-Translator\\roms\\outputs\\POKEMON_RUBY_AXVJ00_all_real.gba",
+  "output_rom_sha256": "57abd4250660b47ad972e382747efb895b57fc33007da0272406cc42355b57ba",
   "patch_root": "C:/code/GBA-Rom-Translator/configs/POKEMON_RUBY_AXVJ00/hook",
   "patch_tree_sha256": "5f38f8de8938efd10fb82c87e5cdca40e2eb6a69667d3d6295571062bb3aadda",
   "patch_file_count": 68,
@@ -79,18 +79,18 @@
     "todo/update_safari_balls_text_in_healthbox.c": "7ef0d2bcc261bf7c62a119392d5585153364b44af8a12b0d047d7e8dfb6d7183"
   },
   "key_src_sha256": {
-    "src/meowth/policy.py": "03702947a9b259c17c74a944d1af7543e4b1cad1e50e5c5377f36f3ad6509a2c",
+    "src/meowth/policy.py": "41e0ed556c4e300c84eb4d0214d2293e2ecb9eb5e69a0c3d4ca8d92a013e80c2",
     "src/meowth/seed_translate.py": "3f5952131892d44f5a5d777d771a45b83978291411387e10e3447fef04950846",
-    "src/meowth/rom_writer.py": "3876bfe6b934ce30f7eec22ffbc244591943389ac318abe327a0a987ed5bb926",
+    "src/meowth/rom_writer.py": "ca6a076047b8702f94ef4f9e8c5749be4e91a67dd31427c74eb5ef5892daec5d",
     "src/meowth/font_patch.py": "ae17cd96dca364503971f30d0b1d3f21d71bdbd11d559d50b61abc33ea98a17a",
-    "src/meowth/core/engine.py": "ff261d42315831dfd29f616578c1bdf3c863b991e4f4916a64af7c247ef9b4df",
+    "src/meowth/core/engine.py": "28d18a3d89bcbed9ec20d6a5eeb4d3fe746963402a60470e0416a367767643cc",
     "src/meowth/table_patch.py": "998a417b554c225d991706004f1989b29b084d4c9f1f8dad5a88f3e0ea9b8c12"
   },
   "inject_stats": {
-    "in_place": 681,
-    "relocated": 226,
+    "in_place": 712,
+    "relocated": 193,
     "skipped": 0,
-    "entry_count": 907,
+    "entry_count": 908,
     "name_tables": {},
     "modules": [
       "属性名",
@@ -133,8 +133,8 @@
       "include": "",
       "exclude": "",
       "omit_band": "",
-      "before": 907,
-      "after": 907,
+      "before": 908,
+      "after": 908,
       "omit_range": null
     }
   },

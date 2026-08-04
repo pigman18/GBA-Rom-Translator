@@ -735,7 +735,7 @@ class TranslationEngine:
                 self.charmap._phrase_codes[s] = code
 
         phrase_codes = self.charmap._phrase_codes
-        plans = plan_entries(flat, self.charmap, phrase_codes)
+        plans = plan_entries(flat, self.charmap, phrase_codes, game_id=self.config.game)
 
         phrases_by_code = [None] * len(phrase_codes)
         for s, code in phrase_codes.items():
@@ -758,6 +758,7 @@ class TranslationEngine:
                     "target_hex": p.get("target_hex", ""),
                     "pointer_sources": p.get("pointer_sources") or [],
                     "phrase_code": p.get("phrase_code"),
+                    "reason": p.get("reason"),
                 }
                 for e, p in zip(flat, plans)
             ],

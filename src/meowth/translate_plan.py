@@ -125,7 +125,11 @@ def plan_entry(
     module_id = entry.get("module") or entry.get("_axvj_module") or entry.get("category")
 
     if not translated or translated == original:
-        return {"type": "keep", "target_hex": original_hex}
+        return {
+            "type": "keep",
+            "target_hex": original_hex,
+            "reason": "无翻译或译文与原文相同",
+        }
 
     s = charmap._sanitize(translated)
     allow_reloc = module_allows_relocate(game_id, module_id)
@@ -145,7 +149,11 @@ def plan_entry(
     try:
         encoded = charmap.encode(translated)
     except Exception:
-        return {"type": "keep", "target_hex": original_hex}
+        return {
+            "type": "keep",
+            "target_hex": original_hex,
+            "reason": "译文编码失败",
+        }
 
     # type 2: 编码字节 ≤ 原始槽位 → 原地
     if len(encoded) <= byte_length:
@@ -169,8 +177,16 @@ def plan_entry(
                 "phrase_code": code,
             }
 
-    # type 5: 保留原文
-    return {"type": "keep", "target_hex": original_hex}
+    # type 5: 保留原文，记录具体原因
+    if not allow_reloc and not allow_phrase:
+        reason = "特殊UI模块禁止relocate/短语，且超槽位"
+    elif not allow_reloc:
+        reason = "模块禁止relocate，且槽位<5无法升槽"
+    elif not allow_phrase:
+        reason = "模块禁止短语引用，且无指针可relocate"
+    else:
+        reason = "无可用注入路径（超槽位/无指针/无短语码）"
+    return {"type": "keep", "target_hex": original_hex, "reason": reason}
 
 
 def plan_entries(

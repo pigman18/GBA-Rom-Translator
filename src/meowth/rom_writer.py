@@ -71,7 +71,7 @@ class RomWriter:
         self.MIN_POINTER_SOURCE = (
             min_pointer_source
             if min_pointer_source is not None
-            else int(self._fp.get("min_pointer_source", 0x6000))
+            else int(self._fp.get("min_pointer_source", 0x0))
         )
         self.write_offset = self.EXPANSION_START  # updated in inject_texts()
         self._line_width_default = line_width_default or 20
@@ -375,7 +375,7 @@ class RomWriter:
             else:
                 print(
                     f"  KEEP {entry_id} @ 0x{address:X} (cat={category}): "
-                    f"F9-80 {len(target)}B > slot {byte_length}B"
+                    f"保留原文（F9-80 短语 {len(target)}B 超槽位 {byte_length}B）"
                 )
                 stats["kept"] = stats.get("kept", 0) + 1
             return
@@ -386,8 +386,8 @@ class RomWriter:
                 stats["in_place"] += 1
             else:
                 print(
-                    f"  KEEP {entry_id} @ 0x{address:X}: "
-                    f"in_place {len(target)}B > slot {byte_length}B"
+                    f"  KEEP {entry_id} @ 0x{address:X} (cat={category}): "
+                    f"保留原文（in_place {len(target)}B 超槽位 {byte_length}B）"
                 )
                 stats["kept"] = stats.get("kept", 0) + 1
             return
@@ -408,20 +408,34 @@ class RomWriter:
                     stats["relocated"] += 1
                     return
                 except RuntimeError as e:
+                    # 细化 relocate 失败原因：统计被 MIN_POINTER_SOURCE 跳过的指针
+                    skipped = sum(
+                        1
+                        for p in ptrs
+                        if self._to_rom_offset(int(str(p).replace("0x", ""), 16))
+                        < self.MIN_POINTER_SOURCE
+                    )
+                    detail = f"{e}"
+                    if skipped:
+                        detail += f"（其中 {skipped}/{len(ptrs)} 个指针低于 MIN_POINTER_SOURCE=0x{self.MIN_POINTER_SOURCE:X}）"
                     print(
-                        f"  WARN {entry_id} @ 0x{address:X}: "
-                        f"relocate failed ({e}); keep original"
+                        f"  WARN {entry_id} @ 0x{address:X} (cat={category}): "
+                        f"relocate failed: {detail}; 保留原文"
                     )
             else:
                 print(
-                    f"  KEEP {entry_id} @ 0x{address:X}: "
-                    f"relocate planned but no pointer sources"
+                    f"  WARN {entry_id} @ 0x{address:X} (cat={category}): "
+                    f"relocate 计划但无指针源; 保留原文"
                 )
             stats["kept"] = stats.get("kept", 0) + 1
             return
 
-        # keep / 未知类型：保留原文
-        print(f"  KEEP {entry_id} @ 0x{address:X} (cat={category}): 保留原文 [{ptype}]")
+        # keep / 未知类型：保留原文，带具体原因
+        reason = plan.get("reason") or (f"类型[{ptype}]无法注入")
+        print(
+            f"  KEEP {entry_id} @ 0x{address:X} (cat={category}): "
+            f"保留原文（{reason}）"
+        )
         stats["kept"] = stats.get("kept", 0) + 1
 
     def _process_entry_v2(self, rom: bytearray, entry: dict, stats: dict) -> None:

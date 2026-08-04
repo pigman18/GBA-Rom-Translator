@@ -49,5 +49,6 @@
   "WIN_CURSOR_TILE_Y": 29
  },
  "expansion_start": 16777216,
- "font_boundary": 33370112
+ "font_boundary": 33370112,
+ "min_pointer_source": 0
 }

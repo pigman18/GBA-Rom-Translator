@@ -95,6 +95,28 @@ def brand_compact_skip(game_id: str = "") -> frozenset[str]:
     return frozenset(str(x) for x in raw)
 
 
+def allows_ids(game_id: str = "") -> frozenset[str]:
+    """config.json 顶层 ``allows``：条目 id 白名单。
+
+    评分低于阈值但 id 在此列表内的条目照常翻译/注入（放行）。
+    """
+    raw = _policy(game_id).get("allows")
+    if not raw:
+        return frozenset()
+    return frozenset(str(x) for x in raw)
+
+
+def rejects_ids(game_id: str = "") -> frozenset[str]:
+    """config.json 顶层 ``rejects``：条目 id 黑名单。
+
+    无论 score 多大都直接拒绝（不翻译、不注入）。取代旧 skip_zh_inject。
+    """
+    raw = _policy(game_id).get("rejects")
+    if not raw:
+        return frozenset()
+    return frozenset(str(x) for x in raw)
+
+
 def skip_zh_inject_originals(game_id: str = "") -> frozenset[str]:
     block = _policy(game_id).get("skip_zh_inject") or {}
     raw = block.get("originals")

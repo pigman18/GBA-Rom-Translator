@@ -172,7 +172,7 @@ def layout_texts(
     Instead of mutating *rom*, it records PatchEntry / PtrPatch objects.
     """
     from .extract import trusted_lz_spans
-    from .policy import filter_pointer_sources, should_skip_zh_inject
+    from .policy import filter_pointer_sources
     from .config_loader import (
         F9_PHRASE_DEFAULT, F9_EOS, module_write_op, load_game_config,
     )
@@ -329,10 +329,6 @@ def layout_texts(
 
         # ---- decide: relocate or in-place ----
         if is_armips:
-            if should_skip_zh_inject(original):
-                stats["skipped"] += 1
-                continue
-
             if is_pointer_based and pointer_sources:
                 # Relocate: write to expansion area
                 encoded = _axvj_pad_relocated(encoded)

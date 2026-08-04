@@ -350,6 +350,11 @@ def check_texts(
             f"game_id mismatch: texts={texts_gid!r}, rom={rom_gid!r}"
         )
 
+    from .policy import allows_ids, rejects_ids
+
+    allows = allows_ids(texts_gid)
+    rejects = rejects_ids(texts_gid)
+
     reject_path = texts_path.with_name(f"{texts_path.stem}_reject_{threshold}.json")
     if threshold <= 0:
         return {
@@ -366,7 +371,13 @@ def check_texts(
 
     rom = rom_path.read_bytes()
     scored = score_entries(entries, rom)
-    rejected = [(e, h, s) for e, h, s in scored if s < threshold]
+    # 被拒条件：id 在 rejects（无条件拒绝）或 score<threshold 且 id 不在 allows
+    rejected = [
+        (e, h, s)
+        for e, h, s in scored
+        if (e.get("id") or "") in rejects
+        or (s < threshold and (e.get("id") or "") not in allows)
+    ]
 
     total_score = (
         round(sum(s for _, _, s in scored) / len(scored), 1) if scored else 100.0

@@ -1,4 +1,9 @@
 {
+  "allows": [
+    "axvj_0817F347",
+    "axvj_08197818"
+  ],
+  "rejects": [],
   "protect": {
     "line_width": 32,
     "semantic_threshold_ratio": 0.75,

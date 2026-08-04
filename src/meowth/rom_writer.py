@@ -125,17 +125,14 @@ class RomWriter:
         )
 
     def _axvj_text_target_ok(self, rom: bytearray, address: int, entry: dict) -> bool:
-        """S2+S3 inject gate."""
-        from .extract import trusted_lz_spans
-        from .policy import should_skip_zh_inject, text_target_ok
+        """注入安全门（已被阈值评分取代）。
 
-        if should_skip_zh_inject(entry.get("original") or ""):
-            return False
-        spans = getattr(self, "_axvj_lz_spans", None)
-        if spans is None:
-            spans = trusted_lz_spans(rom)
-            self._axvj_lz_spans = spans
-        return text_target_ok(rom, address, entry, lz_spans=spans)
+        旧逻辑（should_skip_zh_inject / text_target_ok 的 LZ/GFX/looks_like_jp_text
+        检查）已统一由文本校验阈值评分（check_threshold + allows/rejects）在
+        translate/build 阶段判定：被拒条目带 ``_reject`` 标记、不会被收集进
+        all_entries。此处恒 True，保留 relocate 指针验证等其他技术性处理。
+        """
+        return True
 
     def _axvj_prepare_zh_text(self, text: str, line_width: int | None = None) -> str:
         """Normalize LLM artifacts and re-wrap for narrow AXVJ boxes."""

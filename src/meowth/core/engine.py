@@ -567,38 +567,8 @@ class TranslationEngine:
             elif compact in ("やゆよわをん",):
                 e["translated"] = orig
 
-        # Drop false-positive PCS / code blobs before LLM (config: garbage_filter)
-        if self._feature("garbage_filter") or data.get("game_id") == self.config.game:
-            from ..extract import filter_axvj_garbage_entries
-            from ..modules import entry_matches
-
-            cleaned_tables = []
-            skipped_total = 0
-            for table in data.get("tables") or []:
-                cat = table.get("module") or table.get("category") or ""
-                ents = table.get("entries") or []
-                if entry_matches(
-                    {"module": cat, "category": cat},
-                    "物种名",
-                    "招式名",
-                    game_id=self.config.game,
-                ):
-                    cleaned_tables.append(table)
-                    continue
-                kept, n = filter_axvj_garbage_entries(ents)
-                skipped_total += n
-                table = {**table, "entries": kept}
-                cleaned_tables.append(table)
-            data["tables"] = cleaned_tables
-            free_texts, n_free = filter_axvj_garbage_entries(free_texts)
-            skipped_total += n_free
-            data["free_texts"] = free_texts
-            if skipped_total:
-                self._log(
-                    "info",
-                    f"skipped {skipped_total} garbage entries before LLM",
-                )
-
+        # 垃圾/假文本过滤已统一由文本校验阈值（check_threshold + allows/rejects）
+        # 在 translate 开头评分时处理（score < threshold → _reject，不填充翻译）。
         import os
 
         has_key = bool(self.config.api_key) or bool(
@@ -998,7 +968,6 @@ class TranslationEngine:
         must still land in the ROM.
         """
         from ..extract_pipeline import extract_modules
-        from ..policy import should_skip_zh_inject
         from ..seed_translate import seed_translate_entry
 
         by_addr: dict[str, dict] = {}
@@ -1047,9 +1016,6 @@ class TranslationEngine:
         for e in by_addr.values():
             stamp_entry_module(e, game_id=game_id)
             orig = e.get("original") or ""
-            # S3: unstable windows stay JP (starter bag, gender dialogue, …)
-            if should_skip_zh_inject(orig):
-                continue
             seeded = seed_translate_entry(orig)
             if not seeded:
                 seeded = ct.get(orig) or ct.get(orig.strip('"'))
@@ -1210,13 +1176,18 @@ class TranslationEngine:
         不改动输入文件。返回被拒条目数。
         """
         from ..text_checker import score_entries
+        from ..policy import allows_ids, rejects_ids
 
+        allows = allows_ids(self.config.game)
+        rejects = rejects_ids(self.config.game)
         rom = rom_path.read_bytes()
         scored = score_entries(entries, rom)
         rejected: list[dict] = []
         for e, hits, s in scored:
+            eid = e.get("id") or ""
             e["check_score"] = s
-            if s < threshold:
+            # 无条件拒绝（rejects），或被拒但不在 allows（放行）
+            if eid in rejects or (s < threshold and eid not in allows):
                 e["_reject"] = True
                 rejected.append(dict(e, check_hits=hits, _reject=True))
 
@@ -1707,14 +1678,12 @@ class TranslationEngine:
                 all_entries.append(entry)
 
         # Enrich seeds, then module-filter (checkbox partitions).
-        # Toxic windows stay JP via should_skip_zh_inject (shape/class rules).
         if self._feature("module_filter"):
             from ..geo import filter_entries_by_geo
             from ..modules import (
                 filter_entries_by_modules,
                 resolve_modules,
             )
-            from ..policy import should_skip_zh_inject
 
             all_entries = self._enrich_axvj_build_entries(rom, all_entries)
             before = len(all_entries)
@@ -1769,7 +1738,6 @@ class TranslationEngine:
                 for e in all_entries
                 if (e.get("translated") or "").strip()
                 and (e.get("translated") or "").strip() != (e.get("original") or "")
-                and not should_skip_zh_inject(e.get("original") or "")
             ]
             after_mod = len(all_entries)
             filtered_out = before_filter - after_mod

@@ -7,6 +7,33 @@ from typing import Optional
 from .charmap import Charmap
 
 
+def _safe_truncate_encoded(encoded: bytes, maxlen: int) -> bytes:
+    """Truncate an encoded stream at whole-unit boundaries.
+
+    A CJK/phrase reference is a 4-byte F9 XX hi lo group. Cutting the raw
+    stream mid-group leaves a dangling F9 whose following byte (often the
+    slot terminator 0xFF) is then read as a bogus phrase code, making
+    PrintNextChar redirect the PhraseTable offsets out of bounds (花屏/红字).
+    """
+    out = bytearray()
+    i = 0
+    n = len(encoded)
+    while i < n:
+        if encoded[i] == 0xF9:
+            if i + 3 < n and len(out) + 4 <= maxlen:
+                out += encoded[i:i + 4]
+                i += 4
+            else:
+                break
+            continue
+        if len(out) + 1 <= maxlen:
+            out.append(encoded[i])
+            i += 1
+        else:
+            break
+    return bytes(out) + b"\xFF"
+
+
 class RomWriter:
     """Writes translated text to GBA ROM with pointer redirection."""
 
@@ -418,7 +445,7 @@ class RomWriter:
                     f"'{translated}' encoded {len(encoded)}B > slot {original_length}B, "
                     f"truncating"
                 )
-                encoded = encoded[: original_length - 1] + b"\xFF"
+                encoded = _safe_truncate_encoded(encoded, original_length - 1)
                 print(f"    -> after truncation: {encoded.hex()}")
             self._write_in_place_v2(rom, address, encoded, original_length)
             stats["in_place"] += 1
@@ -442,7 +469,7 @@ class RomWriter:
                     f"'{translated}' encoded {len(encoded)}B > slot {original_length}B, "
                     f"truncating"
                 )
-                encoded = encoded[: original_length - 1] + b"\xFF"
+                encoded = _safe_truncate_encoded(encoded, original_length - 1)
                 print(f"    -> after truncation: {encoded.hex()}")
             self._write_in_place_v2(rom, address, encoded, original_length)
             stats["in_place"] += 1

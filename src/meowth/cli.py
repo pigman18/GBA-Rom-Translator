@@ -122,21 +122,27 @@ def main():
 @click.option("--rom", "rom_path", required=True, type=click.Path(exists=True),
               help="原版 ROM（校验 game_id + LZ/原地址算法）")
 @click.option("--threshold", default=70, type=click.IntRange(0, 100),
-              help="评分阈值，低于此值的条目写入 texts_suspicious.json")
+              help="评分阈值，低于此值的条目写入 texts_reject_*.json")
+@click.option("--modules", default=None,
+              help="逗号分隔模块名；给定后先模块筛选再阈值拒绝（与流水线一致）")
 @click.option("--top", default=20, type=int, help="终端显示的可疑条目数")
 @click.option("--dry-run", is_flag=True, help="只报告，不写任何文件")
-def check_texts(texts_json, rom_path, threshold, top, dry_run):
-    """校验 texts.json：多算法评分，把 score 写回原文件并导出可疑条目。
+def check_texts(texts_json, rom_path, threshold, modules, top, dry_run):
+    """校验 texts.json：多算法评分，导出拒绝清单。
 
-    score 100=干净；低于 --threshold 的条目写到与 texts.json 同级的
-    ``texts_suspicious.json``（带 check_hits 命中算法列表）。
+    默认全量评分。传 ``--modules`` 时先筛选模块再阈值拒绝。
     """
     from collections import Counter
+    from .modules import parse_modules_csv
     from .text_checker import check_texts as run_check
 
     src = Path(texts_json)
     report = run_check(
-        src, Path(rom_path), threshold=threshold, dry_run=dry_run
+        src,
+        Path(rom_path),
+        threshold=threshold,
+        dry_run=dry_run,
+        modules=parse_modules_csv(modules),
     )
     click.echo(f"texts.json : {src}")
     click.echo(
@@ -145,9 +151,12 @@ def check_texts(texts_json, rom_path, threshold, top, dry_run):
     click.echo(
         f"总评分     : {report['total_score']} / 100  (越接近 100 越干净)"
     )
+    scope = ""
+    if report.get("module_candidates") is not None and report.get("entries_total") is not None:
+        scope = f"  模块候选 {report['module_candidates']}/{report['entries_total']}"
     click.echo(
         f"可疑条目   : {report['suspicious_count']} / {report['total_count']} "
-        f"(score < {threshold})"
+        f"(score < {threshold}){scope}"
     )
     if not dry_run:
         click.echo(f"可疑输出   : {report['suspicious_path']}")

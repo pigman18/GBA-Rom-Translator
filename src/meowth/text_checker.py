@@ -35,6 +35,7 @@ WEIGHTS: dict[str, int] = {
     "ptr_odd": 15,       # 指针源含奇数地址（Thumb 函数指针）
     "lz_span": 30,       # 地址处是完整 LZ77 压缩流（需 ROM）
     "orig_rom": 30,      # 原 ROM 该地址字节不是文本流（需 ROM）
+    "tile_map": 40,      # Gen3 地图/图块头：10 00 ?? 00 08 00 + 三连同字节
 }
 
 _TERMINATORS = (0xFF, 0xFB, 0xFE)
@@ -316,6 +317,25 @@ def _byte_profile(bs: bytes) -> bool:
     return bs.count(0x00) > len(bs) * 0.3
 
 
+def _tile_map(bs: bytes) -> bool:
+    """Gen3 地图/图块头误当文本。
+
+    形态：``10 00 ?? 00 08 00`` + 三连同非零字节（如 ``55 55 55``）。
+    对标地点名误扫体（如 axvj_63cbab191a67 / axvj_321095ddfc34）。
+    """
+    if len(bs) < 16:
+        return False
+    if not (
+        bs[0] == 0x10
+        and bs[1] == 0x00
+        and bs[3] == 0x00
+        and bs[4] == 0x08
+        and bs[5] == 0x00
+    ):
+        return False
+    return bs[6] == bs[7] == bs[8] and bs[6] != 0
+
+
 def _terminator(bs: bytes) -> bool:
     if not bs:
         return False
@@ -444,6 +464,8 @@ def score_entries(
             hits.append("overlap")
         if rom is not None and _lz77_span(rom, off):
             hits.append("lz_span")
+        if bs and _tile_map(bs):
+            hits.append("tile_map")
         if bs and _entropy(bs):
             hits.append("entropy")
         if bs and _glyph_ratio(bs):
@@ -471,11 +493,13 @@ def check_texts(
     *,
     threshold: int = 70,
     dry_run: bool = False,
+    modules: list[str] | None = None,
 ) -> dict:
     """校验 texts.json / texts_translated.json，生成拒绝清单。
 
     - 校验 ``texts.json`` 的 game_id 与 ROM 一致（不一致报错）
     - ``threshold <= 0`` 表示不启用校验（不生成文件）
+    - 若给定 ``modules``：先按模块勾选收窄，再评分拒绝（与 translate 一致）
     - 生成 ``{原文件名}_reject_{阈值}.json``（与输入同级），只含
       score < threshold 的条目（带 check_score / check_hits / _reject）
       与 check_meta；**不改动输入文件**
@@ -513,8 +537,18 @@ def check_texts(
             "disabled": True,
         }
 
+    candidates = entries
+    active_modules = None
+    if modules is not None:
+        from .modules import filter_entries_by_modules, resolve_modules
+
+        active_modules = resolve_modules(modules=modules, game_id=texts_gid)
+        candidates = filter_entries_by_modules(
+            entries, active_modules, game_id=texts_gid
+        )
+
     rom = rom_path.read_bytes()
-    scored = score_entries(entries, rom)
+    scored = score_entries(candidates, rom)
     # 被拒条件：id 在 rejects（无条件拒绝）或 score<threshold 且 id 不在 allows
     rejected = [
         (e, h, s)
@@ -531,6 +565,9 @@ def check_texts(
         "threshold": threshold,
         "rejected_count": len(rejected),
         "total_count": len(scored),
+        "entries_total": len(entries),
+        "module_candidates": len(candidates),
+        "active_modules": list(active_modules) if active_modules is not None else None,
         "rom_game_id": rom_gid,
         "match": texts_gid == rom_gid,
         "algorithms": list(WEIGHTS.keys()),
@@ -558,6 +595,8 @@ def check_texts(
         "threshold": threshold,
         "suspicious_count": len(rejected),
         "total_count": len(scored),
+        "entries_total": len(entries),
+        "module_candidates": len(candidates),
         "suspicious": rejected,
         "suspicious_path": reject_path,
         "rom_game_id": rom_gid,

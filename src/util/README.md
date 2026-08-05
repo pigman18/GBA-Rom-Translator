@@ -194,3 +194,37 @@ works/
   ]
 }
 ```
+
+---
+
+# gdb_patcher.py
+
+汉化崩溃排查：输入坏指针值，扫出 ROM 里存放该 4 字节的槽地址；可选连 mGBA GDB 对槽下写断点，回报写入方 PC。
+
+**依赖：** 仅 Python 标准库（不改 ROM、不代开模拟器）。
+
+## 用法
+
+```bash
+# 崩后已 Pause：读现场（识别 Thumb 近邻）
+python gdb_patcher.py listen 0xF909F6A4 --gdb 127.0.0.1:2345 --now
+
+# 强制 PC 跳到坏地址再炸一次（一般不推荐；已在异常向量时会拒绝）
+python gdb_patcher.py goto 0xF909F6A4 --gdb 127.0.0.1:2345
+
+# 坏值 -> 槽地址（可对照原盘）
+python gdb_patcher.py find 0xF909F6A4 --rom path\to\zh.gba \
+  --origin path\to\origin.gba
+```
+
+| 子命令 | 输入 | 输出 |
+|--------|------|------|
+| `listen --now` | 坏值 | 当前停机现场；识别 `F909F6A5` 等 Thumb 近邻 |
+| `listen` | 坏值 | 对坏地址下访问断点后复现，再反查 |
+| `goto` | 坏地址 | 写 PC 再 continue（只验证会炸） |
+| `find` | 坏值 | ROM 中存放该 LE 字的槽 |
+| `watch` | 槽地址 | 写断点命中时的 PC |
+| `regs` | — | 寄存器 |
+| `find-live` | 坏值 | RAM 命中 |
+
+**重要：** 若 `PC≈0x00000004` 且 `r1/LR≈F909F6A5/A6`，说明已经崩过，再 `goto` 没有排查价值。

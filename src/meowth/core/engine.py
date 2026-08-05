@@ -398,6 +398,8 @@ class TranslationEngine:
 
         n = 0
         for e in data.get("entries") or []:
+            if e.get("_reject"):
+                continue
             if self._usable_zh(e.get("original") or "", e.get("translated") or ""):
                 continue
             orig = e.get("original") or ""
@@ -432,18 +434,44 @@ class TranslationEngine:
         """Translate extracted texts JSON with parallel workers."""
         data = json.loads(texts_path.read_text(encoding="utf-8"))
 
-        # 文本校验阈值：score < threshold 的条目标记 _reject，seed/LLM 跳过，
-        # 并生成 {原文件名}_reject_{阈值}.json（texts.json 侧，无 translated）。
+        # 文本校验：rejects 无条件拒绝；allows + 阈值 控制低分是否放行。
+        # 先按勾选模块收窄（若启用 module_filter），再标记 _reject。
+        # 生成 {原文件名}_reject_{阈值}.json（阈值<=0 时仍可用 rejects，文件名用 0）。
         threshold = getattr(self.config, "check_threshold", 0) or 0
-        if threshold > 0 and data.get("entries"):
-            rom_path = self.config.rom_path
-            if rom_path and Path(rom_path).exists():
-                reject_path = Path(texts_path).with_name(
-                    f"{Path(texts_path).stem}_reject_{threshold}.json"
-                )
-                self._apply_check_reject(
-                    data["entries"], Path(rom_path), threshold, reject_path, data
-                )
+        if data.get("entries"):
+            from ..policy import rejects_ids
+
+            gid = self.config.game or data.get("game_id") or data.get("game") or ""
+            has_rejects = bool(rejects_ids(gid))
+            if threshold > 0 or has_rejects:
+                rom_path = self.config.rom_path
+                if rom_path and Path(rom_path).exists():
+                    reject_path = Path(texts_path).with_name(
+                        f"{Path(texts_path).stem}_reject_{threshold}.json"
+                    )
+                    active_modules = None
+                    if self._feature("module_filter"):
+                        from ..modules import resolve_modules
+
+                        preset = (
+                            getattr(self.config, "preset", None)
+                            or getattr(self.config, "funnel", None)
+                        )
+                        active_modules = set(
+                            resolve_modules(
+                                modules=self.config.modules,
+                                preset=preset,
+                                game_id=gid,
+                            )
+                        )
+                    self._apply_check_reject(
+                        data["entries"],
+                        Path(rom_path),
+                        threshold,
+                        reject_path,
+                        data,
+                        active_modules=active_modules,
+                    )
 
         # Reload custom translations (game ID may have changed since __init__)
         from ..config_loader import load_custom_translations
@@ -572,6 +600,8 @@ class TranslationEngine:
                     }
                     n = 0
                     for entry in data.get("free_texts") or []:
+                        if entry.get("_reject"):
+                            continue
                         if entry.get("translated"):
                             continue
                         if entry.get("_axvj_module") in dirty_mods:
@@ -582,6 +612,8 @@ class TranslationEngine:
                             n += 1
                     for t in data.get("tables") or []:
                         for entry in t.get("entries") or []:
+                            if entry.get("_reject"):
+                                continue
                             if entry.get("translated"):
                                 continue
                             if entry.get("_axvj_module") in dirty_mods:
@@ -608,6 +640,8 @@ class TranslationEngine:
                             by_addr[addr] = zh
                 n = 0
                 for entry in data.get("free_texts") or []:
+                    if entry.get("_reject"):
+                        continue
                     if entry.get("translated"):
                         continue
                     if entry.get("_axvj_module") in dirty_mods:
@@ -618,6 +652,8 @@ class TranslationEngine:
                         n += 1
                 for t in data.get("tables") or []:
                     for entry in t.get("entries") or []:
+                        if entry.get("_reject"):
+                            continue
                         if entry.get("translated"):
                             continue
                         if entry.get("_axvj_module") in dirty_mods:
@@ -844,6 +880,7 @@ class TranslationEngine:
                     "pointer_sources": p.get("pointer_sources") or [],
                     "phrase_code": p.get("phrase_code"),
                     "reason": p.get("reason"),
+                    "_reject": bool(e.get("_reject")),
                 }
                 for e, p in zip(flat, plans)
             ],
@@ -1333,8 +1370,13 @@ class TranslationEngine:
         threshold: int,
         reject_path: Path,
         data: dict,
+        *,
+        active_modules: set[str] | None = None,
     ) -> int:
         """评分条目并把 score < threshold 的条目标记 ``_reject``。
+
+        若给定 ``active_modules``：先按模块勾选收窄，再评分/拒绝
+        （未勾选模块的条目不参与阈值拒绝、不写入 reject 清单）。
 
         同时写 ``{原文件名}_reject_{阈值}.json``（只含被拒条目 + check_meta），
         不改动输入文件。返回被拒条目数。
@@ -1342,27 +1384,70 @@ class TranslationEngine:
         from ..text_checker import score_entries
         from ..policy import allows_ids, rejects_ids
 
-        allows = allows_ids(self.config.game)
-        rejects = rejects_ids(self.config.game)
-        rom = rom_path.read_bytes()
-        scored = score_entries(entries, rom)
-        rejected: list[dict] = []
-        for e, hits, s in scored:
-            eid = e.get("id") or ""
-            e["check_score"] = s
-            # 无条件拒绝（rejects），或被拒但不在 allows（放行）
-            if eid in rejects or (s < threshold and eid not in allows):
-                e["_reject"] = True
-                rejected.append(dict(e, check_hits=hits, _reject=True))
-
-        total = (
-            round(sum(s for _, _, s in scored) / len(scored), 1) if scored else 100.0
+        game_id = (
+            self.config.game
+            or data.get("game_id")
+            or data.get("game")
+            or ""
         )
+        allows = allows_ids(game_id)
+        rejects = rejects_ids(game_id)
+        rom = rom_path.read_bytes()
+
+        candidates = entries
+        if active_modules is not None:
+            from ..modules import stamp_entry_module
+
+            candidates = []
+            for e in entries:
+                # 清掉上次全量校验可能留下的标记，避免未勾选模块条目仍带 _reject
+                e.pop("_reject", None)
+                e.pop("check_score", None)
+                mid = stamp_entry_module(e, game_id=game_id)
+                if mid is not None and mid in active_modules:
+                    candidates.append(e)
+
+        rejected: list[dict] = []
+
+        def _mark_reject(e: dict, hits: list | None = None, score: int | float | None = None) -> None:
+            e["_reject"] = True
+            # 无条件拒绝：清掉译文，避免后续 merge/plan 仍按中文走 relocate
+            e["translated"] = ""
+            if score is not None:
+                e["check_score"] = score
+            rejected.append(
+                dict(e, check_hits=list(hits or []), _reject=True)
+            )
+
+        if threshold <= 0:
+            # 仅 rejects 黑名单（无评分门槛）
+            for e in candidates:
+                eid = e.get("id") or ""
+                if eid in rejects:
+                    _mark_reject(e, hits=["rejects"], score=None)
+            scored_count = len(candidates)
+            total = 100.0
+        else:
+            scored = score_entries(candidates, rom)
+            scored_count = len(scored)
+            for e, hits, s in scored:
+                eid = e.get("id") or ""
+                e["check_score"] = s
+                # rejects 无条件拒绝；低分且不在 allows → 拒绝
+                if eid in rejects or (s < threshold and eid not in allows):
+                    _mark_reject(e, hits=hits, score=s)
+            total = (
+                round(sum(s for _, _, s in scored) / len(scored), 1) if scored else 100.0
+            )
+
         meta = {
             "score": total,
             "threshold": threshold,
             "rejected_count": len(rejected),
-            "total_count": len(scored),
+            "total_count": scored_count,
+            "entries_total": len(entries),
+            "module_candidates": len(candidates),
+            "active_modules": sorted(active_modules) if active_modules is not None else None,
             "rom_game_id": data.get("game_id") or data.get("game"),
             "algorithms": sorted(
                 __import__("meowth.text_checker", fromlist=["WEIGHTS"]).WEIGHTS
@@ -1387,10 +1472,15 @@ class TranslationEngine:
             ),
             encoding="utf-8",
         )
+        scope = (
+            f"模块内 {len(candidates)}/{len(entries)}"
+            if active_modules is not None
+            else f"{scored_count}"
+        )
         self._log(
             "info",
-            f"[校验] 阈值 {threshold}: 拒绝 {len(rejected)}/{len(scored)} 条 "
-            f"→ {reject_path.name}",
+            f"[校验] 阈值 {threshold}: 拒绝 {len(rejected)}/{scored_count} 条 "
+            f"（候选 {scope}）→ {reject_path.name}",
         )
         return len(rejected)
 

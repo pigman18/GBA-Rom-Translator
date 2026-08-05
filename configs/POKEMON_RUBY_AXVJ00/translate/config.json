@@ -1,6 +1,8 @@
 {
   "allows": [],
-  "rejects": [],
+  "rejects": [
+
+  ],
   "protect": {
     "line_width": 32,
     "semantic_threshold_ratio": 0.75,

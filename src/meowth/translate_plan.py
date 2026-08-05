@@ -93,6 +93,8 @@ def preallocate_upgrade_phrases(
     for e in entries:
         t = _translated_of(e)
         o = _original_of(e)
+        if e.get("_reject"):
+            continue
         if not t or t == o:
             continue
         s = charmap._sanitize(t)
@@ -126,6 +128,14 @@ def plan_entry(
     byte_length = entry.get("byte_length", 0) or 0
     original_hex = entry.get("original_hex") or ""
     module_id = entry.get("module") or entry.get("_axvj_module") or entry.get("category")
+
+    # config.json rejects / 阈值校验：无条件 keep，不进 relocate/upgrade
+    if entry.get("_reject"):
+        return {
+            "type": "keep",
+            "target_hex": original_hex,
+            "reason": "rejects/校验拒绝(_reject)",
+        }
 
     if not translated or translated == original:
         return {

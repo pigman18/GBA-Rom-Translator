@@ -156,6 +156,35 @@ def convert_format(data: dict) -> dict:
     }
 
 
+def _cache_map_from_data(data: dict) -> dict[str, str]:
+    """把 entries / tables+free_texts 结构压成纯缓存 ``{原文: 译文}``。
+
+    - 跳过 ``_reject``、空翻译、译文等于原文的条目
+    - texts_translated.json 仅作翻译缓存，不含地址/hex
+    """
+    cache: dict[str, str] = {}
+    flat: list[dict] = list(data.get("entries") or [])
+    if not flat:
+        for t in data.get("tables") or []:
+            flat.extend(t.get("entries") or [])
+        flat.extend(data.get("free_texts") or [])
+    for e in flat:
+        if e.get("_reject"):
+            continue
+        orig = e.get("original") or ""
+        tr = e.get("translated") or ""
+        if tr and tr != orig:
+            cache[orig] = tr
+    return cache
+
+
+def _is_cache_map(data: dict) -> bool:
+    """纯缓存 map（{原文: 译文}，无 entries/tables/free_texts）。"""
+    return bool(data) and not any(
+        k in data for k in ("entries", "free_texts", "tables")
+    )
+
+
 def _strip_llm_newlines(text: str) -> str:
     """Remove literal newlines inserted by the LLM for formatting."""
     _PARA = "\x00PARA\x00"
@@ -318,6 +347,28 @@ class TranslationEngine:
             prior = json.loads(prior_path.read_text(encoding="utf-8"))
         except (OSError, json.JSONDecodeError):
             return 0
+
+        # 新版纯缓存 {原文: 译文}（无地址/hex）
+        if isinstance(prior, dict) and not any(
+            k in prior for k in ("entries", "free_texts", "tables")
+        ):
+            by_orig = {
+                orig: tr
+                for orig, tr in prior.items()
+                if self._usable_zh(orig, tr)
+            }
+            n = 0
+            for e in data.get("entries") or []:
+                if self._usable_zh(e.get("original") or "", e.get("translated") or ""):
+                    continue
+                orig = e.get("original") or ""
+                zh = by_orig.get(orig)
+                if zh and self._usable_zh(orig, zh):
+                    e["translated"] = zh
+                    n += 1
+            return n
+
+        # 旧版 entries/free_texts/tables 结构（兼容）
         by_addr: dict[str, str] = {}
         by_orig: dict[str, str] = {}
         for e in prior.get("entries") or []:
@@ -510,6 +561,39 @@ class TranslationEngine:
             except (OSError, json.JSONDecodeError):
                 prior = None
             if prior:
+                if isinstance(prior, dict) and not any(
+                    k in prior for k in ("entries", "free_texts", "tables")
+                ):
+                    # 新版纯缓存 {原文: 译文}：按原文匹配，跳过 dirty 模块
+                    by_orig = {
+                        orig: tr
+                        for orig, tr in prior.items()
+                        if self._usable_zh(orig, tr)
+                    }
+                    n = 0
+                    for entry in data.get("free_texts") or []:
+                        if entry.get("translated"):
+                            continue
+                        if entry.get("_axvj_module") in dirty_mods:
+                            continue
+                        zh = by_orig.get(entry.get("original") or "")
+                        if zh:
+                            entry["translated"] = zh
+                            n += 1
+                    for t in data.get("tables") or []:
+                        for entry in t.get("entries") or []:
+                            if entry.get("translated"):
+                                continue
+                            if entry.get("_axvj_module") in dirty_mods:
+                                continue
+                            zh = by_orig.get(entry.get("original") or "")
+                            if zh:
+                                entry["translated"] = zh
+                                n += 1
+                    if n:
+                        self._log("info", f"Merged {n} entries from prior texts_translated.json")
+                    prior = None
+            if prior:
                 by_addr: dict[str, str] = {}
                 for e in prior.get("free_texts") or []:
                     addr = (e.get("address") or "").upper()
@@ -695,7 +779,8 @@ class TranslationEngine:
 
         output_path.parent.mkdir(parents=True, exist_ok=True)
         output_path.write_text(
-            json.dumps(data, ensure_ascii=False, indent=2), encoding="utf-8"
+            json.dumps(_cache_map_from_data(data), ensure_ascii=False, indent=2),
+            encoding="utf-8",
         )
 
         # --- 翻译通路规划：决策 type + 编码 target_hex → translate.build.json ---
@@ -1549,6 +1634,45 @@ class TranslationEngine:
             self._fonts_from_bdf = False
             raise
 
+    def _rebuild_data_from_build_plan(self, cache_map: dict) -> dict:
+        """从 translate.build.json 重建注入数据，用纯缓存 map 覆盖翻译。
+
+        texts_translated.json 变纯缓存（{原文: 译文}）后不含地址/hex，
+        build 依赖 translate 阶段生成的 translate.build.json（含完整 entries）。
+        """
+        build_path = (
+            Path(self.config.work_dir) / self.config.game / "translate.build.json"
+        )
+        if not build_path.is_file():
+            self._log(
+                "warning",
+                "texts_translated.json 是纯缓存 map，但缺少 translate.build.json，"
+                "无法重建注入条目（请先运行 translate/full）",
+            )
+            return {"tables": [], "free_texts": []}
+        try:
+            bp = json.loads(build_path.read_text(encoding="utf-8"))
+        except (OSError, json.JSONDecodeError):
+            self._log(
+                "warning",
+                f"translate.build.json 读取失败: {build_path}",
+            )
+            return {"tables": [], "free_texts": []}
+        entries = bp.get("entries") or []
+        n = 0
+        for e in entries:
+            orig = e.get("original") or ""
+            tr = cache_map.get(orig)
+            if tr and tr != orig:
+                e["translated"] = tr
+                n += 1
+        self._log(
+            "info",
+            f"从 translate.build.json 重建 {len(entries)} 条注入数据，"
+            f"缓存覆盖 {n} 条翻译",
+        )
+        return {"entries": entries}
+
     def build_rom(
         self,
         original_rom: Path,
@@ -1564,20 +1688,9 @@ class TranslationEngine:
             self._log("info", Messages.DETECTED_GAME.format(game=self.config.game))
 
         data = json.loads(translations_path.read_text(encoding="utf-8"))
+        if _is_cache_map(data):
+            data = self._rebuild_data_from_build_plan(data)
         data = convert_format(data)
-
-        # 文本校验阈值：score < threshold 的条目标记 _reject，注入时跳过，
-        # 并生成 {原文件名}_reject_{阈值}.json（含 translated 内容）。
-        threshold = getattr(self.config, "check_threshold", 0) or 0
-        if threshold > 0:
-            check_entries = [e for t in data.get("tables") or [] for e in t["entries"]] + list(data.get("free_texts") or [])
-            if check_entries:
-                reject_path = Path(translations_path).with_name(
-                    f"{Path(translations_path).stem}_reject_{threshold}.json"
-                )
-                self._apply_check_reject(
-                    check_entries, Path(original_rom), threshold, reject_path, data
-                )
 
         # Load game config (for charmap, expansion decision, font patch, etc.)
         cfg = {}

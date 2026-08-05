@@ -1,8 +1,5 @@
 {
-  "allows": [
-    "axvj_0817F347",
-    "axvj_08197818"
-  ],
+  "allows": [],
   "rejects": [],
   "protect": {
     "line_width": 32,

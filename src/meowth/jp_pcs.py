@@ -5,6 +5,18 @@ Table from Bulbapedia Character encoding (Generation III) — Japanese set.
 """
 from __future__ import annotations
 
+import hashlib
+
+
+def make_entry_id(address_hex: str, original_hex: str) -> str:
+    """条目 id：``axvj_`` + md5(address + original_hex) 前 12 位 hex。
+
+    address+hex 保证同文本唯一（同一地址不同字节也区分）。
+    """
+    raw = f"{address_hex}{original_hex.replace(' ', '').replace('\n', '')}"
+    return "axvj_" + hashlib.md5(raw.encode("utf-8")).hexdigest()[:12]
+
+
 # Bytes 0x01–0xF6 as a contiguous unicode string (index = codepoint - 1 for 0x01..)
 # Built row-wise from the JP table (skipping 0x00 which is space).
 _JP_01_TO_F6 = (

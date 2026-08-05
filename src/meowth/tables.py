@@ -10,7 +10,7 @@ import struct
 from pathlib import Path
 
 from .config_loader import get_active_game_id, list_available_games, load_game_config
-from .jp_pcs import decode_pcs
+from .jp_pcs import decode_pcs, make_entry_id
 
 _TABLE_BY_GAME: dict[str, dict] = {}
 
@@ -97,7 +97,7 @@ def extract_fixed_table(
         if not text:
             continue
         entries.append({
-            "id": f"{id_prefix}_{i:03d}",
+            "id": make_entry_id(f"0x{BASE + off:08X}", raw.hex(" ")),
             "address": f"0x{BASE + off:08X}",
             "table_index": i,
             "table_base": f"0x{table_ptr:08X}",
@@ -168,7 +168,7 @@ def extract_item_names(rom: bytes) -> list[dict]:
         if not text or set(text) <= {"？", "ー", "-", " "}:
             continue
         entries.append({
-            "id": f"item_{i:03d}",
+            "id": make_entry_id(f"0x{BASE_VAL + off:08X}", raw.hex(" ")),
             "address": f"0x{BASE_VAL + off:08X}",
             "table_index": i,
             "table_base": f"0x{table_ptr:08X}",
@@ -217,7 +217,7 @@ def extract_item_descriptions(rom: bytes) -> list[dict]:
             continue
         seen.add(so)
         entries.append({
-            "id": f"itemdesc_{i:03d}",
+            "id": make_entry_id(f"0x{BASE_VAL + so:08X}", raw.hex(" ")),
             "address": f"0x{BASE_VAL + so:08X}",
             "table_index": i,
             "byte_length": len(raw),
@@ -256,7 +256,7 @@ def extract_nature_names(rom: bytes) -> list[dict]:
         if not text:
             continue
         entries.append({
-            "id": f"nature_{i:02d}",
+            "id": make_entry_id(f"0x{BASE_VAL + so:08X}", raw.hex(" ")),
             "address": f"0x{BASE_VAL + so:08X}",
             "table_index": i,
             "table_base": f"0x{BASE_VAL + c['table']:08X}",

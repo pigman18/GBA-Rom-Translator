@@ -232,8 +232,8 @@ def seed_translate(texts_json, output, only_seeded):
 @click.option("--seed-only", is_flag=True, help="Glossary+seed only (no LLM)")
 @click.option("--rom", "rom_path", type=click.Path(exists=True), default=None,
               help="原版 ROM（文本校验阈值评分需要）")
-@click.option("--check-threshold", default=90, type=click.IntRange(0, 100),
-              help="文本校验阈值：0=不启用；score 低于此值的条目不翻译")
+@click.option("--check-threshold", default=70, type=click.IntRange(0, 100),
+              help="文本校验阈值：0=不启用；score 低于此值的条目不翻译（>=阈值放行）")
 @add_provider_options
 def translate(texts_json, output, batch_size, workers, source, target, seed_only,
               rom_path, check_threshold,
@@ -281,8 +281,8 @@ def translate(texts_json, output, batch_size, workers, source, target, seed_only
 @click.option("-o", "--output", required=True)
 @click.option("--source", default="en", help="Source language code (default: from config or en)")
 @click.option("--target", default="zh-Hans", help="Target language code (default: from config or zh-Hans)")
-@click.option("--check-threshold", default=90, type=click.IntRange(0, 100),
-              help="文本校验阈值：0=不启用；score 低于此值的条目不注入")
+@click.option("--check-threshold", default=70, type=click.IntRange(0, 100),
+              help="文本校验阈值：0=不启用；score 低于此值的条目不注入（>=阈值放行）")
 def build(rom_path, translations, output, source, target, check_threshold):
     """Build translated ROM from translations."""
     source = _get_language(source, "en", "source_language")
@@ -320,8 +320,8 @@ def build(rom_path, translations, output, source, target, check_threshold):
     default=None,
     help="Tiles dir (row_patcher export output); patches graphics after translate",
 )
-@click.option("--check-threshold", default=90, type=click.IntRange(0, 100),
-              help="文本校验阈值：0=不启用；score 低于此值的条目不翻译/不注入")
+@click.option("--check-threshold", default=70, type=click.IntRange(0, 100),
+              help="文本校验阈值：0=不启用；score 低于此值的条目不翻译/不注入（>=阈值放行）")
 @_modules_option
 @add_provider_options
 def full(rom_path, output_dir, work_dir, source, target, seed_only, bdf_font_path, tiles_dir,

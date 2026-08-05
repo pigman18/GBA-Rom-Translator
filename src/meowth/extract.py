@@ -47,7 +47,7 @@ from .tables import (
     extract_species_names,
     extract_type_names,
 )
-from .jp_pcs import decode_pcs, looks_like_jp_text
+from .jp_pcs import decode_pcs, looks_like_jp_text, make_entry_id
 
 BASE = _BASE_fn()
 GFX_PTR_SOURCE_DENY = _GFX_PTR_SOURCE_DENY_fn()
@@ -124,7 +124,7 @@ def extract_ui_block(rom: bytes) -> list[dict]:
         cat = _classify_ui(a, text)
         entries.append(
             {
-                "id": f"axvj_{BASE + a:08X}",
+                "id": make_entry_id(f"0x{BASE + a:08X}", rom[a : eos + 1].hex(" ")),
                 "address": f"0x{BASE + a:08X}",
                 "pointer_sources": [f"0x{BASE + p:08X}" for p in ptrs],
                 "pointer_addresses": [f"0x{BASE + p:08X}" for p in ptrs],
@@ -177,7 +177,7 @@ def extract_option_menu(rom: bytes) -> list[dict]:
             continue
         entries.append(
             {
-                "id": f"axvj_{BASE + a:08X}",
+                "id": make_entry_id(f"0x{BASE + a:08X}", rom[a : eos + 1].hex(" ")),
                 "address": f"0x{BASE + a:08X}",
                 "pointer_sources": [f"0x{BASE + p:08X}" for p in ptrs],
                 "pointer_addresses": [f"0x{BASE + p:08X}" for p in ptrs],
@@ -353,7 +353,7 @@ def extract_script_pointers(
             continue
         entries.append(
             {
-                "id": f"axvj_{BASE + so:08X}",
+                "id": make_entry_id(f"0x{BASE + so:08X}", s.hex(" ")),
                 "address": f"0x{BASE + so:08X}",
                 "pointer_sources": [f"0x{BASE + p:08X}" for p in use[:16]],
                 "pointer_addresses": [f"0x{BASE + p:08X}" for p in use[:16]],
@@ -414,7 +414,7 @@ def extract_fc_prefixed_ui(rom: bytes) -> list[dict]:
                 continue
             entries.append(
                 {
-                    "id": f"axvj_{BASE + a:08X}",
+                    "id": make_entry_id(f"0x{BASE + a:08X}", raw.hex(" ")),
                     "address": f"0x{BASE + a:08X}",
                     "pointer_sources": [f"0x{BASE + p:08X}" for p in ptrs],
                     "pointer_addresses": [f"0x{BASE + p:08X}" for p in ptrs],
@@ -497,7 +497,7 @@ def extract_battle_hud_labels(rom: bytes) -> list[dict]:
             seen.add(off)
             out.append(
                 {
-                    "id": f"axvj_{BASE + off:08X}",
+                    "id": make_entry_id(f"0x{BASE + off:08X}", needle.hex(" ")),
                     "address": f"0x{BASE + off:08X}",
                     "pointer_sources": [f"0x{BASE + p:08X}" for p in ptrs],
                     "pointer_addresses": [f"0x{BASE + p:08X}" for p in ptrs],
@@ -557,7 +557,7 @@ def extract_summary_ui_pool(rom: bytes) -> list[dict]:
             seen.add(off)
             out.append(
                 {
-                    "id": f"axvj_{BASE + off:08X}",
+                    "id": make_entry_id(f"0x{BASE + off:08X}", needle.hex(" ")),
                     "address": f"0x{BASE + off:08X}",
                     "pointer_sources": [f"0x{BASE + p:08X}" for p in ptrs],
                     "pointer_addresses": [f"0x{BASE + p:08X}" for p in ptrs],
@@ -637,7 +637,7 @@ def extract_battle_prompt_pool(rom: bytes) -> list[dict]:
         seen.add(a)
         out.append(
             {
-                "id": f"axvj_{BASE + a:08X}",
+                "id": make_entry_id(f"0x{BASE + a:08X}", raw.hex(" ")),
                 "address": f"0x{BASE + a:08X}",
                 "pointer_sources": [f"0x{BASE + p:08X}" for p in ptrs],
                 "pointer_addresses": [f"0x{BASE + p:08X}" for p in ptrs],
@@ -748,7 +748,7 @@ def extract_s1_registry_strings(rom: bytes) -> list[dict]:
             ptrs = [ptr_off]
         entries.append(
             {
-                "id": f"axvj_{BASE + so:08X}",
+                "id": make_entry_id(f"0x{BASE + so:08X}", s.hex(" ")),
                 "address": f"0x{BASE + so:08X}",
                 "pointer_sources": [f"0x{BASE + p:08X}" for p in ptrs],
                 "pointer_addresses": [f"0x{BASE + p:08X}" for p in ptrs],
@@ -810,7 +810,7 @@ def extract_short_menu_labels(rom: bytes) -> list[dict]:
             seen.add(off)
             out.append(
                 {
-                    "id": f"axvj_{BASE + off:08X}",
+                    "id": make_entry_id(f"0x{BASE + off:08X}", needle.hex(" ")),
                     "address": f"0x{BASE + off:08X}",
                     "pointer_sources": [f"0x{BASE + p:08X}" for p in ptrs],
                     "pointer_addresses": [f"0x{BASE + p:08X}" for p in ptrs],
@@ -924,7 +924,7 @@ def extract_save_power_prompts(rom: bytes) -> list[dict]:
         seen.add(off)
         out.append(
             {
-                "id": f"axvj_{BASE + off:08X}",
+                "id": make_entry_id(f"0x{BASE + off:08X}", needle.hex(" ")),
                 "address": f"0x{BASE + off:08X}",
                 "pointer_sources": [f"0x{BASE + p:08X}" for p in ptrs],
                 "pointer_addresses": [f"0x{BASE + p:08X}" for p in ptrs],
@@ -1052,7 +1052,7 @@ def scan_addr_bands(rom: bytes, bands: list) -> list[dict]:
                     ptrs = list(ptr_index.get(a, []))
                     seen.add(a)
                     entry: dict = {
-                        "id": f"axvj_{BASE + a:08X}",
+                        "id": make_entry_id(f"0x{BASE + a:08X}", raw.hex(" ")),
                         "address": f"0x{BASE + a:08X}",
                         "original": text,
                         "original_hex": raw.hex(" "),

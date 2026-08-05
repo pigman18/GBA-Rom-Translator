@@ -70,7 +70,7 @@ class ConfigForm(ctk.CTkFrame):
         ).pack(anchor="w", pady=(8, 0))
         th_row = ctk.CTkFrame(inner, fg_color="transparent")
         th_row.pack(fill="x", pady=(2, 4))
-        self._threshold = ctk.DoubleVar(value=90)
+        self._threshold = ctk.DoubleVar(value=70)
         self.threshold_slider = ctk.CTkSlider(
             th_row,
             from_=0,
@@ -80,7 +80,7 @@ class ConfigForm(ctk.CTkFrame):
             command=self._on_threshold,
         )
         self.threshold_slider.pack(side="left", fill="x", expand=True, padx=(0, 8))
-        self.threshold_label = ctk.CTkLabel(th_row, text="90", width=36)
+        self.threshold_label = ctk.CTkLabel(th_row, text="70", width=36)
         self.threshold_label.pack(side="right")
 
     def _on_threshold(self, value):

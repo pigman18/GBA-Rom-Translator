@@ -42,7 +42,8 @@
       "type": "stride",
       "read": {
         "stride": 5
-      }
+      },
+      "no_relocate": true
     },
     {
       "id": "性格名",
@@ -55,7 +56,8 @@
       "type": "stride_ptr",
       "read": {
         "stride": 4
-      }
+      },
+      "no_relocate": true
     },
     {
       "id": "特性名",
@@ -69,7 +71,8 @@
       "type": "stride",
       "read": {
         "stride": 8
-      }
+      },
+      "no_relocate": true
     },
     {
       "id": "物种名",
@@ -83,7 +86,8 @@
       "type": "stride",
       "read": {
         "stride": 6
-      }
+      },
+      "no_relocate": true
     },
     {
       "id": "招式名",
@@ -97,7 +101,8 @@
       "type": "stride",
       "read": {
         "stride": 8
-      }
+      },
+      "no_relocate": true
     },
     {
       "id": "训练家类名",
@@ -108,7 +113,8 @@
       "description": "Trainer class 名表",
       "start": "0x1C4A10",
       "end": "0x1C4D00",
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "地点名",
@@ -120,7 +126,8 @@
       "end": "0x3CA098",
       "type": "scan",
       "min_byte_length": 5,
-      "max_byte_length": 14
+      "max_byte_length": 14,
+      "no_relocate": true
     },
     {
       "id": "道具名",
@@ -136,7 +143,8 @@
         "entry_size": 40,
         "name_stride": 8,
         "desc_ptr_offset": 16
-      }
+      },
+      "no_relocate": true
     },
     {
       "id": "道具说明",
@@ -146,7 +154,8 @@
       "description": "道具描述指针目标",
       "start": "0x3984DC",
       "end": "0x39A647",
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": false
     },
     {
       "id": "招式说明",
@@ -156,7 +165,8 @@
       "description": "招式说明",
       "start": "0x383001",
       "end": "0x397F20",
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "特性说明",
@@ -167,7 +177,8 @@
       "description": "特性说明",
       "start": "0x1CBF00",
       "end": "0x1CC4E0",
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "图鉴条目",
@@ -178,7 +189,7 @@
       "start": "0x37B5C1",
       "end": "0x383000",
       "type": "scan",
-      "no_relocate": true
+      "no_relocate": false
     },
     {
       "id": "开场家园",
@@ -188,7 +199,8 @@
       "description": "家园镇、选角、博士开场",
       "start": "0x149300",
       "end": "0x156292",
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": false
     },
     {
       "id": "早期城镇",
@@ -198,7 +210,8 @@
       "description": "前期城镇/道馆主线",
       "start": "0x148243",
       "end": "0x165A17",
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": false
     },
     {
       "id": "中期城镇",
@@ -208,7 +221,8 @@
       "description": "中期城镇主线",
       "start": "0x145DBC",
       "end": "0x15C6AF",
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": false
     },
     {
       "id": "后期与联盟",
@@ -228,7 +242,8 @@
           "end": "0x3E7A7B"
         }
       ],
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": false
     },
     {
       "id": "岛屿或通关后",
@@ -238,7 +253,8 @@
       "description": "船/对战塔入口等通关后内容（Ruby 无七岛）",
       "start": "0x17817E",
       "end": "0x17882B",
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": false
     },
     {
       "id": "道路与洞窟",
@@ -258,7 +274,8 @@
           "end": "0x1DFFFF"
         }
       ],
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": false
     },
     {
       "id": "宝可梦中心",
@@ -268,7 +285,8 @@
       "description": "护士、治疗、标准对白（含混合通信文本）",
       "start": "0x180531",
       "end": "0x1806F3",
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "商店",
@@ -312,7 +330,8 @@
           "end": "0x3EA120"
         }
       ],
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "电脑与仓库",
@@ -336,7 +355,8 @@
           "end": "0x3EB4C0"
         }
       ],
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "缆线与通信",
@@ -372,7 +392,8 @@
           "end": "0x403850"
         }
       ],
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "标准脚本串",
@@ -382,7 +403,8 @@
       "description": "obtain/yes-no/告示牌等模板串",
       "start": "0x1E04C2",
       "end": "0x1EC108",
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "标题与主菜单",
@@ -417,7 +439,8 @@
           "end": "0x3EBE96"
         }
       ],
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "设置选项",
@@ -427,7 +450,8 @@
       "description": "选项菜单",
       "start": "0x350F01",
       "end": "0x37B5C0",
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "背包界面",
@@ -437,7 +461,8 @@
       "description": "口袋标签、关闭等短 UI",
       "start": "0x3E9AF4",
       "end": "0x3EB170",
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "状态界面",
@@ -457,7 +482,8 @@
           "end": "0x3EB535"
         }
       ],
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "开始菜单",
@@ -481,7 +507,8 @@
           "end": "0x3EBB58"
         }
       ],
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "战斗菜单",
@@ -501,7 +528,8 @@
           "end": "0x3DBFFF"
         }
       ],
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "战斗提示",
@@ -511,7 +539,8 @@
       "description": "战斗短提示",
       "start": "0x3DC000",
       "end": "0x3DD7FF",
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "战斗报文",
@@ -521,7 +550,8 @@
       "description": "战斗字符串大表",
       "start": "0x3DB500",
       "end": "0x3DBFFF",
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "对战设施",
@@ -531,7 +561,8 @@
       "description": "对战塔（バトルタワー）案内",
       "start": "0x17882C",
       "end": "0x178FFE",
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "登场与胜负白",
@@ -541,7 +572,8 @@
       "description": "训练家登场/挑战前台词池",
       "start": "0x3B4C01",
       "end": "0x3B9200",
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "训练家名",
@@ -552,7 +584,8 @@
       "description": "训练家个体名表（含主角/劲敌默认名）",
       "start": "0x1C7208",
       "end": "0x1CA34D",
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "图鉴界面",
@@ -580,7 +613,8 @@
       "start": "0x1C9F1E",
       "end": "0x1CA008",
       "type": "scan",
-      "table": true
+      "table": true,
+      "no_relocate": true
     },
     {
       "id": "赛事娱乐",
@@ -608,7 +642,8 @@
           "end": "0x3B82FF"
         }
       ],
-      "type": "scan"
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "高风险混杂",
@@ -1524,7 +1559,8 @@
           "start": "0x7FD210",
           "end": "0x7FFDA3"
         }
-      ]
+      ],
+      "no_relocate": true
     },
     {
       "id": "选项菜单扫描",
@@ -1537,12 +1573,6 @@
         "prefix": [
           "FC",
           "05"
-        ],
-        "scan_addr_bands": [
-          [
-            "0x37B44C",
-            "0x37B500"
-          ]
         ],
         "seed_originals": [
           "\\CC0509せっていを かえる",
@@ -1569,7 +1599,8 @@
       },
       "label": "选项菜单扫描",
       "group": "其它",
-      "default": false
+      "default": false,
+      "no_relocate": true
     },
     {
       "id": "FC彩窗扫描",
@@ -1581,21 +1612,12 @@
       "read": {
         "prefix": [
           "FC"
-        ],
-        "scan_addr_bands": [
-          [
-            "0x3E9000",
-            "0x3EB000"
-          ],
-          [
-            "0x3D0000",
-            "0x3E0000"
-          ]
         ]
       },
       "label": "FC彩窗扫描",
       "group": "其它",
-      "default": false
+      "default": false,
+      "no_relocate": true
     },
     {
       "id": "存档提示扫描",
@@ -1606,28 +1628,6 @@
       "start": "0x197000",
       "read": {
         "content_class": "存档与电源",
-        "scan_addr_bands": [
-          [
-            "0x197000",
-            "0x198000"
-          ],
-          [
-            "0x1EC000",
-            "0x1ED000"
-          ],
-          [
-            "0x3EB800",
-            "0x3EBF00"
-          ],
-          [
-            "0x3DC000",
-            "0x3DC200"
-          ],
-          [
-            "0x3E9900",
-            "0x3E9B00"
-          ]
-        ],
         "content_class_rules": [
           {
             "all_contains": [
@@ -1697,7 +1697,8 @@
       },
       "label": "存档提示扫描",
       "group": "其它",
-      "default": false
+      "default": false,
+      "no_relocate": true
     },
     {
       "id": "战斗HUD采集",
@@ -1718,17 +1719,12 @@
           "とくこう",
           "とくぼう",
           "すばやさ"
-        ],
-        "scan_addr_bands": [
-          [
-            "0x100000",
-            "0x3FFFFF"
-          ]
         ]
       },
       "label": "战斗HUD采集",
       "group": "其它",
-      "default": false
+      "default": false,
+      "no_relocate": true
     },
     {
       "id": "短标菜单采集",
@@ -1777,17 +1773,12 @@
           "ボックスを せいりする",
           "さようなら",
           "ケイ"
-        ],
-        "scan_addr_bands": [
-          [
-            "0x100000",
-            "0x3FFFFF"
-          ]
         ]
       },
       "label": "短标菜单采集",
       "group": "其它",
-      "default": false
+      "default": false,
+      "no_relocate": true
     },
     {
       "id": "状态背包采集",
@@ -1814,17 +1805,12 @@
           "ボール",
           "わざマシン",
           "きのみ"
-        ],
-        "scan_addr_bands": [
-          [
-            "0x3E0000",
-            "0x3FFFFF"
-          ]
         ]
       },
       "label": "状态背包采集",
       "group": "其它",
-      "default": false
+      "default": false,
+      "no_relocate": true
     },
     {
       "id": "战斗提示扫描",
@@ -1848,17 +1834,12 @@
           "みず",
           "くさ",
           "でんき"
-        ],
-        "scan_addr_bands": [
-          [
-            "0x3DC000",
-            "0x3DD7FF"
-          ]
         ]
       },
       "label": "战斗提示扫描",
       "group": "其它",
-      "default": false
+      "default": false,
+      "no_relocate": true
     },
     {
       "id": "主脚本指针",
@@ -1873,7 +1854,8 @@
       "group": "其它",
       "default": false,
       "start": "0x0",
-      "end": "0x0"
+      "end": "0x0",
+      "no_relocate": true
     }
   ],
   "unassigned": {

@@ -133,20 +133,29 @@ def read_pcs(rom: bytes, start: int, max_len: int = 512) -> Optional[bytes]:
 
 
 def pcs_looks_plausible(raw: bytes) -> bool:
+    """极轻形态：以 FF 收尾的 PCS 体即可。
+
+    text_patcher 只负责尽量捞出像剧情/对话的串；假阳性交给 Meowth
+    check 阈值 / rejects。此处只挡「空串 / 全 0 / 单字节刷屏」。
+    """
     if not raw or raw[-1] != EOS:
         return False
     body = raw[:-1]
     if not body:
         return False
-    if body.count(0x00) > len(body) * 0.4:
+    if all(b == 0x00 for b in body):
         return False
-    if len(body) >= 8 and len(set(body)) == 1 and body[0] not in CTRL:
+    if len(body) >= 8 and len(set(body)) == 1:
         return False
-    printable = sum(1 for b in body if b not in CTRL and 0x01 <= b <= 0xF6)
-    return (printable / len(body)) >= 0.45
+    # 至少有一个可当字形/对白控制的字节（排除纯高位垃圾）
+    return any(
+        (0x01 <= b <= 0xF6) or b in (0xFA, 0xFB, 0xFC, 0xFD, 0xFE)
+        for b in body
+    )
 
 
 def prev_ok_for_string_start(rom: bytes, so: int) -> bool:
+    """表区密扫用：上一字节像串界。指针路径不使用。"""
     if so <= 0:
         return True
     prev = rom[so - 1]
@@ -160,7 +169,10 @@ def prev_ok_for_string_start(rom: bytes, so: int) -> bool:
 def collect_pointer_targets(
     rom: bytes, body_hi: int, *, ptr_step: int = 1
 ) -> Dict[int, List[int]]:
-    """全 ROM 解指针找 PCS 串。默认 ptr_step=1；--fast 用 PTR_ALIGN。"""
+    """全 ROM 解指针找 PCS 串。默认 ptr_step=1；--fast 用 PTR_ALIGN。
+
+    指针指向 + 读出 FF 结尾串 + 长度合规则收录；不再做 printable 比例等重检。
+    """
     body_hi = min(body_hi, len(rom))
     step = max(1, int(ptr_step))
     hits: Dict[int, List[int]] = {}
@@ -175,9 +187,6 @@ def collect_pointer_targets(
             off += step
             continue
         if so <= off < so + 2:
-            off += step
-            continue
-        if not prev_ok_for_string_start(rom, so):
             off += step
             continue
         raw = read_pcs(rom, so, MAX_LEN + 1)
@@ -254,7 +263,7 @@ def scan_table_region(rom: bytes, lo: int, hi: int) -> List[Tuple[int, int]]:
 
     - 0xFF (EOS) 结束一个串；串内允许 0xFC/0xFD 换行
     - 0xFA/0xFB/0xFE 视为数据中断（非文本）
-    - 用 pcs_looks_plausible 过滤噪声/二进制字段
+    - 仅用极轻 pcs_looks_plausible（挡空串/刷屏）
     """
     out: List[Tuple[int, int]] = []
     i = lo

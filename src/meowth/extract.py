@@ -62,6 +62,15 @@ UI_RANGE = _UI_RANGE_fn()
 _RE_SORT_LABEL = re.compile(r"(ごじゅうおん|アイウエオ|じゅん|おとこ|おんな)")
 
 
+def _enrich_find_window(
+    rom: bytes, bands: list[tuple[int, int]] | tuple[tuple[int, int], ...]
+) -> tuple[int, int]:
+    """Resolve enrich search [lo, hi). Empty bands → short-menu-style ROM window."""
+    if bands:
+        return min(a for a, _ in bands), min(max(b for _, b in bands) + 1, len(rom))
+    return SCRIPT_BANK_MIN, min(len(rom), 0x800000)
+
+
 def read_pcs(rom: bytes, off: int, maxlen: int = 256) -> bytes | None:
     if off < 0 or off >= len(rom):
         return None
@@ -374,58 +383,54 @@ def extract_fc_prefixed_ui(rom: bytes) -> list[dict]:
     from .policy import enrich_scan_bands
 
     bands = enrich_scan_bands("FC彩窗")
-    if not bands:
-        return []
+    find_lo, find_hi = _enrich_find_window(rom, bands)
     entries: list[dict] = []
     lz_spans = trusted_lz_spans(rom)
-    for start, end in bands:
-        # addr_bands hi is inclusive
-        end_ex = min(end + 1, len(rom))
-        a = start
-        while a < end_ex - 4:
-            if rom[a] != 0xFC:
-                a += 1
-                continue
-            eos = rom.find(b"\xFF", a + 2, a + 96)
-            if eos < 0:
-                a += 1
-                continue
-            raw = rom[a : eos + 1]
-            if len(raw) < 5 or len(raw) > 94:
-                a += 1
-                continue
-            if not looks_like_jp_text(raw):
-                a += 1
-                continue
-            text = decode_pcs(raw)
-            if _is_ime_gojuon_row(text) or _is_garbage_jp(text):
-                a = eos + 1
-                continue
-            if not re.search(r"[\u3040-\u30ff]", text):
-                a = eos + 1
-                continue
-            ptrs = [
-                p
-                for p in _ptrs_to(rom, a, 8)
-                if _axvj_ptr_source_ok(rom, p, a, lz_spans=lz_spans)
-            ]
-            if not ptrs:
-                a = eos + 1
-                continue
-            entries.append(
-                {
-                    "id": make_entry_id(f"0x{BASE + a:08X}", raw.hex(" ")),
-                    "address": f"0x{BASE + a:08X}",
-                    "pointer_sources": [f"0x{BASE + p:08X}" for p in ptrs],
-                    "pointer_addresses": [f"0x{BASE + p:08X}" for p in ptrs],
-                    "is_pointer_based": True,
-                    "byte_length": len(raw),
-                    "original_hex": raw.hex(" "),
-                    "original": text,
-                    "translated": "",
-                }
-            )
+    a = find_lo
+    while a < find_hi - 4:
+        if rom[a] != 0xFC:
+            a += 1
+            continue
+        eos = rom.find(b"\xFF", a + 2, min(a + 96, find_hi))
+        if eos < 0:
+            a += 1
+            continue
+        raw = rom[a : eos + 1]
+        if len(raw) < 5 or len(raw) > 94:
+            a += 1
+            continue
+        if not looks_like_jp_text(raw):
+            a += 1
+            continue
+        text = decode_pcs(raw)
+        if _is_ime_gojuon_row(text) or _is_garbage_jp(text):
             a = eos + 1
+            continue
+        if not re.search(r"[\u3040-\u30ff]", text):
+            a = eos + 1
+            continue
+        ptrs = [
+            p
+            for p in _ptrs_to(rom, a, 8)
+            if _axvj_ptr_source_ok(rom, p, a, lz_spans=lz_spans)
+        ]
+        if not ptrs:
+            a = eos + 1
+            continue
+        entries.append(
+            {
+                "id": make_entry_id(f"0x{BASE + a:08X}", raw.hex(" ")),
+                "address": f"0x{BASE + a:08X}",
+                "pointer_sources": [f"0x{BASE + p:08X}" for p in ptrs],
+                "pointer_addresses": [f"0x{BASE + p:08X}" for p in ptrs],
+                "is_pointer_based": True,
+                "byte_length": len(raw),
+                "original_hex": raw.hex(" "),
+                "original": text,
+                "translated": "",
+            }
+        )
+        a = eos + 1
     return entries
 
 
@@ -459,13 +464,12 @@ def extract_battle_hud_labels(rom: bytes) -> list[dict]:
 
     labels = enrich_seed_originals("战斗HUD")
     bands = enrich_scan_bands("战斗HUD")
-    if not labels or not bands:
+    if not labels:
         return []
     out: list[dict] = []
     seen: set[int] = set()
     lz_spans = trusted_lz_spans(rom)
-    find_lo = min(a for a, _ in bands)
-    find_hi = min(max(b for _, b in bands) + 1, len(rom))
+    find_lo, find_hi = _enrich_find_window(rom, bands)
     for label in labels:
         raw = bytearray()
         ok = True
@@ -521,13 +525,12 @@ def extract_summary_ui_pool(rom: bytes) -> list[dict]:
 
     labels = enrich_seed_originals("状态背包")
     bands = enrich_scan_bands("状态背包")
-    if not labels or not bands:
+    if not labels:
         return []
 
     out: list[dict] = []
     seen: set[int] = set()
-    find_lo = min(a for a, _ in bands)
-    find_hi = min(max(b for _, b in bands) + 1, len(rom))
+    find_lo, find_hi = _enrich_find_window(rom, bands)
     for label in labels:
         raw = bytearray()
         ok = True
@@ -580,14 +583,11 @@ def extract_battle_prompt_pool(rom: bytes) -> list[dict]:
     )
 
     bands = enrich_scan_bands("战斗提示")
-    if not bands:
-        return []
     keep_needles = enrich_keep_any_contains("战斗提示")
     out: list[dict] = []
     seen: set[int] = set()
     lz_spans = trusted_lz_spans(rom)
-    start = min(a for a, _ in bands)
-    end = min(max(b for _, b in bands) + 1, len(rom))
+    start, end = _enrich_find_window(rom, bands)
     a = start
     while a < end:
         if rom[a] == 0xFF:
@@ -901,8 +901,6 @@ def extract_save_power_prompts(rom: bytes) -> list[dict]:
 
     enrich_name = "存档与电源"
     bands = enrich_scan_bands(enrich_name)
-    if not bands:
-        return []
     content_class = str(enrich_block(enrich_name).get("content_class") or enrich_name)
 
     out: list[dict] = []
@@ -952,7 +950,12 @@ def extract_save_power_prompts(rom: bytes) -> list[dict]:
                 start = off + 1
                 _add(off, label, needle)
 
-    for lo, hi in bands:
+    if bands:
+        scan_ranges = list(bands)
+    else:
+        lo, hi = _enrich_find_window(rom, ())
+        scan_ranges = [(lo, hi - 1)]
+    for lo, hi in scan_ranges:
         a = lo
         end = min(hi + 1, len(rom))
         while a < end:

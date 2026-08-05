@@ -161,10 +161,18 @@ def _module_geo_bands(meta: dict[str, Any]) -> list[tuple[int, int]]:
 
 
 def _match_addr_to_module(addr: int, mods: dict[str, dict[str, Any]]) -> str | None:
-    """Smallest containing geo band wins (same rule as dump assign_modules)."""
+    """Smallest containing geo band wins (same rule as dump assign_modules).
+
+    Skip ``hidden`` / ``assign: false`` modules: their ``read.scan_addr_bands``
+    are enrich *search windows* (often mega ranges like 0x100000–0x3FFFFF),
+    not dump-band ownership labels. Including them makes the same address
+    look "owned" by HUD采集 and 道路与洞窟 at once.
+    """
     best: tuple[int, str] | None = None
     for mid, meta in mods.items():
         if mid == "未归类":
+            continue
+        if meta.get("hidden") or meta.get("assign") is False:
             continue
         for lo, hi in _module_geo_bands(meta):
             if lo <= addr <= hi:

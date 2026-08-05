@@ -183,8 +183,8 @@ def _emit_scan_entry(
     geo = _geo_from_src(src) if src else None
     if geo:
         entry["geo_ranges"] = geo
-    if src and src.get("no_relocate"):
-        entry["no_relocate"] = True
+    if src is not None and "no_relocate" in src:
+        entry["no_relocate"] = bool(src["no_relocate"])
     _copy_byte_length_bounds(entry, src)
     return entry
 
@@ -203,8 +203,8 @@ def _emit_typed_entry(src: dict, bands_out: List[List[str]]) -> Dict[str, Any]:
         entry["hidden"] = True
     if src.get("enrich"):
         entry["enrich"] = src["enrich"]
-    if src.get("no_relocate"):
-        entry["no_relocate"] = True
+    if "no_relocate" in src:
+        entry["no_relocate"] = bool(src["no_relocate"])
     if src.get("start") is not None:
         st = src["start"]
         entry["start"] = st if isinstance(st, str) else f"0x{parse_addr(st):X}"
@@ -360,7 +360,8 @@ def assign_bands(
 
         rtype = str(src.get("type") or "scan")
         if not _module_participates(src):
-            # hidden / assign:false — emit template; optionally keep product bands
+            # hidden / assign:false — emit enrich 模板；其 scan_addr_bands 是
+            # 采集搜索窗，不参与 dump 带互斥归属（见 meowth.modules.assign）。
             modules_out[mid] = _emit_typed_entry(src, bands_out)
             continue
 

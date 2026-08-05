@@ -1,6 +1,0 @@
-out/
-*.map
-*.elf
-*.o
-game.bin
-build_game/

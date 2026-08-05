@@ -827,7 +827,7 @@ def main() -> None:
         code, _ = identify(args.rom.read_bytes())
         rom_id = resolve_rom_id(args.rom, code.decode("ascii"))
         if args.texts is None:
-            default = REPO_ROOT / "work" / rom_id / "texts_translated.json"
+            default = REPO_ROOT / "work" / "texts_translated.json"
             args.texts = default
         sys.exit(cmd_classify(args.rom, rom_id, args.texts, args.out))
     else:

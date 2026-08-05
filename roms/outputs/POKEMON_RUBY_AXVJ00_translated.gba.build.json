@@ -1,12 +1,12 @@
 {
-  "build_id": "0.4.5+20260804T183128.5f38f8de8938",
+  "build_id": "0.4.5+20260805T012032.77124e7c0655",
   "package_version": "0.4.5",
-  "timestamp_utc": "2026-08-04T18:31:28Z",
+  "timestamp_utc": "2026-08-05T01:20:32Z",
   "game": "POKEMON_RUBY_AXVJ00",
   "output_rom": "C:\\code\\GBA-Rom-Translator\\roms\\outputs\\POKEMON_RUBY_AXVJ00_translated.gba",
-  "output_rom_sha256": "67f7709ec7ae4d1332f355c4c14810982dbe2c42fa59b23c983b4db4077a658d",
+  "output_rom_sha256": "d88efd9209d85c7e8ffc8c1d1115d3e0df32378ade58397f2ff1ff525b007215",
   "patch_root": "C:/code/GBA-Rom-Translator/configs/POKEMON_RUBY_AXVJ00/hook",
-  "patch_tree_sha256": "5f38f8de8938efd10fb82c87e5cdca40e2eb6a69667d3d6295571062bb3aadda",
+  "patch_tree_sha256": "77124e7c0655702814145a50a58b21081c10fe04d5420857a2f2238e96f45f4a",
   "patch_file_count": 68,
   "patch_files": {
     ".gitignore": "e846bdff19d6f85c9bc402591091f8e043e0b74080478b2e502f2d0d00f559f8",
@@ -41,7 +41,7 @@
     "bak/include/OriginSymbols_S.s": "96f737218454186d0935786ceb44a9c1e1e3be1b7c15e6e8ff877acd2a1edc07",
     "bak/strings/testText.s": "ce407d2e5cd8363aed48d73e46ae1b789595cfeadf2bc314f6911517efc0cbad",
     "build.bat": "10e285fe587c68a069a9397cd73884b110a3b257256c7009ee65e90633fbf633",
-    "config.json": "8f10ab935a5d378e0476d3ef8ab69a1c8f4140213a9a8e7c95dfac8681dbee51",
+    "config.json": "4266caeac48823e55d583d9e1bae9d55ad837fade9ea929bcdfc71777fc5d81d",
     "game_addrs.asm": "e2548127e5dbe283eaf51c71af7a10f785fd88da69dcef23219ee61d0722f764",
     "graphic/pokemon_storage/header.bin.lz": "9d514a4385431d1eb18f2059d8a03f54a2cb3450825d02bc8fe3e8e20f9a051c",
     "link/game.ld": "fc75d7de8b1d5755d4feddf7fa77315d3e6f5a448afa515996f3889488f31db2",
@@ -79,18 +79,18 @@
     "todo/update_safari_balls_text_in_healthbox.c": "7ef0d2bcc261bf7c62a119392d5585153364b44af8a12b0d047d7e8dfb6d7183"
   },
   "key_src_sha256": {
-    "src/meowth/policy.py": "03702947a9b259c17c74a944d1af7543e4b1cad1e50e5c5377f36f3ad6509a2c",
+    "src/meowth/policy.py": "5bbd03998d8a45200f58406708bfd9523beecc015e67a83cdc0649d5c973db28",
     "src/meowth/seed_translate.py": "3f5952131892d44f5a5d777d771a45b83978291411387e10e3447fef04950846",
-    "src/meowth/rom_writer.py": "3876bfe6b934ce30f7eec22ffbc244591943389ac318abe327a0a987ed5bb926",
+    "src/meowth/rom_writer.py": "88bfbf4615d194c98a9dea16dac1fd8a1057fcb6748ec23211c45c08232e92c6",
     "src/meowth/font_patch.py": "ae17cd96dca364503971f30d0b1d3f21d71bdbd11d559d50b61abc33ea98a17a",
-    "src/meowth/core/engine.py": "ff261d42315831dfd29f616578c1bdf3c863b991e4f4916a64af7c247ef9b4df",
+    "src/meowth/core/engine.py": "abbc517c97ab297153c13d4b1061352060d7efb2fb22e712c87d8f8b94389244",
     "src/meowth/table_patch.py": "998a417b554c225d991706004f1989b29b084d4c9f1f8dad5a88f3e0ea9b8c12"
   },
   "inject_stats": {
-    "in_place": 681,
-    "relocated": 226,
+    "in_place": 4336,
+    "relocated": 3066,
     "skipped": 0,
-    "entry_count": 907,
+    "entry_count": 7822,
     "name_tables": {},
     "modules": [
       "属性名",
@@ -133,8 +133,8 @@
       "include": "",
       "exclude": "",
       "omit_band": "",
-      "before": 907,
-      "after": 907,
+      "before": 7822,
+      "after": 7822,
       "omit_range": null
     }
   },

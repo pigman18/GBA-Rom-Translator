@@ -1,10 +1,10 @@
 {
-  "build_id": "0.4.5+20260805T101708.77124e7c0655",
+  "build_id": "0.4.5+20260805T145731.77124e7c0655",
   "package_version": "0.4.5",
-  "timestamp_utc": "2026-08-05T10:17:08Z",
+  "timestamp_utc": "2026-08-05T14:57:31Z",
   "game": "POKEMON_RUBY_AXVJ00",
   "output_rom": "C:\\code\\GBA-Rom-Translator\\roms\\outputs\\POKEMON_RUBY_AXVJ00_translated.gba",
-  "output_rom_sha256": "12e6e793f5881793a7469f7c7281188496e5faaf8a2574e7b8c3199ee0cb7ffd",
+  "output_rom_sha256": "f6c69fe1c273eb31d07c76c4e4e0278c3f038418767389e01f0576ec646b559a",
   "patch_root": "C:/code/GBA-Rom-Translator/configs/POKEMON_RUBY_AXVJ00/hook",
   "patch_tree_sha256": "77124e7c0655702814145a50a58b21081c10fe04d5420857a2f2238e96f45f4a",
   "patch_file_count": 68,
@@ -81,16 +81,16 @@
   "key_src_sha256": {
     "src/meowth/policy.py": "5bbd03998d8a45200f58406708bfd9523beecc015e67a83cdc0649d5c973db28",
     "src/meowth/seed_translate.py": "41322de3c8acf047d5a4a8ece311034b150e3f149ca5dad8ec7a41545da5612d",
-    "src/meowth/rom_writer.py": "e9ef08597468b523f27a8a40ad5d8198f6d12f0650f73870abdf9486e43a59e6",
+    "src/meowth/rom_writer.py": "fd6e577f7a1d8303d6d6923681cb80a8818eff22f12123748e920271a6b572e4",
     "src/meowth/font_patch.py": "ae17cd96dca364503971f30d0b1d3f21d71bdbd11d559d50b61abc33ea98a17a",
-    "src/meowth/core/engine.py": "833e4833d6d4df4e20496b0bbebd134edc4682c1ea07ca20020060149483f41e",
+    "src/meowth/core/engine.py": "d693fcf8f7d4d0c4a0a397f318ca4ef7c509b38cfd3220cafda2c11f041f5a91",
     "src/meowth/table_patch.py": "998a417b554c225d991706004f1989b29b084d4c9f1f8dad5a88f3e0ea9b8c12"
   },
   "inject_stats": {
-    "in_place": 0,
-    "relocated": 66,
+    "in_place": 65,
+    "relocated": 0,
     "skipped": 0,
-    "entry_count": 66,
+    "entry_count": 65,
     "name_tables": {},
     "modules": [
       "地点名"
@@ -99,8 +99,8 @@
       "include": "",
       "exclude": "",
       "omit_band": "",
-      "before": 66,
-      "after": 66,
+      "before": 65,
+      "after": 65,
       "omit_range": null
     }
   },

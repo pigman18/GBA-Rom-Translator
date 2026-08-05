@@ -23,6 +23,55 @@ from .config_loader import F9_EOS, F9_PHRASE_DEFAULT
 # relocate 的 F9 00 流会导致花屏/崩溃；也不允许 F9 80 短语引用）。
 NO_RELOCATE_TYPES = frozenset({"stride", "struct"})
 
+# 同 id 多 type 冲突时保留优先级更高者（注入去重 / 载入 build 用）
+PLAN_TYPE_RANK: dict[str, int] = {
+    "relocate": 40,
+    "in_place": 30,
+    "upgrade": 20,
+    "f980": 20,
+    "keep": 10,
+}
+
+
+def plan_type_rank(ptype: str | None) -> int:
+    return PLAN_TYPE_RANK.get(str(ptype or "keep"), 0)
+
+
+def dedupe_entries_by_id(entries: list[dict]) -> list[dict]:
+    """按 id 去重：同一 id 只保留首次出现。无 id 的条目原样保留。"""
+    seen: set[str] = set()
+    out: list[dict] = []
+    for e in entries:
+        eid = str(e.get("id") or "")
+        if not eid:
+            out.append(e)
+            continue
+        if eid in seen:
+            continue
+        seen.add(eid)
+        out.append(e)
+    return out
+
+
+def prefer_plan(existing: dict | None, candidate: dict) -> dict:
+    """同 id 多份 plan 时保留 type 优先级更高者；同级保留已有（先到）。"""
+    if existing is None:
+        return candidate
+    if plan_type_rank(candidate.get("type")) > plan_type_rank(existing.get("type")):
+        return candidate
+    return existing
+
+
+def build_plan_map_by_id(plan_entries_rows: list[dict]) -> dict[str, dict]:
+    """从 translate.build.json entries 建 id→plan，冲突按 PLAN_TYPE_RANK。"""
+    out: dict[str, dict] = {}
+    for row in plan_entries_rows:
+        eid = str(row.get("id") or "")
+        if not eid or not row.get("type"):
+            continue
+        out[eid] = prefer_plan(out.get(eid), row)
+    return out
+
 
 def _module_meta(game_id: str, module_id: str | None) -> dict:
     if not module_id:
@@ -97,6 +146,8 @@ def preallocate_upgrade_phrases(
             continue
         if not t or t == o:
             continue
+        if "|||" in t:
+            continue
         s = charmap._sanitize(t)
         if s in phrase_codes:
             continue
@@ -142,6 +193,14 @@ def plan_entry(
             "type": "keep",
             "target_hex": original_hex,
             "reason": "无翻译或译文与原文相同",
+        }
+
+    # LLM batch 分隔符泄漏：||| 会编进 target_hex（含 00 填充），禁止注入
+    if "|||" in translated:
+        return {
+            "type": "keep",
+            "target_hex": original_hex,
+            "reason": "译文含 LLM 分隔符 |||",
         }
 
     s = charmap._sanitize(translated)
@@ -200,6 +259,7 @@ def plan_entries(
     phrase_codes: dict[str, int],
     game_id: str = "",
 ) -> list[dict]:
-    """批量决策：先预分配 upgrade 短语码，再逐条 plan。返回 plan 列表。"""
+    """批量决策：先按 id 去重，再预分配 upgrade 短语码，再逐条 plan。"""
+    entries = dedupe_entries_by_id(entries)
     preallocate_upgrade_phrases(entries, charmap, phrase_codes, game_id=game_id)
     return [plan_entry(e, charmap, phrase_codes, game_id=game_id) for e in entries]

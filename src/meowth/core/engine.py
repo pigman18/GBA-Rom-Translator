@@ -834,12 +834,36 @@ class TranslationEngine:
 
         短语码（词典 + 自动 upgrade 预分配）在此阶段确定并写入 phrases，
         build 阶段据此生成 PhraseTable 并按 type 注入。
-        """
-        from ..translate_plan import plan_entries
 
-        flat = data.get("entries") or []
+        勾选了模块时（``_axvj_active_modules``）只写入勾选模块条目，
+        避免未勾选模块（如高风险混杂）出现在 build 里误导验收。
+        """
+        from ..translate_plan import dedupe_entries_by_id, plan_entries
+
+        flat = dedupe_entries_by_id(data.get("entries") or [])
         if not flat:
             return
+
+        active = getattr(self, "_axvj_active_modules", None)
+        active_list: list[str] | None = None
+        if active is not None and self._feature("module_filter"):
+            from ..modules import filter_entries_by_modules
+
+            before = len(flat)
+            active_list = sorted(active)
+            flat = filter_entries_by_modules(
+                flat, active_list, game_id=self.config.game
+            )
+            dropped = before - len(flat)
+            if dropped:
+                self._log(
+                    "info",
+                    f"[翻译通路] 按勾选模块收窄 build: {before} → {len(flat)} "
+                    f"（去掉未勾选 {dropped}）[modules={active_list}]",
+                )
+            if not flat:
+                self._log("warning", "[翻译通路] 勾选模块下无条目，跳过 translate.build.json")
+                return
 
         # 分配词典短语码（build 阶段不再重新分配，共享同一码表）
         self.charmap._phrase_codes = {}
@@ -864,6 +888,8 @@ class TranslationEngine:
 
         payload = {
             "game_id": self.config.game,
+            "modules": list(self.config.modules or []) if self.config.modules else active_list,
+            "active_modules": active_list,
             "count": len(flat),
             "phrases": phrases_by_code,
             "entries": [
@@ -2137,15 +2163,19 @@ class TranslationEngine:
         try:
             build_plan_path = (game_work or Path(self.config.work_dir) / self.config.game) / "translate.build.json"
             if build_plan_path.exists():
+                from ..translate_plan import build_plan_map_by_id, dedupe_entries_by_id
+
                 _bp = json.loads(build_plan_path.read_text(encoding="utf-8"))
-                _plan_map = {e.get("id"): e for e in _bp.get("entries") or [] if e.get("type")}
+                _plan_map = build_plan_map_by_id(_bp.get("entries") or [])
+                all_entries = dedupe_entries_by_id(all_entries)
                 for _entry in all_entries:
-                    _p = _plan_map.get(_entry.get("id"))
+                    _p = _plan_map.get(_entry.get("id") or "")
                     if _p:
                         _entry["_plan"] = _p
                 self._log(
                     "info",
-                    f"[翻译通路] 载入 translate.build.json: {len(_plan_map)} 条决策",
+                    f"[翻译通路] 载入 translate.build.json: {len(_plan_map)} 条决策"
+                    f"（条目去重后 {len(all_entries)}）",
                 )
         except Exception as e:  # pragma: no cover
             self._log("warning", f"[翻译通路] 载入 translate.build.json 失败: {e}")

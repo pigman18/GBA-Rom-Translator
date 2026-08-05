@@ -468,7 +468,8 @@
       },
       "start": "0x3B9414",
       "min_byte_length": 5,
-      "max_byte_length": 14
+      "max_byte_length": 14,
+      "no_relocate": true
     },
     "道具名": {
       "label": "词条·道具",

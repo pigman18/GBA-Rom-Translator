@@ -260,9 +260,16 @@ class RomWriter:
 
         Returns (rom, stats).
         Raises ValueError on any write failure — never silently skips.
+
+        注入前按 id 去重；同一 id 只处理一次。in_place/upgrade 若会覆盖
+        其它条目的 relocate ``pointer_sources`` 则跳过（防 F9 写入指针槽）。
         """
         if not isinstance(rom, bytearray):
             rom = bytearray(rom)
+
+        from .translate_plan import dedupe_entries_by_id
+
+        entries = dedupe_entries_by_id(entries)
 
         # Auto-detect safe expansion start
         if self._is_armips:
@@ -281,6 +288,8 @@ class RomWriter:
         stats = {
             "in_place": 0, "relocated": 0, "errors": 0,
             "name_tables": {},
+            "skipped_dup_id": 0,
+            "skipped_ptr_clobber": 0,
         }
 
         lz_spans = None
@@ -313,6 +322,8 @@ class RomWriter:
                     expanded_modules.add(patch_key)
 
         self._axvj_lz_spans = lz_spans
+        self._inject_ptr_slots = self._collect_relocate_pointer_slots(entries)
+        self._inject_processed_ids: set[str] = set()
         baseline = bytes(rom) if self._is_armips else b""
         total = len(entries)
 
@@ -323,6 +334,12 @@ class RomWriter:
                 em = entry.get("module") or entry.get("_axvj_module") or entry.get("category") or ""
                 if em in expanded_modules:
                     continue
+                eid = str(entry.get("id") or "")
+                if eid and eid in self._inject_processed_ids:
+                    stats["skipped_dup_id"] += 1
+                    continue
+                if eid:
+                    self._inject_processed_ids.add(eid)
                 self._process_entry_v2(rom, entry, stats)
             except Exception as e:
                 print(f"Error processing {entry.get('id', '?')}: {e}")
@@ -340,7 +357,49 @@ class RomWriter:
             if n_rest:
                 print(f"Restored {n_rest} false gfx/LZ pointer rewrites")
 
+        if stats.get("skipped_dup_id") or stats.get("skipped_ptr_clobber"):
+            print(
+                f"Inject guards: skipped_dup_id={stats.get('skipped_dup_id', 0)} "
+                f"skipped_ptr_clobber={stats.get('skipped_ptr_clobber', 0)}"
+            )
+
         return rom, stats
+
+    def _collect_relocate_pointer_slots(self, entries: list[dict]) -> set[int]:
+        """收集 relocate 计划的 pointer_sources（ROM 文件偏移），供 in_place 避让。"""
+        slots: set[int] = set()
+        for e in entries:
+            plan = e.get("_plan")
+            ptrs: list = []
+            if plan and (plan.get("type") or "") == "relocate":
+                ptrs = (
+                    plan.get("pointer_sources")
+                    or e.get("pointer_addresses")
+                    or e.get("pointer_sources")
+                    or []
+                )
+            elif not plan:
+                # 无 plan 的旧路径：有指针且会走 relocate 候选
+                ptrs = e.get("pointer_addresses", e.get("pointer_sources", [])) or []
+            for p in ptrs:
+                try:
+                    off = self._to_rom_offset(int(str(p).replace("0x", ""), 16))
+                except (TypeError, ValueError):
+                    continue
+                if off >= 0:
+                    slots.add(off)
+        return slots
+
+    def _body_covers_pointer_slot(
+        self, address: int, byte_length: int, *, entry_id: str = ""
+    ) -> list[int]:
+        """若 [address, address+byte_length) 覆盖任一 relocate 指针槽，返回命中槽列表。"""
+        slots = getattr(self, "_inject_ptr_slots", None) or set()
+        if not slots or byte_length <= 0:
+            return []
+        end = address + byte_length
+        hits = sorted(p for p in slots if address <= p < end)
+        return hits
 
     def _process_planned_entry(
         self, rom: bytearray, entry: dict, plan: dict, stats: dict
@@ -366,6 +425,21 @@ class RomWriter:
         if address >= self.POINTER_OFFSET:
             address -= self.POINTER_OFFSET
         byte_length = entry.get("byte_length", 0) or 0
+
+        if ptype in ("f980", "upgrade", "in_place"):
+            clobber = self._body_covers_pointer_slot(
+                address, byte_length, entry_id=str(entry_id)
+            )
+            if clobber:
+                print(
+                    f"  KEEP {entry_id} @ 0x{address:X} (cat={category}): "
+                    f"保留原文（{ptype} 会覆盖 relocate 指针槽 "
+                    f"{', '.join(f'0x{p:X}' for p in clobber[:4])}"
+                    f"{'…' if len(clobber) > 4 else ''}）"
+                )
+                stats["skipped_ptr_clobber"] = stats.get("skipped_ptr_clobber", 0) + 1
+                stats["kept"] = stats.get("kept", 0) + 1
+                return
 
         if ptype in ("f980", "upgrade"):
             # F9 80 短语引用（5 字节），写入原槽位；槽位不足则保留原文
@@ -463,10 +537,16 @@ class RomWriter:
             return False
         from .config_loader import F9_EOS, F9_PHRASE_DEFAULT
 
-        target = bytes(
-            [0xF9, F9_PHRASE_DEFAULT, (code >> 8) & 0xFF, code & 0xFF, F9_EOS]
-        )
+        target = bytes([0xF9, F9_PHRASE_DEFAULT, (int(code) >> 8) & 0xFF, int(code) & 0xFF, F9_EOS])
         if byte_length < len(target):
+            return False
+        clobber = self._body_covers_pointer_slot(address, byte_length, entry_id=entry_id)
+        if clobber:
+            print(
+                f"  KEEP {entry_id} @ 0x{address:X} (cat={category}): "
+                f"保留原文（F9-80 回退会覆盖指针槽）"
+            )
+            stats["skipped_ptr_clobber"] = stats.get("skipped_ptr_clobber", 0) + 1
             return False
         self._write_in_place_v2(rom, address, target, byte_length)
         stats["in_place"] = stats.get("in_place", 0) + 1
@@ -583,6 +663,16 @@ class RomWriter:
                 )
                 encoded = _safe_truncate_encoded(encoded, original_length - 1)
                 print(f"    -> after truncation: {encoded.hex()}")
+            clobber = self._body_covers_pointer_slot(
+                address, original_length, entry_id=str(entry_id)
+            )
+            if clobber:
+                print(
+                    f"  KEEP {entry_id} @ 0x{address:X} (cat={category}): "
+                    f"保留原文（in_place 会覆盖 relocate 指针槽）"
+                )
+                stats["skipped_ptr_clobber"] = stats.get("skipped_ptr_clobber", 0) + 1
+                return
             self._write_in_place_v2(rom, address, encoded, original_length)
             stats["in_place"] += 1
             return
@@ -607,6 +697,16 @@ class RomWriter:
                 )
                 encoded = _safe_truncate_encoded(encoded, original_length - 1)
                 print(f"    -> after truncation: {encoded.hex()}")
+            clobber = self._body_covers_pointer_slot(
+                address, original_length, entry_id=str(entry_id)
+            )
+            if clobber:
+                print(
+                    f"  KEEP {entry_id} @ 0x{address:X} (cat={category}): "
+                    f"保留原文（in_place 会覆盖 relocate 指针槽）"
+                )
+                stats["skipped_ptr_clobber"] = stats.get("skipped_ptr_clobber", 0) + 1
+                return
             self._write_in_place_v2(rom, address, encoded, original_length)
             stats["in_place"] += 1
         else:

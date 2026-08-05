@@ -84,10 +84,11 @@ def preallocate_upgrade_phrases(
     phrase_codes: dict[str, int],
     game_id: str = "",
 ) -> None:
-    """先扫描“超槽位且不可 relocate”的条目，为它们预先分配短语码。
+    """只给“超槽位且确定走 F9 80”的条目预分配短语码。
 
-    这样后续条目的 ``f980`` 完全匹配判定能命中自动分配的短语（用户要求
-    type1 也包含自动分配的短语）。
+    走 relocate 的条目（有指针 + 允许 relocate）不预占码——F9 80 按需申请，
+    可 relocate 的路径用不到；只有无法 relocate（无指针/禁 relocate）的
+    超槽条目才需要 F9 80 码。
     """
     for e in entries:
         t = _translated_of(e)
@@ -101,6 +102,8 @@ def preallocate_upgrade_phrases(
         if byte_length < 5:
             continue  # 槽位连 F9 80 都放不下 → keep
         module_id = e.get("module") or e.get("_axvj_module") or e.get("category")
+        if _ptr_sources(e) and module_allows_relocate(game_id, module_id):
+            continue  # 可 relocate → 走 relocate，不预占 F9 80 码
         if not module_allows_phrase(game_id, module_id):
             continue  # ui 特殊界面不短语引用 → keep
         try:
@@ -150,13 +153,12 @@ def plan_entry(
         return {"type": "in_place", "target_hex": encoded.hex(" ")}
 
     # type 2: 编码超槽位且该模块允许 relocate 且有指针 → 指针扩表。
-    # 附带预分配的 phrase_code，供 build 注入 relocate 失败时回退 F9 80。
+    # F9 80 码按需申请：走 relocate 的条目不预占码。
     if allow_reloc and _ptr_sources(entry):
         return {
             "type": "relocate",
             "target_hex": encoded.hex(" "),
             "pointer_sources": _ptr_sources(entry),
-            "phrase_code": phrase_codes.get(s),
         }
 
     # type 3: 超槽位且 relocate 不可用（无指针/禁 relocate）但允许短语

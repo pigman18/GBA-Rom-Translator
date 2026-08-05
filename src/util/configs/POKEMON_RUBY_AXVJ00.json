@@ -75,7 +75,7 @@
       "id": "物种名",
       "label": "词条·物种",
       "group": "词条",
-      "default": false,
+      "default": true,
       "table": true,
       "description": "物种名固定表",
       "start": "0x1ca354",

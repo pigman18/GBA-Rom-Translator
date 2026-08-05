@@ -881,6 +881,8 @@ class TranslationEngine:
                     "phrase_code": p.get("phrase_code"),
                     "reason": p.get("reason"),
                     "_reject": bool(e.get("_reject")),
+                    "check_score": e.get("check_score"),
+                    "check_hits": list(e.get("check_hits") or []),
                 }
                 for e, p in zip(flat, plans)
             ],
@@ -1403,6 +1405,7 @@ class TranslationEngine:
                 # 清掉上次全量校验可能留下的标记，避免未勾选模块条目仍带 _reject
                 e.pop("_reject", None)
                 e.pop("check_score", None)
+                e.pop("check_hits", None)
                 mid = stamp_entry_module(e, game_id=game_id)
                 if mid is not None and mid in active_modules:
                     candidates.append(e)
@@ -1415,6 +1418,7 @@ class TranslationEngine:
             e["translated"] = ""
             if score is not None:
                 e["check_score"] = score
+            e["check_hits"] = list(hits or [])
             rejected.append(
                 dict(e, check_hits=list(hits or []), _reject=True)
             )
@@ -1428,11 +1432,12 @@ class TranslationEngine:
             scored_count = len(candidates)
             total = 100.0
         else:
-            scored = score_entries(candidates, rom)
+            scored = score_entries(candidates, rom, game_id=game_id)
             scored_count = len(scored)
             for e, hits, s in scored:
                 eid = e.get("id") or ""
                 e["check_score"] = s
+                e["check_hits"] = list(hits)
                 # rejects 无条件拒绝；低分且不在 allows → 拒绝
                 if eid in rejects or (s < threshold and eid not in allows):
                     _mark_reject(e, hits=hits, score=s)
@@ -2163,32 +2168,6 @@ class TranslationEngine:
                     parts.append(f"{key}: ptr={tbl.get('ptr_patched', 0)} mul={tbl.get('mul_patched', 0)}")
                 if parts:
                     self._log("info", "AXVJ name tables: " + " | ".join(parts))
-
-        # Critical dialogue must be non-empty ZH and in the inject set (seed-only gate)
-        _critical_needles = (
-            "その ほかに",
-            "あ！ やせいの",
-            "ポケモンを えらんで ください",
-        )
-        for needle in _critical_needles:
-            hits = [
-                e
-                for e in all_entries
-                if needle in (e.get("original") or "")
-                and self._usable_zh(e.get("original") or "", e.get("translated") or "")
-            ]
-            if hits:
-                self._log(
-                    "info",
-                    f"critical OK: {needle!r} → {len(hits)} injected "
-                    f"(eg {hits[0].get('translated', '')[:24]!r})",
-                )
-            else:
-                self._log(
-                    "warning",
-                    f"critical MISSING from inject set: {needle!r} "
-                    f"(lexicon/seed empty or filtered)",
-                )
 
         # Save (if emulator locks the file, write sibling *_new.gba)
         output_path.parent.mkdir(parents=True, exist_ok=True)

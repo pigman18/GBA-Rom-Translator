@@ -419,11 +419,23 @@ def export(
             }
 
     write_json(modules_path, result)
+    sync_modules_to_product(rom_id, modules_path)
 
     counts = result["_meta"]["module_band_counts"]
     nonempty = sum(1 for v in counts.values() if v)
     print(f"[ok] modules ({nonempty} nonempty) via {map_path.name} -> {modules_path}")
     return modules_path, result
+
+
+def sync_modules_to_product(rom_id: str, modules_path: Path) -> Path | None:
+    """Copy generated works/modules.json to configs/<rom_id>/translate/modules.json."""
+    dest = REPO_ROOT / "configs" / rom_id / "translate" / "modules.json"
+    if not modules_path.is_file():
+        return None
+    dest.parent.mkdir(parents=True, exist_ok=True)
+    dest.write_bytes(modules_path.read_bytes())
+    print(f"[ok] synced modules -> {dest}")
+    return dest
 
 
 # --------------------------------------------------------------------------

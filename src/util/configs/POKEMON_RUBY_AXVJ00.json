@@ -118,7 +118,9 @@
       "description": "地图/地区名表",
       "start": "0x3B9201",
       "end": "0x3CA098",
-      "type": "scan"
+      "type": "scan",
+      "min_byte_length": 5,
+      "max_byte_length": 14
     },
     {
       "id": "道具名",

@@ -149,6 +149,20 @@ def _geo_from_src(src: dict) -> Optional[List[List[str]]]:
     return geo or None
 
 
+def _copy_byte_length_bounds(entry: Dict[str, Any], src: Optional[dict]) -> None:
+    """Copy non-empty min_byte_length / max_byte_length from module_map src."""
+    if not src:
+        return
+    for key in ("min_byte_length", "max_byte_length"):
+        val = src.get(key)
+        if val is None or val == "":
+            continue
+        try:
+            entry[key] = int(val)
+        except (TypeError, ValueError):
+            continue
+
+
 def _emit_scan_entry(
     meta: dict,
     bands_out: List[List[str]],
@@ -171,6 +185,7 @@ def _emit_scan_entry(
         entry["geo_ranges"] = geo
     if src and src.get("no_relocate"):
         entry["no_relocate"] = True
+    _copy_byte_length_bounds(entry, src)
     return entry
 
 
@@ -215,6 +230,7 @@ def _emit_typed_entry(src: dict, bands_out: List[List[str]]) -> Dict[str, Any]:
     geo = _geo_from_src(src)
     if geo:
         entry["geo_ranges"] = geo
+    _copy_byte_length_bounds(entry, src)
     return entry
 
 

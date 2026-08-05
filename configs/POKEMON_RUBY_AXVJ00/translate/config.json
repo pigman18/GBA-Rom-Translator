@@ -1,7 +1,21 @@
 {
   "allows": [],
   "rejects": [
+    "axvj_2473e30ae149",
+    "axvj_a923da70b61a",
 
+    "axvj_28876ef24ee8",
+    "axvj_ab0b4db0109d",
+    "axvj_d9a32b6c81cb",
+    "axvj_95f14f848919",
+    "axvj_ce4d64086c7b",
+    "axvj_95325de7b9eb",
+    "axvj_d04da5aab678",
+    "axvj_cd7776d04a39",
+    "axvj_0942b151ac1f",
+    "axvj_766b588f5013",
+    "axvj_da5b5e6488bc",
+    "axvj_a411608ed7cb"
   ],
   "protect": {
     "line_width": 32,

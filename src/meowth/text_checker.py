@@ -36,6 +36,8 @@ WEIGHTS: dict[str, int] = {
     "lz_span": 30,       # 地址处是完整 LZ77 压缩流（需 ROM）
     "orig_rom": 30,      # 原 ROM 该地址字节不是文本流（需 ROM）
     "tile_map": 40,      # Gen3 地图/图块头：10 00 ?? 00 08 00 + 三连同字节
+    "mod_min_len": 40,   # 低于模块 min_byte_length（空则不校验）
+    "mod_max_len": 40,   # 高于模块 max_byte_length（空则不校验）
 }
 
 _TERMINATORS = (0xFF, 0xFB, 0xFE)
@@ -336,6 +338,33 @@ def _tile_map(bs: bytes) -> bool:
     return bs[6] == bs[7] == bs[8] and bs[6] != 0
 
 
+def _parse_optional_bound(val) -> int | None:
+    """模块 min/max_byte_length：缺省 / 空 / null → 不校验。"""
+    if val is None or val == "":
+        return None
+    try:
+        return int(val)
+    except (TypeError, ValueError):
+        return None
+
+
+def _mod_len_hits(
+    entry: dict, module_meta: dict | None
+) -> list[str]:
+    """按模块 ``min_byte_length`` / ``max_byte_length`` 判定。"""
+    if not module_meta:
+        return []
+    bl = entry.get("byte_length", 0) or 0
+    hits: list[str] = []
+    mn = _parse_optional_bound(module_meta.get("min_byte_length"))
+    mx = _parse_optional_bound(module_meta.get("max_byte_length"))
+    if mn is not None and bl < mn:
+        hits.append("mod_min_len")
+    if mx is not None and bl > mx:
+        hits.append("mod_max_len")
+    return hits
+
+
 def _terminator(bs: bytes) -> bool:
     if not bs:
         return False
@@ -421,7 +450,10 @@ def _compute_overlap(entries: list[dict]) -> set[int]:
 
 
 def score_entries(
-    entries: list[dict], rom: bytes | None = None
+    entries: list[dict],
+    rom: bytes | None = None,
+    *,
+    game_id: str | None = None,
 ) -> list[tuple[dict, list[str], int]]:
     """对条目列表评分，返回 ``[(entry, hits, score)]``。
 
@@ -430,7 +462,15 @@ def score_entries(
 
     权威形态只抑制 thumb/arm/ptr_odd；质量类算法（jp_text / garbage /
     entropy / glyph_ratio / kana_stats …）始终计分。
+
+    ``game_id`` 用于读取模块 ``min_byte_length`` / ``max_byte_length``。
     """
+    modules_meta: dict = {}
+    if game_id:
+        from .config_loader import load_modules
+
+        modules_meta = load_modules(game_id) or {}
+
     overlap_set = _compute_overlap(entries)
     scored: list[tuple[dict, list[str], int]] = []
     for i, e in enumerate(entries):
@@ -444,6 +484,8 @@ def score_entries(
         off = _entry_off(e)
         length = e.get("byte_length", 0)
         auth = _authoritative(bs, rom, off, length)
+        mid = str(e.get("module") or "")
+        mod_meta = modules_meta.get(mid) if mid else None
 
         # --- 质量层：始终计分 ---
         if bs and not looks_like_jp_text(bs):
@@ -460,6 +502,7 @@ def score_entries(
             hits.append("terminator")
         if _length(e):
             hits.append("length")
+        hits.extend(_mod_len_hits(e, mod_meta))
         if i in overlap_set:
             hits.append("overlap")
         if rom is not None and _lz77_span(rom, off):
@@ -548,7 +591,7 @@ def check_texts(
         )
 
     rom = rom_path.read_bytes()
-    scored = score_entries(candidates, rom)
+    scored = score_entries(candidates, rom, game_id=texts_gid)
     # 被拒条件：id 在 rejects（无条件拒绝）或 score<threshold 且 id 不在 allows
     rejected = [
         (e, h, s)

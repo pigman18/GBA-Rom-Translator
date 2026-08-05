@@ -1,22 +1,26 @@
 {
   "allows": [],
   "rejects": [
-    "axvj_2473e30ae149",
-    "axvj_a923da70b61a",
+    "axvj_c1654b0a3eba",
+    "axvj_4942c5ff727e",
+    "axvj_52c5d8d34056",
+    "axvj_93f696f5fd09",
+    "axvj_d1cf1ee6d4e9",
+    "axvj_3851bd0dac8a",
+    "axvj_b14d78d6fd70",
+    "axvj_1a2ecdf9f32d",
 
-    "axvj_28876ef24ee8",
-    "axvj_ab0b4db0109d",
-    "axvj_d9a32b6c81cb",
-    "axvj_95f14f848919",
-    "axvj_ce4d64086c7b",
-    "axvj_95325de7b9eb",
-    "axvj_d04da5aab678",
-    "axvj_cd7776d04a39",
-    "axvj_0942b151ac1f",
-    "axvj_766b588f5013",
-    "axvj_da5b5e6488bc",
-    "axvj_a411608ed7cb",
-    "axvj_5b0ba277c78d"
+    "axvj_a29b9c8949f8",
+    "axvj_1b745d82ec5c",
+    "axvj_2f499bc76070",
+    "axvj_869754ac1456",
+    "axvj_be45ea068b39",
+    "axvj_5fcf76df65f9",
+    "axvj_2f9915e6f88b",
+    "axvj_14444542259e",
+    "axvj_0574f224f433",
+
+    "axvj_9c8fdf94549d"
   ],
   "protect": {
     "line_width": 32,

@@ -92,6 +92,29 @@ class RomWriter:
             pos -= 1
         return pos + 1
 
+    def _font_slots_end_offset(self) -> int:
+        """ROM file offset just past the last font_slot (Normal/Small/Sym).
+
+        Prevents relocate from treating trailing 0x00 inside/after sparse glyph
+        bins as free space and overwriting FontChsSym (全局红字).
+        """
+        end = 0
+        for slot in self._fp.get("font_slots") or []:
+            addr = slot.get("addr")
+            if addr is None:
+                continue
+            a = int(addr)
+            if a >= self.POINTER_OFFSET:
+                a -= self.POINTER_OFFSET
+            size = int(
+                slot.get("slot_size")
+                or int(slot.get("glyph_count") or 0)
+                * int(slot.get("bytes_per_glyph") or 128)
+            )
+            if size > 0:
+                end = max(end, a + size)
+        return end
+
     def _axvj_expected_pointer(self, text_address: int) -> int:
         """GBA pointer word for a ROM file offset or already-absolute address."""
         if text_address >= self.POINTER_OFFSET:
@@ -271,19 +294,27 @@ class RomWriter:
 
         entries = dedupe_entries_by_id(entries)
 
-        # Auto-detect safe expansion start
+        # Auto-detect safe expansion start (never below config / font_slots end)
+        font_end = self._font_slots_end_offset()
+        floor = max(self.EXPANSION_START, font_end)
         if self._is_armips:
             free_start = self._find_free_space(rom, self.FONT_BOUNDARY, fill=0x00)
-            free_start = max(free_start, self.EXPANSION_START)
+            free_start = max(free_start, floor)
             if free_start >= self.FONT_BOUNDARY - 0x1000:
-                free_start = self.EXPANSION_START
+                free_start = floor
         else:
-            free_start = self._find_free_space(rom, self.FONT_BOUNDARY, fill=0xFF)
+            free_start = max(
+                self._find_free_space(rom, self.FONT_BOUNDARY, fill=0xFF),
+                floor,
+            )
         available = self.FONT_BOUNDARY - free_start
         if available < self._MIN_FREE_BLOCK:
             print(f"Warning: only {available:,} bytes free before font boundary")
         self.write_offset = free_start
-        print(f"Expansion region start: 0x{free_start:08X} ({available:,} bytes available)")
+        print(
+            f"Expansion region start: 0x{free_start:08X} "
+            f"(floor=0x{floor:08X}, available={available:,})"
+        )
 
         stats = {
             "in_place": 0, "relocated": 0, "errors": 0,

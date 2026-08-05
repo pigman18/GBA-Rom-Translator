@@ -1304,9 +1304,7 @@
       },
       "start": "0x3B9237",
       "relocate": false,
-      "hook": false,
-      "min_byte_length": 5,
-      "max_byte_length": 14
+      "hook": false
     },
     "道具名": {
       "label": "词条·道具",

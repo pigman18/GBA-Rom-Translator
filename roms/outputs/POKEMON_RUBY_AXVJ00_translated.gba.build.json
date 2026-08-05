@@ -1,12 +1,12 @@
 {
-  "build_id": "0.4.5+20260805T171554.9041bd71150b",
+  "build_id": "0.4.5+20260805T210051.40a32e92b3ef",
   "package_version": "0.4.5",
-  "timestamp_utc": "2026-08-05T17:15:54Z",
+  "timestamp_utc": "2026-08-05T21:00:51Z",
   "game": "POKEMON_RUBY_AXVJ00",
   "output_rom": "C:\\code\\GBA-Rom-Translator\\roms\\outputs\\POKEMON_RUBY_AXVJ00_translated.gba",
-  "output_rom_sha256": "24f5e1edf70a17c2b85ed6f3ddc1432f141b4bad1f02b1434e775a21c2589e82",
+  "output_rom_sha256": "74e0c608c3ceaf2d9e3c739f9737c6153c6d4233479c6fc748b9467d7114a106",
   "patch_root": "C:/code/GBA-Rom-Translator/configs/POKEMON_RUBY_AXVJ00/hook",
-  "patch_tree_sha256": "9041bd71150bb94df6c8fcac9ca5657c047ac040ef11d14ed3bbee7bc421b123",
+  "patch_tree_sha256": "40a32e92b3efcf88a3b037bb44ec4d47a13bed9471ca007961da440d26753362",
   "patch_file_count": 69,
   "patch_files": {
     ".gitignore": "e846bdff19d6f85c9bc402591091f8e043e0b74080478b2e502f2d0d00f559f8",
@@ -41,7 +41,7 @@
     "bak/include/OriginSymbols_S.s": "96f737218454186d0935786ceb44a9c1e1e3be1b7c15e6e8ff877acd2a1edc07",
     "bak/strings/testText.s": "ce407d2e5cd8363aed48d73e46ae1b789595cfeadf2bc314f6911517efc0cbad",
     "build.bat": "10e285fe587c68a069a9397cd73884b110a3b257256c7009ee65e90633fbf633",
-    "config.json": "4266caeac48823e55d583d9e1bae9d55ad837fade9ea929bcdfc71777fc5d81d",
+    "config.json": "c080736451118c316deb8c69069b74cc6cfde17492942eedecc9385e89093d7f",
     "game_addrs.asm": "e2548127e5dbe283eaf51c71af7a10f785fd88da69dcef23219ee61d0722f764",
     "gen/pointer_redirect.asm": "94a1a3b322b45910982d3048933f46f69f74627e92072b4b77ffd2cb5bb2f4b9",
     "graphic/pokemon_storage/header.bin.lz": "9d514a4385431d1eb18f2059d8a03f54a2cb3450825d02bc8fe3e8e20f9a051c",
@@ -82,26 +82,26 @@
   "key_src_sha256": {
     "src/meowth/policy.py": "5bbd03998d8a45200f58406708bfd9523beecc015e67a83cdc0649d5c973db28",
     "src/meowth/seed_translate.py": "41322de3c8acf047d5a4a8ece311034b150e3f149ca5dad8ec7a41545da5612d",
-    "src/meowth/rom_writer.py": "4cf5a8a07a82078779d32f6c14acd28474f3ffaf0990f17130db968a5ee32a8b",
+    "src/meowth/rom_writer.py": "c39f23f0af90345ac3bed80641bf3cbc97c4ac9e15143866c4e0ecce82e9ce8b",
     "src/meowth/font_patch.py": "ea3c0076eb6ad719f480d5c5d7d76a3a3f81c37a2eba4ba625a3d168f7357a64",
     "src/meowth/core/engine.py": "d693fcf8f7d4d0c4a0a397f318ca4ef7c509b38cfd3220cafda2c11f041f5a91",
     "src/meowth/table_patch.py": "998a417b554c225d991706004f1989b29b084d4c9f1f8dad5a88f3e0ea9b8c12"
   },
   "inject_stats": {
-    "in_place": 1286,
-    "relocated": 878,
+    "in_place": 0,
+    "relocated": 0,
     "skipped": 0,
-    "entry_count": 2255,
+    "entry_count": 0,
     "name_tables": {},
     "modules": [
-      "道路与洞窟"
+      "选项菜单扫描"
     ],
     "geo": {
       "include": "",
       "exclude": "",
       "omit_band": "",
-      "before": 2255,
-      "after": 2255,
+      "before": 0,
+      "after": 0,
       "omit_range": null
     }
   },

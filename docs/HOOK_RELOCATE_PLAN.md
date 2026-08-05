@@ -48,6 +48,7 @@ in_place（F900 ≤ 槽）
 - 地点名：`relocate=false`, `hook=false`
 - 禁止为消化 keep 打开地点名的 hook/relocate
 - 禁止改 lexicon 缩写凑槽；禁止在 `.py` 写死单地址
+- **扩展区**：`hook/config.json` `expansion_start` ≥ `0x01200000`（VMA `0x09200000`），须在 `FontChsSym`（`0x091E0000`+slot）之后；`rom_writer` 另用 `font_slots` 末端做 floor，防空闲扫描踩进字库导致全局红字
 
 ## 相关代码
 

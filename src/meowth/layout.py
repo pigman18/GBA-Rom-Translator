@@ -187,13 +187,14 @@ def layout_texts(
     result = LayoutResult()
 
     # ---- find free space in expansion area ----
+    floor = max(expansion_start, _font_slots_end_offset(fp_cfg))
     if is_armips:
         free_start = _find_free_space(rom, font_boundary, fill=0x00)
-        free_start = max(free_start, expansion_start)
+        free_start = max(free_start, floor)
         if free_start >= font_boundary - 0x1000:
-            free_start = expansion_start
+            free_start = floor
     else:
-        free_start = _find_free_space(rom, font_boundary, fill=0xFF)
+        free_start = max(_find_free_space(rom, font_boundary, fill=0xFF), floor)
 
     write_offset = free_start
     lz_spans = trusted_lz_spans(rom) if is_armips else []
@@ -704,6 +705,26 @@ def _find_free_space(rom: bytes, boundary: int, fill: int = 0x00) -> int:
     while pos >= 0 and rom[pos] == fill:
         pos -= 1
     return pos + 1
+
+
+def _font_slots_end_offset(fp_cfg: dict[str, Any]) -> int:
+    """File offset just past last font_slot (avoid Sym overwrite)."""
+    end = 0
+    for slot in fp_cfg.get("font_slots") or []:
+        addr = slot.get("addr")
+        if addr is None:
+            continue
+        a = int(addr)
+        if a >= _POINTER_OFFSET:
+            a -= _POINTER_OFFSET
+        size = int(
+            slot.get("slot_size")
+            or int(slot.get("glyph_count") or 0)
+            * int(slot.get("bytes_per_glyph") or 128)
+        )
+        if size > 0:
+            end = max(end, a + size)
+    return end
 
 
 def _axvj_pad_relocated(encoded: bytes) -> bytes:

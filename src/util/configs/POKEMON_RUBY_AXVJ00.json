@@ -43,7 +43,8 @@
       "read": {
         "stride": 5
       },
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "性格名",
@@ -57,7 +58,8 @@
       "read": {
         "stride": 4
       },
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "特性名",
@@ -72,7 +74,8 @@
       "read": {
         "stride": 8
       },
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "物种名",
@@ -87,7 +90,8 @@
       "read": {
         "stride": 6
       },
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "招式名",
@@ -102,7 +106,8 @@
       "read": {
         "stride": 8
       },
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "训练家类名",
@@ -114,7 +119,8 @@
       "start": "0x1C4A10",
       "end": "0x1C4D00",
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "地点名",
@@ -127,7 +133,8 @@
       "type": "scan",
       "min_byte_length": 5,
       "max_byte_length": 14,
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "道具名",
@@ -144,7 +151,8 @@
         "name_stride": 8,
         "desc_ptr_offset": 16
       },
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "道具说明",
@@ -155,7 +163,8 @@
       "start": "0x3984DC",
       "end": "0x39A647",
       "type": "scan",
-      "no_relocate": false
+      "relocate": true,
+      "hook": false
     },
     {
       "id": "招式说明",
@@ -166,7 +175,8 @@
       "start": "0x383001",
       "end": "0x397F20",
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "特性说明",
@@ -178,7 +188,8 @@
       "start": "0x1CBF00",
       "end": "0x1CC4E0",
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "图鉴条目",
@@ -189,7 +200,8 @@
       "start": "0x37B5C1",
       "end": "0x383000",
       "type": "scan",
-      "no_relocate": false
+      "relocate": true,
+      "hook": false
     },
     {
       "id": "开场家园",
@@ -200,7 +212,8 @@
       "start": "0x149300",
       "end": "0x156292",
       "type": "scan",
-      "no_relocate": false
+      "relocate": true,
+      "hook": false
     },
     {
       "id": "早期城镇",
@@ -211,7 +224,8 @@
       "start": "0x148243",
       "end": "0x165A17",
       "type": "scan",
-      "no_relocate": false
+      "relocate": true,
+      "hook": false
     },
     {
       "id": "中期城镇",
@@ -222,7 +236,8 @@
       "start": "0x145DBC",
       "end": "0x15C6AF",
       "type": "scan",
-      "no_relocate": false
+      "relocate": true,
+      "hook": false
     },
     {
       "id": "后期与联盟",
@@ -243,7 +258,8 @@
         }
       ],
       "type": "scan",
-      "no_relocate": false
+      "relocate": true,
+      "hook": false
     },
     {
       "id": "岛屿或通关后",
@@ -254,7 +270,8 @@
       "start": "0x17817E",
       "end": "0x17882B",
       "type": "scan",
-      "no_relocate": false
+      "relocate": true,
+      "hook": false
     },
     {
       "id": "道路与洞窟",
@@ -275,7 +292,8 @@
         }
       ],
       "type": "scan",
-      "no_relocate": false
+      "relocate": true,
+      "hook": false
     },
     {
       "id": "宝可梦中心",
@@ -286,7 +304,8 @@
       "start": "0x180531",
       "end": "0x1806F3",
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "商店",
@@ -331,7 +350,8 @@
         }
       ],
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "电脑与仓库",
@@ -356,7 +376,8 @@
         }
       ],
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "缆线与通信",
@@ -393,7 +414,8 @@
         }
       ],
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "标准脚本串",
@@ -404,7 +426,8 @@
       "start": "0x1E04C2",
       "end": "0x1EC108",
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "标题与主菜单",
@@ -415,7 +438,8 @@
       "start": "0x3E7A7C",
       "end": "0x3EA400",
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "存档与电源",
@@ -440,7 +464,8 @@
         }
       ],
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "设置选项",
@@ -451,7 +476,8 @@
       "start": "0x350F01",
       "end": "0x37B5C0",
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "背包界面",
@@ -462,7 +488,8 @@
       "start": "0x3E9AF4",
       "end": "0x3EB170",
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "状态界面",
@@ -483,7 +510,8 @@
         }
       ],
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "开始菜单",
@@ -508,7 +536,8 @@
         }
       ],
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "战斗菜单",
@@ -529,7 +558,8 @@
         }
       ],
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "战斗提示",
@@ -540,7 +570,8 @@
       "start": "0x3DC000",
       "end": "0x3DD7FF",
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "战斗报文",
@@ -551,7 +582,8 @@
       "start": "0x3DB500",
       "end": "0x3DBFFF",
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "对战设施",
@@ -562,7 +594,8 @@
       "start": "0x17882C",
       "end": "0x178FFE",
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "登场与胜负白",
@@ -573,7 +606,8 @@
       "start": "0x3B4C01",
       "end": "0x3B9200",
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "训练家名",
@@ -585,7 +619,8 @@
       "start": "0x1C7208",
       "end": "0x1CA34D",
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "图鉴界面",
@@ -602,7 +637,8 @@
         }
       ],
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "默认名字",
@@ -614,7 +650,8 @@
       "end": "0x1CA008",
       "type": "scan",
       "table": true,
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "赛事娱乐",
@@ -643,7 +680,8 @@
         }
       ],
       "type": "scan",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "高风险混杂",
@@ -1560,7 +1598,8 @@
           "end": "0x7FFDA3"
         }
       ],
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "选项菜单扫描",
@@ -1600,7 +1639,8 @@
       "label": "选项菜单扫描",
       "group": "其它",
       "default": false,
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "FC彩窗扫描",
@@ -1617,7 +1657,8 @@
       "label": "FC彩窗扫描",
       "group": "其它",
       "default": false,
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "存档提示扫描",
@@ -1698,7 +1739,8 @@
       "label": "存档提示扫描",
       "group": "其它",
       "default": false,
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "战斗HUD采集",
@@ -1724,7 +1766,8 @@
       "label": "战斗HUD采集",
       "group": "其它",
       "default": false,
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "短标菜单采集",
@@ -1778,7 +1821,8 @@
       "label": "短标菜单采集",
       "group": "其它",
       "default": false,
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "状态背包采集",
@@ -1810,7 +1854,8 @@
       "label": "状态背包采集",
       "group": "其它",
       "default": false,
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "战斗提示扫描",
@@ -1839,7 +1884,8 @@
       "label": "战斗提示扫描",
       "group": "其它",
       "default": false,
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     {
       "id": "主脚本指针",
@@ -1855,7 +1901,8 @@
       "default": false,
       "start": "0x0",
       "end": "0x0",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     }
   ],
   "unassigned": {

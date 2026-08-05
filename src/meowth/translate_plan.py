@@ -2,15 +2,15 @@
 
 type:
   in_place — F900 编码字节 ≤ 原始槽位，原地写入（最高优先）
-  relocate — 编码超槽位且有指针源且模块允许，写扩展区 + 指针改写
-             （附带预分配 phrase_code，注入 relocate 失败时回退 F9 80）
-  upgrade  — relocate 不可用（无指针/禁 relocate）但允许短语，F9 80 原地
+  relocate — 编码超槽位且有指针源且模块 ``relocate=true``，写扩展区 + 指针改写
+  upgrade  — relocate 不可用但允许短语，F9 80 原地（槽位 ≥ 5）
+  hook     — 前序失败且模块 ``hook=true`` 且有指针：生成 pointer_redirect.asm
   keep     — 都无法满足，保留原文（ROM 不动）
 
-优先级链：F900 原地 → relocate → F9 80 原地 → keep。
+优先级链：F900 原地 → relocate → F9 80 原地 → hook → keep。
 
 translate 阶段只做决策与编码（不注入 ROM），产出 translate.build.json，
-build 阶段按 type 注入。texts_translated.json 降级为翻译缓存文件。
+build 阶段按 type 注入（hook 交 armips）。
 """
 from __future__ import annotations
 
@@ -18,14 +18,13 @@ from typing import Any
 
 from .config_loader import F9_EOS, F9_PHRASE_DEFAULT
 
-# 不 relocate 的模块 type：定长槽（stride/struct 走 in_place/upgrade）。
-# 特殊 UI 用 modules.json 的 ``no_relocate: true`` 标志控制（渲染不走钩子，
-# relocate 的 F9 00 流会导致花屏/崩溃；也不允许 F9 80 短语引用）。
-NO_RELOCATE_TYPES = frozenset({"stride", "struct"})
+# 定长槽类型强制不可指针改写（不受 modules.json relocate 覆盖为 true）
+NO_RELOCATE_TYPES = frozenset({"stride", "struct", "ptr_stride", "stride_ptr"})
 
 # 同 id 多 type 冲突时保留优先级更高者（注入去重 / 载入 build 用）
 PLAN_TYPE_RANK: dict[str, int] = {
-    "relocate": 40,
+    "relocate": 50,
+    "hook": 45,
     "in_place": 30,
     "upgrade": 20,
     "f980": 20,
@@ -85,27 +84,47 @@ def _module_meta(game_id: str, module_id: str | None) -> dict:
 
 
 def module_allows_relocate(game_id: str, module_id: str | None) -> bool:
-    """该模块是否允许 relocate。
+    """该模块是否允许 relocate（Python 改指针 + 扩展区正文）。
 
-    由 modules.json 控制：``no_relocate: true`` 或 type 为 stride/struct 时
-    不允许 relocate。
+    modules.json：``relocate: true/false``（旧 ``no_relocate`` 过渡兼容）。
+    ``stride``/``struct`` 等定长表类型始终不允许。
     """
     meta = _module_meta(game_id, module_id)
-    if meta.get("no_relocate"):
-        return False
     try:
         from .modules import module_type
 
-        return module_type(game_id, module_id) not in NO_RELOCATE_TYPES
+        if module_type(game_id, module_id) in NO_RELOCATE_TYPES:
+            return False
     except Exception:
-        return True
+        pass
+    if "relocate" in meta:
+        return bool(meta.get("relocate"))
+    if "no_relocate" in meta:
+        return not bool(meta.get("no_relocate"))
+    return True
+
+
+def module_allows_hook(game_id: str, module_id: str | None) -> bool:
+    """该模块是否允许 type=hook（生成 pointer_redirect.asm）。
+
+    默认 false；仅 modules.json 显式 ``hook: true``。
+    定长表类型始终不允许（与 relocate 相同）。
+    """
+    meta = _module_meta(game_id, module_id)
+    try:
+        from .modules import module_type
+
+        if module_type(game_id, module_id) in NO_RELOCATE_TYPES:
+            return False
+    except Exception:
+        pass
+    return bool(meta.get("hook"))
 
 
 def module_allows_phrase(game_id: str, module_id: str | None) -> bool:
     """该模块是否允许 F9 80 短语引用（f980 / upgrade）。
 
-    ``no_relocate`` 只禁止 relocate（渲染不经钩子），**不禁止 F9 80 短语**：
-    no_relocate 模块 F900 超槽时同样升槽为 F9 80 原地插入。
+    ``relocate=false`` 只禁止改指针，**不禁止** F9 80 短语原地。
     """
     return True
 
@@ -206,6 +225,8 @@ def plan_entry(
     s = charmap._sanitize(translated)
     allow_reloc = module_allows_relocate(game_id, module_id)
     allow_phrase = module_allows_phrase(game_id, module_id)
+    allow_hook = module_allows_hook(game_id, module_id)
+    ptrs = _ptr_sources(entry)
 
     # 编码（F9 00 单字流等）
     try:
@@ -222,16 +243,14 @@ def plan_entry(
         return {"type": "in_place", "target_hex": encoded.hex(" ")}
 
     # type 2: 编码超槽位且该模块允许 relocate 且有指针 → 指针扩表。
-    # F9 80 码按需申请：走 relocate 的条目不预占码。
-    if allow_reloc and _ptr_sources(entry):
+    if allow_reloc and ptrs:
         return {
             "type": "relocate",
             "target_hex": encoded.hex(" "),
-            "pointer_sources": _ptr_sources(entry),
+            "pointer_sources": ptrs,
         }
 
-    # type 3: 超槽位且 relocate 不可用（无指针/禁 relocate）但允许短语
-    # → F9 80 短语引用原地（preallocate 已给码）
+    # type 3: 超槽位且 relocate 不可用但允许短语 → F9 80 短语引用原地
     if allow_phrase and byte_length >= 5:
         code = phrase_codes.get(s)
         if code is not None:
@@ -241,15 +260,28 @@ def plan_entry(
                 "phrase_code": code,
             }
 
-    # type 4: 保留原文，记录具体原因
-    if not allow_reloc and not allow_phrase:
-        reason = "特殊UI模块禁止relocate/短语，且超槽位"
+    # type 4: 前序失败且 hook=true 且有指针 → armips 指针重定向 asm
+    if allow_hook and ptrs:
+        return {
+            "type": "hook",
+            "target_hex": encoded.hex(" "),
+            "pointer_sources": ptrs,
+            "reason": "hook 指针重定向 asm",
+        }
+
+    # type 5: 保留原文，记录具体原因
+    if not allow_reloc and not allow_hook and not allow_phrase:
+        reason = "模块禁止 relocate/hook/短语，且超槽位"
+    elif not allow_reloc and not allow_hook:
+        reason = "模块禁止 relocate/hook，且槽位<5无法升槽"
     elif not allow_reloc:
-        reason = "模块禁止relocate，且槽位<5无法升槽"
-    elif not allow_phrase:
-        reason = "模块禁止短语引用，且无指针可relocate"
+        reason = "模块禁止 relocate，无 hook，且槽位<5无法升槽"
+    elif not allow_phrase and not allow_hook:
+        reason = "模块禁止短语/hook，且无指针可 relocate"
+    elif not ptrs and not allow_phrase:
+        reason = "无指针且无法短语升槽"
     else:
-        reason = "无可用注入路径（超槽位/无指针/无短语码）"
+        reason = "无可用注入路径（超槽位/无指针/无短语码/无 hook）"
     return {"type": "keep", "target_hex": original_hex, "reason": reason}
 
 

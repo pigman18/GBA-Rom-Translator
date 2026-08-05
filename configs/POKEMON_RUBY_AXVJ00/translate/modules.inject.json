@@ -3,7 +3,7 @@
     "note": "F9 00=侧载。F9 80=短语表默认(auto几何；表内展开为F9 00+PCS流)。write.op=0x01..0x7E（现用 02=footer 03=linear 04=slot）。裸 FA..FF=PCS。商店/状态等回几何，勿铺 op。"
   },
   "道具说明": {
-    "line_width": 13
+    "line_width": 14
   },
   "开始菜单": {
     "line_width": 5

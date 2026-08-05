@@ -1,7 +1,7 @@
 {
   "_meta": {
     "schema": "v3",
-    "exported_by": "reassign+sync (shrink hidden bands)",
+    "exported_by": "reassign relocate/hook flags",
     "match_rule": "smallest span first; full-band inside, else clip intersection against ranges (dump merges); hidden/assign:false skipped",
     "band_count": 16665,
     "module_band_counts": {
@@ -85,7 +85,7 @@
       }
     },
     "rom_id": "POKEMON_RUBY_AXVJ00",
-    "reassigned_from": "addr_bands.json"
+    "module_map": "C:\\code\\GBA-Rom-Translator\\src\\util\\configs\\POKEMON_RUBY_AXVJ00.json"
   },
   "modules": {
     "属性名": {
@@ -94,7 +94,8 @@
       "default": true,
       "description": "属性名短表（单字注入需谨慎）",
       "type": "stride",
-      "no_relocate": true,
+      "relocate": false,
+      "hook": false,
       "start": "0x1cbb0c",
       "end": "0x1cbb65",
       "read": {
@@ -107,7 +108,8 @@
       "default": true,
       "description": "性格名表/相遇与蛋描述",
       "type": "stride_ptr",
-      "no_relocate": true,
+      "relocate": false,
+      "hook": false,
       "start": "0x397168",
       "end": "0x3984DB",
       "read": {
@@ -120,7 +122,8 @@
       "default": true,
       "description": "特性名固定表",
       "type": "stride",
-      "no_relocate": true,
+      "relocate": false,
+      "hook": false,
       "start": "0x1cbc44",
       "end": "0x1cbeb3",
       "read": {
@@ -133,7 +136,8 @@
       "default": true,
       "description": "物种名固定表",
       "type": "stride",
-      "no_relocate": true,
+      "relocate": false,
+      "hook": false,
       "start": "0x1ca354",
       "end": "0x1cacfb",
       "read": {
@@ -146,7 +150,8 @@
       "default": true,
       "description": "招式名固定表",
       "type": "stride",
-      "no_relocate": true,
+      "relocate": false,
+      "hook": false,
       "start": "0x1cacfc",
       "end": "0x1cb813",
       "read": {
@@ -408,7 +413,8 @@
         ]
       },
       "start": "0x1C4A10",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "地点名": {
       "label": "词条·地点",
@@ -1297,7 +1303,8 @@
         ]
       },
       "start": "0x3B9237",
-      "no_relocate": true,
+      "relocate": false,
+      "hook": false,
       "min_byte_length": 5,
       "max_byte_length": 14
     },
@@ -1307,7 +1314,8 @@
       "default": true,
       "description": "道具结构内名称字段",
       "type": "struct",
-      "no_relocate": true,
+      "relocate": false,
+      "hook": false,
       "start": "0x39a648",
       "end": "0x39dca7",
       "read": {
@@ -1331,7 +1339,8 @@
         ]
       },
       "start": "0x3984DC",
-      "no_relocate": false
+      "relocate": true,
+      "hook": true
     },
     "招式说明": {
       "label": "说明·招式",
@@ -1916,7 +1925,8 @@
         ]
       },
       "start": "0x383001",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "特性说明": {
       "label": "说明·特性",
@@ -2229,7 +2239,8 @@
         ]
       },
       "start": "0x1CBF00",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "图鉴条目": {
       "label": "说明·图鉴条目",
@@ -2390,7 +2401,8 @@
         ]
       },
       "start": "0x37B5C1",
-      "no_relocate": false
+      "relocate": true,
+      "hook": false
     },
     "开场家园": {
       "label": "剧情·开场家园",
@@ -2703,7 +2715,8 @@
         ]
       },
       "start": "0x149300",
-      "no_relocate": false
+      "relocate": true,
+      "hook": false
     },
     "早期城镇": {
       "label": "剧情·早期城镇",
@@ -2828,7 +2841,8 @@
         ]
       },
       "start": "0x15C6B0",
-      "no_relocate": false
+      "relocate": true,
+      "hook": false
     },
     "中期城镇": {
       "label": "剧情·中期城镇",
@@ -3037,7 +3051,8 @@
         ]
       },
       "start": "0x145DBC",
-      "no_relocate": false
+      "relocate": true,
+      "hook": false
     },
     "后期与联盟": {
       "label": "剧情·后期联盟",
@@ -4232,7 +4247,8 @@
           "0x3E7A7B"
         ]
       ],
-      "no_relocate": false
+      "relocate": true,
+      "hook": false
     },
     "岛屿或通关后": {
       "label": "剧情·通关后",
@@ -4265,7 +4281,8 @@
         ]
       },
       "start": "0x17817E",
-      "no_relocate": false
+      "relocate": true,
+      "hook": false
     },
     "道路与洞窟": {
       "label": "剧情·道路洞窟",
@@ -12976,7 +12993,8 @@
           "0x1DFFFF"
         ]
       ],
-      "no_relocate": false
+      "relocate": true,
+      "hook": false
     },
     "宝可梦中心": {
       "label": "设施·宝可梦中心",
@@ -12993,7 +13011,8 @@
         ]
       },
       "start": "0x180531",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "商店": {
       "label": "设施·商店",
@@ -13084,7 +13103,8 @@
           "0x3EA120"
         ]
       ],
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "电脑与仓库": {
       "label": "设施·电脑",
@@ -13319,7 +13339,8 @@
           "0x3EB4C0"
         ]
       ],
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "缆线与通信": {
       "label": "设施·通信",
@@ -13634,7 +13655,8 @@
           "0x403850"
         ]
       ],
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "标准脚本串": {
       "label": "设施·标准脚本",
@@ -13743,7 +13765,8 @@
         ]
       },
       "start": "0x1E04C6",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "标题与主菜单": {
       "label": "界面·标题主菜单",
@@ -13812,7 +13835,8 @@
         ]
       },
       "start": "0x3E7F4A",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "存档与电源": {
       "label": "界面·存档",
@@ -16135,7 +16159,8 @@
           "0x3EBE96"
         ]
       ],
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "设置选项": {
       "label": "界面·设置",
@@ -16800,7 +16825,8 @@
         ]
       },
       "start": "0x353BD8",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "背包界面": {
       "label": "界面·背包",
@@ -16837,7 +16863,8 @@
         ]
       },
       "start": "0x3E9AF4",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "状态界面": {
       "label": "界面·状态",
@@ -17096,7 +17123,8 @@
           "0x3EB535"
         ]
       ],
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "开始菜单": {
       "label": "界面·开始菜单",
@@ -17215,7 +17243,8 @@
           "0x3EBB58"
         ]
       ],
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "战斗菜单": {
       "label": "战斗·菜单",
@@ -22058,7 +22087,8 @@
           "0x3DBFFF"
         ]
       ],
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "战斗提示": {
       "label": "战斗·提示",
@@ -22159,7 +22189,8 @@
         ]
       },
       "start": "0x3DC000",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "战斗报文": {
       "label": "战斗·报文",
@@ -22180,7 +22211,8 @@
         ]
       },
       "start": "0x3DB500",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "对战设施": {
       "label": "战斗·对战设施",
@@ -22197,7 +22229,8 @@
         ]
       },
       "start": "0x17882C",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "登场与胜负白": {
       "label": "训练家·对白",
@@ -22550,7 +22583,8 @@
         ]
       },
       "start": "0x3B4C01",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "训练家名": {
       "label": "训练家·名称",
@@ -24127,7 +24161,8 @@
         ]
       },
       "start": "0x1C7208",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "图鉴界面": {
       "label": "图鉴·界面",
@@ -24446,7 +24481,8 @@
           "0x3F1BD9"
         ]
       ],
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "默认名字": {
       "label": "起名·默认名",
@@ -24519,7 +24555,8 @@
         ]
       },
       "start": "0x1C9F1E",
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "赛事娱乐": {
       "label": "其它·赛事",
@@ -26514,7 +26551,8 @@
           "0x3B82FF"
         ]
       ],
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "高风险混杂": {
       "label": "其它·高风险",
@@ -58073,7 +58111,8 @@
           "0x7FFDA3"
         ]
       ],
-      "no_relocate": true
+      "relocate": false,
+      "hook": false
     },
     "选项菜单扫描": {
       "label": "选项菜单扫描",
@@ -58083,7 +58122,8 @@
       "type": "prefix",
       "hidden": true,
       "enrich": "选项菜单",
-      "no_relocate": true,
+      "relocate": false,
+      "hook": false,
       "start": "0x37B44C",
       "read": {
         "prefix": [
@@ -58122,7 +58162,8 @@
       "type": "prefix",
       "hidden": true,
       "enrich": "FC彩窗",
-      "no_relocate": true,
+      "relocate": false,
+      "hook": false,
       "start": "0x3E9000",
       "read": {
         "prefix": [
@@ -58138,7 +58179,8 @@
       "type": "needle",
       "hidden": true,
       "enrich": "存档与电源",
-      "no_relocate": true,
+      "relocate": false,
+      "hook": false,
       "start": "0x197000",
       "read": {
         "content_class": "存档与电源",
@@ -58218,7 +58260,8 @@
       "type": "needle",
       "hidden": true,
       "enrich": "战斗HUD",
-      "no_relocate": true,
+      "relocate": false,
+      "hook": false,
       "start": "0x100000",
       "read": {
         "seed_originals": [
@@ -58243,7 +58286,8 @@
       "type": "needle",
       "hidden": true,
       "enrich": "短标菜单",
-      "no_relocate": true,
+      "relocate": false,
+      "hook": false,
       "start": "0x100000",
       "read": {
         "seed_originals": [
@@ -58296,7 +58340,8 @@
       "type": "needle",
       "hidden": true,
       "enrich": "状态背包",
-      "no_relocate": true,
+      "relocate": false,
+      "hook": false,
       "start": "0x3E0000",
       "read": {
         "seed_originals": [
@@ -58327,7 +58372,8 @@
       "type": "prefix",
       "hidden": true,
       "enrich": "战斗提示",
-      "no_relocate": true,
+      "relocate": false,
+      "hook": false,
       "start": "0x3DC000",
       "read": {
         "prefix": [
@@ -58355,7 +58401,8 @@
       "type": "pointer",
       "hidden": true,
       "enrich": "主脚本指针",
-      "no_relocate": true,
+      "relocate": false,
+      "hook": false,
       "start": "0x0",
       "read": {
         "min_ptr_source": "0x100000"
@@ -63955,7 +64002,9 @@
           ]
         ]
       },
-      "start": "0x1959D"
+      "start": "0x1959D",
+      "relocate": true,
+      "hook": false
     }
   }
 }

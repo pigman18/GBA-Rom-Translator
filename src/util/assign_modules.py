@@ -183,8 +183,17 @@ def _emit_scan_entry(
     geo = _geo_from_src(src) if src else None
     if geo:
         entry["geo_ranges"] = geo
-    if src is not None and "no_relocate" in src:
-        entry["no_relocate"] = bool(src["no_relocate"])
+    if src is not None and "relocate" in src:
+        entry["relocate"] = bool(src["relocate"])
+    elif src is not None and "no_relocate" in src:
+        # 过渡兼容：旧 no_relocate 极性取反
+        entry["relocate"] = not bool(src["no_relocate"])
+    else:
+        entry["relocate"] = True
+    if src is not None and "hook" in src:
+        entry["hook"] = bool(src["hook"])
+    else:
+        entry["hook"] = False
     _copy_byte_length_bounds(entry, src)
     return entry
 
@@ -203,8 +212,16 @@ def _emit_typed_entry(src: dict, bands_out: List[List[str]]) -> Dict[str, Any]:
         entry["hidden"] = True
     if src.get("enrich"):
         entry["enrich"] = src["enrich"]
-    if "no_relocate" in src:
-        entry["no_relocate"] = bool(src["no_relocate"])
+    if "relocate" in src:
+        entry["relocate"] = bool(src["relocate"])
+    elif "no_relocate" in src:
+        entry["relocate"] = not bool(src["no_relocate"])
+    else:
+        entry["relocate"] = True
+    if "hook" in src:
+        entry["hook"] = bool(src["hook"])
+    else:
+        entry["hook"] = False
     if src.get("start") is not None:
         st = src["start"]
         entry["start"] = st if isinstance(st, str) else f"0x{parse_addr(st):X}"

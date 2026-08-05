@@ -33,4 +33,7 @@ PrintNextChar:
 
 .include "./graphic/fonts.s"
 
+; type=hook：扩展区正文 + 指针槽重定向（由 meowth.pointer_redirect 生成）
+.include "./gen/pointer_redirect.asm"
+
 .close

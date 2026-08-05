@@ -8,6 +8,18 @@
 **地址区间台账（已挖 / 全图 / 待挖）：见 [`MODULE_BANDS.md`](MODULE_BANDS.md)。**  
 改模块区间前先改台账；禁止为「缩小范围」关掉整域剧本。
 
+## 注入开关（`relocate` / `hook`）
+
+见 [`HOOK_RELOCATE_PLAN.md`](HOOK_RELOCATE_PLAN.md)。
+
+| 字段 | 含义 |
+|------|------|
+| `relocate` | `true`：允许 Python 改指针写扩展区；`false`：禁止 |
+| `hook` | `true`：前序失败后生成 `pointer_redirect.asm`；默认 `false` |
+
+路径：`in_place` → `relocate` → `upgrade`(F9 80) → `hook` → `keep`。  
+地点名：`relocate=false` 且 `hook=false`。
+
 ## 安全默认（`safe`）
 
 界面：`ui_*` / `battle_*` / `bag_ui` / `summary_ui`  

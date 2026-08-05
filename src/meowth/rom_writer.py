@@ -366,12 +366,12 @@ class RomWriter:
         return rom, stats
 
     def _collect_relocate_pointer_slots(self, entries: list[dict]) -> set[int]:
-        """收集 relocate 计划的 pointer_sources（ROM 文件偏移），供 in_place 避让。"""
+        """收集 relocate/hook 计划的 pointer_sources（ROM 文件偏移），供 in_place 避让。"""
         slots: set[int] = set()
         for e in entries:
             plan = e.get("_plan")
             ptrs: list = []
-            if plan and (plan.get("type") or "") == "relocate":
+            if plan and (plan.get("type") or "") in ("relocate", "hook"):
                 ptrs = (
                     plan.get("pointer_sources")
                     or e.get("pointer_addresses")
@@ -409,6 +409,7 @@ class RomWriter:
         f980/upgrade → F9 80 短语引用写入原槽位（槽位不足则保留原文）
         in_place     → target_hex 写入原地址
         relocate     → target_hex 写入扩展区并改写指针（弱化指针验证）
+        hook         → 跳过（armips pointer_redirect.asm 已写）
         keep         → 保留原文，日志打印
         """
         entry_id = entry.get("id", "?")
@@ -425,6 +426,11 @@ class RomWriter:
         if address >= self.POINTER_OFFSET:
             address -= self.POINTER_OFFSET
         byte_length = entry.get("byte_length", 0) or 0
+
+        if ptype == "hook":
+            # armips 已通过 pointer_redirect.asm 写扩展区 + 改指针；避免双写
+            stats["hook_skipped"] = stats.get("hook_skipped", 0) + 1
+            return
 
         if ptype in ("f980", "upgrade", "in_place"):
             clobber = self._body_covers_pointer_slot(

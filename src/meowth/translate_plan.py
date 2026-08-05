@@ -1,11 +1,13 @@
 """翻译通路规划：为每条目决策注入 type 并编码 target_hex。
 
 type:
-  f980     — translated 完全命中短语表（词典 / 自动分配），target=F9 80 code FF
-  in_place — 编码字节 ≤ 原始槽位，原地写入
-  relocate — 编码超槽位且该条目有指针源，写扩展区 + 指针改写
-  upgrade  — relocate 不可用（无指针），自动分配短语码走 F9 80
+  in_place — F900 编码字节 ≤ 原始槽位，原地写入（最高优先）
+  relocate — 编码超槽位且有指针源且模块允许，写扩展区 + 指针改写
+             （附带预分配 phrase_code，注入 relocate 失败时回退 F9 80）
+  upgrade  — relocate 不可用（无指针/禁 relocate）但允许短语，F9 80 原地
   keep     — 都无法满足，保留原文（ROM 不动）
+
+优先级链：F900 原地 → relocate → F9 80 原地 → keep。
 
 translate 阶段只做决策与编码（不注入 ROM），产出 translate.build.json，
 build 阶段按 type 注入。texts_translated.json 降级为翻译缓存文件。
@@ -53,10 +55,10 @@ def module_allows_relocate(game_id: str, module_id: str | None) -> bool:
 def module_allows_phrase(game_id: str, module_id: str | None) -> bool:
     """该模块是否允许 F9 80 短语引用（f980 / upgrade）。
 
-    ``no_relocate: true`` 的特殊 UI 渲染不经钩子，短语流同样解析失败 → 不允许。
+    ``no_relocate`` 只禁止 relocate（渲染不经钩子），**不禁止 F9 80 短语**：
+    no_relocate 模块 F900 超槽时同样升槽为 F9 80 原地插入。
     """
-    meta = _module_meta(game_id, module_id)
-    return not meta.get("no_relocate")
+    return True
 
 
 def _encode_phrase_ref(code: int) -> bytes:
@@ -99,8 +101,6 @@ def preallocate_upgrade_phrases(
         if byte_length < 5:
             continue  # 槽位连 F9 80 都放不下 → keep
         module_id = e.get("module") or e.get("_axvj_module") or e.get("category")
-        if _ptr_sources(e) and module_allows_relocate(game_id, module_id):
-            continue  # 可 relocate → 不预分配
         if not module_allows_phrase(game_id, module_id):
             continue  # ui 特殊界面不短语引用 → keep
         try:
@@ -135,16 +135,6 @@ def plan_entry(
     allow_reloc = module_allows_relocate(game_id, module_id)
     allow_phrase = module_allows_phrase(game_id, module_id)
 
-    # type 1: F9 80 完全匹配（词典 / 自动分配短语，最高优先；仅允许短语的模块）
-    if allow_phrase:
-        code = phrase_codes.get(s)
-        if code is not None:
-            return {
-                "type": "f980",
-                "target_hex": _encode_phrase_ref(code).hex(" "),
-                "phrase_code": code,
-            }
-
     # 编码（F9 00 单字流等）
     try:
         encoded = charmap.encode(translated)
@@ -155,19 +145,22 @@ def plan_entry(
             "reason": "译文编码失败",
         }
 
-    # type 2: 编码字节 ≤ 原始槽位 → 原地
+    # type 1: F900 编码 ≤ 原始槽位 → 原地（最高优先）
     if len(encoded) <= byte_length:
         return {"type": "in_place", "target_hex": encoded.hex(" ")}
 
-    # type 3: 编码超槽位且该模块允许 relocate 且有指针 → 指针扩表
+    # type 2: 编码超槽位且该模块允许 relocate 且有指针 → 指针扩表。
+    # 附带预分配的 phrase_code，供 build 注入 relocate 失败时回退 F9 80。
     if allow_reloc and _ptr_sources(entry):
         return {
             "type": "relocate",
             "target_hex": encoded.hex(" "),
             "pointer_sources": _ptr_sources(entry),
+            "phrase_code": phrase_codes.get(s),
         }
 
-    # type 4: relocate 不可用且允许短语 → 升槽（preallocate 已给码 → f980）
+    # type 3: 超槽位且 relocate 不可用（无指针/禁 relocate）但允许短语
+    # → F9 80 短语引用原地（preallocate 已给码）
     if allow_phrase and byte_length >= 5:
         code = phrase_codes.get(s)
         if code is not None:
@@ -177,7 +170,7 @@ def plan_entry(
                 "phrase_code": code,
             }
 
-    # type 5: 保留原文，记录具体原因
+    # type 4: 保留原文，记录具体原因
     if not allow_reloc and not allow_phrase:
         reason = "特殊UI模块禁止relocate/短语，且超槽位"
     elif not allow_reloc:

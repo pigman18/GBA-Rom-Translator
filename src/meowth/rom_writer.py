@@ -427,6 +427,11 @@ class RomWriter:
                     f"  WARN {entry_id} @ 0x{address:X} (cat={category}): "
                     f"relocate 计划但无指针源; 保留原文"
                 )
+            # 回退：relocate 失败/无指针 → F9 80 短语原地插入（需 phrase_code）
+            if self._try_phrase_fallback(
+                rom, address, byte_length, plan, stats, entry_id, category
+            ):
+                return
             stats["kept"] = stats.get("kept", 0) + 1
             return
 
@@ -437,6 +442,39 @@ class RomWriter:
             f"保留原文（{reason}）"
         )
         stats["kept"] = stats.get("kept", 0) + 1
+
+    def _try_phrase_fallback(
+        self,
+        rom: bytearray,
+        address: int,
+        byte_length: int,
+        plan: dict,
+        stats: dict,
+        entry_id: str,
+        category: str,
+    ) -> bool:
+        """relocate 失败回退：F9 80 短语引用（5 字节）写入原槽位。
+
+        优先级链：F900 原地 → relocate → F9 80 原地 → keep。
+        仅当 plan 已预分配 phrase_code 且槽位 ≥ 5 字节才成功。
+        """
+        code = plan.get("phrase_code")
+        if code is None:
+            return False
+        from .config_loader import F9_EOS, F9_PHRASE_DEFAULT
+
+        target = bytes(
+            [0xF9, F9_PHRASE_DEFAULT, (code >> 8) & 0xFF, code & 0xFF, F9_EOS]
+        )
+        if byte_length < len(target):
+            return False
+        self._write_in_place_v2(rom, address, target, byte_length)
+        stats["in_place"] = stats.get("in_place", 0) + 1
+        print(
+            f"  回退 F9-80 @ 0x{address:X} (cat={category}): {entry_id} "
+            f"(relocate 失败/无指针，短语 {len(target)}B 原地)"
+        )
+        return True
 
     def _process_entry_v2(self, rom: bytearray, entry: dict, stats: dict) -> None:
         """Process a single entry. Raises ValueError on any write failure."""

@@ -8,12 +8,13 @@
 from __future__ import annotations
 
 import json
+import math
 import re
 from collections import Counter
 from datetime import datetime, timezone
 from pathlib import Path
 
-from .jp_pcs import looks_like_jp_text
+from .jp_pcs import BYTE_TO_CHAR, looks_like_jp_text
 
 BASE = 0x08000000
 
@@ -23,6 +24,9 @@ WEIGHTS: dict[str, int] = {
     "jp_text": 30,       # original_hex 字节流不是合法 FF 结尾日文
     "garbage_jp": 30,    # original 字符串含半角假名/符号/乱序假名
     "arm_code": 30,      # original_hex 含 Thumb 指令字节组合
+    "glyph_ratio": 25,   # 合法 charmap 字形占比过低 / 非法高位字节
+    "kana_stats": 25,    # 假名 bigram / 连打 / 单调五十音行可疑
+    "entropy": 20,       # Shannon 熵过低（填充）或过高（近随机）
     "byte_profile": 15,  # 0x00 填充比例过高（数据而非文本）
     "repeat": 15,        # 2 字节重复模式（像素/压缩数据特征）
     "terminator": 15,    # 不以 FF/FB/FE 结尾
@@ -70,6 +74,125 @@ def _entry_off(entry: dict) -> int | None:
     except (ValueError, TypeError):
         return None
     return addr - BASE if addr >= BASE else addr
+
+
+def _body_bytes(bs: bytes) -> bytes:
+    if bs and bs[-1] in _TERMINATORS:
+        return bs[:-1]
+    return bs
+
+
+def _walk_pcs_glyphs(body: bytes) -> tuple[list[int], int, int]:
+    """Walk PCS body; return (kana_bytes, glyph_count, bad_count)."""
+    from .pcs_codes import fc_arg_count
+
+    kana: list[int] = []
+    glyph = 0
+    bad = 0
+    i = 0
+    while i < len(body):
+        b = body[i]
+        if b in (0xFE, 0xFA, 0xFB):
+            i += 1
+            continue
+        if b == 0xFD:
+            if i + 1 >= len(body):
+                bad += 1
+                break
+            i += 2
+            continue
+        if b == 0xFC:
+            if i + 1 >= len(body):
+                bad += 1
+                break
+            narg = fc_arg_count(body[i + 1])
+            if i + 2 + narg > len(body):
+                bad += 1
+                break
+            i += 2 + narg
+            continue
+        if b >= 0xF7 or b not in BYTE_TO_CHAR:
+            bad += 1
+            i += 1
+            continue
+        glyph += 1
+        if 0x01 <= b <= 0xA0:
+            kana.append(b)
+        i += 1
+    return kana, glyph, bad
+
+
+def _shannon_entropy(data: bytes) -> float:
+    if not data:
+        return 0.0
+    n = len(data)
+    counts = Counter(data)
+    return -sum((c / n) * math.log2(c / n) for c in counts.values())
+
+
+def _entropy(bs: bytes) -> bool:
+    """Shannon 熵过低（填充/重复）或过高（近随机二进制）。"""
+    body = _body_bytes(bs)
+    if len(body) < 8:
+        return False
+    h = _shannon_entropy(body)
+    return h < 1.8 or h > 6.8
+
+
+def _glyph_ratio(bs: bytes) -> bool:
+    """合法 charmap 字形占比过低，或非法高位字节过多。"""
+    if not bs or len(bs) < 3:
+        return False
+    body = _body_bytes(bs)
+    if len(body) < 2:
+        return False
+    _kana, glyph, bad = _walk_pcs_glyphs(body)
+    total = glyph + bad
+    if bad >= 2:
+        return True
+    if total > 0 and bad / total > 0.15:
+        return True
+    if len(body) >= 8 and glyph / len(body) < 0.35:
+        return True
+    return False
+
+
+def _kana_stats(bs: bytes) -> bool:
+    """假名连打 / 单调五十音行（表倾倒、乱码），不使用宽松 bigram 比率以免误杀对话。"""
+    body = _body_bytes(bs)
+    kana, _glyph, _bad = _walk_pcs_glyphs(body)
+    if len(kana) < 4:
+        return False
+
+    # Same-byte runs (mojibake / padding decoded as kana)
+    run = 1
+    max_run = 1
+    for i in range(1, len(kana)):
+        if kana[i] == kana[i - 1]:
+            run += 1
+            max_run = max(max_run, run)
+        else:
+            run = 1
+    if max_run >= 5:
+        return True
+
+    # Strict mono ascending/descending (IME gojuon / table dump)
+    asc = desc = 1
+    max_mono = 1
+    for i in range(1, len(kana)):
+        if kana[i] == kana[i - 1] + 1:
+            asc += 1
+            desc = 1
+        elif kana[i] == kana[i - 1] - 1:
+            desc += 1
+            asc = 1
+        else:
+            asc = desc = 1
+        max_mono = max(max_mono, asc, desc)
+    if max_mono >= 6:
+        return True
+
+    return False
 
 
 def _arm_code(bs: bytes) -> bool:
@@ -131,9 +254,14 @@ def _lz77_span(rom: bytes, off: int | None) -> bool:
     标准 LZ77 或 lz77_swap（字节对交换，宝石版图像格式）。比简单
     ``_lz10_span`` 严格：完整解压到声明的 dest_size 才算命中，因此
     ``0x10`` 开头的日文文本不会误判。
+
+    只在 ``off`` 起的有界窗口内尝试（默认 64KiB），避免对每条文本
+    ``bytearray(rom[off:])`` 复制整盘 ROM。
     """
     if off is None or off >= len(rom):
         return False
+
+    window = 0x10000  # 64 KiB is enough for any plausible text-adjacent LZ blob
 
     def try_decompress(data: bytes, start: int) -> bool:
         if start + 4 > len(data) or data[start] != 0x10:
@@ -168,13 +296,17 @@ def _lz77_span(rom: bytes, off: int | None) -> bool:
                 flags <<= 1
         return False
 
-    if try_decompress(rom, off):
+    end = min(len(rom), off + window)
+    segment = rom[off:end]
+    if try_decompress(segment, 0):
         return True
-    # lz77_swap：压缩流字节对交换后按标准 LZ77 解压
-    swapped = bytearray(rom[off:])
-    for i in range(0, len(swapped) - 1, 2):
-        swapped[i], swapped[i + 1] = swapped[i + 1], swapped[i]
-    return try_decompress(bytes(swapped), 0)
+    # lz77_swap：仅当交换后首字节可能是 0x10 时才复制窗口
+    if len(segment) >= 2 and segment[1] == 0x10:
+        swapped = bytearray(segment)
+        for i in range(0, len(swapped) - 1, 2):
+            swapped[i], swapped[i + 1] = swapped[i + 1], swapped[i]
+        return try_decompress(bytes(swapped), 0)
+    return False
 
 
 def _byte_profile(bs: bytes) -> bool:
@@ -222,11 +354,9 @@ def _orig_rom_text(rom: bytes, off: int | None, length: int) -> bool:
 
 
 def _authoritative(bs: bytes, rom: bytes | None, off: int | None, length: int) -> bool:
-    """权威判定：字节流是正常文本（结尾控制符 + 0x00 密度低）。
+    """权威形态：结尾控制符 + 0x00 密度低。
 
-    乱序假名垃圾（LZ/像素数据解码）0x00 密度高，正常日文文本空格
-    占少数；短片假名文本（如 マユミのパソコン）0x00 低且以 FF 结尾。
-    ``rom`` 可为 None（无 ROM 时只用 original_hex 判定，跳过原 ROM 检查）。
+    仅用于抑制易误报的代码类信号（thumb/arm/ptr_odd），不再直接给满分。
     """
     if bs:
         if bs[-1] not in _TERMINATORS:
@@ -253,12 +383,20 @@ def _compute_overlap(entries: list[dict]) -> set[int]:
             continue
     addrs.sort()
     for i in range(1, len(addrs)):
-        if addrs[i][0] - addrs[i - 1][0] <= 2:
-            ha = (entries[addrs[i - 1][1]].get("original_hex") or "").replace(" ", "")
-            hb = (entries[addrs[i][1]].get("original_hex") or "").replace(" ", "")
-            if ha and hb and (ha in hb or hb in ha):
-                marked.add(addrs[i - 1][1])
-                marked.add(addrs[i][1])
+        delta = addrs[i][0] - addrs[i - 1][0]
+        if delta > 2:
+            continue
+        ia, ib = addrs[i - 1][1], addrs[i][1]
+        ha = (entries[ia].get("original_hex") or "").replace(" ", "")
+        hb = (entries[ib].get("original_hex") or "").replace(" ", "")
+        if not ha or not hb:
+            continue
+        # 同地址且全文相同 = extract 重复登记，不是错位副本
+        if delta == 0 and ha == hb:
+            continue
+        if ha in hb or hb in ha:
+            marked.add(ia)
+            marked.add(ib)
     return marked
 
 
@@ -268,7 +406,10 @@ def score_entries(
     """对条目列表评分，返回 ``[(entry, hits, score)]``。
 
     纯计算、不改动 entry。``rom`` 为 None 时跳过需要 ROM 的算法
-    （thumb_code / lz_span / orig_rom），authoritative 只查 original_hex。
+    （thumb_code / lz_span / orig_rom）。
+
+    权威形态只抑制 thumb/arm/ptr_odd；质量类算法（jp_text / garbage /
+    entropy / glyph_ratio / kana_stats …）始终计分。
     """
     overlap_set = _compute_overlap(entries)
     scored: list[tuple[dict, list[str], int]] = []
@@ -282,25 +423,15 @@ def score_entries(
         bs = _hex_bytes(e)
         off = _entry_off(e)
         length = e.get("byte_length", 0)
+        auth = _authoritative(bs, rom, off, length)
 
-        # 权威判定：结尾控制符 + 0x00 密度低 = 正常文本。
-        # 辅助算法（thumb_code/arm/byte_profile/overlap…）对正常文本易误判
-        # （省略号 b0 b0、高字节 >=0x31、0x10 开头、ptr_odd、长文本反汇编），
-        # 只在权威异常时计入加重。
-        if _authoritative(bs, rom, off, length):
-            scored.append((e, hits, 100))
-            continue
-
-        if rom is not None and _thumb_code(rom, off, length):
-            hits.append("thumb_code")
+        # --- 质量层：始终计分 ---
         if bs and not looks_like_jp_text(bs):
             hits.append("jp_text")
         if rom is not None and not _orig_rom_text(rom, off, length):
             hits.append("orig_rom")
         if _garbage_jp(e.get("original") or ""):
             hits.append("garbage_jp")
-        if _arm_code(bs):
-            hits.append("arm_code")
         if _byte_profile(bs):
             hits.append("byte_profile")
         if _repeat_pattern(bs):
@@ -311,10 +442,23 @@ def score_entries(
             hits.append("length")
         if i in overlap_set:
             hits.append("overlap")
-        if _ptr_odd(e):
-            hits.append("ptr_odd")
         if rom is not None and _lz77_span(rom, off):
             hits.append("lz_span")
+        if bs and _entropy(bs):
+            hits.append("entropy")
+        if bs and _glyph_ratio(bs):
+            hits.append("glyph_ratio")
+        if bs and _kana_stats(bs):
+            hits.append("kana_stats")
+
+        # --- 代码类：仅权威形态异常时计分 ---
+        if not auth:
+            if rom is not None and _thumb_code(rom, off, length):
+                hits.append("thumb_code")
+            if _arm_code(bs):
+                hits.append("arm_code")
+            if _ptr_odd(e):
+                hits.append("ptr_odd")
 
         score = max(0, 100 - sum(WEIGHTS[h] for h in hits))
         scored.append((e, hits, score))

@@ -9,7 +9,25 @@
     "note": "default=true（除物种名/姓名输入/默认名字/其它组与未归类）。名表+界面+剧情由 measure_module_spans.py 实测；支持 ranges 多段（战斗短标签 / 散落商店簇）；道路与洞窟为对话库兜底。",
     "source": "AXVJ 名表/道具表实测；红蓝共用语义与地址族",
     "rom_id": "POKEMON_RUBY_AXVJ00",
-    "measured_by": "measure_module_spans.py"
+    "measured_by": "measure_module_spans.py",
+    "schema_note": "module_map for text_patcher; type/read feed v3 modules.json export",
+    "updated_by": "text_patcher plan: type templates + hidden + unassigned clusters",
+    "last_writeback": {
+      "rom_id": "POKEMON_RUBY_AXVJ00",
+      "expanded_ranges": 0,
+      "added_modules": 2,
+      "by": "text_patcher.py"
+    },
+    "last_fold_autos": {
+      "expanded_into_named": 29,
+      "removed_modules": 7,
+      "by": "text_patcher.fold_auto_modules_into_named"
+    },
+    "last_absorb_unassigned": {
+      "bands": 3250,
+      "expanded": 3250,
+      "by": "text_patcher.absorb_unassigned_bands_into_named"
+    }
   },
   "modules": [
     {
@@ -19,8 +37,12 @@
       "default": true,
       "table": true,
       "description": "属性名短表（单字注入需谨慎）",
-      "start": "0x1CBB0C",
-      "end": "0x1CBB65"
+      "start": "0x1cbb0c",
+      "end": "0x1cbb65",
+      "type": "stride",
+      "read": {
+        "stride": 5
+      }
     },
     {
       "id": "性格名",
@@ -29,7 +51,11 @@
       "default": true,
       "description": "性格名表/相遇与蛋描述",
       "start": "0x397168",
-      "end": "0x397329"
+      "end": "0x3984DB",
+      "type": "stride_ptr",
+      "read": {
+        "stride": 4
+      }
     },
     {
       "id": "特性名",
@@ -38,8 +64,12 @@
       "default": true,
       "table": true,
       "description": "特性名固定表",
-      "start": "0x1CBC44",
-      "end": "0x1CBEB3"
+      "start": "0x1cbc44",
+      "end": "0x1cbeb3",
+      "type": "stride",
+      "read": {
+        "stride": 8
+      }
     },
     {
       "id": "物种名",
@@ -48,8 +78,12 @@
       "default": false,
       "table": true,
       "description": "物种名固定表",
-      "start": "0x1CA354",
-      "end": "0x1CACFB"
+      "start": "0x1ca354",
+      "end": "0x1cacfb",
+      "type": "stride",
+      "read": {
+        "stride": 6
+      }
     },
     {
       "id": "招式名",
@@ -58,8 +92,12 @@
       "default": true,
       "table": true,
       "description": "招式名固定表",
-      "start": "0x1CACFC",
-      "end": "0x1CB813"
+      "start": "0x1cacfc",
+      "end": "0x1cb813",
+      "type": "stride",
+      "read": {
+        "stride": 8
+      }
     },
     {
       "id": "训练家类名",
@@ -69,7 +107,8 @@
       "table": true,
       "description": "Trainer class 名表",
       "start": "0x1C4A10",
-      "end": "0x1C4D00"
+      "end": "0x1C4D00",
+      "type": "scan"
     },
     {
       "id": "地点名",
@@ -77,8 +116,9 @@
       "group": "词条",
       "default": true,
       "description": "地图/地区名表",
-      "start": "0x3BECB0",
-      "end": "0x3BEF20"
+      "start": "0x3B9201",
+      "end": "0x3CA098",
+      "type": "scan"
     },
     {
       "id": "道具名",
@@ -87,8 +127,14 @@
       "default": true,
       "table": true,
       "description": "道具结构内名称字段",
-      "start": "0x39A648",
-      "end": "0x39DCA7"
+      "start": "0x39a648",
+      "end": "0x39dca7",
+      "type": "struct",
+      "read": {
+        "entry_size": 40,
+        "name_stride": 8,
+        "desc_ptr_offset": 16
+      }
     },
     {
       "id": "道具说明",
@@ -97,7 +143,8 @@
       "default": true,
       "description": "道具描述指针目标",
       "start": "0x3984DC",
-      "end": "0x39A643"
+      "end": "0x39A647",
+      "type": "scan"
     },
     {
       "id": "招式说明",
@@ -105,8 +152,9 @@
       "group": "说明",
       "default": true,
       "description": "招式说明",
-      "start": "0x3932D8",
-      "end": "0x397F20"
+      "start": "0x383001",
+      "end": "0x397F20",
+      "type": "scan"
     },
     {
       "id": "特性说明",
@@ -116,7 +164,8 @@
       "table": true,
       "description": "特性说明",
       "start": "0x1CBF00",
-      "end": "0x1CC4E0"
+      "end": "0x1CC4E0",
+      "type": "scan"
     },
     {
       "id": "图鉴条目",
@@ -124,8 +173,10 @@
       "group": "说明",
       "default": true,
       "description": "图鉴正文",
-      "start": "0x37E800",
-      "end": "0x383000"
+      "start": "0x37B5C1",
+      "end": "0x383000",
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "开场家园",
@@ -134,7 +185,8 @@
       "default": true,
       "description": "家园镇、选角、博士开场",
       "start": "0x149300",
-      "end": "0x156292"
+      "end": "0x156292",
+      "type": "scan"
     },
     {
       "id": "早期城镇",
@@ -143,7 +195,8 @@
       "default": true,
       "description": "前期城镇/道馆主线",
       "start": "0x148243",
-      "end": "0x165A17"
+      "end": "0x165A17",
+      "type": "scan"
     },
     {
       "id": "中期城镇",
@@ -152,7 +205,8 @@
       "default": true,
       "description": "中期城镇主线",
       "start": "0x145DBC",
-      "end": "0x15C6AF"
+      "end": "0x15C6AF",
+      "type": "scan"
     },
     {
       "id": "后期与联盟",
@@ -168,10 +222,11 @@
           "end": "0x1782C8"
         },
         {
-          "start": "0x3E760C",
+          "start": "0x3DE366",
           "end": "0x3E7A7B"
         }
-      ]
+      ],
+      "type": "scan"
     },
     {
       "id": "岛屿或通关后",
@@ -180,7 +235,8 @@
       "default": true,
       "description": "船/对战塔入口等通关后内容（Ruby 无七岛）",
       "start": "0x17817E",
-      "end": "0x17882B"
+      "end": "0x17882B",
+      "type": "scan"
     },
     {
       "id": "道路与洞窟",
@@ -199,7 +255,8 @@
           "start": "0x179001",
           "end": "0x1DFFFF"
         }
-      ]
+      ],
+      "type": "scan"
     },
     {
       "id": "宝可梦中心",
@@ -208,7 +265,8 @@
       "default": true,
       "description": "护士、治疗、标准对白（含混合通信文本）",
       "start": "0x180531",
-      "end": "0x1806F3"
+      "end": "0x1806F3",
+      "type": "scan"
     },
     {
       "id": "商店",
@@ -251,7 +309,8 @@
           "start": "0x3E9EC0",
           "end": "0x3EA120"
         }
-      ]
+      ],
+      "type": "scan"
     },
     {
       "id": "电脑与仓库",
@@ -260,25 +319,22 @@
       "default": true,
       "description": "PC/仓库菜单与提示",
       "start": "0x1804D9",
-      "end": "0x3A3304",
+      "end": "0x3EB4C0",
       "ranges": [
         {
           "start": "0x1804D9",
           "end": "0x1809F7"
         },
         {
-          "start": "0x3A3270",
+          "start": "0x39DEFB",
           "end": "0x3A3304"
         },
         {
           "start": "0x3EB120",
-          "end": "0x3EB1A0"
-        },
-        {
-          "start": "0x3EB400",
           "end": "0x3EB4C0"
         }
-      ]
+      ],
+      "type": "scan"
     },
     {
       "id": "缆线与通信",
@@ -287,37 +343,34 @@
       "default": true,
       "description": "联机/Wifi/神秘礼物",
       "start": "0x182E9F",
-      "end": "0x3F1C10",
+      "end": "0x403850",
       "ranges": [
         {
           "start": "0x182E9F",
           "end": "0x18333D"
         },
         {
-          "start": "0x1E0164",
-          "end": "0x1E01D1"
-        },
-        {
-          "start": "0x1E0324",
-          "end": "0x1E0459"
-        },
-        {
-          "start": "0x1E04BF",
+          "start": "0x1E0000",
           "end": "0x1E04C1"
         },
         {
-          "start": "0x3EBDC0",
-          "end": "0x3EBE6F"
-        },
-        {
-          "start": "0x3EBE97",
+          "start": "0x3EB597",
           "end": "0x3EBEAD"
         },
         {
-          "start": "0x3F1BF6",
-          "end": "0x3F1C10"
+          "start": "0x3F1BDA",
+          "end": "0x3FCB18"
+        },
+        {
+          "start": "0x402048",
+          "end": "0x402050"
+        },
+        {
+          "start": "0x403846",
+          "end": "0x403850"
         }
-      ]
+      ],
+      "type": "scan"
     },
     {
       "id": "标准脚本串",
@@ -325,8 +378,9 @@
       "group": "设施",
       "default": true,
       "description": "obtain/yes-no/告示牌等模板串",
-      "start": "0x1EC0FC",
-      "end": "0x1EC108"
+      "start": "0x1E04C2",
+      "end": "0x1EC108",
+      "type": "scan"
     },
     {
       "id": "标题与主菜单",
@@ -334,8 +388,10 @@
       "group": "界面",
       "default": true,
       "description": "标题、继续/新游戏等",
-      "start": "0x3E8840",
-      "end": "0x3EA400"
+      "start": "0x3E7A7C",
+      "end": "0x3EA400",
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "存档与电源",
@@ -344,17 +400,22 @@
       "default": true,
       "description": "存档损坏、电池等系统提示",
       "start": "0x1EC5CC",
-      "end": "0x3EBDBE",
+      "end": "0x3EBE96",
       "ranges": [
         {
           "start": "0x1EC5CC",
-          "end": "0x1EC641"
+          "end": "0x2317AC"
+        },
+        {
+          "start": "0x233233",
+          "end": "0x23341C"
         },
         {
           "start": "0x3EBB59",
-          "end": "0x3EBDBE"
+          "end": "0x3EBE96"
         }
-      ]
+      ],
+      "type": "scan"
     },
     {
       "id": "设置选项",
@@ -362,8 +423,9 @@
       "group": "界面",
       "default": true,
       "description": "选项菜单",
-      "start": "0x37B08C",
-      "end": "0x37B5C0"
+      "start": "0x350F01",
+      "end": "0x37B5C0",
+      "type": "scan"
     },
     {
       "id": "背包界面",
@@ -372,7 +434,8 @@
       "default": true,
       "description": "口袋标签、关闭等短 UI",
       "start": "0x3E9AF4",
-      "end": "0x3EB170"
+      "end": "0x3EB170",
+      "type": "scan"
     },
     {
       "id": "状态界面",
@@ -380,26 +443,19 @@
       "group": "界面",
       "default": true,
       "description": "宝可梦详情页标签（非图鉴条目）",
-      "start": "0x3DE19C",
-      "end": "0x3EA7EA",
+      "start": "0x3DD800",
+      "end": "0x3EB535",
       "ranges": [
         {
-          "start": "0x3DE19C",
-          "end": "0x3DE1D6"
-        },
-        {
-          "start": "0x3DE1D8",
-          "end": "0x3DE322"
-        },
-        {
-          "start": "0x3DE337",
+          "start": "0x3DD800",
           "end": "0x3DE365"
         },
         {
           "start": "0x3EA742",
-          "end": "0x3EA7EA"
+          "end": "0x3EB535"
         }
-      ]
+      ],
+      "type": "scan"
     },
     {
       "id": "开始菜单",
@@ -422,7 +478,8 @@
           "start": "0x3EB5AE",
           "end": "0x3EBB58"
         }
-      ]
+      ],
+      "type": "scan"
     },
     {
       "id": "战斗菜单",
@@ -430,18 +487,19 @@
       "group": "战斗",
       "default": true,
       "description": "战斗主菜单短串（PCS或图块另册）",
-      "start": "0x350800",
+      "start": "0x2ACD58",
       "end": "0x3DBFFF",
       "ranges": [
         {
-          "start": "0x350800",
+          "start": "0x2ACD58",
           "end": "0x350F00"
         },
         {
           "start": "0x3D0000",
           "end": "0x3DBFFF"
         }
-      ]
+      ],
+      "type": "scan"
     },
     {
       "id": "战斗提示",
@@ -450,7 +508,8 @@
       "default": true,
       "description": "战斗短提示",
       "start": "0x3DC000",
-      "end": "0x3DD7FF"
+      "end": "0x3DD7FF",
+      "type": "scan"
     },
     {
       "id": "战斗报文",
@@ -459,7 +518,8 @@
       "default": true,
       "description": "战斗字符串大表",
       "start": "0x3DB500",
-      "end": "0x3DBFFF"
+      "end": "0x3DBFFF",
+      "type": "scan"
     },
     {
       "id": "对战设施",
@@ -468,7 +528,8 @@
       "default": true,
       "description": "对战塔（バトルタワー）案内",
       "start": "0x17882C",
-      "end": "0x178C00"
+      "end": "0x178FFE",
+      "type": "scan"
     },
     {
       "id": "登场与胜负白",
@@ -476,8 +537,9 @@
       "group": "训练家",
       "default": true,
       "description": "训练家登场/挑战前台词池",
-      "start": "0x3B8300",
-      "end": "0x3B9200"
+      "start": "0x3B4C01",
+      "end": "0x3B9200",
+      "type": "scan"
     },
     {
       "id": "训练家名",
@@ -487,7 +549,8 @@
       "table": true,
       "description": "训练家个体名表（含主角/劲敌默认名）",
       "start": "0x1C7208",
-      "end": "0x1CA34D"
+      "end": "0x1CA34D",
+      "type": "scan"
     },
     {
       "id": "图鉴界面",
@@ -495,14 +558,16 @@
       "group": "图鉴",
       "default": true,
       "description": "搜索/模式等UI；条目正文归图鉴条目",
-      "start": "0x3F1AA6",
+      "start": "0x3EBEAE",
       "end": "0x3F1BD9",
       "ranges": [
         {
-          "start": "0x3F1AA6",
+          "start": "0x3EBEAE",
           "end": "0x3F1BD9"
         }
-      ]
+      ],
+      "type": "scan",
+      "no_relocate": true
     },
     {
       "id": "默认名字",
@@ -511,7 +576,9 @@
       "default": false,
       "description": "男/女默认名（ユウキ/ハルカ等，训练家名表内）",
       "start": "0x1C9F1E",
-      "end": "0x1CA008"
+      "end": "0x1CA008",
+      "type": "scan",
+      "table": true
     },
     {
       "id": "赛事娱乐",
@@ -519,38 +586,27 @@
       "group": "其它",
       "default": false,
       "description": "华丽大赛/ブレンダー/缎带（RS 特有）",
-      "start": "0x39DCD6",
-      "end": "0x3B7BF0",
+      "start": "0x1EC108",
+      "end": "0x3B82FF",
       "ranges": [
-        {
-          "start": "0x39DCD6",
-          "end": "0x39DCE4"
-        },
-        {
-          "start": "0x39DCF7",
-          "end": "0x39DD35"
-        },
-        {
-          "start": "0x39DE7F",
-          "end": "0x39DEA9"
-        },
-        {
-          "start": "0x39DEAC",
-          "end": "0x39DEFA"
-        },
         {
           "start": "0x1EC108",
           "end": "0x1EC700"
         },
         {
-          "start": "0x3B4A60",
+          "start": "0x39DCA8",
+          "end": "0x39DEFA"
+        },
+        {
+          "start": "0x3A644B",
           "end": "0x3B4C00"
         },
         {
           "start": "0x3B7915",
-          "end": "0x3B7BF0"
+          "end": "0x3B82FF"
         }
-      ]
+      ],
+      "type": "scan"
     },
     {
       "id": "高风险混杂",
@@ -558,8 +614,1264 @@
       "group": "其它",
       "default": false,
       "description": "音效测试/曲名区等与图形同页宽带；默认关",
-      "start": "0x3A555C",
-      "end": "0x3A644A"
+      "start": "0x0",
+      "end": "0x7FFDA3",
+      "type": "scan",
+      "ranges": [
+        {
+          "start": "0x0",
+          "end": "0x193B2"
+        },
+        {
+          "start": "0x1AD41",
+          "end": "0x246F4"
+        },
+        {
+          "start": "0x25861",
+          "end": "0x38A0D"
+        },
+        {
+          "start": "0x3A662",
+          "end": "0x3C1FC"
+        },
+        {
+          "start": "0x3DBDC",
+          "end": "0x42329"
+        },
+        {
+          "start": "0x43333",
+          "end": "0x45DB7"
+        },
+        {
+          "start": "0x47504",
+          "end": "0x57CA5"
+        },
+        {
+          "start": "0x5954D",
+          "end": "0x6528B"
+        },
+        {
+          "start": "0x666B9",
+          "end": "0x68858"
+        },
+        {
+          "start": "0x6A906",
+          "end": "0x6B835"
+        },
+        {
+          "start": "0x6CDDF",
+          "end": "0x760E7"
+        },
+        {
+          "start": "0x77403",
+          "end": "0x79B37"
+        },
+        {
+          "start": "0x7AD55",
+          "end": "0x8A948"
+        },
+        {
+          "start": "0x8BAED",
+          "end": "0x8DC20"
+        },
+        {
+          "start": "0x8EF95",
+          "end": "0x954E5"
+        },
+        {
+          "start": "0x99F61",
+          "end": "0x9D215"
+        },
+        {
+          "start": "0x9E3B5",
+          "end": "0xAA5B6"
+        },
+        {
+          "start": "0xABBC1",
+          "end": "0xBBBC1"
+        },
+        {
+          "start": "0xBD669",
+          "end": "0xC6746"
+        },
+        {
+          "start": "0xC7799",
+          "end": "0xD68E7"
+        },
+        {
+          "start": "0xD7A75",
+          "end": "0xDDBE4"
+        },
+        {
+          "start": "0xDEEEE",
+          "end": "0xE4595"
+        },
+        {
+          "start": "0xE6703",
+          "end": "0xEC473"
+        },
+        {
+          "start": "0xED8F5",
+          "end": "0xEF716"
+        },
+        {
+          "start": "0xF0E06",
+          "end": "0xF508C"
+        },
+        {
+          "start": "0xF684C",
+          "end": "0xF76D9"
+        },
+        {
+          "start": "0xF9209",
+          "end": "0xF970E"
+        },
+        {
+          "start": "0xFB289",
+          "end": "0xFFF74"
+        },
+        {
+          "start": "0x25D0DC",
+          "end": "0x25D19C"
+        },
+        {
+          "start": "0x3A3305",
+          "end": "0x3A644A"
+        },
+        {
+          "start": "0x414A00",
+          "end": "0x416C84"
+        },
+        {
+          "start": "0x41970E",
+          "end": "0x4197DA"
+        },
+        {
+          "start": "0x41B394",
+          "end": "0x41B412"
+        },
+        {
+          "start": "0x41CD04",
+          "end": "0x41CEBF"
+        },
+        {
+          "start": "0x42004F",
+          "end": "0x4257DF"
+        },
+        {
+          "start": "0x427DD8",
+          "end": "0x4291E2"
+        },
+        {
+          "start": "0x42AB34",
+          "end": "0x42B870"
+        },
+        {
+          "start": "0x430900",
+          "end": "0x433364"
+        },
+        {
+          "start": "0x43451C",
+          "end": "0x4355B1"
+        },
+        {
+          "start": "0x43775C",
+          "end": "0x43909E"
+        },
+        {
+          "start": "0x43CAAA",
+          "end": "0x43D7AA"
+        },
+        {
+          "start": "0x440835",
+          "end": "0x4408EF"
+        },
+        {
+          "start": "0x442458",
+          "end": "0x443430"
+        },
+        {
+          "start": "0x450A40",
+          "end": "0x450AC8"
+        },
+        {
+          "start": "0x451F10",
+          "end": "0x452988"
+        },
+        {
+          "start": "0x455E90",
+          "end": "0x455EED"
+        },
+        {
+          "start": "0x457354",
+          "end": "0x4574B9"
+        },
+        {
+          "start": "0x458F44",
+          "end": "0x458F95"
+        },
+        {
+          "start": "0x45A2F8",
+          "end": "0x45A3D0"
+        },
+        {
+          "start": "0x45FE13",
+          "end": "0x460977"
+        },
+        {
+          "start": "0x462F0F",
+          "end": "0x462FE5"
+        },
+        {
+          "start": "0x464080",
+          "end": "0x4649AE"
+        },
+        {
+          "start": "0x46840E",
+          "end": "0x468959"
+        },
+        {
+          "start": "0x46B80E",
+          "end": "0x46B833"
+        },
+        {
+          "start": "0x46F0E8",
+          "end": "0x46F19D"
+        },
+        {
+          "start": "0x470440",
+          "end": "0x472187"
+        },
+        {
+          "start": "0x4742EC",
+          "end": "0x47437D"
+        },
+        {
+          "start": "0x47542C",
+          "end": "0x475486"
+        },
+        {
+          "start": "0x476FCC",
+          "end": "0x47707A"
+        },
+        {
+          "start": "0x478100",
+          "end": "0x478182"
+        },
+        {
+          "start": "0x47A168",
+          "end": "0x47A1A5"
+        },
+        {
+          "start": "0x47B386",
+          "end": "0x47B389"
+        },
+        {
+          "start": "0x47C700",
+          "end": "0x47C88E"
+        },
+        {
+          "start": "0x47EB24",
+          "end": "0x482B4E"
+        },
+        {
+          "start": "0x48460C",
+          "end": "0x484709"
+        },
+        {
+          "start": "0x4877C8",
+          "end": "0x48ADDE"
+        },
+        {
+          "start": "0x48C32C",
+          "end": "0x48C42A"
+        },
+        {
+          "start": "0x48E408",
+          "end": "0x48E732"
+        },
+        {
+          "start": "0x490102",
+          "end": "0x492BF7"
+        },
+        {
+          "start": "0x493C43",
+          "end": "0x493D55"
+        },
+        {
+          "start": "0x495BDD",
+          "end": "0x4960D0"
+        },
+        {
+          "start": "0x498684",
+          "end": "0x4986A0"
+        },
+        {
+          "start": "0x49E064",
+          "end": "0x49E0CB"
+        },
+        {
+          "start": "0x49F3D4",
+          "end": "0x4A0CA9"
+        },
+        {
+          "start": "0x4A23AC",
+          "end": "0x4A312F"
+        },
+        {
+          "start": "0x4A8668",
+          "end": "0x4A87A9"
+        },
+        {
+          "start": "0x4AEA1C",
+          "end": "0x4B3124"
+        },
+        {
+          "start": "0x4B4F00",
+          "end": "0x4B4F30"
+        },
+        {
+          "start": "0x4B6454",
+          "end": "0x4B6459"
+        },
+        {
+          "start": "0x4B7DB0",
+          "end": "0x4B7DFB"
+        },
+        {
+          "start": "0x4B9998",
+          "end": "0x4BB873"
+        },
+        {
+          "start": "0x4BD0DC",
+          "end": "0x4BD195"
+        },
+        {
+          "start": "0x4C0881",
+          "end": "0x4C24A1"
+        },
+        {
+          "start": "0x4C37B0",
+          "end": "0x4C54E4"
+        },
+        {
+          "start": "0x4C674D",
+          "end": "0x4C6750"
+        },
+        {
+          "start": "0x4C8780",
+          "end": "0x4C8930"
+        },
+        {
+          "start": "0x4CB394",
+          "end": "0x4CB3C7"
+        },
+        {
+          "start": "0x4CCB14",
+          "end": "0x4CF302"
+        },
+        {
+          "start": "0x4D2CB4",
+          "end": "0x4D2D7C"
+        },
+        {
+          "start": "0x4D408E",
+          "end": "0x4D45E9"
+        },
+        {
+          "start": "0x4D5D58",
+          "end": "0x4D5DFA"
+        },
+        {
+          "start": "0x4D761C",
+          "end": "0x4D76C7"
+        },
+        {
+          "start": "0x4D8A05",
+          "end": "0x4D8FBD"
+        },
+        {
+          "start": "0x4DA234",
+          "end": "0x4DA38A"
+        },
+        {
+          "start": "0x4DC218",
+          "end": "0x4DE004"
+        },
+        {
+          "start": "0x4DF254",
+          "end": "0x4E139E"
+        },
+        {
+          "start": "0x4E27B0",
+          "end": "0x4E28A6"
+        },
+        {
+          "start": "0x4E3D5C",
+          "end": "0x4E3DAB"
+        },
+        {
+          "start": "0x4E50C8",
+          "end": "0x4E50F9"
+        },
+        {
+          "start": "0x4E6534",
+          "end": "0x4E8449"
+        },
+        {
+          "start": "0x4E9F4C",
+          "end": "0x4E9FCA"
+        },
+        {
+          "start": "0x4EB190",
+          "end": "0x4EB7D8"
+        },
+        {
+          "start": "0x4EEDAC",
+          "end": "0x4EEDE1"
+        },
+        {
+          "start": "0x4F0043",
+          "end": "0x4F0E17"
+        },
+        {
+          "start": "0x4F5C50",
+          "end": "0x4F5D91"
+        },
+        {
+          "start": "0x4F77E2",
+          "end": "0x4F865C"
+        },
+        {
+          "start": "0x4FB1B8",
+          "end": "0x4FC162"
+        },
+        {
+          "start": "0x4FD9E0",
+          "end": "0x4FDB6E"
+        },
+        {
+          "start": "0x4FEFF8",
+          "end": "0x500064"
+        },
+        {
+          "start": "0x50235C",
+          "end": "0x50313A"
+        },
+        {
+          "start": "0x508D58",
+          "end": "0x508DEF"
+        },
+        {
+          "start": "0x50C018",
+          "end": "0x50E514"
+        },
+        {
+          "start": "0x510234",
+          "end": "0x512FE7"
+        },
+        {
+          "start": "0x5145E4",
+          "end": "0x514619"
+        },
+        {
+          "start": "0x517066",
+          "end": "0x517891"
+        },
+        {
+          "start": "0x518A34",
+          "end": "0x518A54"
+        },
+        {
+          "start": "0x51B3B4",
+          "end": "0x51BC56"
+        },
+        {
+          "start": "0x51E970",
+          "end": "0x51F22D"
+        },
+        {
+          "start": "0x520B8C",
+          "end": "0x520BE9"
+        },
+        {
+          "start": "0x5222BC",
+          "end": "0x5241D5"
+        },
+        {
+          "start": "0x525920",
+          "end": "0x525A17"
+        },
+        {
+          "start": "0x52ED94",
+          "end": "0x530359"
+        },
+        {
+          "start": "0x532978",
+          "end": "0x532B65"
+        },
+        {
+          "start": "0x5351C0",
+          "end": "0x535FC0"
+        },
+        {
+          "start": "0x537277",
+          "end": "0x537293"
+        },
+        {
+          "start": "0x539318",
+          "end": "0x5393E7"
+        },
+        {
+          "start": "0x53AAFC",
+          "end": "0x53ABA4"
+        },
+        {
+          "start": "0x53C3C4",
+          "end": "0x53C427"
+        },
+        {
+          "start": "0x540300",
+          "end": "0x542627"
+        },
+        {
+          "start": "0x544AA4",
+          "end": "0x544ACC"
+        },
+        {
+          "start": "0x5461C5",
+          "end": "0x547C78"
+        },
+        {
+          "start": "0x549D88",
+          "end": "0x549DAD"
+        },
+        {
+          "start": "0x54B900",
+          "end": "0x54B91E"
+        },
+        {
+          "start": "0x54E764",
+          "end": "0x54E7E1"
+        },
+        {
+          "start": "0x550D84",
+          "end": "0x5528F9"
+        },
+        {
+          "start": "0x553E90",
+          "end": "0x553EF7"
+        },
+        {
+          "start": "0x5557C0",
+          "end": "0x556B66"
+        },
+        {
+          "start": "0x5590D8",
+          "end": "0x5590FF"
+        },
+        {
+          "start": "0x55AD6B",
+          "end": "0x55DBEF"
+        },
+        {
+          "start": "0x560000",
+          "end": "0x560694"
+        },
+        {
+          "start": "0x562510",
+          "end": "0x562ABA"
+        },
+        {
+          "start": "0x56402C",
+          "end": "0x564083"
+        },
+        {
+          "start": "0x566E0C",
+          "end": "0x566E62"
+        },
+        {
+          "start": "0x567F7C",
+          "end": "0x567FF6"
+        },
+        {
+          "start": "0x569258",
+          "end": "0x5695BD"
+        },
+        {
+          "start": "0x56BB58",
+          "end": "0x56BBEE"
+        },
+        {
+          "start": "0x56F8B0",
+          "end": "0x56F98F"
+        },
+        {
+          "start": "0x570F44",
+          "end": "0x571E32"
+        },
+        {
+          "start": "0x57A2E0",
+          "end": "0x57D789"
+        },
+        {
+          "start": "0x57F194",
+          "end": "0x57F236"
+        },
+        {
+          "start": "0x5807A8",
+          "end": "0x580882"
+        },
+        {
+          "start": "0x58247C",
+          "end": "0x582530"
+        },
+        {
+          "start": "0x5843FC",
+          "end": "0x584FE5"
+        },
+        {
+          "start": "0x58AD3C",
+          "end": "0x58ADF1"
+        },
+        {
+          "start": "0x58DA2C",
+          "end": "0x58DAB9"
+        },
+        {
+          "start": "0x58ED28",
+          "end": "0x591262"
+        },
+        {
+          "start": "0x593830",
+          "end": "0x5948EE"
+        },
+        {
+          "start": "0x59A4B8",
+          "end": "0x59BD99"
+        },
+        {
+          "start": "0x59FCC4",
+          "end": "0x59FCF9"
+        },
+        {
+          "start": "0x5A1AA4",
+          "end": "0x5A357A"
+        },
+        {
+          "start": "0x5A48E0",
+          "end": "0x5A5025"
+        },
+        {
+          "start": "0x5A6D10",
+          "end": "0x5A6DCE"
+        },
+        {
+          "start": "0x5A9EDC",
+          "end": "0x5A9F0D"
+        },
+        {
+          "start": "0x5AC518",
+          "end": "0x5AC626"
+        },
+        {
+          "start": "0x5ADDD0",
+          "end": "0x5ADFA3"
+        },
+        {
+          "start": "0x5AF103",
+          "end": "0x5B0A8D"
+        },
+        {
+          "start": "0x5B2147",
+          "end": "0x5B2400"
+        },
+        {
+          "start": "0x5B4380",
+          "end": "0x5B502F"
+        },
+        {
+          "start": "0x5B6050",
+          "end": "0x5B63C7"
+        },
+        {
+          "start": "0x5B9360",
+          "end": "0x5B9391"
+        },
+        {
+          "start": "0x5BBAA4",
+          "end": "0x5BF00C"
+        },
+        {
+          "start": "0x5C0208",
+          "end": "0x5C046F"
+        },
+        {
+          "start": "0x5C35D4",
+          "end": "0x5C3780"
+        },
+        {
+          "start": "0x5C55E8",
+          "end": "0x5C56BB"
+        },
+        {
+          "start": "0x5C7ED0",
+          "end": "0x5C8009"
+        },
+        {
+          "start": "0x5CB218",
+          "end": "0x5CB26D"
+        },
+        {
+          "start": "0x5CCC3F",
+          "end": "0x5CE19A"
+        },
+        {
+          "start": "0x5D0300",
+          "end": "0x5D0346"
+        },
+        {
+          "start": "0x5D3548",
+          "end": "0x5D3574"
+        },
+        {
+          "start": "0x5D646C",
+          "end": "0x5D64B5"
+        },
+        {
+          "start": "0x5D7ECC",
+          "end": "0x5D7F6A"
+        },
+        {
+          "start": "0x5D9258",
+          "end": "0x5D940E"
+        },
+        {
+          "start": "0x5DABB4",
+          "end": "0x5DC11B"
+        },
+        {
+          "start": "0x5DD538",
+          "end": "0x5DF0BA"
+        },
+        {
+          "start": "0x5E030C",
+          "end": "0x5E11F7"
+        },
+        {
+          "start": "0x5E2CF4",
+          "end": "0x5E2ED0"
+        },
+        {
+          "start": "0x5E50AC",
+          "end": "0x5E5243"
+        },
+        {
+          "start": "0x5E6DD8",
+          "end": "0x5E6E8D"
+        },
+        {
+          "start": "0x5E8122",
+          "end": "0x5E953D"
+        },
+        {
+          "start": "0x5EB922",
+          "end": "0x5ED0FE"
+        },
+        {
+          "start": "0x5EF84C",
+          "end": "0x5EF990"
+        },
+        {
+          "start": "0x5F2B2D",
+          "end": "0x5F2D1F"
+        },
+        {
+          "start": "0x5F9404",
+          "end": "0x5F9492"
+        },
+        {
+          "start": "0x5FB2E8",
+          "end": "0x5FBE32"
+        },
+        {
+          "start": "0x5FE1B4",
+          "end": "0x5FE942"
+        },
+        {
+          "start": "0x5FFE38",
+          "end": "0x600035"
+        },
+        {
+          "start": "0x60129C",
+          "end": "0x601442"
+        },
+        {
+          "start": "0x607C8A",
+          "end": "0x609BD8"
+        },
+        {
+          "start": "0x60F53C",
+          "end": "0x61005E"
+        },
+        {
+          "start": "0x611A58",
+          "end": "0x61219B"
+        },
+        {
+          "start": "0x613A94",
+          "end": "0x613EE4"
+        },
+        {
+          "start": "0x615C8C",
+          "end": "0x615E24"
+        },
+        {
+          "start": "0x623668",
+          "end": "0x623680"
+        },
+        {
+          "start": "0x62485C",
+          "end": "0x62499D"
+        },
+        {
+          "start": "0x62833C",
+          "end": "0x6284BC"
+        },
+        {
+          "start": "0x63599F",
+          "end": "0x63655A"
+        },
+        {
+          "start": "0x638148",
+          "end": "0x63850B"
+        },
+        {
+          "start": "0x63F498",
+          "end": "0x640B88"
+        },
+        {
+          "start": "0x645638",
+          "end": "0x645648"
+        },
+        {
+          "start": "0x64A0D8",
+          "end": "0x64A15C"
+        },
+        {
+          "start": "0x64CC28",
+          "end": "0x64D829"
+        },
+        {
+          "start": "0x64E948",
+          "end": "0x652235"
+        },
+        {
+          "start": "0x653FE8",
+          "end": "0x655178"
+        },
+        {
+          "start": "0x67D000",
+          "end": "0x683868"
+        },
+        {
+          "start": "0x684968",
+          "end": "0x68DACD"
+        },
+        {
+          "start": "0x690000",
+          "end": "0x69207D"
+        },
+        {
+          "start": "0x6940BC",
+          "end": "0x694CEC"
+        },
+        {
+          "start": "0x696678",
+          "end": "0x6A3773"
+        },
+        {
+          "start": "0x6A4914",
+          "end": "0x728D03"
+        },
+        {
+          "start": "0x72A2A0",
+          "end": "0x75AE33"
+        },
+        {
+          "start": "0x75BE78",
+          "end": "0x7D488F"
+        },
+        {
+          "start": "0x7D633C",
+          "end": "0x7E8E79"
+        },
+        {
+          "start": "0x7EA34C",
+          "end": "0x7EC2E3"
+        },
+        {
+          "start": "0x7ED624",
+          "end": "0x7FA106"
+        },
+        {
+          "start": "0x7FB6E4",
+          "end": "0x7FC1EE"
+        },
+        {
+          "start": "0x7FD210",
+          "end": "0x7FFDA3"
+        }
+      ]
+    },
+    {
+      "id": "选项菜单扫描",
+      "assign": false,
+      "hidden": true,
+      "type": "prefix",
+      "enrich": "选项菜单",
+      "start": "0x37B44C",
+      "read": {
+        "prefix": [
+          "FC",
+          "05"
+        ],
+        "scan_addr_bands": [
+          [
+            "0x37B44C",
+            "0x37B500"
+          ]
+        ],
+        "seed_originals": [
+          "\\CC0509せっていを かえる",
+          "\\CC0509はなしの はやさ",
+          "\\CC0509せんとうエフェクト",
+          "\\CC0509しあいの ルール",
+          "\\CC0509サウンド",
+          "\\CC0509ウインドウ",
+          "\\CC0509おわる",
+          "\\CC0509ボタンの モード",
+          "\\CC050Fおそい",
+          "\\CC050Fふつう",
+          "\\CC050Fはやい",
+          "\\CC050Fみる",
+          "\\CC050Fみない",
+          "\\CC050Fいれかえ",
+          "\\CC050Fかちぬき",
+          "\\CC050Fモノラル",
+          "\\CC050Fステレオ",
+          "\\CC050Fタイプ",
+          "\\CC050Fノーマル",
+          "\\CC050FＬＲ"
+        ]
+      },
+      "label": "选项菜单扫描",
+      "group": "其它",
+      "default": false
+    },
+    {
+      "id": "FC彩窗扫描",
+      "assign": false,
+      "hidden": true,
+      "type": "prefix",
+      "enrich": "FC彩窗",
+      "start": "0x3E9000",
+      "read": {
+        "prefix": [
+          "FC"
+        ],
+        "scan_addr_bands": [
+          [
+            "0x3E9000",
+            "0x3EB000"
+          ],
+          [
+            "0x3D0000",
+            "0x3E0000"
+          ]
+        ]
+      },
+      "label": "FC彩窗扫描",
+      "group": "其它",
+      "default": false
+    },
+    {
+      "id": "存档提示扫描",
+      "assign": false,
+      "hidden": true,
+      "type": "needle",
+      "enrich": "存档与电源",
+      "start": "0x197000",
+      "read": {
+        "content_class": "存档与电源",
+        "scan_addr_bands": [
+          [
+            "0x197000",
+            "0x198000"
+          ],
+          [
+            "0x1EC000",
+            "0x1ED000"
+          ],
+          [
+            "0x3EB800",
+            "0x3EBF00"
+          ],
+          [
+            "0x3DC000",
+            "0x3DC200"
+          ],
+          [
+            "0x3E9900",
+            "0x3E9B00"
+          ]
+        ],
+        "content_class_rules": [
+          {
+            "all_contains": [
+              "でんげんを",
+              "きらない"
+            ]
+          },
+          {
+            "all_contains": [
+              "ポケモンレポート",
+              "かきこみ"
+            ]
+          },
+          {
+            "all_contains": [
+              "レポート"
+            ],
+            "any_contains": [
+              "かきこみ",
+              "かきしる",
+              "かきのこ",
+              "かかれた",
+              "かかれています"
+            ]
+          },
+          {
+            "all_contains": [
+              "バックアップ"
+            ],
+            "any_contains": [
+              "カートリッジ",
+              "きのう",
+              "セーブ"
+            ]
+          },
+          {
+            "any_contains_raw": [
+              "ＲＴＣ",
+              "RTC"
+            ],
+            "also_any_contains": [
+              "リセット",
+              "じかん"
+            ]
+          },
+          {
+            "all_contains": [
+              "ゲームない",
+              "じかん"
+            ]
+          },
+          {
+            "all_contains": [
+              "ずかん",
+              "セーブ"
+            ]
+          },
+          {
+            "all_contains": [
+              "うえから",
+              "かいて",
+              "レポート"
+            ]
+          }
+        ],
+        "seed_from_lexicon": true
+      },
+      "label": "存档提示扫描",
+      "group": "其它",
+      "default": false
+    },
+    {
+      "id": "战斗HUD采集",
+      "assign": false,
+      "hidden": true,
+      "type": "needle",
+      "enrich": "战斗HUD",
+      "start": "0x100000",
+      "read": {
+        "seed_originals": [
+          "わざ",
+          "めいちゅう",
+          "いりょく",
+          "タイプ",
+          "PP",
+          "つよさ",
+          "ぼうぎょ",
+          "とくこう",
+          "とくぼう",
+          "すばやさ"
+        ],
+        "scan_addr_bands": [
+          [
+            "0x100000",
+            "0x3FFFFF"
+          ]
+        ]
+      },
+      "label": "战斗HUD采集",
+      "group": "其它",
+      "default": false
+    },
+    {
+      "id": "短标菜单采集",
+      "assign": false,
+      "hidden": true,
+      "type": "needle",
+      "enrich": "短标菜单",
+      "start": "0x100000",
+      "read": {
+        "seed_originals": [
+          "はい",
+          "いいえ",
+          "たたかう",
+          "バッグ",
+          "ポケモン",
+          "にげる",
+          "けってい",
+          "やめる",
+          "いれかえる",
+          "いれかえ",
+          "つよさをみる",
+          "\\0Fは どうする？",
+          "\\20は どうする？",
+          "もどる",
+          "おわり",
+          "おわる",
+          "おとこ",
+          "おんな",
+          "じぶんできめる",
+          "じぶんで きめる",
+          "なまえ",
+          "おこづかい",
+          "プレイじかん",
+          "リーグバッジ",
+          "かいに きた",
+          "うりに きた",
+          "なんでもないです",
+          "かいもの を やめます",
+          "だれかのパソコン",
+          "マユミのパソコン",
+          "スイッチをきる",
+          "なにを しますか？",
+          "ポケモンを つれていく",
+          "ポケモンを あずける",
+          "ポケモンを あずける ",
+          "ボックスを せいりする",
+          "さようなら",
+          "ケイ"
+        ],
+        "scan_addr_bands": [
+          [
+            "0x100000",
+            "0x3FFFFF"
+          ]
+        ]
+      },
+      "label": "短标菜单采集",
+      "group": "其它",
+      "default": false
+    },
+    {
+      "id": "状态背包采集",
+      "assign": false,
+      "hidden": true,
+      "type": "needle",
+      "enrich": "状态背包",
+      "start": "0x3E0000",
+      "read": {
+        "seed_originals": [
+          "ポケモンじょうほう",
+          "おぼえているわざ",
+          "せつめい",
+          "パーソナル",
+          "トレーナーメモ",
+          "とくせい",
+          "きりかえ",
+          "いれかえ",
+          "たたかうわざ",
+          "ポケモンのうりょく",
+          "バッグをとじる",
+          "どうぐ",
+          "だいじなもの",
+          "ボール",
+          "わざマシン",
+          "きのみ"
+        ],
+        "scan_addr_bands": [
+          [
+            "0x3E0000",
+            "0x3FFFFF"
+          ]
+        ]
+      },
+      "label": "状态背包采集",
+      "group": "其它",
+      "default": false
+    },
+    {
+      "id": "战斗提示扫描",
+      "assign": false,
+      "hidden": true,
+      "type": "prefix",
+      "enrich": "战斗提示",
+      "start": "0x3DC000",
+      "read": {
+        "prefix": [
+          "FC"
+        ],
+        "keep_any_contains": [
+          "どうする",
+          "わざタイプ",
+          "たたかう",
+          "にげる",
+          "バッグ",
+          "ノーマル",
+          "ほのお",
+          "みず",
+          "くさ",
+          "でんき"
+        ],
+        "scan_addr_bands": [
+          [
+            "0x3DC000",
+            "0x3DD7FF"
+          ]
+        ]
+      },
+      "label": "战斗提示扫描",
+      "group": "其它",
+      "default": false
+    },
+    {
+      "id": "主脚本指针",
+      "assign": false,
+      "hidden": true,
+      "type": "pointer",
+      "enrich": "主脚本指针",
+      "read": {
+        "min_ptr_source": "0x100000"
+      },
+      "label": "主脚本指针",
+      "group": "其它",
+      "default": false,
+      "start": "0x0",
+      "end": "0x0"
     }
   ],
   "unassigned": {

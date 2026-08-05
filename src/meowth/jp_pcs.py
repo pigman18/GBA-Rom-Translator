@@ -129,6 +129,7 @@ def looks_like_jp_text(s: bytes) -> bool:
     glyph = 0
     kanaish = 0
     hiragana = 0
+    katakana = 0
     latinish = 0
     neutral = 0  # space / JP punctuation — not counted against kana ratio
     while i < len(body):
@@ -163,6 +164,7 @@ def looks_like_jp_text(s: bytes) -> bool:
             hiragana += 1
             kanaish += 1
         elif 0x51 <= b <= 0xA0:
+            katakana += 1
             kanaish += 1
         elif 0xBB <= b <= 0xF6:
             latinish += 1
@@ -172,9 +174,9 @@ def looks_like_jp_text(s: bytes) -> bool:
         return False
     if latinish > max(1, glyph // 8):
         return False
-    # Real JP strings are mostly kana; require some hiragana for longer bodies
-    if glyph >= 8 and hiragana < 2:
-        return False
     # Punctuation/spaces are common in dialogue — exclude them from the ratio.
     effective = max(1, glyph - neutral)
+    # Long bodies: hiragana dialogue OR katakana-heavy UI (menus / move names).
+    if glyph >= 8 and hiragana < 2 and katakana < (effective + 1) // 2:
+        return False
     return kanaish >= max(2, (effective * 2) // 3)

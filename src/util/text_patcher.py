@@ -3,25 +3,26 @@
 """
 text_patcher.py
 ==============
-从日版 Gen3 GBA ROM 导出文本 addr_bands，并按 configs/{ROM_ID}.json 归类 modules。
+从日版 Gen3 GBA ROM 导出文本 addr_bands，并按 configs/{ROM_ID}.json 归类 modules
+（产出 schema v3，与 Meowth translate/modules.json 同构）。
 
 用法：
   python text_patcher.py <rom.gba>                     # 兼容：等同 export
-  python text_patcher.py export <rom.gba>              # 导出 addr_bands + modules
+  python text_patcher.py export <rom.gba>              # 全 ROM 密扫 + modules v3
+  python text_patcher.py export <rom.gba> --fast       # 指针步长 4
+  python text_patcher.py export <rom.gba> --no-update-map
+                                                       # 不写回 configs
   python text_patcher.py diff --new <a.json> --ref <b.json>
-                                                       # 逐模块对比（回归检测）
   python text_patcher.py status <rom.gba> [--ref <ref.json>]
                        [--texts <texts.json>] [--samples N]
-                                                       # 覆盖表 + 未归类解码预览
   python text_patcher.py classify <rom.gba> --texts <texts.json> --out <suggestions.json>
-                                                       # 未归类 band 解码+关键词/词表分类建议
 
 配置：
-  configs/POKEMON_RUBY_AXVJ00.json   ← 按 ROM id 命名的 module_map
+  configs/POKEMON_RUBY_AXVJ00.json   ← module_map（发现新空间/模块会追加写回）
 
 输出：
   works/POKEMON_RUBY_AXVJ00/addr_bands.json
-  works/POKEMON_RUBY_AXVJ00/modules.json
+  works/POKEMON_RUBY_AXVJ00/modules.json   ← schema v3
 """
 
 from __future__ import annotations
@@ -57,16 +58,24 @@ ROM_ID_BY_CODE = {
 BASE = 0x08000000
 EOS = 0xFF
 CTRL = {0xFA, 0xFB, 0xFC, 0xFD, 0xFE, 0xFF}
-BODY_LO = 0x100000
+BODY_LO = 0  # 全 ROM：不再砍掉低址串
 MIN_LEN = 2
 MAX_LEN = 512
 PTR_ALIGN = 4
 MERGE_GAP = 0
+# module_map 回写：邻接扩 ranges / 未归类聚类成新模块
+MAP_ADJACENT_GAP = 0x1000
+MAP_CLUSTER_GAP = 0x10000
+MAP_CLUSTER_MIN_BANDS = 8
+MAP_CLUSTER_MIN_SPAN = 0x2000
+UNASSIGNED_ID = "未归类"
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 CONFIGS_DIR = SCRIPT_DIR / "configs"
 WORKS_DIR = SCRIPT_DIR / "works"
 REPO_ROOT = Path(__file__).resolve().parents[2]
+# Desktop util 镜像（若存在则与仓库 configs 同步回写）
+DESKTOP_CONFIGS_DIR = Path(r"C:\Users\Administrator\Desktop\util\util\configs")
 
 # PCS 控制字节（不参与文本字符）
 PCS_CTRL = frozenset([0x00, 0xF7, 0xF8, 0xF9, 0xFA, 0xFB, 0xFC, 0xFD, 0xFE, 0xFF])
@@ -148,12 +157,15 @@ def prev_ok_for_string_start(rom: bytes, so: int) -> bool:
     return False
 
 
-def collect_pointer_targets(rom: bytes, body_hi: int) -> Dict[int, List[int]]:
+def collect_pointer_targets(
+    rom: bytes, body_hi: int, *, ptr_step: int = 1
+) -> Dict[int, List[int]]:
+    """全 ROM 解指针找 PCS 串。默认 ptr_step=1；--fast 用 PTR_ALIGN。"""
     body_hi = min(body_hi, len(rom))
+    step = max(1, int(ptr_step))
     hits: Dict[int, List[int]] = {}
     off = 0
     while off + 4 <= len(rom):
-        step = 1 if 0x100000 <= off < 0x200000 else max(1, PTR_ALIGN)
         v = u32(rom, off)
         if not (BASE <= v < BASE + len(rom)):
             off += step
@@ -226,11 +238,12 @@ def write_json(path: Path, data: dict) -> None:
     )
 
 
-def scan_rom(rom_path: Path, rom_id: str):
+def scan_rom(rom_path: Path, rom_id: str, *, fast: bool = False):
     rom = rom_path.read_bytes()
     code, name = identify(rom)
     game_code = code.decode("ascii")
-    hits = collect_pointer_targets(rom, body_hi=len(rom))
+    ptr_step = PTR_ALIGN if fast else 1
+    hits = collect_pointer_targets(rom, body_hi=len(rom), ptr_step=ptr_step)
     blocks = blocks_from_hits(rom, hits)
     bands = merge_bands(blocks, MERGE_GAP)
     return rom, game_code, name, blocks, bands, hits
@@ -339,8 +352,16 @@ def apply_table_inject(
     return bands
 
 
-def export(rom_path: Path, rom_id: str) -> Tuple[Path, dict]:
-    rom, game_code, name, blocks, bands, hits = scan_rom(rom_path, rom_id)
+def export(
+    rom_path: Path,
+    rom_id: str,
+    *,
+    fast: bool = False,
+    update_map: bool = True,
+) -> Tuple[Path, dict]:
+    rom, game_code, name, blocks, bands, hits = scan_rom(
+        rom_path, rom_id, fast=fast
+    )
     work_dir = WORKS_DIR / rom_id
     bands_path = work_dir / "addr_bands.json"
     bands_doc = {
@@ -353,6 +374,7 @@ def export(rom_path: Path, rom_id: str) -> Tuple[Path, dict]:
             "string_blocks": len(blocks),
             "band_count": len(bands),
             "ptr_backed_starts": len(hits),
+            "ptr_step": PTR_ALIGN if fast else 1,
             "exported_by": "text_patcher.py",
         },
         "addr_bands": [[f"0x{s:08X}", f"0x{e:08X}"] for s, e in bands],
@@ -378,6 +400,24 @@ def export(rom_path: Path, rom_id: str) -> Tuple[Path, dict]:
     result["_meta"]["game_code"] = game_code
     result["_meta"]["module_map"] = str(map_path.resolve())
     result["_meta"]["exported_by"] = "text_patcher.py"
+
+    if update_map:
+        n_exp, n_add = update_module_map_from_result(map_path, result, rom_id)
+        print(f"[ok] module_map writeback: expanded {n_exp} ranges, added {n_add} modules")
+        if n_exp or n_add:
+            # re-assign so works/modules.json reflects updated map
+            mmap = load_module_map(map_path)
+            result = assign_bands(bands, mmap)
+            result["_meta"]["rom_id"] = rom_id
+            result["_meta"]["source_rom_path"] = str(rom_path.resolve())
+            result["_meta"]["game_code"] = game_code
+            result["_meta"]["module_map"] = str(map_path.resolve())
+            result["_meta"]["exported_by"] = "text_patcher.py"
+            result["_meta"]["map_writeback"] = {
+                "expanded_ranges": n_exp,
+                "added_modules": n_add,
+            }
+
     write_json(modules_path, result)
 
     counts = result["_meta"]["module_band_counts"]
@@ -387,7 +427,7 @@ def export(rom_path: Path, rom_id: str) -> Tuple[Path, dict]:
 
 
 # --------------------------------------------------------------------------
-# modules.json 读写
+# modules.json 读写（v3: read.scan_addr_bands；兼容顶层 addr_bands）
 # --------------------------------------------------------------------------
 
 def parse_addr(v: object) -> int:
@@ -397,19 +437,370 @@ def parse_addr(v: object) -> int:
     return int(s, 16) if s.lower().startswith("0x") else int(s, 0)
 
 
+def entry_scan_bands(entry: dict) -> List[Tuple[int, int]]:
+    read = entry.get("read") or {}
+    bands = (
+        read.get("scan_addr_bands")
+        or read.get("addr_bands")
+        or entry.get("addr_bands")
+        or []
+    )
+    out: List[Tuple[int, int]] = []
+    for pair in bands:
+        if isinstance(pair, (list, tuple)) and len(pair) >= 2:
+            out.append((parse_addr(pair[0]), parse_addr(pair[1])))
+    return out
+
+
 def load_modules(path: Path) -> Tuple[dict, Dict[str, List[Tuple[int, int]]]]:
     data = json.loads(path.read_text(encoding="utf-8"))
     mods = data.get("modules") or {}
     out: Dict[str, List[Tuple[int, int]]] = {}
     for mid, entry in mods.items():
-        bands = entry.get("addr_bands") or []
-        out[mid] = [(parse_addr(a), parse_addr(b)) for a, b in bands]
+        out[mid] = entry_scan_bands(entry)
     return data, out
 
 
 def band_list(bands: Sequence[Tuple[int, int]]) -> List[List[str]]:
     return [[f"0x{lo:X}", f"0x{hi:X}"] for lo, hi in sorted(bands)]
 
+
+# --------------------------------------------------------------------------
+# module_map 回写：扩 ranges / 追加新模块
+# --------------------------------------------------------------------------
+
+def _map_module_participates(m: dict) -> bool:
+    if m.get("assign") is False:
+        return False
+    if m.get("hidden"):
+        return False
+    return True
+
+
+def _is_auto_catchall_module(mid: str) -> bool:
+    """Plan-era dump catch-alls: 自动区_* / 扩展对话库_* / 地图脚本对话."""
+    if mid.startswith("自动区_"):
+        return True
+    if mid.startswith("扩展对话库_"):
+        return True
+    if mid == "地图脚本对话":
+        return True
+    return False
+
+
+def _map_segs(m: dict) -> List[Tuple[int, int]]:
+    ranges = m.get("ranges")
+    segs: List[Tuple[int, int]] = []
+    if ranges:
+        for r in ranges:
+            if isinstance(r, dict):
+                segs.append((parse_addr(r["start"]), parse_addr(r["end"])))
+            elif isinstance(r, (list, tuple)) and len(r) >= 2:
+                segs.append((parse_addr(r[0]), parse_addr(r[1])))
+    if not segs:
+        segs.append(
+            (parse_addr(m.get("start") or 0), parse_addr(m.get("end") or 0))
+        )
+    return [(a, b) for a, b in segs if b >= a and not (a == 0 and b == 0)]
+
+
+def _merge_seg_into_module(m: dict, lo: int, hi: int) -> bool:
+    """Merge [lo,hi] into module ranges/envelope. Return True if changed."""
+    segs = _map_segs(m)
+    if not segs:
+        m["start"] = f"0x{lo:X}"
+        m["end"] = f"0x{hi:X}"
+        return True
+    # try merge into adjacent segment
+    changed = False
+    merged: List[Tuple[int, int]] = []
+    placed = False
+    for a, b in sorted(segs):
+        if placed:
+            merged.append((a, b))
+            continue
+        if hi < a - MAP_ADJACENT_GAP - 1:
+            merged.append((lo, hi))
+            merged.append((a, b))
+            placed = True
+            changed = True
+            continue
+        if lo > b + MAP_ADJACENT_GAP + 1:
+            merged.append((a, b))
+            continue
+        # adjacent / overlap
+        na, nb = min(a, lo), max(b, hi)
+        if na != a or nb != b:
+            changed = True
+        merged.append((na, nb))
+        placed = True
+    if not placed:
+        merged.append((lo, hi))
+        changed = True
+    # coalesce merged list
+    merged.sort()
+    out: List[Tuple[int, int]] = []
+    for a, b in merged:
+        if not out:
+            out.append((a, b))
+            continue
+        pa, pb = out[-1]
+        if a <= pb + MAP_ADJACENT_GAP + 1:
+            out[-1] = (pa, max(pb, b))
+        else:
+            out.append((a, b))
+    final = out
+    env_lo = min(a for a, _ in final)
+    env_hi = max(b for _, b in final)
+    old_env = (parse_addr(m.get("start") or 0), parse_addr(m.get("end") or 0))
+    m["start"] = f"0x{env_lo:X}"
+    m["end"] = f"0x{env_hi:X}"
+    if len(final) == 1 and not m.get("ranges"):
+        if old_env != (env_lo, env_hi):
+            changed = True
+        return changed
+    m["ranges"] = [{"start": f"0x{a:X}", "end": f"0x{b:X}"} for a, b in final]
+    return changed
+
+
+def _cluster_bands(
+    bands: Sequence[Tuple[int, int]], gap: int
+) -> List[Tuple[int, int, int]]:
+    """Return clusters as (lo, hi, band_count)."""
+    if not bands:
+        return []
+    ordered = sorted(bands)
+    out: List[List[int]] = []
+    for lo, hi in ordered:
+        if not out or lo > out[-1][1] + gap:
+            out.append([lo, hi, 1])
+        else:
+            out[-1][1] = max(out[-1][1], hi)
+            out[-1][2] += 1
+    return [(a, b, n) for a, b, n in out]
+
+
+def _best_named_for_seg(
+    lo: int,
+    hi: int,
+    named: Sequence[dict],
+) -> Optional[dict]:
+    """Smallest-span named module that overlaps or is within MAP_ADJACENT_GAP."""
+    hits: List[Tuple[int, dict]] = []
+    for m in named:
+        for a, b in _map_segs(m):
+            if hi < a - MAP_ADJACENT_GAP - 1 or lo > b + MAP_ADJACENT_GAP + 1:
+                continue
+            span = b - a + 1
+            hits.append((span, m))
+            break
+    if not hits:
+        return None
+    hits.sort(key=lambda t: (t[0], t[1]["id"]))
+    return hits[0][1]
+
+
+def _nearest_named_for_seg(
+    lo: int,
+    hi: int,
+    named: Sequence[dict],
+) -> Optional[dict]:
+    """Nearest named module by address distance (0 if overlap); then smallest span."""
+    best: Optional[Tuple[int, int, str, dict]] = None
+    for m in named:
+        segs = _map_segs(m)
+        if not segs:
+            continue
+        dist = min(
+            0
+            if not (hi < a or lo > b)
+            else (a - hi if hi < a else lo - b)
+            for a, b in segs
+        )
+        span = min(b - a + 1 for a, b in segs)
+        key = (dist, span, m["id"], m)
+        if best is None or key[:3] < best[:3]:
+            best = key
+    return best[3] if best else None
+
+
+def _named_by_id(named: Sequence[dict], mid: str) -> Optional[dict]:
+    for m in named:
+        if m["id"] == mid:
+            return m
+    return None
+
+
+def absorb_unassigned_bands_into_named(
+    mmap: dict,
+    un_bands: Sequence[Tuple[int, int]],
+) -> Tuple[dict, int]:
+    """Expand existing named module ranges to cover 未归类 bands.
+
+    - Prefer adjacent/overlapping (small span).
+    - Else nearest module by address; low-ROM and far clusters prefer 高风险混杂
+      when present (default:false), so we change addresses without creating new ids.
+    """
+    mods: List[dict] = [
+        m for m in (mmap.get("modules") or []) if not _is_auto_catchall_module(m["id"])
+    ]
+    named = [m for m in mods if _map_module_participates(m)]
+    risky = _named_by_id(named, "高风险混杂")
+    expanded = 0
+
+    for lo, hi in sorted(un_bands):
+        if hi < lo:
+            lo, hi = hi, lo
+        target = _best_named_for_seg(lo, hi, named)
+        if target is None:
+            # 低址或离现有模块很远：优先高风险混杂（可改地址、默认不勾）
+            near = _nearest_named_for_seg(lo, hi, named)
+            if risky is not None and (hi < 0x100000 or near is None):
+                target = risky
+            elif near is not None:
+                # 距离过大也进高风险，避免把 0x67xxxx 整坨并进剧情小模块
+                segs = _map_segs(near)
+                dist = min(
+                    0
+                    if not (hi < a or lo > b)
+                    else (a - hi if hi < a else lo - b)
+                    for a, b in segs
+                )
+                if risky is not None and dist > MAP_CLUSTER_GAP:
+                    target = risky
+                else:
+                    target = near
+            elif risky is not None:
+                target = risky
+            else:
+                continue
+        if _merge_seg_into_module(target, lo, hi):
+            expanded += 1
+
+    mmap = dict(mmap)
+    mmap["modules"] = mods
+    meta = dict(mmap.get("_meta") or {})
+    meta["last_absorb_unassigned"] = {
+        "bands": len(un_bands),
+        "expanded": expanded,
+        "by": "text_patcher.absorb_unassigned_bands_into_named",
+    }
+    mmap["_meta"] = meta
+    return mmap, expanded
+
+
+def fold_auto_modules_into_named(mmap: dict) -> Tuple[dict, int, int]:
+    """Merge auto catch-all ranges into adjacent named modules; drop auto ids.
+
+    Returns (updated_map, expanded_count, removed_count).
+    Segments with no adjacent named module are dropped (→ 未归类 on next assign).
+    Low-ROM auto blobs (hi < 0x100000) are never merged into named modules.
+    """
+    mods: List[dict] = list(mmap.get("modules") or [])
+    autos = [m for m in mods if _is_auto_catchall_module(m["id"])]
+    named = [
+        m
+        for m in mods
+        if _map_module_participates(m) and not _is_auto_catchall_module(m["id"])
+    ]
+    expanded = 0
+    for auto in autos:
+        for lo, hi in _map_segs(auto):
+            # 低址代码/数据海：不并入剧情模块，删除后进未归类
+            if hi < 0x100000:
+                continue
+            target = _best_named_for_seg(lo, hi, named)
+            if target is None:
+                continue
+            if _merge_seg_into_module(target, lo, hi):
+                expanded += 1
+    kept = [m for m in mods if not _is_auto_catchall_module(m["id"])]
+    removed = len(mods) - len(kept)
+    mmap = dict(mmap)
+    mmap["modules"] = kept
+    meta = dict(mmap.get("_meta") or {})
+    meta["last_fold_autos"] = {
+        "expanded_into_named": expanded,
+        "removed_modules": removed,
+        "by": "text_patcher.fold_auto_modules_into_named",
+    }
+    mmap["_meta"] = meta
+    return mmap, expanded, removed
+
+
+def update_module_map_from_result(
+    map_path: Path,
+    result: dict,
+    rom_id: str,
+) -> Tuple[int, int]:
+    """Expand ranges on existing named modules only. Never create 自动区_*.
+
+    Returns (expanded, added) where added is always 0.
+    """
+    mmap = load_module_map(map_path)
+    # Drop any leftover auto catch-alls if still present
+    mmap, fold_exp, fold_rm = fold_auto_modules_into_named(mmap)
+    mods: List[dict] = list(mmap.get("modules") or [])
+    by_id = {m["id"]: m for m in mods}
+    expanded = fold_exp
+    added = 0
+
+    # 1) Expand existing modules when their assigned bands sit just outside envelope
+    for mid, entry in (result.get("modules") or {}).items():
+        if mid == UNASSIGNED_ID or _is_auto_catchall_module(mid):
+            continue
+        m = by_id.get(mid)
+        if not m or not _map_module_participates(m):
+            continue
+        rtype = str(m.get("type") or entry.get("type") or "scan")
+        if rtype not in ("scan", "addr_bands", ""):
+            continue
+        for lo, hi in entry_scan_bands(entry):
+            segs = _map_segs(m)
+            if any(lo >= a and hi <= b for a, b in segs):
+                continue
+            if any(
+                not (hi < a - MAP_ADJACENT_GAP - 1 or lo > b + MAP_ADJACENT_GAP + 1)
+                for a, b in segs
+            ):
+                if _merge_seg_into_module(m, lo, hi):
+                    expanded += 1
+
+    # 2) 未归类：改已有模块地址 ranges 吃掉（不新建自动区_*）
+    un_entry = (result.get("modules") or {}).get(UNASSIGNED_ID) or {}
+    un_bands = entry_scan_bands(un_entry)
+    if un_bands:
+        mmap, n_abs = absorb_unassigned_bands_into_named(mmap, un_bands)
+        mods = list(mmap.get("modules") or [])
+        expanded += n_abs
+
+    if expanded or fold_rm:
+        mmap["modules"] = mods
+        meta = mmap.setdefault("_meta", {})
+        meta["last_writeback"] = {
+            "rom_id": rom_id,
+            "expanded_ranges": expanded,
+            "added_modules": added,
+            "removed_auto_modules": fold_rm,
+            "by": "text_patcher.py",
+        }
+        text = json.dumps(mmap, indent=2, ensure_ascii=False) + "\n"
+        map_path.write_text(text, encoding="utf-8")
+        mirrors: List[Path] = []
+        if CONFIGS_DIR.resolve() != DESKTOP_CONFIGS_DIR.resolve():
+            if DESKTOP_CONFIGS_DIR.is_dir():
+                mirrors.append(DESKTOP_CONFIGS_DIR / map_path.name)
+        repo_cfg = REPO_ROOT / "src" / "util" / "configs" / map_path.name
+        if repo_cfg.resolve() != map_path.resolve() and repo_cfg.parent.is_dir():
+            mirrors.append(repo_cfg)
+        for mp in mirrors:
+            try:
+                mp.write_text(text, encoding="utf-8")
+                print(f"[ok] mirrored module_map -> {mp}")
+            except OSError as exc:
+                print(f"[!] mirror failed {mp}: {exc}", file=sys.stderr)
+
+    return expanded, added
 
 # --------------------------------------------------------------------------
 # diff
@@ -548,7 +939,7 @@ def cmd_status(
                 flag = "  <<< REGRESS"
             print(f"{mid:<14} {nc:>5} {rc:>5}{flag}")
 
-    un = result["modules"].get("未归类", {}).get("addr_bands", [])
+    un = entry_scan_bands(result["modules"].get("未归类") or {})
     print(f"\n未归类 bands: {len(un)}")
     if samples > 0:
         cm = None
@@ -556,11 +947,9 @@ def cmd_status(
             tdata = json.loads(texts_path.read_text(encoding="utf-8"))
             cm = build_charmap(tdata.get("entries") or [])
         print("decoded preview (first %d):" % samples)
-        for a, b in un[:samples]:
-            lo = parse_addr(a)
-            hi = parse_addr(b)
+        for lo, hi in un[:samples]:
             text = decode_band(rom, lo, hi, cm) if cm else "(no --texts)"
-            print(f"  {a}-{b} | {text[:80]}")
+            print(f"  0x{lo:X}-0x{hi:X} | {text[:80]}")
     return 0
 
 
@@ -660,8 +1049,6 @@ KEYWORD_RULES: List[Tuple[str, List[str]]] = [
     ]),
 ]
 
-UNASSIGNED_ID = "未归类"
-
 
 def load_lexicons(rom_id: str) -> Dict[str, dict]:
     lex_dir = REPO_ROOT / "configs" / rom_id / "translate" / "lexicon"
@@ -719,7 +1106,7 @@ def cmd_classify(rom_path: Path, rom_id: str, texts_path: Path, out_path: Path) 
         return 1
     mmap = load_module_map(map_path)
     result = assign_bands(apply_table_inject(rom, bands, mmap), mmap)
-    un = result["modules"].get(UNASSIGNED_ID, {}).get("addr_bands", [])
+    un = entry_scan_bands(result["modules"].get(UNASSIGNED_ID) or {})
 
     tdata = json.loads(texts_path.read_text(encoding="utf-8"))
     cm = build_charmap(tdata.get("entries") or [])
@@ -727,15 +1114,14 @@ def cmd_classify(rom_path: Path, rom_id: str, texts_path: Path, out_path: Path) 
 
     suggestions = []
     n_cand = 0
-    for a, b in un:
-        lo, hi = parse_addr(a), parse_addr(b)
+    for lo, hi in un:
         text = decode_band(rom, lo, hi, cm)
         cands = classify_band(text, cm, lexicons)
         if cands:
             n_cand += 1
         suggestions.append(
             {
-                "band": [a, b],
+                "band": [f"0x{lo:X}", f"0x{hi:X}"],
                 "text": text,
                 "candidates": [
                     {"module": m, "reason": r, "score": s} for m, (r, s) in cands
@@ -772,6 +1158,16 @@ def main() -> None:
 
     p_export = sub.add_parser("export", help="导出 addr_bands + modules.json")
     p_export.add_argument("rom", type=Path)
+    p_export.add_argument(
+        "--fast",
+        action="store_true",
+        help="指针扫描步长 4（更快，覆盖略少）",
+    )
+    p_export.add_argument(
+        "--no-update-map",
+        action="store_true",
+        help="不把新空间/新模块写回 configs/{ROM_ID}.json",
+    )
 
     p_diff = sub.add_parser("diff", help="对比两个 modules.json（回归检测）")
     p_diff.add_argument("--new", required=True, type=Path)
@@ -810,7 +1206,12 @@ def main() -> None:
             sys.exit(1)
         code, _ = identify(args.rom.read_bytes())
         rom_id = resolve_rom_id(args.rom, code.decode("ascii"))
-        export(args.rom, rom_id)
+        export(
+            args.rom,
+            rom_id,
+            fast=bool(args.fast),
+            update_map=not bool(args.no_update_map),
+        )
     elif args.cmd == "diff":
         sys.exit(cmd_diff(args.new, args.ref))
     elif args.cmd == "status":

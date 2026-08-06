@@ -102,6 +102,31 @@ def _classify_newlines(text: str) -> str:
     return result
 
 
+def unwrap_quotes(text: str) -> str:
+    """Strip a single layer of wrapping ASCII quotes if present."""
+    s = text or ""
+    if len(s) >= 2 and s[0] == '"' and s[-1] == '"':
+        return s[1:-1]
+    return s
+
+
+def format_original(text: str) -> str:
+    """Canonical original for translation-cache keys (and protect head).
+
+    Same structural steps as :func:`protect` before ``{Cn}`` placeholders:
+    unwrap quotes, map paragraph/layout tokens, normalize CR, classify
+    layout vs semantic newlines.  Layout ``\\n`` becomes a space — so a cache
+    written after formatting still hits when lookup uses the raw extract.
+    """
+    result = unwrap_quotes(text)
+    for tok in _paragraph_codes():
+        result = result.replace(tok, "\n\n")
+    for tok in _strip_layout_codes():
+        result = result.replace(tok, "")
+    result = result.replace("\r\n", "\n").replace("\r", "\n")
+    return _classify_newlines(result)
+
+
 def protect(text: str) -> tuple[str, list[tuple[str, str]]]:
     """Replace control codes with numbered placeholders.
 
@@ -121,15 +146,7 @@ def protect(text: str) -> tuple[str, list[tuple[str, str]]]:
         codes.append((placeholder, original))
         return placeholder
 
-    # Pre-process: paragraph codes → \\n\\n; layout codes stripped (codec-driven)
-    result = text
-    for tok in _paragraph_codes():
-        result = result.replace(tok, "\n\n")
-    for tok in _strip_layout_codes():
-        result = result.replace(tok, "")
-
-    result = result.replace("\r\n", "\n")
-    result = _classify_newlines(result)
+    result = format_original(text)
 
     parts = []
     i = 0

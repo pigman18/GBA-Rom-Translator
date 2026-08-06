@@ -8,6 +8,7 @@ from .tables import (
     base,
     build_chs_table,
     find_literal_refs,
+    item_data_cfg,
     rom_table_entries,
 )
 from .charmap import Charmap
@@ -180,7 +181,7 @@ def _item_rom_name_entries(rom: bytes, item_cfg: dict) -> list[dict]:
                 "original_hex": raw.hex(" "),
                 "original": text,
                 "translated": "",
-                "module": item_cfg.get("module") or "道具名",
+                "module": item_cfg.get("module") or "",
             }
         )
     return out
@@ -336,19 +337,27 @@ def _process_item_table(
 ) -> tuple[int, dict]:
     """Process item name table via gItems struct + ItemId_GetName patching."""
     key = patch["tables_key"]
-    module = patch.get("module") or "道具名"
+    module = patch.get("module") or item_data_cfg().get("module") or ""
+    if not module:
+        raise ValueError("table_patch item: module id missing on patch/config")
     chs_stride = patch["chs_stride"]
     count = patch["count"]
     base_addr = base()
 
-    item_cfg = tables_cfg.get("item_data", {})
+    item_cfg = item_data_cfg()
     if not item_cfg:
-        raise ValueError("table_patch: item_data config missing for item patch")
+        # tables 键已改为模块 id；按形态回退
+        for _k, v in (tables_cfg or {}).items():
+            if isinstance(v, dict) and "entry_size" in v and "name_stride" in v:
+                item_cfg = v
+                break
+    if not item_cfg:
+        raise ValueError("table_patch: item struct table config missing")
 
     merged = {int(e["table_index"]): dict(e) for e in _item_rom_name_entries(bytes(rom), item_cfg)}
     for e in entries:
         em = _entry_module(e)
-        if em != module and em != "道具名":
+        if module and em and em != module:
             continue
         if "table_index" not in e:
             continue

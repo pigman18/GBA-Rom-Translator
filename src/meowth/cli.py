@@ -121,17 +121,13 @@ def main():
 @click.argument("texts_json", type=click.Path(exists=True))
 @click.option("--rom", "rom_path", required=True, type=click.Path(exists=True),
               help="原版 ROM（校验 game_id + LZ/原地址算法）")
-@click.option("--threshold", default=70, type=click.IntRange(0, 100),
-              help="评分阈值，低于此值的条目写入 texts_reject_*.json")
+@click.option("--threshold", default=0, type=click.IntRange(0, 100),
+              help="仅诊断评分用；拒绝清单只看 rejects/allows（默认 0=不按分拒绝）")
 @click.option("--modules", default=None,
-              help="逗号分隔模块名；给定后先模块筛选再阈值拒绝（与流水线一致）")
+              help="逗号分隔模块名；给定后先模块筛选再应用 rejects/allows")
 @click.option("--top", default=20, type=int, help="终端显示的可疑条目数")
-@click.option("--dry-run", is_flag=True, help="只报告，不写任何文件")
-def check_texts(texts_json, rom_path, threshold, modules, top, dry_run):
-    """校验 texts.json：多算法评分，导出拒绝清单。
-
-    默认全量评分。传 ``--modules`` 时先筛选模块再阈值拒绝。
-    """
+def check_texts(texts_json, rom_path, threshold, modules, top):
+    """校验 texts.json：rejects/allows 拒绝清单（仅报告，不写文件）。"""
     from collections import Counter
     from .modules import parse_modules_csv
     from .text_checker import check_texts as run_check
@@ -141,37 +137,36 @@ def check_texts(texts_json, rom_path, threshold, modules, top, dry_run):
         src,
         Path(rom_path),
         threshold=threshold,
-        dry_run=dry_run,
         modules=parse_modules_csv(modules),
     )
     click.echo(f"texts.json : {src}")
     click.echo(
         f"ROM        : {rom_path}  (game_id={report['rom_game_id']}, match=OK)"
     )
-    click.echo(
-        f"总评分     : {report['total_score']} / 100  (越接近 100 越干净)"
-    )
+    if report.get("total_score") is not None and threshold > 0:
+        click.echo(
+            f"总评分     : {report['total_score']} / 100  (诊断用，不参与拒绝)"
+        )
     scope = ""
     if report.get("module_candidates") is not None and report.get("entries_total") is not None:
         scope = f"  模块候选 {report['module_candidates']}/{report['entries_total']}"
     click.echo(
-        f"可疑条目   : {report['suspicious_count']} / {report['total_count']} "
-        f"(score < {threshold}){scope}"
+        f"拒绝条目   : {report['suspicious_count']} / {report['total_count']}"
+        f"（rejects/allows）{scope}"
     )
-    if not dry_run:
-        click.echo(f"可疑输出   : {report['suspicious_path']}")
 
     sus = report["suspicious"]
     if sus:
-        click.echo(f"\nTop {min(top, len(sus))} 可疑条目:")
+        click.echo(f"\nTop {min(top, len(sus))} 拒绝条目:")
         click.echo(f"  {'id':<22} {'address':<12} {'module':<10} {'score':>5}  hits")
-        for e, hits, score in sorted(sus, key=lambda x: x[2])[:top]:
+        for e, hits, score in sorted(sus, key=lambda x: (x[2] is None, x[2] if x[2] is not None else 0))[:top]:
+            sc = "" if score is None else f"{score:>5}"
             click.echo(
                 f"  {e.get('id',''):<22} {e.get('address',''):<12} "
-                f"{(e.get('module') or ''):<10} {score:>5}  {','.join(hits)}"
+                f"{(e.get('module') or ''):<10} {sc:>5}  {','.join(hits)}"
             )
         mod_tot = Counter(e[0].get("module") for e in report["suspicious"])
-        click.echo("\n按模块统计（可疑数/总数）:")
+        click.echo("\n按模块统计（拒绝数/总数）:")
         all_mod = Counter()
         try:
             data = json.loads(src.read_text(encoding="utf-8"))
@@ -181,17 +176,17 @@ def check_texts(texts_json, rom_path, threshold, modules, top, dry_run):
         for m, n in mod_tot.most_common(10):
             click.echo(f"  {m}: {n}/{all_mod.get(m, 0)}")
     else:
-        click.echo("\n未发现可疑条目。")
+        click.echo("\n未发现拒绝条目。")
 
 
 @main.command()
 @click.argument("rom_path", type=click.Path(exists=True))
-@click.option("-o", "--output", default=None, help="Output texts JSON path (default: work/<game_id>/texts.json)")
+@click.option("-o", "--output", default=None, help="Copy to path (default: return configs/.../translate/texts.json)")
 @click.option("--source", default="en", help="Source language code (default: from config or en)")
 @click.option("--target", default="zh-Hans", help="Target language code (default: from config or zh-Hans)")
 @_modules_option
 def extract(rom_path, output, source, target, modules):
-    """Extract texts from ROM (AXVJ uses JP pointer scan; others use MeowthBridge)."""
+    """Load curated translate/texts.json (no ROM dump; modules ignored)."""
     from .modules import parse_modules_csv
     from .config_loader import list_available_games
     from .core.engine import detect_game
@@ -213,7 +208,7 @@ def extract(rom_path, output, source, target, modules):
         Path(output) if output else None,
         modules=parse_modules_csv(modules),
     )
-    click.echo(f"Extracted: {out} (source={source})")
+    click.echo(f"Texts: {out} (source={source})")
 
 
 @main.command("seed-translate")
@@ -240,12 +235,10 @@ def seed_translate(texts_json, output, only_seeded):
 @click.option("--target", default="zh-Hans", help="Target language code (default: from config or zh-Hans)")
 @click.option("--seed-only", is_flag=True, help="Glossary+seed only (no LLM)")
 @click.option("--rom", "rom_path", type=click.Path(exists=True), default=None,
-              help="原版 ROM（文本校验阈值评分需要）")
-@click.option("--check-threshold", default=70, type=click.IntRange(0, 100),
-              help="文本校验阈值：0=不启用；score 低于此值的条目不翻译（>=阈值放行）")
+              help="原版 ROM（可选；写入 reject 清单元数据）")
 @add_provider_options
 def translate(texts_json, output, batch_size, workers, source, target, seed_only,
-              rom_path, check_threshold,
+              rom_path,
               provider, api_base, api_key, api_key_env, model):
     """Translate extracted texts JSON via LLM API (or --seed-only)."""
     source = _get_language(source, "en", "source_language")
@@ -262,7 +255,6 @@ def translate(texts_json, output, batch_size, workers, source, target, seed_only
         seed_only=seed_only,
         seed_first=True,
         rom_path=Path(rom_path) if rom_path else None,
-        check_threshold=check_threshold,
         **kwargs
     )
     # Infer game from JSON meta
@@ -290,9 +282,7 @@ def translate(texts_json, output, batch_size, workers, source, target, seed_only
 @click.option("-o", "--output", required=True)
 @click.option("--source", default="en", help="Source language code (default: from config or en)")
 @click.option("--target", default="zh-Hans", help="Target language code (default: from config or zh-Hans)")
-@click.option("--check-threshold", default=70, type=click.IntRange(0, 100),
-              help="文本校验阈值：0=不启用；score 低于此值的条目不注入（>=阈值放行）")
-def build(rom_path, translations, output, source, target, check_threshold):
+def build(rom_path, translations, output, source, target):
     """Build translated ROM from translations."""
     source = _get_language(source, "en", "source_language")
     target = _get_language(target, "zh-Hans", "target_language")
@@ -303,7 +293,6 @@ def build(rom_path, translations, output, source, target, check_threshold):
         source_lang=source,
         target_lang=target,
         rom_path=Path(rom_path),
-        check_threshold=check_threshold,
     )
     engine = TranslationEngine(config, CLICallbacks())
     engine.build_rom(Path(rom_path), Path(translations), Path(output))
@@ -329,14 +318,12 @@ def build(rom_path, translations, output, source, target, check_threshold):
     default=None,
     help="Tiles dir (row_patcher export output); patches graphics after translate",
 )
-@click.option("--check-threshold", default=70, type=click.IntRange(0, 100),
-              help="文本校验阈值：0=不启用；score 低于此值的条目不翻译/不注入（>=阈值放行）")
 @_modules_option
 @add_provider_options
 def full(rom_path, output_dir, work_dir, source, target, seed_only, bdf_font_path, tiles_dir,
-         check_threshold, modules,
+         modules,
          provider, api_base, api_key, api_key_env, model):
-    """Run full pipeline: extract -> translate -> build ROM."""
+    """Run full pipeline: load translate/texts.json -> translate -> build ROM."""
     from .modules import parse_modules_csv
 
     source = _get_language(source, "en", "source_language")
@@ -362,7 +349,6 @@ def full(rom_path, output_dir, work_dir, source, target, seed_only, bdf_font_pat
         seed_first=True,
         bdf_font_path=bdf_font_path,
         tiles_dir=tiles_dir,
-        check_threshold=check_threshold,
         game=game if game != "unknown" else "firered",
         **kwargs
     )

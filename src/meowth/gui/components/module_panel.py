@@ -1,6 +1,6 @@
 """Right-side module selection panel.
 
-Modules come from ``translate/modules.json`` (addr_bands scope).
+Modules come from ``translate/texts.json`` → ``modules``.
 Starts empty; call ``load_game(game_id)`` when a ROM is selected.
 """
 

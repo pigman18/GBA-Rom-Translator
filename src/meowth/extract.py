@@ -652,20 +652,35 @@ def extract_battle_prompt_pool(rom: bytes) -> list[dict]:
     return out
 
 
-def SPECIES_LIKE(so: int) -> bool:
-    from .tables import species_names_cfg
+def in_fixed_name_table(so: int) -> bool:
+    """True if file-offset ``so`` falls in a stride/struct/ptr name-table band."""
+    from .config_loader import get_active_game_id, load_modules, _parse_file_offset
+    from .modules import TABLE_LAYOUT_TYPES
 
-    c = species_names_cfg()
-    end = c["offset"] + c["count"] * c["stride"]
-    return c["offset"] <= so < end
+    gid = (get_active_game_id() or "").strip()
+    if not gid:
+        return False
+    for _mid, meta in (load_modules(gid) or {}).items():
+        typ = str(meta.get("type") or "").strip()
+        if typ not in TABLE_LAYOUT_TYPES:
+            continue
+        start = _parse_file_offset(
+            meta.get("start") if meta.get("start") is not None else meta.get("offset")
+        )
+        end = _parse_file_offset(meta.get("end"))
+        if start is None or end is None:
+            continue
+        if start <= so <= end:
+            return True
+    return False
+
+
+def SPECIES_LIKE(so: int) -> bool:
+    return in_fixed_name_table(so)
 
 
 def MOVE_LIKE(so: int) -> bool:
-    from .tables import move_names_cfg
-
-    c = move_names_cfg()
-    end = c["offset"] + c["count"] * c["stride"]
-    return c["offset"] <= so < end
+    return in_fixed_name_table(so)
 
 
 def _looks_like_story(text: str, body_len: int) -> bool:
@@ -1236,13 +1251,21 @@ def extract_axvj(
     include_scripts: bool = True,
     script_limit: int = 0,
 ) -> Path:
-    """Extract texts via v3 module-driven extraction (scan/table + hidden UI)."""
+    """DEPRECATED — use ``util.texts_patcher export`` → translate/texts.json.
+
+    Product extract no longer dumps ROM corpus through Meowth.
+    """
+    import warnings
+
+    warnings.warn(
+        "extract_axvj is deprecated; use texts_patcher export → texts.json",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     from .extract_pipeline import extract_modules
 
     rom = Path(rom_path).read_bytes()
     gid = game_id or get_active_game_id() or "AXVJ"
-    # All discovery is config-driven (modules.json declares scan + UI scanners);
-    # ``extract_modules`` stamps each entry with its module id and dedupes.
     entries = extract_modules(rom, gid, include_scripts=include_scripts, verbose=True)
 
     from .modules import stamp_entry_module

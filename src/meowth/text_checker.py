@@ -534,19 +534,15 @@ def check_texts(
     texts_path: Path,
     rom_path: Path,
     *,
-    threshold: int = 70,
-    dry_run: bool = False,
+    threshold: int = 0,
+    dry_run: bool = True,
     modules: list[str] | None = None,
 ) -> dict:
-    """校验 texts.json / texts_translated.json，生成拒绝清单。
+    """校验 texts.json：按 rejects/allows 报告拒绝条目（不写文件）。
 
-    - 校验 ``texts.json`` 的 game_id 与 ROM 一致（不一致报错）
-    - ``threshold <= 0`` 表示不启用校验（不生成文件）
-    - 若给定 ``modules``：先按模块勾选收窄，再评分拒绝（与 translate 一致）
-    - 生成 ``{原文件名}_reject_{阈值}.json``（与输入同级），只含
-      score < threshold 的条目（带 check_score / check_hits / _reject）
-      与 check_meta；**不改动输入文件**
-    - ``dry_run=True`` 只报告不写文件
+    - 校验 ``texts.json`` 的 game_id 与 ROM 一致
+    - 拒绝条件：id ∈ rejects 且 id ∉ allows
+    - ``threshold > 0`` 时附带诊断评分（不改变拒绝集合）
     """
     texts_path = Path(texts_path)
     data = json.loads(texts_path.read_text(encoding="utf-8"))
@@ -566,20 +562,6 @@ def check_texts(
     allows = allows_ids(texts_gid)
     rejects = rejects_ids(texts_gid)
 
-    reject_path = texts_path.with_name(f"{texts_path.stem}_reject_{threshold}.json")
-    if threshold <= 0:
-        return {
-            "total_score": 100.0,
-            "threshold": threshold,
-            "suspicious_count": 0,
-            "total_count": len(entries),
-            "suspicious": [],
-            "suspicious_path": reject_path,
-            "rom_game_id": rom_gid,
-            "dry_run": dry_run,
-            "disabled": True,
-        }
-
     candidates = entries
     active_modules = None
     if modules is not None:
@@ -590,59 +572,36 @@ def check_texts(
             entries, active_modules, game_id=texts_gid
         )
 
-    rom = rom_path.read_bytes()
-    scored = score_entries(candidates, rom, game_id=texts_gid)
-    # 被拒条件：id 在 rejects（无条件拒绝）或 score<threshold 且 id 不在 allows
-    rejected = [
-        (e, h, s)
-        for e, h, s in scored
-        if (e.get("id") or "") in rejects
-        or (s < threshold and (e.get("id") or "") not in allows)
-    ]
-
-    total_score = (
-        round(sum(s for _, _, s in scored) / len(scored), 1) if scored else 100.0
-    )
-    check_meta = {
-        "score": total_score,
-        "threshold": threshold,
-        "rejected_count": len(rejected),
-        "total_count": len(scored),
-        "entries_total": len(entries),
-        "module_candidates": len(candidates),
-        "active_modules": list(active_modules) if active_modules is not None else None,
-        "rom_game_id": rom_gid,
-        "match": texts_gid == rom_gid,
-        "algorithms": list(WEIGHTS.keys()),
-        "checked_at": datetime.now(timezone.utc).isoformat(),
-    }
-
-    if not dry_run:
-        payload = {
-            "game": data.get("game"),
-            "game_id": texts_gid,
-            "source_lang": data.get("source_lang"),
-            "count": len(rejected),
-            "entries": [
-                dict(e, check_score=s, check_hits=h, _reject=True)
-                for e, h, s in rejected
-            ],
-            "check_meta": check_meta,
-        }
-        reject_path.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
+    score_by_id: dict[str, tuple[list, float]] = {}
+    total_score = None
+    if threshold > 0:
+        rom = rom_path.read_bytes()
+        scored = score_entries(candidates, rom, game_id=texts_gid)
+        for e, h, s in scored:
+            score_by_id[e.get("id") or ""] = (h, s)
+        total_score = (
+            round(sum(s for _, _, s in scored) / len(scored), 1) if scored else 100.0
         )
+
+    rejected: list[tuple[dict, list, float | None]] = []
+    for e in candidates:
+        eid = e.get("id") or ""
+        if eid in rejects and eid not in allows:
+            hits, sc = score_by_id.get(eid, (["rejects"], None))
+            if "rejects" not in hits:
+                hits = ["rejects", *hits]
+            rejected.append((e, list(hits), sc))
 
     return {
         "total_score": total_score,
         "threshold": threshold,
         "suspicious_count": len(rejected),
-        "total_count": len(scored),
+        "total_count": len(candidates),
         "entries_total": len(entries),
         "module_candidates": len(candidates),
         "suspicious": rejected,
-        "suspicious_path": reject_path,
+        "suspicious_path": None,
         "rom_game_id": rom_gid,
-        "dry_run": dry_run,
+        "dry_run": True,
         "disabled": False,
     }

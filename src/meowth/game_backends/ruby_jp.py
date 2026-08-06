@@ -15,6 +15,13 @@ class RubyJpBackend(GameBackend):
     implemented = True
 
     def extract(self, rom_path: Path, output_path: Path, **kwargs: Any) -> Path:
+        import warnings
+
+        warnings.warn(
+            "RubyJpBackend.extract is deprecated; use texts_patcher → texts.json",
+            DeprecationWarning,
+            stacklevel=2,
+        )
         from ..extract import extract_axvj
 
         return extract_axvj(rom_path, output_path, game_id=self.id, modules=kwargs.get("modules"))

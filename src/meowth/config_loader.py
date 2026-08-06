@@ -6,17 +6,16 @@
       game.json
       extract/config.json
       translate/
-        config.json            # protect / skip
-        modules.json           # dump scope: addr_bands + offset/end
+        config.json            # protect / skip / allows / rejects
+        texts.json             # entries + modules 定义（取代 modules.json）
         modules.inject.json    # read / write.type / write.stride / line_width
         lexicon/
       font/config.json + charmap.txt
       patch/                   # ARMIPS
       inject/config.json       # pointer deny / brand_compact_skip
 
-Name-table geo (offset/end) comes from dump ``modules.json``; inject ``read``
-holds row shape; ``write`` holds Chinese widen/patch and VRAM write behavior.
-``count`` is derived. ``line_width`` defaults to 20 when omitted.
+模块定义与语料均在 ``translate/texts.json``；inject ``read``/``write`` 仍可
+由 ``modules.inject.json`` 覆盖。``line_width`` 缺省 20。
 """
 
 from __future__ import annotations
@@ -106,18 +105,8 @@ def module_write_op(game_id: str, module_id: str | None) -> int | None:
         return None
     return _parse_write_op_value(write.get(typ))
 
-# modules.inject.json module id → legacy tables.py key
-_INJECT_TO_TABLE_KEY = {
-    "物种名": "species_names",
-    "招式名": "move_names",
-    "特性名": "ability_names",
-    "属性名": "type_names",
-    "道具名": "item_data",
-    "性格名": "nature_names",
-}
-
-# Fields that may live on a module entry in v2 ``translate/modules.json``
-# (migrated from modules.inject.json) and feed inject-style readers.
+# Fields that may live on a module entry in ``translate/texts.json`` modules
+# (or modules.inject.json) and feed inject-style readers.
 _INJECT_MODULE_KEYS = (
     "read",
     "write",
@@ -129,13 +118,32 @@ _INJECT_MODULE_KEYS = (
 )
 
 
+def texts_json_path(game_id: str) -> Path:
+    """``configs/<game_id>/translate/texts.json``（语料 + modules 定义）。"""
+    return stage_dir(game_id, STAGE_TRANSLATE) / "texts.json"
+
+
+def load_texts_doc(game_id: str) -> dict[str, Any]:
+    """Load ``translate/texts.json`` object (entries + modules)."""
+    path = texts_json_path(game_id)
+    if not path.is_file():
+        raise FileNotFoundError(
+            f"No texts.json for game {game_id!r} (expected {path})"
+        )
+    data = _read_json(path)
+    if not isinstance(data, dict):
+        raise ValueError(f"Invalid texts.json: {path}")
+    return data
+
+
 def _v2_extraction(game_id: str) -> dict[str, Any]:
-    """Top-level scan/policy/modules_defaults/enrich from v2 modules.json."""
-    raw = _read_json(stage_dir(game_id, STAGE_TRANSLATE) / "modules.json")
-    if not isinstance(raw, dict):
+    """Top-level scan/policy/modules_defaults/enrich from texts.json meta."""
+    try:
+        raw = load_texts_doc(game_id)
+    except FileNotFoundError:
         return {}
-    meta = raw.get("_meta") or {}
-    if meta.get("schema") != "v2":
+    meta = raw.get("modules_meta") or raw.get("_meta") or {}
+    if not isinstance(meta, dict) or meta.get("schema") != "v2":
         return {}
     out: dict[str, Any] = {}
     scan = raw.get("scan")
@@ -275,8 +283,11 @@ def load_modules_inject(game_id: str = "") -> dict[str, dict[str, Any]]:
         return _modules_inject_cache[gid]
 
     out: dict[str, dict[str, Any]] = {}
-    raw_v2 = _read_json(stage_dir(gid, STAGE_TRANSLATE) / "modules.json")
-    mods_v2 = raw_v2.get("modules") if isinstance(raw_v2, dict) else None
+    try:
+        raw_texts = load_texts_doc(gid)
+    except FileNotFoundError:
+        raw_texts = {}
+    mods_v2 = raw_texts.get("modules") if isinstance(raw_texts, dict) else None
     if isinstance(mods_v2, dict):
         for mid, meta in mods_v2.items():
             if not isinstance(meta, dict):
@@ -358,7 +369,7 @@ def tables_from_modules_inject(game_id: str = "") -> dict[str, Any]:
         if not isinstance(layout, dict):
             continue
         write = _inject_write_block(cfg)
-        key = _INJECT_TO_TABLE_KEY.get(mid) or mid
+        key = mid
         entry: dict[str, Any] = {"module": mid}
         mod_meta = mods.get(mid) or {}
         typ = (
@@ -383,7 +394,7 @@ def tables_from_modules_inject(game_id: str = "") -> dict[str, Any]:
             continue
         if typ == "stride":
             typ = "fixed_table"
-        elif typ == "ptr_stride":
+        elif typ in ("ptr_stride", "stride_ptr"):
             typ = "ptr_table"
         elif typ == "struct":
             typ = "struct_table"
@@ -401,7 +412,7 @@ def tables_from_modules_inject(game_id: str = "") -> dict[str, Any]:
 
         if typ == "ptr_table":
             if offset is None:
-                raise ValueError(f"module {mid}: missing offset (dump modules.json)")
+                raise ValueError(f"module {mid}: missing start/offset")
             entry["table"] = offset
             unit = 4
             if end is not None:
@@ -415,7 +426,7 @@ def tables_from_modules_inject(game_id: str = "") -> dict[str, Any]:
                 if f in layout:
                     entry[f] = layout[f]
             if offset is None:
-                raise ValueError(f"module {mid}: missing offset (dump modules.json)")
+                raise ValueError(f"module {mid}: missing start/offset")
             entry["offset"] = offset
             unit = int(layout.get("entry_size") or 0)
             if end is not None and unit:
@@ -428,7 +439,7 @@ def tables_from_modules_inject(game_id: str = "") -> dict[str, Any]:
             if "stride" in layout:
                 entry["stride"] = layout["stride"]
             if offset is None:
-                raise ValueError(f"module {mid}: missing offset (dump modules.json)")
+                raise ValueError(f"module {mid}: missing start/offset")
             entry["offset"] = offset
             unit = int(layout.get("stride") or 0)
             if end is not None and unit:
@@ -552,38 +563,23 @@ def load_game_config(game_id: str) -> dict[str, Any]:
 
 
 def load_modules(game_id: str) -> dict[str, dict[str, Any]]:
-    """Load ``translate/modules.json`` (dump addr-band scope)."""
+    """Load module defs from ``translate/texts.json`` → ``modules`` object."""
     if game_id in _modules_cache:
         return _modules_cache[game_id]
 
-    path = _first_existing(
-        game_id,
-        f"{STAGE_TRANSLATE}/modules.json",
-        f"{STAGE_MODULES}/modules.json",
-        "modules.json",
-    )
-    mods: dict[str, Any] | None = None
-    if path is not None:
-        print(f"[配置] 读取模块: {path}")
-        data = json.loads(path.read_text(encoding="utf-8"))
-        if isinstance(data, dict) and isinstance(data.get("modules"), dict):
-            mods = data["modules"]
-        elif isinstance(data, dict):
-            mods = {
-                k: v
-                for k, v in data.items()
-                if isinstance(v, dict) and k not in ("_meta",)
-            }
-    if mods is None:
-        # Legacy: modules nested in translate/config.json
-        tr = load_stage_config(game_id, STAGE_TRANSLATE, "codec.json")
-        if isinstance(tr.get("modules"), dict):
-            mods = tr["modules"]
-            print(f"[配置] 读取模块(兼容 config.json): {len(mods)} 个")
-    if mods is None:
+    path = texts_json_path(game_id)
+    if not path.is_file():
         raise FileNotFoundError(
             f"No modules for game {game_id!r} "
-            f"(expected {STAGE_TRANSLATE}/modules.json under {game_config_dir(game_id)})"
+            f"(expected {path} with modules object)"
+        )
+    print(f"[配置] 读取模块: {path}")
+    data = json.loads(path.read_text(encoding="utf-8"))
+    mods = data.get("modules") if isinstance(data, dict) else None
+    if not isinstance(mods, dict):
+        raise ValueError(
+            f"{path}: modules must be an object {{id: meta}}, "
+            f"got {type(mods).__name__}"
         )
 
     # Ensure no line_width left on dump modules (inject owns wrap width)

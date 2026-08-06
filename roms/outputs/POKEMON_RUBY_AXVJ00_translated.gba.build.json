@@ -1,12 +1,12 @@
 {
-  "build_id": "0.4.5+20260805T210051.40a32e92b3ef",
+  "build_id": "0.4.5+20260806T092908.4546ae7cff68",
   "package_version": "0.4.5",
-  "timestamp_utc": "2026-08-05T21:00:51Z",
+  "timestamp_utc": "2026-08-06T09:29:08Z",
   "game": "POKEMON_RUBY_AXVJ00",
   "output_rom": "C:\\code\\GBA-Rom-Translator\\roms\\outputs\\POKEMON_RUBY_AXVJ00_translated.gba",
-  "output_rom_sha256": "74e0c608c3ceaf2d9e3c739f9737c6153c6d4233479c6fc748b9467d7114a106",
+  "output_rom_sha256": "066134eeb41bdcb8e7aa3d87e26f8978a6a3692cd3efa1f9664c48cdfad0ffa8",
   "patch_root": "C:/code/GBA-Rom-Translator/configs/POKEMON_RUBY_AXVJ00/hook",
-  "patch_tree_sha256": "40a32e92b3efcf88a3b037bb44ec4d47a13bed9471ca007961da440d26753362",
+  "patch_tree_sha256": "4546ae7cff682e2aab9ebbfc3f08e7e2e72ad354774285929f40e3ebba58cf47",
   "patch_file_count": 69,
   "patch_files": {
     ".gitignore": "e846bdff19d6f85c9bc402591091f8e043e0b74080478b2e502f2d0d00f559f8",
@@ -41,7 +41,7 @@
     "bak/include/OriginSymbols_S.s": "96f737218454186d0935786ceb44a9c1e1e3be1b7c15e6e8ff877acd2a1edc07",
     "bak/strings/testText.s": "ce407d2e5cd8363aed48d73e46ae1b789595cfeadf2bc314f6911517efc0cbad",
     "build.bat": "10e285fe587c68a069a9397cd73884b110a3b257256c7009ee65e90633fbf633",
-    "config.json": "c080736451118c316deb8c69069b74cc6cfde17492942eedecc9385e89093d7f",
+    "config.json": "06722a6b8988cb69c95f14fa42ce2ec4d269d966313126d909708f01a99a3f99",
     "game_addrs.asm": "e2548127e5dbe283eaf51c71af7a10f785fd88da69dcef23219ee61d0722f764",
     "gen/pointer_redirect.asm": "94a1a3b322b45910982d3048933f46f69f74627e92072b4b77ffd2cb5bb2f4b9",
     "graphic/pokemon_storage/header.bin.lz": "9d514a4385431d1eb18f2059d8a03f54a2cb3450825d02bc8fe3e8e20f9a051c",
@@ -80,28 +80,61 @@
     "todo/update_safari_balls_text_in_healthbox.c": "7ef0d2bcc261bf7c62a119392d5585153364b44af8a12b0d047d7e8dfb6d7183"
   },
   "key_src_sha256": {
-    "src/meowth/policy.py": "5bbd03998d8a45200f58406708bfd9523beecc015e67a83cdc0649d5c973db28",
+    "src/meowth/policy.py": "219ca00b42ed5327fa35e49c32b34128425aa448ba6356b31e74739ed1b68622",
     "src/meowth/seed_translate.py": "41322de3c8acf047d5a4a8ece311034b150e3f149ca5dad8ec7a41545da5612d",
-    "src/meowth/rom_writer.py": "c39f23f0af90345ac3bed80641bf3cbc97c4ac9e15143866c4e0ecce82e9ce8b",
+    "src/meowth/rom_writer.py": "0f838a7fa1f4d951e071c99da740404d7220d22f9c2151db8beeaed38d7da983",
     "src/meowth/font_patch.py": "ea3c0076eb6ad719f480d5c5d7d76a3a3f81c37a2eba4ba625a3d168f7357a64",
-    "src/meowth/core/engine.py": "d693fcf8f7d4d0c4a0a397f318ca4ef7c509b38cfd3220cafda2c11f041f5a91",
-    "src/meowth/table_patch.py": "998a417b554c225d991706004f1989b29b084d4c9f1f8dad5a88f3e0ea9b8c12"
+    "src/meowth/core/engine.py": "ec28448ee8cedb0faf1b68ee4a66674b4b8bf235428c7dc48c2b729643af134e",
+    "src/meowth/table_patch.py": "5a28f2e6e9e14da10d66016065129270f25ae14e814f2121229a6cb33a5b85d2"
   },
   "inject_stats": {
-    "in_place": 0,
-    "relocated": 0,
+    "in_place": 544,
+    "relocated": 647,
     "skipped": 0,
-    "entry_count": 0,
-    "name_tables": {},
+    "entry_count": 2264,
+    "name_tables": {
+      "特性名": {
+        "lits_total": 0,
+        "lits_safe": 0
+      },
+      "宝可梦名": {
+        "written": 1,
+        "ptr_patched": 58,
+        "mul_patched": 58,
+        "lits_total": 67,
+        "lits_safe": 58
+      },
+      "招式名": {
+        "lits_total": 0,
+        "lits_safe": 0
+      },
+      "道具名": {
+        "written": 1,
+        "ptr_patched": 1,
+        "mul_patched": 1,
+        "lits_total": 14,
+        "lits_safe": 1
+      }
+    },
     "modules": [
-      "选项菜单扫描"
+      "属性名",
+      "性格名",
+      "特性名",
+      "宝可梦名",
+      "招式名",
+      "地点名",
+      "道具名",
+      "道具说明",
+      "招式说明",
+      "特性说明",
+      "图鉴说明"
     ],
     "geo": {
       "include": "",
       "exclude": "",
       "omit_band": "",
-      "before": 0,
-      "after": 0,
+      "before": 2264,
+      "after": 2264,
       "omit_range": null
     }
   },

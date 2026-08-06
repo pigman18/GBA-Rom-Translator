@@ -1,9 +1,9 @@
-"""Module scope loader — stage pack ``modules/``.
+"""Module scope loader — ``translate/texts.json`` → ``modules``.
 
-Pipeline: extract/tables emit entries → assign_module (addr_bands here) →
+Pipeline: texts.json entries already stamped with ``module`` →
 GUI checkboxes → translate/build only process checked modules.
 
-Authoritative file: ``configs/<game_id>/translate/modules.json``.
+Authoritative file: ``configs/<game_id>/translate/texts.json``.
 Wrap width: ``translate/modules.inject.json`` → ``line_width`` (default 20).
 Write behavior: ``write.type=op`` + ``write.op`` (0x01..0x7E) → phrase ``F9 <op> hi lo``;
 default phrase channel is ``F9 80`` (see ``module_write_op``).
@@ -19,6 +19,18 @@ from .config_loader import load_modules
 # Types whose text body lives in a fixed-length ROM slot.
 # Only these may auto-upgrade F9 00 → F9 80 on byte_length overflow.
 FIXED_SLOT_TYPES = frozenset({"stride", "struct"})
+
+# Inject geometry: modules whose ``type`` builds a name/desc table layout.
+# Not used for translate routing (corpus is unified free_texts).
+TABLE_LAYOUT_TYPES = frozenset({
+    "stride",
+    "struct",
+    "stride_ptr",
+    "ptr_stride",
+    "fixed_table",
+    "struct_table",
+    "ptr_table",
+})
 
 
 def _get_modules(game_id: str) -> dict[str, dict[str, Any]]:
@@ -63,6 +75,30 @@ def module_is_fixed_slot(game_id: str, module_id: str | None) -> bool:
     """
     typ = module_type(game_id, module_id)
     return typ in FIXED_SLOT_TYPES
+
+
+def module_has_table_layout(
+    module_id: str | None,
+    game_id: str = "",
+    *,
+    modules_meta: dict[str, dict[str, Any]] | None = None,
+) -> bool:
+    """True if module ``type`` is a fixed/ptr/struct name table (inject only)."""
+    if not module_id:
+        return False
+    meta: dict[str, Any] | None = None
+    if modules_meta is not None:
+        m = modules_meta.get(module_id)
+        meta = m if isinstance(m, dict) else None
+    else:
+        try:
+            meta = _get_modules(game_id).get(module_id) or None
+        except ValueError:
+            meta = None
+    if not meta:
+        return False
+    typ = str(meta.get("type") or "").strip()
+    return typ in TABLE_LAYOUT_TYPES
 
 
 def list_module_meta(game_id: str = "") -> list[dict[str, Any]]:
@@ -189,36 +225,33 @@ def _match_addr_to_module(addr: int, mods: dict[str, dict[str, Any]]) -> str | N
 
 
 def assign_module(entry: dict[str, Any], game_id: str = "") -> str | None:
-    """Assign module by ROM address ∩ dump geo (bands / offset–end).
+    """Resolve module for an entry.
 
-    Address match is authoritative so stale English ``category`` / old
-    ``module`` stamps cannot override measured dump spans. Known Chinese
-    ``module`` stamps are used only when address is missing.
+    Prefer a stamped ``entry.module`` / ``_axvj_module`` that exists in
+    texts.json modules (corpus is curated). Geo address match only when the
+    stamp is missing or unknown — never overwrite a known texts stamp.
     """
     try:
         mods = _get_modules(game_id)
     except ValueError:
         mods = {}
+    stamped = entry.get("module") or entry.get("_axvj_module")
+    if isinstance(stamped, str) and stamped.strip():
+        s = stamped.strip()
+        if not mods or s in mods:
+            return s
     if not mods:
-        stamped = entry.get("module") or entry.get("_axvj_module")
-        if isinstance(stamped, str) and stamped.strip():
-            return stamped.strip()
         return None
     addr = _entry_rom_addr(entry)
     if addr is not None:
         hit = _match_addr_to_module(addr, mods)
         if hit:
             return hit
-    stamped = entry.get("module") or entry.get("_axvj_module")
-    if isinstance(stamped, str) and stamped.strip():
-        s = stamped.strip()
-        if s in mods:
-            return s
     return None
 
 
 def entry_module(entry: dict[str, Any], game_id: str = "") -> str | None:
-    """Resolve module id for an entry (address geo, else known Chinese stamp)."""
+    """Resolve module id (trust texts stamp; geo only if missing)."""
     return assign_module(entry, game_id=game_id)
 
 
@@ -314,16 +347,15 @@ def entry_is_script_like(entry: dict[str, Any], game_id: str = "") -> bool:
 
 
 def stamp_entry_module(entry: dict[str, Any], game_id: str = "") -> str | None:
-    """Write ``module`` / ``_axvj_module`` from geo resolver; align category."""
+    """Ensure ``module`` / ``_axvj_module`` / ``category`` are aligned.
+
+    Does not clear a known texts stamp when geo fails to match.
+    """
     mid = entry_module(entry, game_id=game_id)
     if mid:
         entry["module"] = mid
         entry["_axvj_module"] = mid
-        entry["category"] = mid  # same Chinese id; no parallel English taxonomy
-    else:
-        entry.pop("module", None)
-        entry.pop("_axvj_module", None)
-        entry.pop("category", None)
+        entry["category"] = mid  # same id; no parallel English taxonomy
     return mid
 
 

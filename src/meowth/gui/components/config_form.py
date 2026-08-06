@@ -64,28 +64,6 @@ class ConfigForm(ctk.CTkFrame):
             text_color=("gray40", "gray60"),
         ).pack(anchor="w", pady=(0, 2))
 
-        # --- 文本校验阈值 ---
-        ctk.CTkLabel(
-            inner, text="文本校验阈值（0=不启用）", font=("", 12, "bold")
-        ).pack(anchor="w", pady=(8, 0))
-        th_row = ctk.CTkFrame(inner, fg_color="transparent")
-        th_row.pack(fill="x", pady=(2, 4))
-        self._threshold = ctk.DoubleVar(value=70)
-        self.threshold_slider = ctk.CTkSlider(
-            th_row,
-            from_=0,
-            to=100,
-            number_of_steps=100,
-            variable=self._threshold,
-            command=self._on_threshold,
-        )
-        self.threshold_slider.pack(side="left", fill="x", expand=True, padx=(0, 8))
-        self.threshold_label = ctk.CTkLabel(th_row, text="70", width=36)
-        self.threshold_label.pack(side="right")
-
-    def _on_threshold(self, value):
-        self.threshold_label.configure(text=f"{int(round(value))}")
-
     @staticmethod
     def _detect_jp_rom(path: Path) -> tuple[str | None, str]:
         from ...game_backends import UnsupportedGameError, get_backend
@@ -151,7 +129,6 @@ class ConfigForm(ctk.CTkFrame):
             bdf_font_path=Path(self.font_entry.get()) if self.font_entry.get() else None,
             modules=None,
             seed_first=True,
-            check_threshold=int(round(self._threshold.get())),
         )
 
     def validate(self) -> tuple[bool, str]:

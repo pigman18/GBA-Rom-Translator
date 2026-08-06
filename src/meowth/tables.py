@@ -29,40 +29,68 @@ def _tbl(game_id: str = "") -> dict:
     return _TABLE_BY_GAME[gid]
 
 
+def clear_table_cache() -> None:
+    _TABLE_BY_GAME.clear()
+
+
 def base() -> int:
     return int(_tbl().get("base", 0x08000000))
 
 
-def species_names_cfg():
-    return _tbl().get("species_names", {})
+def module_cfg(module_id: str, game_id: str = "") -> dict:
+    """Table row for ``module_id``（tables 键 = 模块 id，来自 texts.json）。"""
+    if not module_id:
+        return {}
+    t = _tbl(game_id)
+    c = t.get(module_id)
+    if isinstance(c, dict):
+        return c
+    for v in t.values():
+        if isinstance(v, dict) and v.get("module") == module_id:
+            return v
+    return {}
 
 
-def move_names_cfg():
-    return _tbl().get("move_names", {})
+def iter_table_cfgs(game_id: str = ""):
+    """Yield ``(key, cfg)`` for assembled name/desc tables."""
+    for k, v in _tbl(game_id).items():
+        if k in ("base",) or not isinstance(v, dict):
+            continue
+        if "offset" in v or "table" in v:
+            yield k, v
 
 
-def ability_names_cfg():
-    return _tbl().get("ability_names", {})
+def item_data_cfg() -> dict:
+    """Struct name table（含 entry_size + name_stride）。"""
+    for _, c in iter_table_cfgs():
+        if "entry_size" in c and "name_stride" in c:
+            return c
+    return {}
 
 
-def type_names_cfg():
-    return _tbl().get("type_names", {})
-
-
-def item_data_cfg():
-    return _tbl().get("item_data", {})
-
-
-def nature_names_cfg():
-    return _tbl().get("nature_names", {})
+def nature_names_cfg() -> dict:
+    """Pointer name table（含 table 键、无 offset）。"""
+    for _, c in iter_table_cfgs():
+        if "table" in c and "offset" not in c:
+            return c
+    return {}
 
 
 def chs_species_stride() -> int:
-    return _tbl().get("chs_species_stride", 24)
+    for _, c in iter_table_cfgs():
+        if c.get("chs_stride") and c.get("stride") and "entry_size" not in c:
+            return int(c["chs_stride"])
+    return 24
 
 
 def chs_move_stride() -> int:
-    return _tbl().get("chs_move_stride", 24)
+    n = 0
+    for _, c in iter_table_cfgs():
+        if c.get("chs_stride") and c.get("stride") and "entry_size" not in c:
+            n += 1
+            if n >= 2:
+                return int(c["chs_stride"])
+    return 24
 
 
 # ---------------------------------------------------------------------------
@@ -114,52 +142,30 @@ def extract_fixed_table(
     return entries
 
 
-def extract_species_names(rom: bytes) -> list[dict]:
-    c = species_names_cfg()
-    if not c or "offset" not in c:
+def extract_module(rom: bytes, module_id: str) -> list[dict]:
+    """按 ``tables[module_id]`` 形态抽取（stride / struct / ptr），无英文别名表。"""
+    c = module_cfg(module_id)
+    if not c:
         return []
-    return extract_fixed_table(
-        rom, offset=c["offset"], stride=c["stride"], count=c["count"],
-        module=c.get("module") or "物种名", id_prefix="pkmn",
-    )
+    mid = c.get("module") or module_id
+    if "entry_size" in c and "name_stride" in c and "offset" in c:
+        return _extract_struct_names(rom, c, mid)
+    if "table" in c and "count" in c and "offset" not in c:
+        return _extract_ptr_names(rom, c, mid)
+    if "offset" in c and "stride" in c and "count" in c:
+        return extract_fixed_table(
+            rom,
+            offset=int(c["offset"]),
+            stride=int(c["stride"]),
+            count=int(c["count"]),
+            module=mid,
+            id_prefix=mid,
+        )
+    return []
 
 
-def extract_move_names(rom: bytes) -> list[dict]:
-    c = move_names_cfg()
-    if not c or "offset" not in c:
-        return []
-    return extract_fixed_table(
-        rom, offset=c["offset"], stride=c["stride"], count=c["count"],
-        module=c.get("module") or "招式名", id_prefix="move",
-    )
-
-
-def extract_ability_names(rom: bytes) -> list[dict]:
-    c = ability_names_cfg()
-    if not c or "offset" not in c:
-        return []
-    return extract_fixed_table(
-        rom, offset=c["offset"], stride=c["stride"], count=c["count"],
-        module=c.get("module") or "特性名", id_prefix="ability",
-    )
-
-
-def extract_type_names(rom: bytes) -> list[dict]:
-    c = type_names_cfg()
-    if not c or "offset" not in c:
-        return []
-    return extract_fixed_table(
-        rom, offset=c["offset"], stride=c["stride"], count=c["count"],
-        module=c.get("module") or "属性名", id_prefix="type",
-    )
-
-
-def extract_item_names(rom: bytes) -> list[dict]:
-    c = item_data_cfg()
-    if not c or "offset" not in c:
-        return []
+def _extract_struct_names(rom: bytes, c: dict, mid: str) -> list[dict]:
     BASE_VAL = base()
-    mid = c.get("module") or "道具名"
     entries: list[dict] = []
     table_ptr = BASE_VAL + c["offset"]
     for i in range(c["count"]):
@@ -185,12 +191,110 @@ def extract_item_names(rom: bytes) -> list[dict]:
     return entries
 
 
+def _extract_ptr_names(rom: bytes, c: dict, mid: str) -> list[dict]:
+    BASE_VAL = base()
+    entries: list[dict] = []
+    for i in range(c["count"]):
+        lit = c["table"] + i * 4
+        if lit + 4 > len(rom):
+            break
+        ptr = struct.unpack_from("<I", rom, lit)[0]
+        if not (BASE_VAL <= ptr < BASE_VAL + 0x800000):
+            continue
+        so = ptr - BASE_VAL
+        eos = rom.find(b"\xFF", so, so + 24)
+        if eos < 0:
+            continue
+        raw = rom[so: eos + 1]
+        text = decode_pcs(raw)
+        if not text:
+            continue
+        entries.append({
+            "id": make_entry_id(f"0x{BASE_VAL + so:08X}", raw.hex(" ")),
+            "address": f"0x{BASE_VAL + so:08X}",
+            "table_index": i,
+            "table_base": f"0x{BASE_VAL + c['table']:08X}",
+            "byte_length": len(raw),
+            "original_hex": raw.hex(" "),
+            "original": text,
+            "translated": "",
+            "module": mid,
+            "is_pointer_based": True,
+            "is_fixed_table": False,
+            "pointer_sources": [f"0x{BASE_VAL + lit:08X}"],
+            "pointer_addresses": [f"0x{BASE_VAL + lit:08X}"],
+        })
+    return entries
+
+
+def extract_species_names(rom: bytes) -> list[dict]:
+    """DEPRECATED — prefer ``extract_module`` with module id from texts.json."""
+    import warnings
+
+    warnings.warn("extract_species_names is deprecated; use extract_module", DeprecationWarning, stacklevel=2)
+    for key, c in iter_table_cfgs():
+        if c.get("stride") and "entry_size" not in c and c.get("offset") is not None:
+            return extract_module(rom, c.get("module") or key)
+    return []
+
+
+def extract_move_names(rom: bytes) -> list[dict]:
+    import warnings
+
+    warnings.warn("extract_move_names is deprecated; use extract_module", DeprecationWarning, stacklevel=2)
+    seen = 0
+    for key, c in iter_table_cfgs():
+        if c.get("stride") and "entry_size" not in c and c.get("offset") is not None:
+            seen += 1
+            if seen == 2:
+                return extract_module(rom, c.get("module") or key)
+    return []
+
+
+def extract_ability_names(rom: bytes) -> list[dict]:
+    for key, c in iter_table_cfgs():
+        if c.get("stride") and "entry_size" not in c and c.get("offset") is not None:
+            mid = c.get("module") or key
+            # skip until we find a short stride typical of abilities (8) after species/moves
+            if int(c.get("stride") or 0) == 8:
+                return extract_module(rom, mid)
+    return []
+
+
+def extract_type_names(rom: bytes) -> list[dict]:
+    for key, c in iter_table_cfgs():
+        if int(c.get("stride") or 0) == 5 and c.get("offset") is not None:
+            return extract_module(rom, c.get("module") or key)
+    return []
+
+
+def extract_item_names(rom: bytes) -> list[dict]:
+    c = item_data_cfg()
+    if not c:
+        return []
+    return extract_module(rom, c.get("module") or "")
+
+
+def extract_nature_names(rom: bytes) -> list[dict]:
+    c = nature_names_cfg()
+    if not c:
+        return []
+    return extract_module(rom, c.get("module") or "")
+
+
 def extract_item_descriptions(rom: bytes) -> list[dict]:
+    import warnings
+
+    warnings.warn(
+        "extract_item_descriptions is deprecated; corpus comes from texts.json",
+        DeprecationWarning,
+        stacklevel=2,
+    )
     c = item_data_cfg()
     if not c or "offset" not in c:
         return []
     BASE_VAL = base()
-    mid = "道具说明"
+    mid = str(c.get("module") or "")
     entries: list[dict] = []
     seen: set[int] = set()
     for i in range(c["count"]):
@@ -229,46 +333,6 @@ def extract_item_descriptions(rom: bytes) -> list[dict]:
             "is_fixed_table": False,
             "pointer_sources": [f"0x{BASE_VAL + ptr_off:08X}"],
             "pointer_addresses": [f"0x{BASE_VAL + ptr_off:08X}"],
-        })
-    return entries
-
-
-def extract_nature_names(rom: bytes) -> list[dict]:
-    c = nature_names_cfg()
-    if not c or "table" not in c:
-        return []
-    BASE_VAL = base()
-    mid = c.get("module") or "性格名"
-    entries: list[dict] = []
-    for i in range(c["count"]):
-        lit = c["table"] + i * 4
-        if lit + 4 > len(rom):
-            break
-        ptr = struct.unpack_from("<I", rom, lit)[0]
-        if not (BASE_VAL <= ptr < BASE_VAL + 0x800000):
-            continue
-        so = ptr - BASE_VAL
-        eos = rom.find(b"\xFF", so, so + 24)
-        if eos < 0:
-            continue
-        raw = rom[so: eos + 1]
-        text = decode_pcs(raw)
-        if not text:
-            continue
-        entries.append({
-            "id": make_entry_id(f"0x{BASE_VAL + so:08X}", raw.hex(" ")),
-            "address": f"0x{BASE_VAL + so:08X}",
-            "table_index": i,
-            "table_base": f"0x{BASE_VAL + c['table']:08X}",
-            "byte_length": len(raw),
-            "original_hex": raw.hex(" "),
-            "original": text,
-            "translated": "",
-            "module": mid,
-            "is_pointer_based": True,
-            "is_fixed_table": False,
-            "pointer_sources": [f"0x{BASE_VAL + lit:08X}"],
-            "pointer_addresses": [f"0x{BASE_VAL + lit:08X}"],
         })
     return entries
 

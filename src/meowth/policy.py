@@ -98,7 +98,7 @@ def brand_compact_skip(game_id: str = "") -> frozenset[str]:
 def allows_ids(game_id: str = "") -> frozenset[str]:
     """config.json 顶层 ``allows``：条目 id 白名单。
 
-    评分低于阈值但 id 在此列表内的条目照常翻译/注入（放行）。
+    id 在 ``rejects`` 中但同时在 ``allows`` 内的条目照常翻译/注入（放行）。
     """
     raw = _policy(game_id).get("allows")
     if not raw:
@@ -109,7 +109,7 @@ def allows_ids(game_id: str = "") -> frozenset[str]:
 def rejects_ids(game_id: str = "") -> frozenset[str]:
     """config.json 顶层 ``rejects``：条目 id 黑名单。
 
-    无论 score 多大都直接拒绝（不翻译、不注入）。取代旧 skip_zh_inject。
+    直接拒绝（不翻译、不注入），除非同 id 也在 ``allows`` 中。
     """
     raw = _policy(game_id).get("rejects")
     if not raw:
@@ -562,8 +562,13 @@ def is_nature_name_table_ptr(ptr_off: int) -> bool:
     from .tables import nature_names_cfg
 
     cfg = nature_names_cfg()
-    table = int(cfg.get("table", 0x3971E8))
-    count = int(cfg.get("count", 25))
+    if "table" not in cfg or "count" not in cfg:
+        raise ValueError(
+            "nature name table config missing (need module type=stride_ptr "
+            "with start/end in texts.json modules)"
+        )
+    table = int(cfg["table"])
+    count = int(cfg["count"])
     return table <= ptr_off < table + count * 4 and (ptr_off - table) % 4 == 0
 
 
@@ -571,10 +576,16 @@ def is_item_desc_table_ptr(ptr_off: int) -> bool:
     from .tables import item_data_cfg
 
     cfg = item_data_cfg()
-    base = int(cfg.get("offset", 0x39A648))
-    count = int(cfg.get("count", 348))
-    entry_size = int(cfg.get("entry_size", 40))
-    desc_off = int(cfg.get("desc_ptr_offset", 0x10))
+    for req in ("offset", "count", "entry_size", "desc_ptr_offset"):
+        if req not in cfg:
+            raise ValueError(
+                f"item struct table config missing {req!r} "
+                "(need 道具名 module read/entry_size in texts.json)"
+            )
+    base = int(cfg["offset"])
+    count = int(cfg["count"])
+    entry_size = int(cfg["entry_size"])
+    desc_off = int(cfg["desc_ptr_offset"])
     if not (base <= ptr_off < base + count * entry_size):
         return False
     return (ptr_off - base) % entry_size == desc_off
@@ -982,14 +993,21 @@ def should_keep_relocated_local_pool(
     BASE_VAL = BASE()
     nature_cfg = nature_names_cfg()
     item_cfg = item_data_cfg()
+    if "table" not in nature_cfg or "count" not in nature_cfg:
+        raise ValueError("nature_names_cfg incomplete for local-pool keep check")
+    if not all(
+        k in item_cfg
+        for k in ("offset", "count", "entry_size", "desc_ptr_offset")
+    ):
+        raise ValueError("item_data_cfg incomplete for local-pool keep check")
 
-    nature_table = nature_cfg.get("table", 0x3971E8) + BASE_VAL
-    nature_count = nature_cfg.get("count", 25)
+    nature_table = int(nature_cfg["table"]) + BASE_VAL
+    nature_count = int(nature_cfg["count"])
 
-    item_offset = item_cfg.get("offset", 0x39A648) + BASE_VAL
-    item_count = item_cfg.get("count", 348)
-    item_entry_size = item_cfg.get("entry_size", 40)
-    item_desc_ptr_offset = item_cfg.get("desc_ptr_offset", 0x10)
+    item_offset = int(item_cfg["offset"]) + BASE_VAL
+    item_count = int(item_cfg["count"])
+    item_entry_size = int(item_cfg["entry_size"])
+    item_desc_ptr_offset = int(item_cfg["desc_ptr_offset"])
 
     if nature_table <= ptr_off < nature_table + nature_count * 4:
         return True

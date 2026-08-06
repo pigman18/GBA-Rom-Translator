@@ -7,7 +7,7 @@ from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
 from ..charmap import Charmap
-from ..control_codes import protect, restore
+from ..control_codes import format_original, protect, restore, unwrap_quotes
 from ..config_loader import (
     load_game_config,
     get_game_patch_dir,
@@ -27,17 +27,8 @@ from .config import TranslationConfig
 
 from ..game_backends import UnsupportedGameError, detect_game, get_backend
 
-# Table module ids (routed through _translate_table)
-TABLE_CATEGORIES = {
-    "物种名",
-    "招式名",
-    "特性名",
-    "性格名",
-    "属性名",
-    "道具名",
-    "训练家类名",
-    "地点名",
-}
+# DEPRECATED empty set — corpus is unified free_texts; do not gate on module ids.
+TABLE_CATEGORIES: set[str] = set()
 
 # Hardcoded translations (FireRed + Chinese only)
 _HARDCODED_TRANSLATIONS: dict[str, str] = {
@@ -121,39 +112,30 @@ def is_decomp_rom(rom_path: Path, game: str) -> bool:
 
 
 def convert_format(data: dict) -> dict:
-    """Convert MeowthBridge entries format to tables + free_texts format.
+    """Normalize corpus to a single list: ``free_texts`` (``tables`` always empty).
 
-    If both ``entries`` and ``tables``/``free_texts`` are present (AXVJ flatten
-    often writes all three), prefer rebuilding from ``entries`` so Build sees
-    the latest translations.
+    texts.json already carries address + JP + ``module``. Translate/build do
+    not split name-tables vs dialogue — one path for all entries; inject uses
+    per-module ``read``/``write``/relocate config.
     """
     entries = data.get("entries")
     if entries:
-        tables_by_key: dict[str, list] = {}
-        free_texts: list = []
-        for e in entries:
-            mid = e.get("module") or e.get("_axvj_module") or e.get("category") or ""
-            if mid in TABLE_CATEGORIES:
-                tables_by_key.setdefault(mid, []).append(e)
-            else:
-                free_texts.append(e)
-        out = {
-            "tables": [
-                {"module": k, "category": k, "entries": es}
-                for k, es in tables_by_key.items()
-            ],
-            "free_texts": free_texts,
-        }
-        for k in ("game", "game_id", "source_lang", "modules", "count"):
-            if k in data:
-                out[k] = data[k]
-        return out
-    if "tables" in data:
-        return data
-    return {
+        free_texts = list(entries)
+    elif "tables" in data or "free_texts" in data:
+        free_texts = list(data.get("free_texts") or [])
+        for t in data.get("tables") or []:
+            free_texts.extend(t.get("entries") or [])
+    else:
+        free_texts = []
+    out: dict = {
         "tables": [],
-        "free_texts": [],
+        "free_texts": free_texts,
     }
+    for k in ("game", "game_id", "source_lang", "modules", "count"):
+        if k in data:
+            out[k] = data[k]
+    return out
+
 
 
 def _cache_map_from_data(data: dict) -> dict[str, str]:
@@ -161,6 +143,8 @@ def _cache_map_from_data(data: dict) -> dict[str, str]:
 
     - 跳过 ``_reject``、空翻译、译文等于原文的条目
     - texts_translated.json 仅作翻译缓存，不含地址/hex
+    - 键用 :func:`format_original`（与 LLM 预处理一致），避免排版换行
+      格式化后精确匹配失败
     """
     cache: dict[str, str] = {}
     flat: list[dict] = list(data.get("entries") or [])
@@ -174,8 +158,45 @@ def _cache_map_from_data(data: dict) -> dict[str, str]:
         orig = e.get("original") or ""
         tr = e.get("translated") or ""
         if tr and tr != orig:
-            cache[orig] = tr
+            key = format_original(orig)
+            cache[key] = tr
+            # 兼容旧查找：仍保留未格式化键（若不同）
+            if orig and orig != key:
+                cache.setdefault(orig, tr)
+            unwrapped = unwrap_quotes(orig)
+            if unwrapped and unwrapped != key and unwrapped != orig:
+                cache.setdefault(unwrapped, tr)
     return cache
+
+
+def _index_translation_cache(
+    prior: dict,
+    usable,
+) -> dict[str, str]:
+    """Expand a ``{原文: 译文}`` map so raw / unquoted / formatted keys all hit."""
+    by_orig: dict[str, str] = {}
+    for orig, tr in prior.items():
+        if not usable(orig, tr):
+            continue
+        by_orig[orig] = tr
+        key = format_original(orig)
+        by_orig[key] = tr
+        unwrapped = unwrap_quotes(orig)
+        if unwrapped:
+            by_orig[unwrapped] = tr
+    return by_orig
+
+
+def _lookup_translation_cache(by_orig: dict[str, str], original: str) -> str | None:
+    """Lookup translation trying raw, unquoted, then formatted original."""
+    if not original:
+        return None
+    if original in by_orig:
+        return by_orig[original]
+    unwrapped = unwrap_quotes(original)
+    if unwrapped in by_orig:
+        return by_orig[unwrapped]
+    return by_orig.get(format_original(original))
 
 
 def _is_cache_map(data: dict) -> bool:
@@ -298,14 +319,6 @@ class TranslationEngine:
         "module_filter": True,
         "lz_scan": True,
         "name_tables": True,
-        "llm_table_categories": [
-            "物种名",
-            "招式名",
-            "特性名",
-            "道具名",
-            "属性名",
-            "性格名",
-        ],
     }
 
     def _feature(self, key: str, default=False):
@@ -352,17 +365,13 @@ class TranslationEngine:
         if isinstance(prior, dict) and not any(
             k in prior for k in ("entries", "free_texts", "tables")
         ):
-            by_orig = {
-                orig: tr
-                for orig, tr in prior.items()
-                if self._usable_zh(orig, tr)
-            }
+            by_orig = _index_translation_cache(prior, self._usable_zh)
             n = 0
             for e in data.get("entries") or []:
                 if self._usable_zh(e.get("original") or "", e.get("translated") or ""):
                     continue
                 orig = e.get("original") or ""
-                zh = by_orig.get(orig)
+                zh = _lookup_translation_cache(by_orig, orig)
                 if zh and self._usable_zh(orig, zh):
                     e["translated"] = zh
                     n += 1
@@ -370,7 +379,7 @@ class TranslationEngine:
 
         # 旧版 entries/free_texts/tables 结构（兼容）
         by_addr: dict[str, str] = {}
-        by_orig: dict[str, str] = {}
+        raw_by_orig: dict[str, str] = {}
         for e in prior.get("entries") or []:
             orig = e.get("original") or ""
             zh = e.get("translated") or ""
@@ -379,13 +388,13 @@ class TranslationEngine:
             addr = (e.get("address") or "").upper()
             if addr:
                 by_addr[addr] = zh
-            by_orig[orig] = zh
+            raw_by_orig[orig] = zh
         # Also scan free_texts / tables shapes
         for e in prior.get("free_texts") or []:
             orig = e.get("original") or ""
             zh = e.get("translated") or ""
             if self._usable_zh(orig, zh):
-                by_orig[orig] = zh
+                raw_by_orig[orig] = zh
                 addr = (e.get("address") or "").upper()
                 if addr:
                     by_addr[addr] = zh
@@ -394,7 +403,8 @@ class TranslationEngine:
                 orig = e.get("original") or ""
                 zh = e.get("translated") or ""
                 if self._usable_zh(orig, zh):
-                    by_orig[orig] = zh
+                    raw_by_orig[orig] = zh
+        by_orig = _index_translation_cache(raw_by_orig, self._usable_zh)
 
         n = 0
         for e in data.get("entries") or []:
@@ -404,7 +414,7 @@ class TranslationEngine:
                 continue
             orig = e.get("original") or ""
             addr = (e.get("address") or "").upper()
-            zh = by_addr.get(addr) or by_orig.get(orig)
+            zh = by_addr.get(addr) or _lookup_translation_cache(by_orig, orig)
             if zh and self._usable_zh(orig, zh):
                 e["translated"] = zh
                 n += 1
@@ -434,44 +444,33 @@ class TranslationEngine:
         """Translate extracted texts JSON with parallel workers."""
         data = json.loads(texts_path.read_text(encoding="utf-8"))
 
-        # 文本校验：rejects 无条件拒绝；allows + 阈值 控制低分是否放行。
+        # 文本校验：rejects 黑名单；allows 可覆盖 rejects。
         # 先按勾选模块收窄（若启用 module_filter），再标记 _reject。
-        # 生成 {原文件名}_reject_{阈值}.json（阈值<=0 时仍可用 rejects，文件名用 0）。
-        threshold = getattr(self.config, "check_threshold", 0) or 0
         if data.get("entries"):
-            from ..policy import rejects_ids
+            from ..policy import rejects_ids, allows_ids
 
             gid = self.config.game or data.get("game_id") or data.get("game") or ""
-            has_rejects = bool(rejects_ids(gid))
-            if threshold > 0 or has_rejects:
-                rom_path = self.config.rom_path
-                if rom_path and Path(rom_path).exists():
-                    reject_path = Path(texts_path).with_name(
-                        f"{Path(texts_path).stem}_reject_{threshold}.json"
-                    )
-                    active_modules = None
-                    if self._feature("module_filter"):
-                        from ..modules import resolve_modules
+            if rejects_ids(gid) or allows_ids(gid):
+                active_modules = None
+                if self._feature("module_filter"):
+                    from ..modules import resolve_modules
 
-                        preset = (
-                            getattr(self.config, "preset", None)
-                            or getattr(self.config, "funnel", None)
-                        )
-                        active_modules = set(
-                            resolve_modules(
-                                modules=self.config.modules,
-                                preset=preset,
-                                game_id=gid,
-                            )
-                        )
-                    self._apply_check_reject(
-                        data["entries"],
-                        Path(rom_path),
-                        threshold,
-                        reject_path,
-                        data,
-                        active_modules=active_modules,
+                    preset = (
+                        getattr(self.config, "preset", None)
+                        or getattr(self.config, "funnel", None)
                     )
+                    active_modules = set(
+                        resolve_modules(
+                            modules=self.config.modules,
+                            preset=preset,
+                            game_id=gid,
+                        )
+                    )
+                self._apply_check_reject(
+                    data["entries"],
+                    data,
+                    active_modules=active_modules,
+                )
 
         # Reload custom translations (game ID may have changed since __init__)
         from ..config_loader import load_custom_translations
@@ -592,12 +591,8 @@ class TranslationEngine:
                 if isinstance(prior, dict) and not any(
                     k in prior for k in ("entries", "free_texts", "tables")
                 ):
-                    # 新版纯缓存 {原文: 译文}：按原文匹配，跳过 dirty 模块
-                    by_orig = {
-                        orig: tr
-                        for orig, tr in prior.items()
-                        if self._usable_zh(orig, tr)
-                    }
+                    # 新版纯缓存 {原文: 译文}：按格式化原文匹配，跳过 dirty 模块
+                    by_orig = _index_translation_cache(prior, self._usable_zh)
                     n = 0
                     for entry in data.get("free_texts") or []:
                         if entry.get("_reject"):
@@ -606,7 +601,9 @@ class TranslationEngine:
                             continue
                         if entry.get("_axvj_module") in dirty_mods:
                             continue
-                        zh = by_orig.get(entry.get("original") or "")
+                        zh = _lookup_translation_cache(
+                            by_orig, entry.get("original") or ""
+                        )
                         if zh:
                             entry["translated"] = zh
                             n += 1
@@ -618,7 +615,9 @@ class TranslationEngine:
                                 continue
                             if entry.get("_axvj_module") in dirty_mods:
                                 continue
-                            zh = by_orig.get(entry.get("original") or "")
+                            zh = _lookup_translation_cache(
+                                by_orig, entry.get("original") or ""
+                            )
                             if zh:
                                 entry["translated"] = zh
                                 n += 1
@@ -687,8 +686,7 @@ class TranslationEngine:
             elif compact in ("やゆよわをん",):
                 e["translated"] = orig
 
-        # 垃圾/假文本过滤已统一由文本校验阈值（check_threshold + allows/rejects）
-        # 在 translate 开头评分时处理（score < threshold → _reject，不填充翻译）。
+        # 垃圾/假文本过滤已统一由 rejects/allows（translate 开头标记 _reject）。
         import os
 
         has_key = bool(self.config.api_key) or bool(
@@ -929,11 +927,15 @@ class TranslationEngine:
         )
 
     def _translate_table(self, table: dict):
-        """Translate a table's entries using glossary lookup."""
-        category = table.get("module") or table.get("category") or ""
-        needs_llm: list[dict] = []  # entries deferred to batch LLM call
+        """Legacy table bucket — corpus is unified; prefer free_texts path.
+
+        Kept so old ``tables``-shaped JSON still gets glossary/seed treatment
+        if anything still passes a non-empty table (convert_format normally
+        flattens everything into free_texts).
+        """
+        needs_llm: list[dict] = []
         active = getattr(self, "_axvj_active_modules", None)
-        from ..modules import entry_matches, stamp_entry_module
+        from ..modules import stamp_entry_module
 
         ct_hit = 0
         for entry in table["entries"]:
@@ -943,90 +945,45 @@ class TranslationEngine:
                 if mid is None:
                     continue
                 if mid not in active:
-                    # Unchecked: keep usable Chinese; do not wipe
                     continue
-                # Clear stale JP-hold so glossary/LLM can run (not under seed_only)
                 if (entry.get("translated") or "") == original and not self.config.seed_only:
                     entry["translated"] = ""
                 elif self._usable_zh(original, entry.get("translated") or ""):
                     continue
-            # Check term overrides (all games, Chinese only)
             if self.config.target_lang == "zh-Hans" and original in _TERM_OVERRIDES:
                 entry["translated"] = _TERM_OVERRIDES[original]
                 continue
-            # Check manual overrides
             if (
-                entry_matches(
-                    {"module": category, "category": category},
-                    "训练家类名",
-                    game_id=self.config.game,
-                )
-                and self.config.target_lang == "zh-Hans"
+                self.config.target_lang == "zh-Hans"
                 and original in _TRAINER_CLASS_OVERRIDES
             ):
                 entry["translated"] = _TRAINER_CLASS_OVERRIDES[original]
                 continue
-            # Check custom_translations from folder (skip API if found)
             ct_zh = self._custom_translations.get(original)
             if ct_zh:
                 entry["translated"] = ct_zh
                 ct_hit += 1
                 continue
-            # Try glossary lookup
             zh = self.glossary.lookup(original)
             if zh:
-                ok, bad = self.charmap.can_encode(zh)
+                ok, _bad = self.charmap.can_encode(zh)
                 if ok:
                     entry["translated"] = zh
                     continue
-            # Descriptions, map names without glossary match, and battle text:
-            # defer to batch LLM call instead of one-by-one to avoid 500+ API calls
-            if (
-                "说明" in category
-                or "description" in category
-                or (
-                    entry_matches(
-                        {"module": category, "category": category},
-                        "地点名",
-                        game_id=self.config.game,
-                    )
-                    and not zh
-                )
-                or entry_matches(
-                    {"module": category, "category": category},
-                    "战斗提示",
-                    game_id=self.config.game,
-                )
-            ):
-                needs_llm.append(entry)
-            elif category in self._feature("llm_table_categories", []):
-                needs_llm.append(entry)
-            elif zh:
-                entry["translated"] = zh
-            else:
-                entry["translated"] = original
+            needs_llm.append(entry)
 
-        # Batch translate all deferred LLM entries
         if needs_llm:
             self._translate_table_llm_batch(needs_llm)
-
             if ct_hit:
                 msg = f"[自定义翻译] 命中: {ct_hit}/{len(table['entries'])} 条 (跳过 API)"
                 self._log("info", msg)
                 print(msg)
 
-        # Inject map / species names into glossary for free-text consistency
-        if entry_matches(
-            {"module": category, "category": category},
-            "地点名",
-            "物种名",
-            game_id=self.config.game,
-        ):
-            for entry in table["entries"]:
-                original = entry["original"].strip('"')
-                translated = entry.get("translated", "")
-                if translated and translated != original:
-                    self.glossary.add_term(original, translated, "dynamic")
+        for entry in table["entries"]:
+            original = entry["original"].strip('"')
+            translated = entry.get("translated", "")
+            if translated and translated != original:
+                self.glossary.add_term(original, translated, "dynamic")
 
     def _translate_table_llm_batch(self, entries: list[dict]):
         """Batch LLM translate table entries (descriptions, map names, battle text).
@@ -1101,7 +1058,7 @@ class TranslationEngine:
         if not remaining:
             return
 
-        originals = [e["original"] for e in remaining]
+        originals = [unwrap_quotes(e.get("original") or "") for e in remaining]
 
         # Protect control codes
         protected_list = []
@@ -1154,7 +1111,7 @@ class TranslationEngine:
         """Single-shot LLM batch without nested retry (used after failed ja→zh)."""
         if not remaining:
             return
-        originals = [e["original"] for e in remaining]
+        originals = [unwrap_quotes(e.get("original") or "") for e in remaining]
         protected_list = []
         codes_list = []
         for text in originals:
@@ -1184,77 +1141,6 @@ class TranslationEngine:
         if not terms:
             return ""
         return "\n".join(f"  {src} = {tgt}" for src, tgt in terms.items())
-
-    def _enrich_axvj_build_entries(
-        self,
-        rom: bytes | bytearray,
-        entries: list[dict],
-    ) -> list[dict]:
-        """Merge option/UI extract + offline seeds into the Build inject list.
-
-        GUI users often click Build alone with an older ``texts_translated.json``
-        that predates options-menu extract. Seeds (menu pad, house, options)
-        must still land in the ROM.
-        """
-        from ..extract_pipeline import extract_modules
-        from ..seed_translate import seed_translate_entry
-
-        by_addr: dict[str, dict] = {}
-        for e in entries:
-            addr = e.get("address") or ""
-            if not addr:
-                continue
-            by_addr[addr] = dict(e)
-
-        rom_bytes = bytes(rom)
-        game_id = self.config.game
-        _enrich_list = extract_modules(
-            rom_bytes, game_id, hidden_only=True, include_scripts=False
-        )
-        for e in _enrich_list:
-            addr = e.get("address") or ""
-            if not addr:
-                continue
-            prev = by_addr.get(addr)
-            if prev is None:
-                by_addr[addr] = dict(e)
-                prev = by_addr[addr]
-            else:
-                for k in (
-                    "pointer_sources",
-                    "pointer_addresses",
-                    "original_hex",
-                    "byte_length",
-                    "module",
-                    "category",
-                    "original",
-                ):
-                    if not e.get(k):
-                        continue
-                    if k.startswith("pointer"):
-                        old = list(prev.get(k) or [])
-                        new = list(e.get(k) or [])
-                        prev[k] = list(dict.fromkeys(old + new))
-                    else:
-                        prev[k] = e[k]
-
-        out: list[dict] = []
-        from ..modules import stamp_entry_module
-
-        ct = self._custom_translations or {}
-        for e in by_addr.values():
-            stamp_entry_module(e, game_id=game_id)
-            orig = e.get("original") or ""
-            seeded = seed_translate_entry(orig)
-            if not seeded:
-                seeded = ct.get(orig) or ct.get(orig.strip('"'))
-            if seeded:
-                e["translated"] = seeded
-            tr = (e.get("translated") or "").strip()
-            if not tr or tr == orig:
-                continue
-            out.append(e)
-        return out
 
     def run_full(self) -> Path:
         """Run full pipeline: translate → tile → hook → build.
@@ -1373,43 +1259,49 @@ class TranslationEngine:
         *,
         modules: list[str] | None = None,
     ) -> Path:
-        """Extract texts from ``rom_path`` into ``output_path``.
+        """Load curated ``configs/<game_id>/translate/texts.json`` (no ROM dump).
 
-        Defaults to ``work/<game_id>/texts.json``. Discovery is config-driven
-        (``configs/<game_id>/translate/modules.json``), so ``modules`` is only
-        a scope hint for backends that accept it.
+        ``modules`` is ignored (entries already stamped). If ``output_path`` is
+        set and differs from the config file, copies there for CLI convenience.
         """
-        from ..game_backends import detect_game, get_backend
+        import shutil
+
+        from ..config_loader import texts_json_path
+        from ..game_backends import detect_game
 
         game_id = detect_game(rom_path)
         if game_id == "unknown":
             raise ValueError(f"Unknown ROM: {rom_path}")
         self.config.game = game_id
         set_active_game_id(game_id)
+        src = texts_json_path(game_id)
+        if not src.is_file():
+            raise FileNotFoundError(
+                f"缺少语料 {src}；请先用 texts_patcher export 生成 "
+                f"configs/{game_id}/translate/texts.json"
+            )
+        self._log("info", f"[texts] 读取 {src}")
         if output_path is None:
-            output_path = Path(self.config.work_dir) / game_id / "texts.json"
-        backend = get_backend(game_id)
-        return backend.extract(rom_path, output_path, modules=modules)
+            return src
+        output_path = Path(output_path)
+        if output_path.resolve() != src.resolve():
+            output_path.parent.mkdir(parents=True, exist_ok=True)
+            shutil.copy2(src, output_path)
+            return output_path
+        return src
 
     def _apply_check_reject(
         self,
         entries: list[dict],
-        rom_path: Path,
-        threshold: int,
-        reject_path: Path,
         data: dict,
         *,
         active_modules: set[str] | None = None,
     ) -> int:
-        """评分条目并把 score < threshold 的条目标记 ``_reject``。
+        """按 ``rejects`` / ``allows`` 标记 ``_reject``（不写额外文件）。
 
-        若给定 ``active_modules``：先按模块勾选收窄，再评分/拒绝
-        （未勾选模块的条目不参与阈值拒绝、不写入 reject 清单）。
-
-        同时写 ``{原文件名}_reject_{阈值}.json``（只含被拒条目 + check_meta），
-        不改动输入文件。返回被拒条目数。
+        - id ∈ rejects 且 id ∉ allows → 拒绝
+        - 若给定 ``active_modules``：先按模块勾选收窄
         """
-        from ..text_checker import score_entries
         from ..policy import allows_ids, rejects_ids
 
         game_id = (
@@ -1420,7 +1312,6 @@ class TranslationEngine:
         )
         allows = allows_ids(game_id)
         rejects = rejects_ids(game_id)
-        rom = rom_path.read_bytes()
 
         candidates = entries
         if active_modules is not None:
@@ -1428,7 +1319,6 @@ class TranslationEngine:
 
             candidates = []
             for e in entries:
-                # 清掉上次全量校验可能留下的标记，避免未勾选模块条目仍带 _reject
                 e.pop("_reject", None)
                 e.pop("check_score", None)
                 e.pop("check_hits", None)
@@ -1436,97 +1326,30 @@ class TranslationEngine:
                 if mid is not None and mid in active_modules:
                     candidates.append(e)
 
-        rejected: list[dict] = []
+        rejected = 0
+        for e in candidates:
+            eid = e.get("id") or ""
+            if eid in rejects and eid not in allows:
+                e["_reject"] = True
+                e["translated"] = ""
+                e["check_hits"] = ["rejects"]
+                rejected += 1
 
-        def _mark_reject(e: dict, hits: list | None = None, score: int | float | None = None) -> None:
-            e["_reject"] = True
-            # 无条件拒绝：清掉译文，避免后续 merge/plan 仍按中文走 relocate
-            e["translated"] = ""
-            if score is not None:
-                e["check_score"] = score
-            e["check_hits"] = list(hits or [])
-            rejected.append(
-                dict(e, check_hits=list(hits or []), _reject=True)
-            )
-
-        if threshold <= 0:
-            # 仅 rejects 黑名单（无评分门槛）
-            for e in candidates:
-                eid = e.get("id") or ""
-                if eid in rejects:
-                    _mark_reject(e, hits=["rejects"], score=None)
-            scored_count = len(candidates)
-            total = 100.0
-        else:
-            scored = score_entries(candidates, rom, game_id=game_id)
-            scored_count = len(scored)
-            for e, hits, s in scored:
-                eid = e.get("id") or ""
-                e["check_score"] = s
-                e["check_hits"] = list(hits)
-                # rejects 无条件拒绝；低分且不在 allows → 拒绝
-                if eid in rejects or (s < threshold and eid not in allows):
-                    _mark_reject(e, hits=hits, score=s)
-            total = (
-                round(sum(s for _, _, s in scored) / len(scored), 1) if scored else 100.0
-            )
-
-        meta = {
-            "score": total,
-            "threshold": threshold,
-            "rejected_count": len(rejected),
-            "total_count": scored_count,
-            "entries_total": len(entries),
-            "module_candidates": len(candidates),
-            "active_modules": sorted(active_modules) if active_modules is not None else None,
-            "rom_game_id": data.get("game_id") or data.get("game"),
-            "algorithms": sorted(
-                __import__("meowth.text_checker", fromlist=["WEIGHTS"]).WEIGHTS
-            ),
-            "checked_at": __import__("datetime").datetime.now(
-                __import__("datetime").timezone.utc
-            ).isoformat(),
-        }
-        reject_path.parent.mkdir(parents=True, exist_ok=True)
-        reject_path.write_text(
-            json.dumps(
-                {
-                    "game": data.get("game"),
-                    "game_id": data.get("game_id") or data.get("game"),
-                    "source_lang": data.get("source_lang"),
-                    "count": len(rejected),
-                    "entries": rejected,
-                    "check_meta": meta,
-                },
-                ensure_ascii=False,
-                indent=2,
-            ),
-            encoding="utf-8",
-        )
         scope = (
             f"模块内 {len(candidates)}/{len(entries)}"
             if active_modules is not None
-            else f"{scored_count}"
+            else f"{len(candidates)}"
         )
         self._log(
             "info",
-            f"[校验] 阈值 {threshold}: 拒绝 {len(rejected)}/{scored_count} 条 "
-            f"（候选 {scope}）→ {reject_path.name}",
+            f"[校验] rejects/allows: 拒绝 {rejected}/{len(candidates)} 条"
+            f"（候选 {scope}）",
         )
-        return len(rejected)
+        return rejected
 
     def _extract_texts(self, rom_path: Path, output_dir: Path) -> Path:
-        """Extract texts using the game backend."""
-        from ..game_backends import detect_game, get_backend
-
-        game_id = detect_game(rom_path)
-        if game_id == "unknown":
-            raise ValueError(f"Unknown ROM: {rom_path}")
-        self.config.game = game_id
-        set_active_game_id(game_id)
-        output_path = output_dir / game_id / "texts.json"
-        backend = get_backend(game_id)
-        return backend.extract(rom_path, output_path, modules=self.config.modules)
+        """Load ``translate/texts.json`` (no ROM extract)."""
+        return self.extract_texts(rom_path, output_path=None)
 
     @staticmethod
     def _decompress_4bpp_glyph(glyph_data: bytes) -> bytearray:
@@ -1780,10 +1603,13 @@ class TranslationEngine:
             )
             return {"tables": [], "free_texts": []}
         entries = bp.get("entries") or []
+        by_orig = _index_translation_cache(
+            cache_map, lambda o, t: bool(t) and t != o
+        )
         n = 0
         for e in entries:
             orig = e.get("original") or ""
-            tr = cache_map.get(orig)
+            tr = _lookup_translation_cache(by_orig, orig)
             if tr and tr != orig:
                 e["translated"] = tr
                 n += 1
@@ -2008,7 +1834,8 @@ class TranslationEngine:
             if "translated" in entry:
                 all_entries.append(entry)
 
-        # Enrich seeds, then module-filter (checkbox partitions).
+        # Module-filter (checkbox partitions). Corpus is texts.json only —
+        # no ROM re-extract enrich.
         if self._feature("module_filter"):
             from ..geo import filter_entries_by_geo
             from ..modules import (
@@ -2016,7 +1843,6 @@ class TranslationEngine:
                 resolve_modules,
             )
 
-            all_entries = self._enrich_axvj_build_entries(rom, all_entries)
             before = len(all_entries)
             preset = (
                 getattr(self.config, "preset", None)

@@ -393,7 +393,9 @@ texts:
 python src/util/texts_patcher.py export <rom.gba> [--config yaml] [--module 模块名] [-o texts.json]
 ```
 
-默认按 yaml 全部模块扫 PCS（已减 `omit_ranges`），写出 `configs/<game_id>/translate/texts.json`。
+默认按 yaml 全部模块扫 PCS（已减 `omit_ranges`），写出 `src/util/work/<game_id>/texts.json`。  
+单模块：`--module 道具名` → `src/util/work/<game_id>/texts_道具名.json`。  
+**禁止**默认写到流水线 `configs/<game_id>/translate/`（见 `.cursor/rules/util-no-pipeline-output.mdc`）。
 
 ## 搜索 (scan)
 

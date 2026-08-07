@@ -1,0 +1,25 @@
+---
+description: util 工具禁止直接写入 Meowth 流水线 configs/
+alwaysApply: true
+---
+
+# util：禁止直写流水线配置
+
+`src/util/` 下的工具（`texts_patcher` / `tiles_patcher` / `assign_modules` 等）是**离线准备**层，与 Meowth 打包流水线分离。
+
+## 必须
+
+- util 默认产物写到 **`src/util/work/<game_id>/`**（或 util 自己的 `out/` / 显式 `-o` 到非流水线路径）。
+- util 自用配置写在 **`src/util/configs/*.yaml`**（模块表、omit、tiles presets）。
+- 要把语料/图块交给流水线时：人工或单独步骤**复制/晋升**到 `configs/<game_id>/…`，不得由 util 默认路径直接覆盖。
+
+## 禁止
+
+1. util 命令默认（或未明示）写出到仓库根 **`configs/<game_id>/`**（`translate/texts.json`、`tiles/`、`hook/` 等流水线目录）。
+2. 为「省事」把 `texts_patcher export` / `tiles_patcher export` 的默认 `-o` 指回流水线 `configs/`。
+3. 以「export 会修好 texts.json」为由，让 util import 路径依赖并改写流水线 `texts.json`（鸡生蛋死锁）。
+
+## 自检
+
+- util 默认输出路径是否在 `src/util/work/`（或明确的非 `configs/`）？
+- diff 是否出现 util 脚本把文件写进 `configs/POKEMON_*`？→ 违规，改回 util/work。

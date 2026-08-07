@@ -17,6 +17,8 @@ texts_patcher.py
   python texts_patcher.py mark-404 [--translated PATH] [--game-id ID]
   python texts_patcher.py migrate-omit [rom.gba] [--config yaml]
 
+export 默认写出 ``src/util/work/<game_id>/texts.json``（单模块为
+``texts_<模块>.json``）；与产品 ``configs/.../translate/texts.json`` 分离。
 跳过带写在 ``texts.omit_ranges``（全局）；模块 ``ranges`` 保持粗带。
 remove 整句洞 merge 进 omit，不再把模块 ranges 切碎。
 """
@@ -35,11 +37,16 @@ from typing import Any, NamedTuple
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1]
 CONFIGS_DIR = SCRIPT_DIR / "configs"
+WORK_DIR = SCRIPT_DIR / "work"
 OUT_DIR = SCRIPT_DIR / "out"
+PIPELINE_CONFIGS = REPO_ROOT / "configs"  # Meowth 流水线；util 禁止直写
 
 BASE = 0x08000000
 EOS = 0xFF
 MAX_PCS = 512
+# export 扫带启发式下限 / 标题 LZ（不读产品 texts.json / game config）
+SCRIPT_BANK_MIN = 0x100000
+TITLE_LZ_BAND = (0x36D000, 0x370000)
 
 # entries 字段顺序（便于人工查看；缺省键靠后）
 ENTRY_KEY_ORDER = (
@@ -201,17 +208,41 @@ def _order_entry(e: dict) -> dict:
     return ordered
 
 
+def refuse_pipeline_write(path: Path) -> Path:
+    """拒绝写入仓库根 ``configs/``（流水线）；util 产物只许 work/out/显式非流水线路。"""
+    resolved = path.resolve()
+    pipe = PIPELINE_CONFIGS.resolve()
+    try:
+        resolved.relative_to(pipe)
+    except ValueError:
+        return path
+    raise SystemExit(
+        f"util 禁止写入流水线配置目录: {path}\n"
+        f"  请写到 {WORK_DIR}/<game_id>/… 或其它非 {pipe} 的路径"
+    )
+
+
 def default_output_path(game_id: str, module: str | None = None) -> Path:
-    """``configs/<game_id>/translate/texts.json`` 或单模块 ``texts_<模块>.json``。"""
-    base = REPO_ROOT / "configs" / game_id / "translate"
+    """``src/util/work/<game_id>/texts.json`` 或单模块 ``texts_<模块>.json``。"""
+    base = WORK_DIR / game_id
     if module:
         return base / f"texts_{module}.json"
     return base / "texts.json"
 
 
 def default_translated_path(game_id: str) -> Path:
-    """``configs/<game_id>/translate/texts_translated.json``。"""
-    return REPO_ROOT / "configs" / game_id / "translate" / "texts_translated.json"
+    """``src/util/work/<game_id>/texts_translated.json``。"""
+    return WORK_DIR / game_id / "texts_translated.json"
+
+
+def read_pcs(rom: bytes, off: int, maxlen: int = 256) -> bytes | None:
+    """读到 FF 的 PCS 体（含 EOS）；本地实现，不 import meowth.extract。"""
+    if off < 0 or off >= len(rom):
+        return None
+    end = rom.find(bytes([EOS]), off, min(len(rom), off + maxlen))
+    if end < 0:
+        return None
+    return rom[off : end + 1]
 
 
 def _modules_as_dict(modules_list: list[dict]) -> dict[str, dict]:
@@ -819,12 +850,8 @@ def extract_scan(
     omit_ranges: list[tuple[int, int]] | None = None,
     filters: list[dict[str, Any]] | None = None,
 ) -> list[dict]:
-    from meowth.extract import (
-        SCRIPT_BANK_MIN,
-        TITLE_LZ_BAND,
-        read_pcs,
-        scan_addr_bands,
-    )
+    # 只用 jp_pcs + 本地 read_pcs / SCRIPT_BANK_MIN；禁止 import meowth.extract
+    #（extract 会 load_game_config → 读流水线 texts.json，与 util 导出死锁）。
     from meowth.jp_pcs import decode_pcs, looks_like_jp_text
     from meowth.policy import looks_like_translatable
 
@@ -874,6 +901,8 @@ def extract_scan(
     def _in_bands(a: int) -> bool:
         return any(lo <= a <= hi for lo, hi in band_pairs)
 
+    ptrs_map = ptr_index or {}
+
     needles = _original_include_needles(filt)
     if needles is not None:
         # 包含模式：按正文关键字在 band 内 find，避免整 ROM 逐字节扫
@@ -884,7 +913,6 @@ def extract_scan(
             raw = _encode_jp_needle(text)
             if raw and len(raw) >= 2:
                 encoded.append(raw)
-            # 去空白变体
             compact = _norm_original_key(text)
             if compact and compact != text:
                 raw2 = _encode_jp_needle(compact)
@@ -892,7 +920,7 @@ def extract_scan(
                     encoded.append(raw2)
         for needle in encoded:
             start = 0
-            body = needle  # includes FF
+            body = needle
             while True:
                 a = rom.find(body, start)
                 if a < 0:
@@ -906,15 +934,13 @@ def extract_scan(
                     continue
                 raw = read_pcs(rom, a, 512) or body
                 if not looks_like_jp_text(raw):
-                    # 仍允许短 UI：若 find 命中完整 needle 则用 needle
-                    if raw != body and not (body.endswith(b"\xff") and rom[a : a + len(body)] == body):
+                    if raw != body and not (
+                        body.endswith(b"\xff") and rom[a : a + len(body)] == body
+                    ):
                         continue
                     raw = body
                 text = decode_pcs(raw)
-                if not looks_like_translatable(text, len(raw)):
-                    # 白名单正文本身已指定；放宽
-                    pass
-                ptrs = list((ptr_index or {}).get(a, []))
+                ptrs = list(ptrs_map.get(a, []))
                 ctx = make_filter_context(
                     fo=a,
                     raw=raw,
@@ -938,92 +964,54 @@ def extract_scan(
                 out.append(_stamp(e, mid=mid, game_code=game_code))
         return out
 
-    if ptr_index is not None:
-        out = []
-        seen = set()
-
-        for lo, hi in band_pairs:
-            a = lo
-            while a <= hi:
-                b = rom[a]
-                # 0xFC = 扩展控制码前缀（战斗菜单等 FC 彩窗）；勿与 F7–FB / FE / FF 一并跳过
-                if b == 0xFF or b == 0x00 or (b >= 0xF7 and b != 0xFC):
-                    a += 1
-                    continue
-                raw = read_pcs(rom, a, 512)
-                if raw is None:
-                    a += 1
-                    continue
-                end = a + len(raw) - 1
-                if looks_like_jp_text(raw):
-                    text = decode_pcs(raw)
-                    if looks_like_translatable(text, len(raw)):
-                        if a < SCRIPT_BANK_MIN or TITLE_LZ_BAND[0] <= a < TITLE_LZ_BAND[1]:
-                            a = end + 1
-                            continue
-                        if a in seen:
-                            a = end + 1
-                            continue
-                        ptrs = list(ptr_index.get(a, []))
-                        ctx = make_filter_context(
-                            fo=a,
-                            raw=raw,
-                            original=text,
-                            ptrs=ptrs,
-                            module_id=str(mid),
-                            module_type=mtype,
-                        )
-                        if filt and not apply_filters(ctx, filt):
-                            a = end + 1
-                            continue
-                        seen.add(a)
-                        e = {
-                            "address": f"0x{BASE + a:08X}",
-                            "original": text,
-                            "original_hex": raw.hex(" "),
-                            "byte_length": len(raw),
-                            "is_pointer_based": bool(ptrs),
-                            "pointer_sources": [
-                                f"0x{BASE + q:08X}" for q in ptrs
-                            ],
-                            "pointer_addresses": [
-                                f"0x{BASE + q:08X}" for q in ptrs
-                            ],
-                        }
-                        out.append(_stamp(e, mid=mid, game_code=game_code))
-                a = end + 1
-        return out
-
-    out = []
-    for e in scan_addr_bands(rom, bands):
-        text = e.get("original") or ""
-        addr = e.get("address") or ""
-        fo = normalize_file_off(addr) if addr else 0
-        ohex = (e.get("original_hex") or "").replace(" ", "")
-        try:
-            raw = bytes.fromhex(ohex) if ohex else b""
-        except ValueError:
-            raw = b""
-        if not raw.endswith(b"\xff"):
-            raw = raw + b"\xff"
-        ptrs_s = e.get("pointer_sources") or e.get("pointer_addresses") or []
-        ptrs = []
-        for p in ptrs_s:
-            try:
-                ptrs.append(normalize_file_off(p))
-            except Exception:
-                pass
-        ctx = make_filter_context(
-            fo=fo,
-            raw=raw if raw else b"\xff",
-            original=text,
-            ptrs=ptrs,
-            module_id=str(mid),
-            module_type=mtype,
-        )
-        if filt and not apply_filters(ctx, filt):
-            continue
-        out.append(_stamp(dict(e), mid=mid, game_code=game_code))
+    out: list[dict] = []
+    seen: set[int] = set()
+    for lo, hi in band_pairs:
+        a = lo
+        while a <= hi:
+            b = rom[a]
+            # 0xFC = 扩展控制码前缀；勿与 F7–FB / FE / FF 一并跳过
+            if b == 0xFF or b == 0x00 or (b >= 0xF7 and b != 0xFC):
+                a += 1
+                continue
+            raw = read_pcs(rom, a, 512)
+            if raw is None:
+                a += 1
+                continue
+            end = a + len(raw) - 1
+            if looks_like_jp_text(raw):
+                text = decode_pcs(raw)
+                if looks_like_translatable(text, len(raw)):
+                    if a < SCRIPT_BANK_MIN or TITLE_LZ_BAND[0] <= a < TITLE_LZ_BAND[1]:
+                        a = end + 1
+                        continue
+                    if a in seen:
+                        a = end + 1
+                        continue
+                    ptrs = list(ptrs_map.get(a, []))
+                    ctx = make_filter_context(
+                        fo=a,
+                        raw=raw,
+                        original=text,
+                        ptrs=ptrs,
+                        module_id=str(mid),
+                        module_type=mtype,
+                    )
+                    if filt and not apply_filters(ctx, filt):
+                        a = end + 1
+                        continue
+                    seen.add(a)
+                    e = {
+                        "address": f"0x{BASE + a:08X}",
+                        "original": text,
+                        "original_hex": raw.hex(" "),
+                        "byte_length": len(raw),
+                        "is_pointer_based": bool(ptrs),
+                        "pointer_sources": [f"0x{BASE + q:08X}" for q in ptrs],
+                        "pointer_addresses": [f"0x{BASE + q:08X}" for q in ptrs],
+                    }
+                    out.append(_stamp(e, mid=mid, game_code=game_code))
+            a = end + 1
     return out
 
 
@@ -1149,7 +1137,9 @@ def export_texts(
     if skipped:
         print(f"[i] skipped module types (not implemented): {skipped}")
 
-    out_path = output or default_output_path(game_id, module=module)
+    out_path = refuse_pipeline_write(
+        output or default_output_path(game_id, module=module)
+    )
     # modules 只来自 yaml（不与旧 texts.json 合并，避免改 label/id 后残留）
     doc = {
         "game": game_id,
@@ -1516,8 +1506,6 @@ def span_for_start(
     if bl >= 1:
         return (fo, fo + bl - 1)
     if rom is not None and 0 <= fo < len(rom):
-        from meowth.extract import read_pcs
-
         raw = read_pcs(rom, fo, MAX_PCS)
         if raw:
             return (fo, fo + len(raw) - 1)
@@ -1661,7 +1649,6 @@ def preview_lost_rom_strings(
     rom: bytes, spans: list[tuple[int, int]]
 ) -> list[dict[str, Any]]:
     """坏句起点的 PCS 解码（对照挖掉的整段）。"""
-    from meowth.extract import read_pcs
     from meowth.jp_pcs import decode_pcs
 
     rows: list[dict[str, Any]] = []
@@ -1883,6 +1870,7 @@ def sync_texts_json_omit(
         kept.append(e)
     doc["entries"] = kept
     doc["count"] = len(kept)
+    refuse_pipeline_write(texts_path)
     texts_path.write_text(
         json.dumps(doc, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -2009,6 +1997,7 @@ def sync_texts_json_modules_meta(texts_path: Path, cfg: dict) -> int:
                 meta[k] = mod[k]
         mods_obj[mid] = meta
         n_mod += 1
+    refuse_pipeline_write(texts_path)
     texts_path.write_text(
         json.dumps(doc, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -2262,6 +2251,7 @@ def mark_404_in_translated(
         )
         n_cleaned += 1
 
+    refuse_pipeline_write(translated_path)
     translated_path.write_text(
         json.dumps(out, ensure_ascii=False, indent=2) + "\n",
         encoding="utf-8",
@@ -2306,7 +2296,7 @@ def _add_remove_args(p: argparse.ArgumentParser) -> None:
         metavar="PATH",
         help=(
             "从 texts_translated.json 的 status=404 经 texts.json 反查地址；"
-            "省略 PATH 则用 configs/<game_id>/translate/texts_translated.json"
+            "省略 PATH 则用 src/util/work/<game_id>/texts_translated.json"
         ),
     )
     p.add_argument("--config", type=Path, default=None)
@@ -2336,7 +2326,7 @@ def main(argv: list[str] | None = None) -> int:
         "--output",
         type=Path,
         default=None,
-        help="输出路径（默认 configs/<game_id>/translate/texts.json）",
+        help="输出路径（默认 src/util/work/<game_id>/texts.json；禁止写流水线 configs/）",
     )
 
     p_sc = sub.add_parser(
@@ -2402,7 +2392,7 @@ def main(argv: list[str] | None = None) -> int:
         "--translated",
         type=Path,
         default=None,
-        help="texts_translated.json（默认 configs/<game_id>/translate/…）",
+        help="texts_translated.json（默认 src/util/work/<game_id>/texts_translated.json）",
     )
     p_m4.add_argument(
         "--game-id",

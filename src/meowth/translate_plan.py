@@ -285,13 +285,18 @@ def plan_entry(
             "reason": "hook 指针重定向 asm",
         }
 
-    # type 5: 保留原文，记录具体原因
+    # type 5: 保留原文，记录具体原因（勿把「有 hook 但无指针」说成「无 hook」）
     if not allow_reloc and not allow_hook and not allow_phrase:
         reason = "模块禁止 relocate/hook/短语，且超槽位"
     elif not allow_reloc and not allow_hook:
         reason = "模块禁止 relocate/hook，且槽位<5无法升槽"
-    elif not allow_reloc:
-        reason = "模块禁止 relocate，无 hook，且槽位<5无法升槽"
+    elif allow_hook and not ptrs:
+        if allow_phrase and byte_length < 5:
+            reason = "允许 hook 但无指针；槽位<5 无法 F980 短语升槽"
+        elif allow_phrase:
+            reason = "允许 hook 但无指针，且无可用短语码"
+        else:
+            reason = "允许 hook 但无指针，且无法短语升槽"
     elif not allow_phrase and not allow_hook:
         reason = "模块禁止短语/hook，且无指针可 relocate"
     elif not ptrs and not allow_phrase:

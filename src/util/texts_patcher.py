@@ -346,11 +346,11 @@ def _module_bands(mod: dict) -> list[list[str]]:
                 lo, hi = parse_addr(r[0]), parse_addr(r[1])
             else:
                 continue
-            if hi >= lo > 0:
+            if hi >= lo >= 0:
                 bands.append([f"0x{lo:X}", f"0x{hi:X}"])
     if not bands:
         lo, hi = parse_addr(mod.get("start")), parse_addr(mod.get("end"))
-        if hi >= lo > 0:
+        if hi >= lo >= 0:
             bands.append([f"0x{lo:X}", f"0x{hi:X}"])
     return bands
 
@@ -458,13 +458,35 @@ def plain_original(original: str) -> str:
     return s
 
 
+def _has_include_original_text_filter(filters: list[dict[str, Any]]) -> bool:
+    """模块是否声明了 original_text_filter 且为包含模式（filter: false）。"""
+    for spec in filters or []:
+        if not isinstance(spec, dict):
+            continue
+        if str(spec.get("type") or "") != "original_text_filter":
+            continue
+        # 未写 filter 默认 true=过滤；仅 false=包含
+        if "filter" in spec and not bool(spec.get("filter")):
+            return True
+    return False
+
+
 def resolve_filters(cfg: dict, mod: dict) -> list[dict[str, Any]]:
-    """texts.filters.<type> + module.filters；同 type 后写覆盖 value。"""
+    """texts.filters.<type> + module.filters；同 type 后写覆盖整条（含 value / filter）。
+
+    若模块声明了 ``original_text_filter`` 且 ``filter: false``（正文包含白名单），
+    **不再合并** 全局 ``texts.filters.<type>``——只使用 ``module.filters``。
+    否则全局 ``min_byte_length: 8`` / ``dialogue_shape`` 等会把短 UI（如「バッグ」）全部滤掉，
+    与 ``texts_patcher scan``（不跑模块 filter）行为不一致。
+    """
     mtype = str(mod.get("type") or "scan")
     texts = cfg.get("texts") or {}
     by_type = texts.get("filters") or {}
-    base = list(by_type.get(mtype) or [])
     extra = list(mod.get("filters") or [])
+    if _has_include_original_text_filter(extra):
+        base: list[Any] = []
+    else:
+        base = list(by_type.get(mtype) or [])
     # 合并：先 base 再 extra，同 type 后写覆盖
     merged: dict[str, dict[str, Any]] = {}
     order: list[str] = []
@@ -482,6 +504,99 @@ def resolve_filters(cfg: dict, mod: dict) -> list[dict[str, Any]]:
             order.append(t)
         merged[t] = dict(spec)
     return [merged[t] for t in order]
+
+
+def _norm_original_key(s: str) -> str:
+    """正文匹配用：去掉空白后比较。"""
+    return re.sub(r"\s+", "", s or "")
+
+
+def _original_text_hit(ctx: FilterContext, val: Any) -> bool:
+    """original_text_filter：原文精确或去空白后命中 value 列表。"""
+    if not isinstance(val, (list, tuple)):
+        return False
+    keys = [str(x) for x in val if x is not None and str(x)]
+    if not keys:
+        return False
+    o = ctx.original or ""
+    plain = ctx.original_plain or ""
+    o_n = _norm_original_key(o)
+    plain_n = _norm_original_key(plain)
+    for k in keys:
+        if o == k or plain == k:
+            return True
+        kn = _norm_original_key(k)
+        if kn and (o_n == kn or plain_n == kn):
+            return True
+    return False
+
+
+def _filter_hit(ctx: FilterContext, spec: dict[str, Any]) -> bool | None:
+    """计算是否命中过滤条件。
+
+    返回 ``None`` 表示本闸禁用（恒保留）。
+    ``hit=True`` 表示命中「过滤模式」应丢弃的一侧；
+    ``filter: true``（默认）保留 ⟺ not hit；``filter: false``（包含）保留 ⟺ hit。
+    """
+    t = str(spec.get("type") or "")
+    val = spec.get("value")
+
+    if t == "character_filter":
+        pat = str(val or "")
+        if not pat:
+            return None
+        return re.search(pat, ctx.original_plain or "") is not None
+
+    if t == "dialogue_shape_filter":
+        if not bool(val):
+            return None
+        return not _dialogue_shape_ok(ctx)
+
+    if t == "min_byte_length_filter":
+        try:
+            n = int(val)
+        except (TypeError, ValueError):
+            return None
+        return ctx.byte_length < n
+
+    if t == "max_byte_length_filter":
+        try:
+            n = int(val)
+        except (TypeError, ValueError):
+            return None
+        return ctx.byte_length > n
+
+    if t == "require_pointer_filter":
+        if not bool(val):
+            return None
+        return not bool(ctx.is_pointer_based)
+
+    if t == "garbage_heuristic_filter":
+        if not bool(val):
+            return None
+        return _looks_garbage_original(ctx.original)
+
+    if t == "address_filter":
+        if isinstance(val, dict):
+            lo = normalize_file_off(val.get("start") or 0)
+            hi = normalize_file_off(val.get("end") or 0)
+            if hi < lo:
+                lo, hi = hi, lo
+            return lo <= ctx.address <= hi
+        pat = str(val or "")
+        if not pat:
+            return None
+        hex_s = f"0x{ctx.address:X}"
+        vma_s = f"0x{ctx.address_vma:08X}"
+        return (
+            re.search(pat, hex_s) is not None
+            or re.search(pat, vma_s) is not None
+        )
+
+    if t == "original_text_filter":
+        return _original_text_hit(ctx, val)
+
+    raise SystemExit(f"未知 filter type: {t!r}")
 
 
 def _dialogue_shape_ok(ctx: FilterContext) -> bool:
@@ -568,61 +683,20 @@ def _looks_garbage_original(original: str) -> bool:
 
 
 def apply_one_filter(ctx: FilterContext, spec: dict[str, Any]) -> bool:
-    """True=保留，False=拒绝。"""
-    t = str(spec.get("type") or "")
-    val = spec.get("value")
+    """True=保留，False=拒绝。
 
-    if t == "character_filter":
-        pat = str(val or "")
-        if not pat:
-            return True
-        return re.search(pat, ctx.original_plain or "") is None
-
-    if t == "dialogue_shape_filter":
-        if not bool(val):
-            return True
-        return _dialogue_shape_ok(ctx)
-
-    if t == "min_byte_length_filter":
-        try:
-            n = int(val)
-        except (TypeError, ValueError):
-            return True
-        return ctx.byte_length >= n
-
-    if t == "max_byte_length_filter":
-        try:
-            n = int(val)
-        except (TypeError, ValueError):
-            return True
-        return ctx.byte_length <= n
-
-    if t == "require_pointer_filter":
-        if not bool(val):
-            return True
-        return bool(ctx.is_pointer_based)
-
-    if t == "garbage_heuristic_filter":
-        if not bool(val):
-            return True
-        return not _looks_garbage_original(ctx.original)
-
-    if t == "address_filter":
-        # value: 正则匹配 0x… VMA/file hex，或 {start,end} 禁止区间
-        if isinstance(val, dict):
-            lo = normalize_file_off(val.get("start") or 0)
-            hi = normalize_file_off(val.get("end") or 0)
-            if hi < lo:
-                lo, hi = hi, lo
-            return not (lo <= ctx.address <= hi)
-        pat = str(val or "")
-        if not pat:
-            return True
-        hex_s = f"0x{ctx.address:X}"
-        vma_s = f"0x{ctx.address_vma:08X}"
-        return re.search(pat, hex_s) is None and re.search(pat, vma_s) is None
-
-    raise SystemExit(f"未知 filter type: {t!r}")
+    ``filter`` 极性（默认 ``true``=过滤）：
+    - ``true``：命中则丢（保留 ⟺ not hit）
+    - ``false``：命中则留（包含模式；保留 ⟺ hit）
+    """
+    hit = _filter_hit(ctx, spec)
+    if hit is None:
+        return True
+    # 未写 filter 字段时默认 true（过滤），与旧行为一致
+    exclude = True if "filter" not in spec else bool(spec.get("filter"))
+    if exclude:
+        return not hit
+    return bool(hit)
 
 
 def apply_filters(ctx: FilterContext, filters: list[dict[str, Any]]) -> bool:
@@ -653,6 +727,87 @@ def make_filter_context(
         module_id=module_id,
         module_type=module_type,
     )
+
+
+def _original_include_needles(filters: list[dict[str, Any]]) -> list[str] | None:
+    """若存在 ``original_text_filter`` 且 ``filter: false``，返回正文白名单；否则 None。"""
+    for spec in filters or []:
+        if str(spec.get("type") or "") != "original_text_filter":
+            continue
+        # 默认 filter=true；仅包含模式走关键字快扫
+        if bool(spec.get("filter", True)):
+            return None
+        val = spec.get("value")
+        if not isinstance(val, (list, tuple)):
+            return None
+        out = [str(x) for x in val if x is not None and str(x)]
+        return out
+    return None
+
+
+def _encode_jp_needle(text: str) -> bytes | None:
+    """把抽出原文编码为 JP PCS（含 FF）。失败返回 None。"""
+    from meowth.jp_pcs import CHAR_TO_BYTE
+
+    if not text:
+        return None
+    out = bytearray()
+    i = 0
+    n = len(text)
+    while i < n:
+        # \\CC + hex args (from decode_pcs)
+        if text.startswith("\\CC", i):
+            hexpart = ""
+            j = i + 3
+            while j < n and text[j] in "0123456789abcdefABCDEF":
+                hexpart += text[j]
+                j += 1
+            if len(hexpart) < 2 or len(hexpart) % 2:
+                return None
+            out.append(0xFC)
+            try:
+                out.extend(bytes.fromhex(hexpart))
+            except ValueError:
+                return None
+            i = j
+            continue
+        if text.startswith("\\l", i):
+            out.append(0xFA)
+            i += 2
+            continue
+        if text.startswith("\\p", i):
+            out.append(0xFB)
+            i += 2
+            continue
+        if text.startswith("\\n", i):
+            out.append(0xFE)
+            i += 2
+            continue
+        # \\XX variable / control (FD xx) — two hex digits
+        if text[i] == "\\" and i + 3 <= n and text[i + 1] != "\\":
+            hx = text[i + 1 : i + 3]
+            if all(c in "0123456789abcdefABCDEF" for c in hx):
+                out.append(0xFD)
+                out.append(int(hx, 16))
+                i += 3
+                continue
+        ch = text[i]
+        if ch == "\n":
+            # 单换行 FE；连续两个 \n\n → FB（与 decode 对称不完美，优先 FE）
+            if i + 1 < n and text[i + 1] == "\n":
+                out.append(0xFB)
+                i += 2
+            else:
+                out.append(0xFE)
+                i += 1
+            continue
+        b = CHAR_TO_BYTE.get(ch)
+        if b is None:
+            return None
+        out.append(b)
+        i += 1
+    out.append(0xFF)
+    return bytes(out)
 
 
 def extract_scan(
@@ -697,20 +852,97 @@ def extract_scan(
     ):
         filt.append({"type": "require_pointer_filter", "value": True})
 
-    if ptr_index is not None:
+    def _parse(v: object) -> int:
+        if isinstance(v, int):
+            return v
+        s = str(v).strip().lower().replace("0x", "")
+        return int(s, 16) if s else 0
+
+    rom_last = max(0, len(rom) - 1)
+    band_pairs: list[tuple[int, int]] = []
+    for lo_s, hi_s in bands:
+        lo, hi = _parse(lo_s), _parse(hi_s)
+        if hi < lo:
+            continue
+        lo = max(0, min(lo, rom_last))
+        hi = max(0, min(hi, rom_last))
+        if hi >= lo:
+            band_pairs.append((lo, hi))
+    if not band_pairs:
+        return []
+
+    def _in_bands(a: int) -> bool:
+        return any(lo <= a <= hi for lo, hi in band_pairs)
+
+    needles = _original_include_needles(filt)
+    if needles is not None:
+        # 包含模式：按正文关键字在 band 内 find，避免整 ROM 逐字节扫
         out: list[dict] = []
         seen: set[int] = set()
+        encoded: list[bytes] = []
+        for text in needles:
+            raw = _encode_jp_needle(text)
+            if raw and len(raw) >= 2:
+                encoded.append(raw)
+            # 去空白变体
+            compact = _norm_original_key(text)
+            if compact and compact != text:
+                raw2 = _encode_jp_needle(compact)
+                if raw2 and len(raw2) >= 2 and raw2 not in encoded:
+                    encoded.append(raw2)
+        for needle in encoded:
+            start = 0
+            body = needle  # includes FF
+            while True:
+                a = rom.find(body, start)
+                if a < 0:
+                    break
+                start = a + 1
+                if not _in_bands(a):
+                    continue
+                if a in seen:
+                    continue
+                if a < SCRIPT_BANK_MIN or TITLE_LZ_BAND[0] <= a < TITLE_LZ_BAND[1]:
+                    continue
+                raw = read_pcs(rom, a, 512) or body
+                if not looks_like_jp_text(raw):
+                    # 仍允许短 UI：若 find 命中完整 needle 则用 needle
+                    if raw != body and not (body.endswith(b"\xff") and rom[a : a + len(body)] == body):
+                        continue
+                    raw = body
+                text = decode_pcs(raw)
+                if not looks_like_translatable(text, len(raw)):
+                    # 白名单正文本身已指定；放宽
+                    pass
+                ptrs = list((ptr_index or {}).get(a, []))
+                ctx = make_filter_context(
+                    fo=a,
+                    raw=raw,
+                    original=text,
+                    ptrs=ptrs,
+                    module_id=str(mid),
+                    module_type=mtype,
+                )
+                if filt and not apply_filters(ctx, filt):
+                    continue
+                seen.add(a)
+                e = {
+                    "address": f"0x{BASE + a:08X}",
+                    "original": text,
+                    "original_hex": raw.hex(" "),
+                    "byte_length": len(raw),
+                    "is_pointer_based": bool(ptrs),
+                    "pointer_sources": [f"0x{BASE + q:08X}" for q in ptrs],
+                    "pointer_addresses": [f"0x{BASE + q:08X}" for q in ptrs],
+                }
+                out.append(_stamp(e, mid=mid, game_code=game_code))
+        return out
 
-        def _parse(v: object) -> int:
-            if isinstance(v, int):
-                return v
-            s = str(v).strip().lower().replace("0x", "")
-            return int(s, 16) if s else 0
+    if ptr_index is not None:
+        out = []
+        seen = set()
 
-        for lo_s, hi_s in bands:
-            lo, hi = _parse(lo_s), _parse(hi_s)
-            if hi < lo:
-                continue
+        for lo, hi in band_pairs:
             a = lo
             while a <= hi:
                 b = rom[a]
@@ -775,7 +1007,7 @@ def extract_scan(
         if not raw.endswith(b"\xff"):
             raw = raw + b"\xff"
         ptrs_s = e.get("pointer_sources") or e.get("pointer_addresses") or []
-        ptrs: list[int] = []
+        ptrs = []
         for p in ptrs_s:
             try:
                 ptrs.append(normalize_file_off(p))

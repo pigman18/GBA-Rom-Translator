@@ -1,0 +1,31 @@
+---
+description: 修图前必须备份 tiles/compose 等到 bak/ 时间戳副本
+alwaysApply: true
+---
+
+# tiles / compose 修图：先备份
+
+## 必须
+
+对 `configs/**/tiles/` 下已有成品图（尤其 `*_compose.png`）做覆盖写入前，先备份当前文件：
+
+```
+bak/{原文件名去后缀}.{yyyyMMddHHmm}.{原后缀}
+```
+
+示例：
+
+- `0x0836D268_compose.png` → `bak/0x0836D268_compose.202608071748.png`
+- `bak/` 与被改文件同目录（如 `configs/POKEMON_RUBY_AXVJ00/tiles/bak/`）
+
+时间戳用本地时区，精确到**分**（`yyyyMMddHHmm`）。同分钟内多次修改可再追加秒：`yyyyMMddHHmmss`。
+
+## 禁止
+
+1. 未备份就覆盖已有 compose / 贴图成品。
+2. 覆盖 `bak/` 里已有同名时间戳文件（换新时间戳）。
+3. 把备份写到仓库外或临时目录后即删（须留在对应 `tiles/bak/`）。
+
+## 自检
+
+- 本轮若改了 `*_compose.png` 等 tiles 成品 → `tiles/bak/` 是否已有本轮时间戳副本？没有则先补备份再改。

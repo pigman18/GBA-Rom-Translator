@@ -322,7 +322,7 @@ texts:
     - { start: '0x100C0E', end: '0x100C22' }
   filters:                     # 按 module.type 默认闸；类型名必须以 _filter 结尾
     scan:
-      - { type: character_filter, value: '[üÜ►♂♀]' }
+      - { type: character_filter, value: '[üÜ►♂♀ÖÄßＣ-Ｚａ-ｚ]' }  # 留 ＡＢ，踢 ｘ/ｇ 等
       - { type: dialogue_shape_filter, value: true }
       - { type: min_byte_length_filter, value: 8 }
       - { type: garbage_heuristic_filter, value: true }
@@ -364,14 +364,14 @@ texts:
 
 | filter `type` | `value` | 保留条件 |
 |---------------|---------|----------|
-| `character_filter` | 正则 | **plain** 不匹配该模式（用于踢 `ü`/`►` 等） |
+| `character_filter` | 正则 | **plain** 不匹配该模式；scan 默认踢 `ü`/`►`/`Ｃ-Ｚａ-ｚ`（**保留** `ＡＢ`） |
 | `dialogue_shape_filter` | bool | `true`：像对白（`ポケモン` / 助词+`！？`/`\l\p`/`。`）；指针短标放行 |
 | `min_byte_length_filter` / `max_byte_length_filter` | int | 字节长度上下限 |
 | `require_pointer_filter` | bool | `true`：必须有指针 |
 | `garbage_heuristic_filter` | bool | `true`：拒绝垃圾假名/拉丁混扫（**不**把 `Ａボタン` 当垃圾） |
 | `address_filter` | 正则或 `{start,end}` | 正则命中地址则拒；或落在禁止区间则拒 |
 
-**勿**把 `character_filter` 默认设成 `[Ａ-Ｚａ-ｚ]`：会误杀 `Ａボタンで…` 一类 UI/说明。需要踢全角拉丁碎屑时用 `garbage_heuristic_filter`，或模块级更窄正则。
+**勿**把 `character_filter` 写成 `[Ａ-Ｚａ-ｚ]`：会误杀 `Ａボタンで…`。要踢全角拉丁碎屑时用 `[Ｃ-Ｚａ-ｚ]`（或加上 `üÜ►♂♀` 等），单独留下 `Ａ`/`Ｂ`。
 
 ## 导出 (export)
 

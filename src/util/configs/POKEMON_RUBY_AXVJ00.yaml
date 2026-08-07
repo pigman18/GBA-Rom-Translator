@@ -3437,7 +3437,8 @@ texts:
   filters:
     scan:
     - type: character_filter
-      value: '[üÜ►♂♀ÖＥｇｈｉｉｊｋｃｍｏＧÄ]'
+      # 踢全角拉丁碎屑；保留 Ａ/Ｂ（Ａボタン等）。勿写 [Ａ-Ｚａ-ｚ]
+      value: '[üÜ►♂♀ÖÄß：Ｃ-Ｚａ-ｚ]'
     - type: dialogue_shape_filter
       value: true
     - type: min_byte_length_filter

@@ -374,16 +374,20 @@ def layout_texts(
                 stats["relocated"] += 1
                 continue
 
-            # In-place
+            # In-place：整槽 FF 清尾后写入，避免残留原文
             if address <= 0 or original_length <= 0:
                 stats["skipped"] += 1
                 continue
-            if len(encoded) > original_length:
-                encoded = encoded[: original_length - 1] + b"\xFF"
-
+            body = encoded
+            if not body.endswith(b"\xFF"):
+                body = body + b"\xFF"
+            if len(body) > original_length:
+                body = body[: original_length - 1] + b"\xFF"
+            slot = b"\xFF" * original_length
+            slot = body + slot[len(body) :]
             result.chunks.append(PatchEntry(
                 rom_offset=address,
-                data=encoded,
+                data=slot,
                 comment=f"inplace_{entry_id}",
             ))
             stats["in_place"] += 1
@@ -420,11 +424,16 @@ def layout_texts(
             write_offset += len(encoded)
             stats["relocated"] += 1
         elif address > 0 and original_length > 0:
-            if len(encoded) > original_length:
-                encoded = encoded[: original_length - 1] + b"\xFF"
+            body = encoded
+            if not body.endswith(b"\xFF"):
+                body = body + b"\xFF"
+            if len(body) > original_length:
+                body = body[: original_length - 1] + b"\xFF"
+            slot = b"\xFF" * original_length
+            slot = body + slot[len(body) :]
             result.chunks.append(PatchEntry(
                 rom_offset=address,
-                data=encoded,
+                data=slot,
                 comment=f"inplace_{entry_id}",
             ))
             stats["in_place"] += 1

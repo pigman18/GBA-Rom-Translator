@@ -23817,6 +23817,46 @@
   },
   {
     "status": 200,
+    "original": "ひでんマシン０１",
+    "translated": "秘传机01"
+  },
+  {
+    "status": 200,
+    "original": "ひでんマシン０２",
+    "translated": "秘传机02"
+  },
+  {
+    "status": 200,
+    "original": "ひでんマシン０３",
+    "translated": "秘传机03"
+  },
+  {
+    "status": 200,
+    "original": "ひでんマシン０４",
+    "translated": "秘传机04"
+  },
+  {
+    "status": 200,
+    "original": "ひでんマシン０５",
+    "translated": "秘传机05"
+  },
+  {
+    "status": 200,
+    "original": "ひでんマシン０６",
+    "translated": "秘传机06"
+  },
+  {
+    "status": 200,
+    "original": "ひでんマシン０７",
+    "translated": "秘传机07"
+  },
+  {
+    "status": 200,
+    "original": "ひでんマシン０８",
+    "translated": "秘传机08"
+  },
+  {
+    "status": 200,
     "original": "ひでん：あまスパイス",
     "translated": "秘传：甜味料"
   },
@@ -34344,6 +34384,11 @@
     "status": 200,
     "original": "クリスマス きねんリボン",
     "translated": "圣诞纪念缎带"
+  },
+  {
+    "status": 200,
+    "original": "クリティカッター",
+    "translated": "十字切"
   },
   {
     "status": 200,

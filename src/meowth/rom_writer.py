@@ -233,24 +233,20 @@ class RomWriter:
     def _write_in_place_v2(
         self, rom: bytearray, address: int, encoded: bytes, max_length: int
     ) -> None:
-        """Write text in place (raises on error)."""
+        """Write text in place: fill slot with FF, then write encoded (≤ max_length)."""
+        if max_length <= 0:
+            raise RuntimeError(f"in-place max_length={max_length} @ 0x{address:X}")
         if address + max_length > len(rom):
             raise RuntimeError(f"Address 0x{address:X} + {max_length} exceeds ROM")
 
-        orig_text_end = max_length
-        for j in range(max_length):
-            if rom[address + j] == 0xFF:
-                orig_text_end = j + 1
-                break
-
-        safe_length = min(max_length, max(orig_text_end, len(encoded)))
-        write_len = min(len(encoded), safe_length)
-        rom[address : address + write_len] = encoded[:write_len]
-
-        if write_len < orig_text_end:
-            rom[address + write_len : address + orig_text_end] = b"\xFF" * (
-                orig_text_end - write_len
-            )
+        body = bytes(encoded)
+        if not body.endswith(b"\xFF"):
+            body += b"\xFF"
+        if len(body) > max_length:
+            body = body[: max_length - 1] + b"\xFF"
+        # 整槽先 FF，再写入，杜绝尾部残留原文假名
+        rom[address : address + max_length] = b"\xFF" * max_length
+        rom[address : address + len(body)] = body
 
     # ------------------------------------------------------------------
     # High-level API used by Pipeline.build_rom

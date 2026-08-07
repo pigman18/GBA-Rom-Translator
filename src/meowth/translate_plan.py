@@ -150,6 +150,22 @@ def _encode_phrase_ref(code: int) -> bytes:
     return bytes([0xF9, F9_PHRASE_DEFAULT, (code >> 8) & 0xFF, code & 0xFF, F9_EOS])
 
 
+def pad_inplace_to_slot(encoded: bytes, byte_length: int) -> bytes:
+    """in_place：正文后用 FF 补齐到 ``byte_length``（target_hex 与槽等长）。
+
+    避免只写短串（如 5B 的 F980）而槽尾残留日文假名。
+    """
+    eos = bytes([F9_EOS])
+    body = bytes(encoded)
+    while body.endswith(eos):
+        body = body[:-1]
+    if byte_length <= 0:
+        return body + eos
+    if len(body) >= byte_length:
+        return body[: byte_length - 1] + eos
+    return body + eos * (byte_length - len(body))
+
+
 def _translated_of(entry: dict) -> str:
     return (entry.get("translated") or "").strip('"')
 
@@ -254,9 +270,12 @@ def plan_entry(
             "reason": "译文编码失败",
         }
 
-    # type 1: F900 编码 ≤ 原始槽位 → 原地（最高优先）
+    # type 1: F900 编码 ≤ 原始槽位 → 原地（最高优先）；FF 补齐到 byte_length
     if len(encoded) <= byte_length:
-        return {"type": "in_place", "target_hex": encoded.hex(" ")}
+        return {
+            "type": "in_place",
+            "target_hex": pad_inplace_to_slot(encoded, byte_length).hex(" "),
+        }
 
     # type 2: 编码超槽位且该模块允许 relocate 且有指针 → 指针扩表。
     if allow_reloc and ptrs:
@@ -272,7 +291,9 @@ def plan_entry(
         if code is not None:
             return {
                 "type": "in_place",
-                "target_hex": _encode_phrase_ref(code).hex(" "),
+                "target_hex": pad_inplace_to_slot(
+                    _encode_phrase_ref(code), byte_length
+                ).hex(" "),
                 "phrase_code": code,
             }
 

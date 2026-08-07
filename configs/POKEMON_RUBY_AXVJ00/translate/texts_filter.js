@@ -1,5 +1,6 @@
-const texts = require('./texts.json');
-const texts_translated = require('./texts_translated.json');
+const fs = require('node:fs');
+let texts = require('./texts.json');
+let texts_translated = require('./texts_translated.json');
 
 /**
  * 反查原文地址
@@ -23,6 +24,14 @@ function isError3(translated) {
     return translated.split(' ').length > 6;
 }
 
+// 移除无效的译文
+let tt2 = texts_translated.filter((tt) => {
+    let al = getAddressList(tt.original);
+    return al.length > 0;
+});
+texts_translated = tt2;
+fs.writeFileSync('./texts_translated.json', JSON.stringify(texts_translated, null, 2));
+
 // 查出明显异常的译文
 let addressList = [];
 for(let tt of texts_translated) {
@@ -40,3 +49,5 @@ for(let tt of texts_translated) {
     }
 }
 console.log(`--addrs "${[...new Set(addressList)].join(',')}"`);
+
+

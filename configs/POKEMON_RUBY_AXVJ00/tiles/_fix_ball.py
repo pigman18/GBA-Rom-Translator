@@ -52,16 +52,15 @@ def make_ball(pal: list[tuple[int, int, int]]) -> Image.Image:
         ".ORRRRRRRRRO.",
         ".ORRRRRRRRRO.",
         ".ORRRRRRRRRO.",
-        ".OKKKBKKKKO.",
-        ".OWWWWWWWWO.",
-        ".OWWWWWWWWO.",
-        ".OWWWWWWWWO.",
+        ".OKKKBKKKKKO.",
+        ".OWWWWWWWWWO.",
+        ".OWWWWWWWWWO.",
+        ".OWWWWWWWWWO.",
         "..OWWWWWWO...",
         "...OWWWWO....",
         "....OOOOO....",
     ]
-    # fix row lengths to 13
-    rows = [r.ljust(13, ".")[:13] for r in rows]
+    assert all(len(r) == 13 for r in rows), [len(r) for r in rows]
     n = 13
     ball = Image.new("RGBA", (n, n), (0, 0, 0, 0))
     bp = ball.load()
@@ -81,21 +80,7 @@ def make_ball(pal: list[tuple[int, int, int]]) -> Image.Image:
                 bp[x, y] = (*white, 255)
             elif ch == "W":
                 bp[x, y] = (*white, 255)
-    # JP handakuten is slightly clockwise — rotate ~10°
-    ball = ball.rotate(-10, resample=Image.Resampling.NEAREST, expand=True)
-    # drop any opaque black leftovers from expand
-    px = ball.load()
-    w, h = ball.size
-    for y in range(h):
-        for x in range(w):
-            r, g, b, a = px[x, y]
-            if a < 10:
-                continue
-            if r + g + b < 8:
-                px[x, y] = (0, 0, 0, 0)
-    bb = ball.getbbox()
-    assert bb
-    return ball.crop(bb)
+    return ball
 
 
 def bao_bounds(chs: Image.Image) -> tuple[int, int]:
@@ -156,33 +141,57 @@ def main() -> None:
                 wb += 1
     print(f"CONFIRM ball size={ball.size} opaque={opaque} redTop={rt} whiteBot={wb}")
     assert rt >= 8 and wb >= 8, "ball failed orientation — refuse paste"
+    # mid row should be mostly band/button, not a red field
+    mid = bh // 2
+    mid_red = sum(
+        1
+        for x in range(bw)
+        if px[x, mid][3] >= 10 and px[x, mid][0] > 150 and px[x, mid][0] > px[x, mid][1] + 30
+    )
+    print("mid-row red px", mid_red)
+    assert mid_red <= 3, "ball band not horizontal — refuse paste"
     # no opaque black corners
     corners = [(0, 0), (bw - 1, 0), (0, bh - 1), (bw - 1, bh - 1)]
     for x, y in corners:
         assert px[x, y][3] < 10, f"opaque corner at {x},{y} — refuse paste"
+    # print ASCII for log
+    def cell(r, g, b, a):
+        if a < 10:
+            return "."
+        if r > 200 and g > 200 and b > 200:
+            return "W"
+        if r > 150 and r > g + 30:
+            return "R"
+        if r + g + b < 80:
+            return "K"
+        return "g"
+
+    print("ball ASCII:")
+    for y in range(bh):
+        print("".join(cell(*px[x, y]) for x in range(bw)))
     print("ball gates OK — pasting")
 
     bao_left, bao_right = bao_bounds(chs)
     print("bao", bao_left, "..", bao_right)
     cpx = chs.load()
     top0 = bb[1]
-    # rightmost opaque of 宝 upper band (include white outline)
+    # Top-right of 宝 red+outline, but stay within first glyph (don't start in 可)
     tr = []
     for y in range(top0, top0 + 16):
-        for x in range(bao_right - 8, min(chs.size[0], bao_right + 6)):
+        for x in range(bao_right - 10, bao_right + 1):
             if cpx[x, y][3] >= 10:
                 tr.append((x, y))
     max_x = max(x for x, _y in tr)
     min_y = min(y for x, y in tr if x >= max_x - 4)
     print("TR tip", max_x, min_y)
 
-    # sit on top-right shoulder like JP handakuten (overlap outline)
-    place_x = max_x - bw + 2
-    place_y = max(0, min_y - 1)
-    bao_mid = (bao_left + bao_right) // 2
-    # force right third of 宝
+    # Red roof fill of 宝 is ~y=18..23; white outline is y=16..17.
+    # Place so ball white-bottom (rows 7..11) sits on RED, not white outline.
+    place_x = bao_right - bw + 5
+    place_y = 11
     place_x = max(place_x, bao_left + 2 * (bao_right - bao_left) // 3)
-    print("place", place_x, place_y)
+    place_x = min(place_x, bao_right - 4)
+    print("place", place_x, place_y, "cx", place_x + bw // 2, "whiteBotY", place_y + 9)
 
     out = chs.copy()
     out.alpha_composite(ball, (place_x, place_y))

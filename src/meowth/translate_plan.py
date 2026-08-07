@@ -108,17 +108,11 @@ def module_allows_relocate(game_id: str, module_id: str | None) -> bool:
 def module_allows_hook(game_id: str, module_id: str | None) -> bool:
     """该模块是否允许 type=hook（生成 pointer_redirect.asm）。
 
-    默认 false；仅 modules.json 显式 ``hook: true``。
-    定长表类型始终不允许（与 relocate 相同）。
+    默认 false；仅配置显式 ``hook: true`` 时允许。
+    与 relocate 解耦：``stride_ptr`` 等可 ``relocate: false`` 且 ``hook: true``
+    （性格名走 armips 改指针表，不走 Python relocate）。
     """
     meta = _module_meta(game_id, module_id)
-    try:
-        from .modules import module_type
-
-        if module_type(game_id, module_id) in NO_RELOCATE_TYPES:
-            return False
-    except Exception:
-        pass
     return bool(meta.get("hook"))
 
 

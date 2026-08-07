@@ -202,6 +202,10 @@
         },
         {
           "start": "0x10490B",
+          "end": "0x105410"
+        },
+        {
+          "start": "0x10546B",
           "end": "0x10757D"
         },
         {
@@ -650,6 +654,10 @@
         },
         {
           "start": "0x1279B7",
+          "end": "0x12ECBB"
+        },
+        {
+          "start": "0x12ECFB",
           "end": "0x12FFF2"
         },
         {
@@ -846,11 +854,15 @@
         },
         {
           "start": "0x15D159",
-          "end": "0x16FEB8"
+          "end": "0x16F1FA"
         },
         {
           "start": "0x15D159",
           "end": "0x165A17"
+        },
+        {
+          "start": "0x16F205",
+          "end": "0x16FEB8"
         },
         {
           "start": "0x16FED5",
@@ -1186,6 +1198,18 @@
         },
         {
           "start": "0x1A65EB",
+          "end": "0x1A675C"
+        },
+        {
+          "start": "0x1A6781",
+          "end": "0x1A67BB"
+        },
+        {
+          "start": "0x1A67CD",
+          "end": "0x1A67DF"
+        },
+        {
+          "start": "0x1A67F5",
           "end": "0x1A690A"
         },
         {
@@ -1710,6 +1734,10 @@
         },
         {
           "start": "0x1D4AD3",
+          "end": "0x1D4B15"
+        },
+        {
+          "start": "0x1D4B2B",
           "end": "0x1D4B58"
         },
         {
@@ -1790,6 +1818,14 @@
         },
         {
           "start": "0x1D4FB5",
+          "end": "0x1D515F"
+        },
+        {
+          "start": "0x1D5179",
+          "end": "0x1D5179"
+        },
+        {
+          "start": "0x1D5193",
           "end": "0x1D51B0"
         },
         {
@@ -1830,6 +1866,22 @@
         },
         {
           "start": "0x1D548F",
+          "end": "0x1D55F5"
+        },
+        {
+          "start": "0x1D560B",
+          "end": "0x1D5785"
+        },
+        {
+          "start": "0x1D579D",
+          "end": "0x1D579D"
+        },
+        {
+          "start": "0x1D57BD",
+          "end": "0x1D57BD"
+        },
+        {
+          "start": "0x1D57DF",
           "end": "0x1DB8C0"
         },
         {
@@ -1956,6 +2008,10 @@
       "ranges": [
         {
           "start": "0x15FBCE",
+          "end": "0x16F1FA"
+        },
+        {
+          "start": "0x16F205",
           "end": "0x16FEB8"
         },
         {
@@ -2369,6 +2425,10 @@
         },
         {
           "start": "0x1F25F8",
+          "end": "0x1F2C11"
+        },
+        {
+          "start": "0x1F2C6E",
           "end": "0x1F2FF3"
         },
         {
@@ -2505,6 +2565,10 @@
         },
         {
           "start": "0x20028D",
+          "end": "0x200634"
+        },
+        {
+          "start": "0x200682",
           "end": "0x2013BD"
         },
         {
@@ -2517,6 +2581,10 @@
         },
         {
           "start": "0x201B7D",
+          "end": "0x201D0B"
+        },
+        {
+          "start": "0x201E90",
           "end": "0x201FFA"
         },
         {
@@ -2537,6 +2605,10 @@
         },
         {
           "start": "0x2039B3",
+          "end": "0x203A3E"
+        },
+        {
+          "start": "0x203A44",
           "end": "0x204F15"
         },
         {
@@ -2577,6 +2649,10 @@
         },
         {
           "start": "0x20978A",
+          "end": "0x209967"
+        },
+        {
+          "start": "0x20996C",
           "end": "0x209A20"
         },
         {
@@ -2705,6 +2781,10 @@
         },
         {
           "start": "0x212CC5",
+          "end": "0x213492"
+        },
+        {
+          "start": "0x2134DB",
           "end": "0x2134F7"
         },
         {
@@ -2801,6 +2881,14 @@
         },
         {
           "start": "0x21D4B7",
+          "end": "0x21D5F9"
+        },
+        {
+          "start": "0x21D6A5",
+          "end": "0x21DFF4"
+        },
+        {
+          "start": "0x21E01A",
           "end": "0x21ED6B"
         },
         {
@@ -2809,6 +2897,10 @@
         },
         {
           "start": "0x21FADC",
+          "end": "0x220062"
+        },
+        {
+          "start": "0x220067",
           "end": "0x220210"
         },
         {
@@ -2909,6 +3001,10 @@
         },
         {
           "start": "0x228209",
+          "end": "0x2294BB"
+        },
+        {
+          "start": "0x2294C0",
           "end": "0x22950C"
         },
         {
@@ -2917,6 +3013,10 @@
         },
         {
           "start": "0x229543",
+          "end": "0x2296A7"
+        },
+        {
+          "start": "0x2296AC",
           "end": "0x2296E0"
         },
         {
@@ -2977,6 +3077,10 @@
         },
         {
           "start": "0x3AB6BB",
+          "end": "0x3AB908"
+        },
+        {
+          "start": "0x3AB96A",
           "end": "0x3AF33C"
         },
         {
@@ -3951,6 +4055,10 @@
         },
         {
           "start": "0x5BBAA4",
+          "end": "0x5BC67F"
+        },
+        {
+          "start": "0x5BC684",
           "end": "0x5BF00C"
         },
         {
@@ -4307,10 +4415,26 @@
         },
         {
           "start": "0x682B07",
+          "end": "0x68352A"
+        },
+        {
+          "start": "0x683550",
           "end": "0x683868"
         },
         {
           "start": "0x684968",
+          "end": "0x684C70"
+        },
+        {
+          "start": "0x684D11",
+          "end": "0x684D4F"
+        },
+        {
+          "start": "0x684DD4",
+          "end": "0x68916F"
+        },
+        {
+          "start": "0x6891A0",
           "end": "0x68A38D"
         },
         {
@@ -4571,6 +4695,10 @@
         },
         {
           "start": "0x69B0B2",
+          "end": "0x69B492"
+        },
+        {
+          "start": "0x69B5AF",
           "end": "0x69B60F"
         },
         {
@@ -4663,6 +4791,10 @@
         },
         {
           "start": "0x69E1B3",
+          "end": "0x6A017B"
+        },
+        {
+          "start": "0x6A0212",
           "end": "0x6A1C97"
         },
         {
@@ -4943,6 +5075,26 @@
         },
         {
           "start": "0x6B85BB",
+          "end": "0x6B9EF4"
+        },
+        {
+          "start": "0x6B9F5E",
+          "end": "0x6BA27C"
+        },
+        {
+          "start": "0x6BA375",
+          "end": "0x6BBB4E"
+        },
+        {
+          "start": "0x6BBB54",
+          "end": "0x6BBD4F"
+        },
+        {
+          "start": "0x6BBD58",
+          "end": "0x6C00D9"
+        },
+        {
+          "start": "0x6C00FD",
           "end": "0x6C0325"
         },
         {
@@ -4955,6 +5107,14 @@
         },
         {
           "start": "0x6C03F2",
+          "end": "0x6C51EA"
+        },
+        {
+          "start": "0x6C5274",
+          "end": "0x6C96AF"
+        },
+        {
+          "start": "0x6C96B5",
           "end": "0x6CA8C4"
         },
         {
@@ -4971,6 +5131,14 @@
         },
         {
           "start": "0x6CB924",
+          "end": "0x6D0756"
+        },
+        {
+          "start": "0x6D0769",
+          "end": "0x6D0AE8"
+        },
+        {
+          "start": "0x6D0AF5",
           "end": "0x6DB2A2"
         },
         {
@@ -5003,6 +5171,10 @@
         },
         {
           "start": "0x6DE402",
+          "end": "0x6E2487"
+        },
+        {
+          "start": "0x6E24A7",
           "end": "0x6E8E88"
         },
         {
@@ -5011,6 +5183,10 @@
         },
         {
           "start": "0x6E8F35",
+          "end": "0x6EE683"
+        },
+        {
+          "start": "0x6EE68B",
           "end": "0x6EE7F0"
         },
         {
@@ -5023,6 +5199,10 @@
         },
         {
           "start": "0x6EE866",
+          "end": "0x6EE883"
+        },
+        {
+          "start": "0x6EE88B",
           "end": "0x6EEBE3"
         },
         {
@@ -5103,6 +5283,22 @@
         },
         {
           "start": "0x6F4694",
+          "end": "0x6FA7B3"
+        },
+        {
+          "start": "0x6FA7BB",
+          "end": "0x6FA7DF"
+        },
+        {
+          "start": "0x6FA7E5",
+          "end": "0x6FDAD4"
+        },
+        {
+          "start": "0x6FDAE7",
+          "end": "0x6FE378"
+        },
+        {
+          "start": "0x6FE37D",
           "end": "0x6FE4B5"
         },
         {
@@ -5139,6 +5335,10 @@
         },
         {
           "start": "0x701128",
+          "end": "0x705C20"
+        },
+        {
+          "start": "0x705C27",
           "end": "0x706A6A"
         },
         {
@@ -5211,6 +5411,14 @@
         },
         {
           "start": "0x70A1CF",
+          "end": "0x70E7F6"
+        },
+        {
+          "start": "0x70E7FE",
+          "end": "0x714008"
+        },
+        {
+          "start": "0x71400D",
           "end": "0x71565D"
         },
         {
@@ -5279,6 +5487,10 @@
         },
         {
           "start": "0x71F289",
+          "end": "0x720852"
+        },
+        {
+          "start": "0x720857",
           "end": "0x721113"
         },
         {
@@ -5459,6 +5671,18 @@
         },
         {
           "start": "0x730F8A",
+          "end": "0x730F8A"
+        },
+        {
+          "start": "0x730F8F",
+          "end": "0x731F80"
+        },
+        {
+          "start": "0x731F86",
+          "end": "0x732CFE"
+        },
+        {
+          "start": "0x732D26",
           "end": "0x735629"
         },
         {
@@ -5567,6 +5791,10 @@
         },
         {
           "start": "0x73B7A0",
+          "end": "0x73C1A1"
+        },
+        {
+          "start": "0x73C1AC",
           "end": "0x73C1B5"
         },
         {
@@ -5587,6 +5815,10 @@
         },
         {
           "start": "0x73E425",
+          "end": "0x73E587"
+        },
+        {
+          "start": "0x73E5B6",
           "end": "0x73FA3B"
         },
         {
@@ -5739,6 +5971,10 @@
         },
         {
           "start": "0x746209",
+          "end": "0x74CB39"
+        },
+        {
+          "start": "0x74CB88",
           "end": "0x74EBAB"
         },
         {
@@ -5747,6 +5983,14 @@
         },
         {
           "start": "0x74EC00",
+          "end": "0x74F7BC"
+        },
+        {
+          "start": "0x74F7E0",
+          "end": "0x74FE22"
+        },
+        {
+          "start": "0x74FE64",
           "end": "0x754762"
         },
         {
@@ -5791,6 +6035,10 @@
         },
         {
           "start": "0x755E3E",
+          "end": "0x75722A"
+        },
+        {
+          "start": "0x757230",
           "end": "0x757241"
         },
         {
@@ -5883,6 +6131,14 @@
         },
         {
           "start": "0x75BE78",
+          "end": "0x75D797"
+        },
+        {
+          "start": "0x75D7A4",
+          "end": "0x762DEF"
+        },
+        {
+          "start": "0x762E8A",
           "end": "0x7637FE"
         },
         {
@@ -5907,6 +6163,14 @@
         },
         {
           "start": "0x769F65",
+          "end": "0x76ACD9"
+        },
+        {
+          "start": "0x76ACE1",
+          "end": "0x76AEDD"
+        },
+        {
+          "start": "0x76AEE5",
           "end": "0x76BA48"
         },
         {
@@ -6003,6 +6267,42 @@
         },
         {
           "start": "0x76FDC2",
+          "end": "0x77252D"
+        },
+        {
+          "start": "0x7725BD",
+          "end": "0x77421F"
+        },
+        {
+          "start": "0x77422C",
+          "end": "0x775B5B"
+        },
+        {
+          "start": "0x775B78",
+          "end": "0x775F7D"
+        },
+        {
+          "start": "0x775FAA",
+          "end": "0x776EA9"
+        },
+        {
+          "start": "0x7770AA",
+          "end": "0x77B9AA"
+        },
+        {
+          "start": "0x77B9B1",
+          "end": "0x77BC7B"
+        },
+        {
+          "start": "0x77BCB0",
+          "end": "0x77BCC9"
+        },
+        {
+          "start": "0x77BCCF",
+          "end": "0x77C4BF"
+        },
+        {
+          "start": "0x77C521",
           "end": "0x77C644"
         },
         {
@@ -6179,6 +6479,10 @@
         },
         {
           "start": "0x788197",
+          "end": "0x789E18"
+        },
+        {
+          "start": "0x789E5C",
           "end": "0x78B5C0"
         },
         {
@@ -6267,6 +6571,14 @@
         },
         {
           "start": "0x78F4BF",
+          "end": "0x78FD26"
+        },
+        {
+          "start": "0x78FD57",
+          "end": "0x79054E"
+        },
+        {
+          "start": "0x790557",
           "end": "0x791763"
         },
         {
@@ -6339,6 +6651,54 @@
         },
         {
           "start": "0x798C51",
+          "end": "0x79A335"
+        },
+        {
+          "start": "0x79A363",
+          "end": "0x79E8FB"
+        },
+        {
+          "start": "0x79E90D",
+          "end": "0x7A1528"
+        },
+        {
+          "start": "0x7A164F",
+          "end": "0x7A33EB"
+        },
+        {
+          "start": "0x7A3443",
+          "end": "0x7A36DF"
+        },
+        {
+          "start": "0x7A36EC",
+          "end": "0x7A3B43"
+        },
+        {
+          "start": "0x7A3B5E",
+          "end": "0x7A40F8"
+        },
+        {
+          "start": "0x7A4120",
+          "end": "0x7A6026"
+        },
+        {
+          "start": "0x7A6038",
+          "end": "0x7A9A12"
+        },
+        {
+          "start": "0x7A9A1B",
+          "end": "0x7AA9CD"
+        },
+        {
+          "start": "0x7AAA02",
+          "end": "0x7AB53E"
+        },
+        {
+          "start": "0x7AB58B",
+          "end": "0x7AB958"
+        },
+        {
+          "start": "0x7AB96F",
           "end": "0x7AC490"
         },
         {
@@ -6350,7 +6710,7 @@
           "end": "0x7AD4B1"
         },
         {
-          "start": "0x7AD55C",
+          "start": "0x7AD5EE",
           "end": "0x7AD87A"
         },
         {
@@ -6363,6 +6723,10 @@
         },
         {
           "start": "0x7B07C1",
+          "end": "0x7B224D"
+        },
+        {
+          "start": "0x7B2253",
           "end": "0x7B4A21"
         },
         {
@@ -6519,6 +6883,14 @@
         },
         {
           "start": "0x7BAC8F",
+          "end": "0x7BCE3B"
+        },
+        {
+          "start": "0x7BCEBA",
+          "end": "0x7BD46B"
+        },
+        {
+          "start": "0x7BD473",
           "end": "0x7BFF4D"
         },
         {
@@ -6539,6 +6911,10 @@
         },
         {
           "start": "0x7C388C",
+          "end": "0x7C7449"
+        },
+        {
+          "start": "0x7C7470",
           "end": "0x7C7E49"
         },
         {
@@ -6571,10 +6947,58 @@
         },
         {
           "start": "0x7C9801",
+          "end": "0x7CDC4F"
+        },
+        {
+          "start": "0x7CDC72",
+          "end": "0x7CE02E"
+        },
+        {
+          "start": "0x7CE0B2",
+          "end": "0x7CF065"
+        },
+        {
+          "start": "0x7CF0BA",
+          "end": "0x7D1BBC"
+        },
+        {
+          "start": "0x7D1BC3",
+          "end": "0x7D1E7E"
+        },
+        {
+          "start": "0x7D1E99",
+          "end": "0x7D2072"
+        },
+        {
+          "start": "0x7D2090",
+          "end": "0x7D2388"
+        },
+        {
+          "start": "0x7D23C4",
+          "end": "0x7D26C2"
+        },
+        {
+          "start": "0x7D26E0",
+          "end": "0x7D45DC"
+        },
+        {
+          "start": "0x7D45E4",
           "end": "0x7D488F"
         },
         {
           "start": "0x7D633C",
+          "end": "0x7D6ADE"
+        },
+        {
+          "start": "0x7D6AE4",
+          "end": "0x7D7E71"
+        },
+        {
+          "start": "0x7D7EC9",
+          "end": "0x7E857B"
+        },
+        {
+          "start": "0x7E85A2",
           "end": "0x7E8E79"
         },
         {
@@ -6583,6 +7007,14 @@
         },
         {
           "start": "0x7ED624",
+          "end": "0x7EF005"
+        },
+        {
+          "start": "0x7EF00A",
+          "end": "0x7EF3A3"
+        },
+        {
+          "start": "0x7EF3AA",
           "end": "0x7FA106"
         },
         {
@@ -6591,6 +7023,10 @@
         },
         {
           "start": "0x7FD210",
+          "end": "0x7FDB79"
+        },
+        {
+          "start": "0x7FDB7E",
           "end": "0x7FFDA3"
         }
       ],
@@ -6808,6 +7244,14 @@
         },
         {
           "start": "0x32240A",
+          "end": "0x325AD1"
+        },
+        {
+          "start": "0x325AFB",
+          "end": "0x325DD1"
+        },
+        {
+          "start": "0x325DF1",
           "end": "0x329164"
         },
         {
@@ -7072,6 +7516,10 @@
         },
         {
           "start": "0x370145",
+          "end": "0x370366"
+        },
+        {
+          "start": "0x37036D",
           "end": "0x3704BC"
         },
         {
@@ -7192,6 +7640,18 @@
         },
         {
           "start": "0x370F95",
+          "end": "0x3711B0"
+        },
+        {
+          "start": "0x3711B7",
+          "end": "0x3712EF"
+        },
+        {
+          "start": "0x3712F6",
+          "end": "0x3717CC"
+        },
+        {
+          "start": "0x3717FB",
           "end": "0x3719C7"
         },
         {
@@ -7236,6 +7696,10 @@
         },
         {
           "start": "0x372182",
+          "end": "0x372333"
+        },
+        {
+          "start": "0x37233B",
           "end": "0x3724A0"
         },
         {
@@ -7336,6 +7800,14 @@
         },
         {
           "start": "0x3D0000",
+          "end": "0x3D2191"
+        },
+        {
+          "start": "0x3D21D3",
+          "end": "0x3D220A"
+        },
+        {
+          "start": "0x3D2218",
           "end": "0x3D3FC6"
         },
         {
@@ -7368,6 +7840,10 @@
         },
         {
           "start": "0x3D4615",
+          "end": "0x3D4E9A"
+        },
+        {
+          "start": "0x3D4F24",
           "end": "0x3D51A1"
         },
         {
@@ -7396,6 +7872,10 @@
         },
         {
           "start": "0x3D596B",
+          "end": "0x3D5A6F"
+        },
+        {
+          "start": "0x3D5A7D",
           "end": "0x3D5A7D"
         },
         {
@@ -7497,7 +7977,7 @@
       "line_width": 5
     }
   },
-  "count": 20671,
+  "count": 20549,
   "entries": [
     {
       "id": "axvj_92f0510597a5",
@@ -43621,18 +44101,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_ef2453c99a29",
-      "module": "前期剧情",
-      "address": "0x08105411",
-      "byte_length": 90,
-      "original": "らおやりリえ８グばヨ 』ば りたＶハばちのｔの リくミリふ かきせタふ かえせｔの リ りあＶえぁｚｅ らぞばど げぼネばあの．ね リくミリふ かきせタふ かえせえぁÖｅハばちの",
-      "original_hex": "27 05 24 28 78 04 a9 89 46 76 00 b2 46 00 28 10 d0 6a 46 11 19 e8 19 00 78 08 70 78 1c 00 06 07 0e 60 1c 00 06 04 0e e8 19 00 78 00 28 01 d0 04 2f ee d9 00 27 40 46 45 00 3a 4a 68 46 01 19 b8 18 00 78 08 70 78 1c 00 06 07 0e 60 1c 00 06 04 0e 04 2f f2 d9 6a 46 11 19 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_ac3c7f5a69d5",
       "module": "前期剧情",
       "address": "0x0810546B",
@@ -47251,18 +47719,6 @@
       "byte_length": 25,
       "original": "ü\nかべあみくィむネまみべｎねき うゾぢ う  ",
       "original_hex": "f6 fe 06 49 01 20 08 80 21 68 1f 20 49 e2 18 07 00 03 90 42 00 03 00 00 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_db7897127ca2",
-      "module": "前期剧情",
-      "address": "0x0812ECBC",
-      "byte_length": 63,
-      "original": "え いいぃ♂ か もこべぢすっね ルォぢさＸすふ やっのあネＯねしミケふけかさせ ルォぢöＹぃＢあＢ びシｐじくた♂ やみふ",
-      "original_hex": "04 00 02 02 30 b5 00 06 00 23 0a 49 42 0d 50 18 00 79 83 42 0b d2 0d 1c 00 24 50 19 01 68 c9 18 0c 70 59 1c 09 06 0b 0e 00 79 83 42 f5 d3 30 bc 01 bc 00 47 5c e4 3d 08 10 b5 00 24 20 1c ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -70415,18 +70871,6 @@
       "byte_length": 20,
       "original": "いいえりÄにく あぞ  ぇÄにく  サ",
       "original_hex": "02 02 04 28 f1 16 08 00 01 40 00 00 32 f1 16 08 00 00 5b ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_ea831697b877",
-      "module": "前期剧情",
-      "address": "0x0816F1FB",
-      "byte_length": 10,
-      "original": "げÖにくア  うぽ",
-      "original_hex": "3a f2 16 08 51 00 00 03 4f ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -108379,48 +108823,12 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_714d49b05233",
-      "module": "前期剧情",
-      "address": "0x081A675D",
-      "byte_length": 36,
-      "original": "あ のグ ぜええいＢÖげくェうこ と あ のグ ぜええい３Öげくェうｏ",
-      "original_hex": "01 00 19 89 00 3f 04 04 02 bc f2 3a 08 82 03 0a 00 14 00 01 00 19 89 00 3f 04 04 02 a4 f2 3a 08 82 03 e3 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_8403a2fa13be",
       "module": "前期剧情",
       "address": "0x081A6796",
       "byte_length": 17,
       "original": "あ のグ ぜええい３Öげくェう\n\n",
       "original_hex": "01 00 19 89 00 3f 04 04 02 a4 f2 3a 08 82 03 fb ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_a412b2e8e7f0",
-      "module": "前期剧情",
-      "address": "0x081A67BC",
-      "byte_length": 17,
-      "original": "あ のグ ぜええい３Öげくェうｘ",
-      "original_hex": "01 00 19 89 00 3f 04 04 02 a4 f2 3a 08 82 03 ec ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_804bbaa9b7d4",
-      "module": "前期剧情",
-      "address": "0x081A67E0",
-      "byte_length": 21,
-      "original": "そ あ のグ ぜええいＢÖげくェうは \n\n",
-      "original_hex": "0f 00 01 00 19 89 00 3f 04 04 02 bc f2 3a 08 82 03 1a 00 fb ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -116569,22 +116977,6 @@
       ]
     },
     {
-      "id": "axvj_19b701dfe5cc",
-      "module": "前期剧情",
-      "address": "0x081D4B16",
-      "byte_length": 21,
-      "original": "わいろいエにんれツずＷイモニÖレキズサ２",
-      "original_hex": "2c 02 2b 02 54 16 2e 2a 62 3e d1 52 73 66 f2 7a 57 8e 5b a3 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081D9D48"
-      ],
-      "pointer_addresses": [
-        "0x081D9D48"
-      ]
-    },
-    {
       "id": "axvj_fc4e55e3e26f",
       "module": "前期剧情",
       "address": "0x081D4B2C",
@@ -117733,38 +118125,6 @@
       ]
     },
     {
-      "id": "axvj_1866f2796317",
-      "module": "前期剧情",
-      "address": "0x081D5160",
-      "byte_length": 25,
-      "original": "わいふい×いぶうふつ×めぶぉÖぢｍばヌイＯツぜメ",
-      "original_hex": "2c 02 1c 02 b9 02 48 03 1c 12 b9 22 48 33 f2 42 e1 46 67 52 c9 62 3f 72 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081D9EB0"
-      ],
-      "pointer_addresses": [
-        "0x081D9EB0"
-      ]
-    },
-    {
-      "id": "axvj_2c670ece0fa3",
-      "module": "前期剧情",
-      "address": "0x081D517A",
-      "byte_length": 25,
-      "original": "わいふい×いぶうふつ×めぶぉÖぢｍばヌイＯハぜェ",
-      "original_hex": "2c 02 1c 02 b9 02 48 03 1c 12 b9 22 48 33 f2 42 e1 46 67 52 c9 6a 3f 82 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081D9EB4"
-      ],
-      "pointer_addresses": [
-        "0x081D9EB4"
-      ]
-    },
-    {
       "id": "axvj_660a113b3949",
       "module": "前期剧情",
       "address": "0x081D5194",
@@ -118281,22 +118641,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_efbe0fe749d4",
-      "module": "前期剧情",
-      "address": "0x081D55F6",
-      "byte_length": 21,
-      "original": "もいレせわとカむヌよグぇÖぎぅどＵぼメカ",
-      "original_hex": "23 02 7a 0e 2c 14 56 21 67 26 89 32 f2 38 31 45 cf 4a 72 56 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081D9F68"
-      ],
-      "pointer_addresses": [
-        "0x081D9F68"
-      ]
-    },
-    {
       "id": "axvj_ac940cc6f25a",
       "module": "前期剧情",
       "address": "0x081D5624",
@@ -118430,54 +118774,6 @@
       ],
       "pointer_addresses": [
         "0x081D9F98"
-      ]
-    },
-    {
-      "id": "axvj_5c896d5e75a7",
-      "module": "前期剧情",
-      "address": "0x081D5786",
-      "byte_length": 23,
-      "original": "テいわころつへめヤれゃぇｍぢ．ぼÖイアテよハ",
-      "original_hex": "63 02 2c 0a 2b 12 1d 22 74 2a 34 32 e1 42 b8 4a f2 52 51 63 26 6a ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081D9FA8"
-      ],
-      "pointer_addresses": [
-        "0x081D9FA8"
-      ]
-    },
-    {
-      "id": "axvj_f724af5feadf",
-      "module": "前期剧情",
-      "address": "0x081D579E",
-      "byte_length": 31,
-      "original": "テいわいろいへいわころつへめヤれゃぇ♀ざｍぴ．セÖミアゴよピ",
-      "original_hex": "63 02 2c 02 2b 02 1d 02 2c 0a 2b 12 1d 22 74 2a 34 32 b6 3c e1 4c b8 5e f2 70 51 8b 26 9c ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081D9FAC"
-      ],
-      "pointer_addresses": [
-        "0x081D9FAC"
-      ]
-    },
-    {
-      "id": "axvj_5b619f756e6d",
-      "module": "前期剧情",
-      "address": "0x081D57BE",
-      "byte_length": 33,
-      "original": "テいわいろいへいわころつへめヤれゃぇ♀ざｍぴ．セてトÖレアポよ／",
-      "original_hex": "63 02 2c 02 2b 02 1d 02 2c 0a 2b 12 1d 22 74 2a 34 32 b6 3c e1 4c b8 5e 13 64 f2 7a 51 9f 26 ba ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081D9FB0"
-      ],
-      "pointer_addresses": [
-        "0x081D9FB0"
       ]
     },
     {
@@ -129879,18 +130175,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_6a4e3cbcaef9",
-      "module": "特殊文本",
-      "address": "0x081F2C12",
-      "byte_length": 92,
-      "original": "：あミあキち ちアミオちち びえオち ミでえそびでこ ｌミでそみびそみミÄち７なフエいユビででぺぼぇ９ つウこぎウえうどえろどＲあｋナラどで だたたエラぱキぃうニカおペアいじゆＥÖÄ",
-      "original_hex": "f0 01 70 01 57 11 00 11 51 70 55 11 11 00 47 04 55 11 00 70 44 04 0f 47 44 0a 00 e0 70 44 0f 20 47 0f 20 70 f1 11 a8 15 6c 54 02 75 97 44 44 4e 4a 32 aa 00 12 53 0a 38 53 04 03 45 04 2b 45 cc 01 df 65 77 45 44 00 41 10 10 54 77 4b 57 30 03 66 56 05 9e 51 02 3d 25 bf f2 f1 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_8c9956260d26",
       "module": "特殊文本",
       "address": "0x081F2D1B",
@@ -132207,18 +132491,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_17ab779458cf",
-      "module": "特殊文本",
-      "address": "0x08200635",
-      "byte_length": 77,
-      "original": "Ｆあム ９はちムはダベムみダでみうちベベベぬィたうパベ×ぬ『ＡＡぞ０あｏの０レあベひャぞうＡムあ× うひ『いムあむてムあぅ►Ö４ うめたうめたいＷ あち",
-      "original_hex": "c0 01 71 00 aa 1a 11 71 1a 91 99 71 20 91 44 20 03 11 99 99 99 17 80 10 03 9b 99 b9 17 b1 bb bb 40 a1 01 e3 19 a1 7a 01 99 1b 84 40 03 bb 71 01 b9 00 03 1b b1 02 71 01 21 13 71 01 31 ef f2 a5 00 03 22 10 03 22 10 02 d1 00 01 11 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_3dc3279629a0",
       "module": "特殊文本",
       "address": "0x082009F3",
@@ -132537,18 +132809,6 @@
       "byte_length": 5,
       "original": "びつでオ",
       "original_hex": "47 12 44 55 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_aba1f3320317",
-      "module": "特殊文本",
-      "address": "0x08201D0C",
-      "byte_length": 388,
-      "original": "ちＭあｓなひまヌヨヨおはへｉきわおひたず\\CC0E02なゃきめ ぬなぶ ェカナナナく‥ぞまヨァうリマぃうワヨたうおまと たテんＡラ！ ／エキ♀ゴヤキト ゴヤびヤパオびニエ♀たまヤ ナエ デＡボ ヒで．Ａニばグヒ ニび８ヒヨびＡニりラび ピがあＹづヨラめキづちｏでナヌ うＡ 円で♂ギヒエ♂ブ ×エ♂ベ／オニＡぞロたジギ×ラカベ／みキオ ちオパヒキオつ♀ヌヨえＹヨカえＹキ／せ０びÄダＢＣィこラしッテむ キえぬカぉぉヌえろワばくヲいうすヒ öくさどナ ウエゃエゃでぉどＩお』こ？エづでぉ ょあダペらÜナナこチけレねＯぶ『でオエけな つどヨ えナす・そオどヨきねビぬｗたキ：ヂｔぃあたがえ． ほグエどづおばエどニょたっどけむＫりÖはüエどヤけるウたせちウでヤおヌがテオ ＥソユィＥトさＨ：ＥミＥおコ：Ｅ７ィＥラ ニラ ァヨラトヘゃほヲ ＥびゾＥタァゃ かＪか』ろっオオゃしヅづヨａ ！づ",
-      "original_hex": "11 c7 01 e7 15 1b 1f 67 76 76 05 1a 1d dd 07 2c 05 1b 10 3e fc 0e 02 15 34 07 22 00 17 15 48 00 82 56 65 65 65 08 b0 40 1f 76 7f 03 78 6f 30 03 7c 76 10 03 05 1f 14 00 10 63 2e bb 77 ab 00 ba 54 57 b6 8b 74 57 64 00 8b 74 47 74 9b 55 47 66 54 b6 10 1f 74 00 65 54 00 94 bb 9a 00 6b 44 b8 bb 66 46 89 6b 00 66 47 a9 6b 76 47 bb 66 28 77 47 00 9c 37 01 d3 43 76 77 22 57 43 11 e3 44 65 67 00 03 bb 00 b7 44 b5 88 6b 54 b5 98 00 b9 54 b5 99 ba 55 66 bb 40 7b 10 8d 88 b9 77 56 99 ba 20 57 55 00 11 55 9b 6b 57 55 12 b6 67 76 04 d3 76 56 04 d3 57 ba 0e a1 47 f1 91 bc bd 80 0a 77 0c a0 63 21 00 57 04 17 56 33 33 67 04 2b 7c 46 08 7d 02 03 0d 6b 00 f5 08 0b 45 65 00 53 54 34 54 34 44 33 45 c3 05 b2 0a ac 54 43 44 33 00 36 01 91 9e 27 f3 65 65 0a 61 09 7a 18 c9 48 b1 44 55 54 09 15 00 12 45 76 00 04 65 0d af 0f 55 45 76 07 18 97 17 eb 10 57 f0 92 e8 30 01 10 37 04 b8 00 1e 89 54 45 43 05 46 54 45 66 36 10 50 45 09 21 c5 28 f2 1a f6 54 45 74 09 29 53 10 0e 11 53 44 74 05 67 37 63 55 00 bf 5f 75 80 bf 64 0b c2 f0 bf 70 bf 05 5a f0 bf a8 80 bf 77 00 66 77 00 7f 76 77 64 6d 34 1e 7d 00 bf 47 90 bf 60 7f 34 00 06 c4 06 b2 2b 50 55 55 34 0c 93 43 76 d5 00 ab 43 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -132885,18 +133145,6 @@
       "byte_length": 3,
       "original": "たま",
       "original_hex": "10 1f ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_1070a5d1cf33",
-      "module": "特殊文本",
-      "address": "0x08203A3F",
-      "byte_length": 5,
-      "original": "ぁÖ あ",
-      "original_hex": "2f f2 00 01 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -133749,18 +133997,6 @@
       "byte_length": 4,
       "original": "ちむÖ",
       "original_hex": "11 21 f2 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_2dbf19154b3a",
-      "module": "特殊文本",
-      "address": "0x08209968",
-      "byte_length": 4,
-      "original": "ぅむÖ",
-      "original_hex": "31 21 f2 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -135123,18 +135359,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_44f038cc635d",
-      "module": "特殊文本",
-      "address": "0x08213493",
-      "byte_length": 72,
-      "original": "キえぺラ うクオキク スキ セクたソにロにッｌちぶトパゃンクベケドベカどえｆオ Öキ きいよゃ３え０どう２エギいぐベオノドかｖあうぉあｈゃで ",
-      "original_hex": "57 04 4e 77 00 03 58 55 57 58 00 5d 57 00 5e 58 10 5f 16 7b 16 a0 e0 11 48 64 9b 34 7e 58 99 59 95 99 56 45 04 da 55 00 f2 57 00 07 02 26 34 a4 04 a1 45 03 a3 54 88 02 39 99 55 69 95 06 ea 01 03 33 01 dc 34 44 00 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_72e914b68f4b",
       "module": "特殊文本",
       "address": "0x082134F7",
@@ -136419,30 +136643,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_f267039a34fe",
-      "module": "特殊文本",
-      "address": "0x0821D5FA",
-      "byte_length": 44,
-      "original": "みう はみうÖぉÖァÖロェぜアｓ・おテ えヤたなヒ ききヒみきダとピちて ８てぇめおェ",
-      "original_hex": "20 03 00 1a 20 03 f2 33 f2 7f f2 7b 82 3f 51 e7 af 05 63 00 04 74 10 15 6b 00 07 07 6b 20 07 91 14 9c 11 13 00 a9 13 32 22 05 82 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_b284d27727e0",
-      "module": "特殊文本",
-      "address": "0x0821D626",
-      "byte_length": 127,
-      "original": "ぞう ぬたうぜｚみへねょＶうたひゥÖＥめいぽぽでとオ２ ぅぢでＯちぢでヂ７さでと うや うぉちぐ ゃぉちのゃぉぅヅこぉぉＲＲミあＯ うつ‥ えも えなずめめヂめＺゾま あピ いむ いぇちィなぞるめめピでやてオむ カべ セぢ うぉたうろづヅ うダ ＤぐÄ",
-      "original_hex": "40 03 00 17 10 03 3f ee 20 1d 18 36 d0 03 10 1b 81 f2 bf 22 02 4f 4f 44 14 55 a3 00 31 42 44 c9 11 42 44 92 a8 0b 44 14 00 03 24 00 03 33 11 39 00 34 33 11 19 34 33 31 93 0a 33 33 cc cc 70 01 c9 00 03 12 b0 00 04 23 00 04 15 3e 22 22 92 22 d4 90 1f 00 01 9c 00 02 21 00 02 32 11 80 15 40 29 22 22 9c 44 24 13 55 21 00 56 49 00 5e 42 00 03 33 10 03 2b 43 93 00 03 91 00 be 39 f1 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_e1b934a596f6",
       "module": "特殊文本",
       "address": "0x0821D6E4",
@@ -136509,18 +136709,6 @@
       "byte_length": 156,
       "original": "：あ：あ：あ：あ：あ：あ：あ：あ\n：あ：あ：あ：あ：あ：あＦあタ‥ィうミぞう さタカニニ か ナ４ハ ハ９ ９かハ９コかナオ オニラオオ５ニキおオ５４ラヌコァカ い ９ タ４９ニヨ９く９９キ４ うオオ９びカ わニニニ ち：あ あ７キぜナ う９ え９９きィ うか ９コユ オリオたうたの：あ ビニ  ス５ マ９\\l",
       "original_hex": "f0 01 f0 01 f0 01 f0 01 f0 01 f0 01 f0 01 f0 01 fe f0 01 f0 01 f0 01 f0 01 f0 01 f0 01 c0 01 60 b0 80 03 70 40 03 00 0b 60 56 66 66 00 06 00 65 a5 6a 00 6a aa 00 aa 06 6a aa 5a 06 65 55 00 55 66 77 55 55 a6 66 57 05 55 a6 a5 77 67 5a 7f 56 00 02 00 aa 00 60 a5 aa 66 76 aa 08 aa aa 57 a5 00 03 55 55 aa 47 56 00 2c 66 66 66 00 11 f0 01 00 01 a8 57 3f 65 00 03 aa 00 04 aa aa 07 80 00 03 06 00 aa 5a 75 00 55 78 55 10 03 10 19 f0 01 00 97 66 00 00 5d a6 00 6f aa fa ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_e9e58c766b8b",
-      "module": "特殊文本",
-      "address": "0x0821DFF5",
-      "byte_length": 37,
-      "original": "：なみあコみふみまコキＦ るたうヌ９コナマ９みオöいもヨヨオナマくマナニ",
-      "original_hex": "f0 15 20 01 5a 20 1c 20 1f 5a 57 c0 00 29 10 03 67 aa 5a 65 6f aa 20 55 f5 02 23 76 76 55 65 6f 08 6f 65 66 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -136629,18 +136817,6 @@
       "byte_length": 37,
       "original": "のびてｗキぉキづげう ムぬぉぉムぬギギみムぬたさめめムぬラレラっさÜまÄ",
       "original_hex": "19 47 13 eb 57 33 57 43 3a 03 00 71 17 33 33 71 17 88 88 20 71 17 10 0b 22 22 71 17 77 7a 77 50 0b f3 1f f1 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_b1252ff64eb3",
-      "module": "特殊文本",
-      "address": "0x08220063",
-      "byte_length": 4,
-      "original": "Öぁち",
-      "original_hex": "f2 2f 11 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -137955,18 +138131,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_f6bd7a75c288",
-      "module": "特殊文本",
-      "address": "0x082294BC",
-      "byte_length": 4,
-      "original": "まちÖ",
-      "original_hex": "1f 11 f2 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_67265c4a7e46",
       "module": "特殊文本",
       "address": "0x082294C8",
@@ -138021,18 +138185,6 @@
       "byte_length": 23,
       "original": "でちちでちちちちちちちちちちちちちちちちざÖ",
       "original_hex": "44 11 11 44 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 11 3c f2 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_2ebf41c0b731",
-      "module": "特殊文本",
-      "address": "0x082296A8",
-      "byte_length": 4,
-      "original": "まちÖ",
-      "original_hex": "1f 11 f2 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -146425,18 +146577,6 @@
         "0x083AB938",
         "0x083AB9C8"
       ]
-    },
-    {
-      "id": "axvj_ede41e95ec74",
-      "module": "特殊文本",
-      "address": "0x083AB909",
-      "byte_length": 97,
-      "original": "あ  \nァ      え×げく２ら２らぃワゅく ×げく    と×げくぐキしく２ら２ら７レゅくｌ．げく    ．ぉひくグキしく２ら２ら７レゅく\\CCB8げく    ．ぉひくｍキしくぞあぞあ    Ö",
-      "original_hex": "01 00 00 fe 7f 00 00 00 00 00 00 04 b9 3a 08 a3 27 a3 27 30 7c 35 08 00 b9 3a 08 00 00 00 00 14 b9 3a 08 39 57 0c 08 a3 27 a3 27 a8 7a 35 08 e0 b8 3a 08 00 00 00 00 b8 33 1b 08 89 57 0c 08 a3 27 a3 27 a8 7a 35 08 fc b8 3a 08 00 00 00 00 b8 33 1b 08 e1 57 0c 08 40 01 40 01 00 00 00 00 f2 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
     },
     {
       "id": "axvj_5fc1f541aa21",
@@ -183707,18 +183847,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_a6ea75ac89b6",
-      "module": "高风险混杂",
-      "address": "0x085BC680",
-      "byte_length": 4,
-      "original": "Öちま",
-      "original_hex": "f2 11 1f ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_fd9329350998",
       "module": "高风险混杂",
       "address": "0x085BC684",
@@ -187943,18 +188071,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_c51b245ff60e",
-      "module": "高风险混杂",
-      "address": "0x0868352B",
-      "byte_length": 37,
-      "original": "テ７キブえゴこオブブいァき  なユユラちオラ８ぉちアäヲたあ８ッつザÖゥ",
-      "original_hex": "63 a8 57 98 04 8b 0a 55 98 98 02 7f 07 00 00 15 75 75 77 11 55 77 a9 33 11 51 f4 7d 10 01 a9 a0 12 8c f2 81 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_eed8e76ba72d",
       "module": "高风险混杂",
       "address": "0x086835A5",
@@ -188043,18 +188159,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_4de07889c4de",
-      "module": "高风险混杂",
-      "address": "0x08684C71",
-      "byte_length": 160,
-      "original": "たうゴこ うラゲ． ラ６Ö ：あＦ：あッあブＡラ ギ× ラ ／ブロ  Ａｆいうとァッ ォぃあラ ネラ キ６ギラオオボキィ うレオオ４ブオオ オギ９オオゴベコッめポさィうくグけ ボさギさ デ う４：ペ：あＨ：あッあ‥Ａゴエおそ９」 ビベたすＶまどあたで３   ぼでゲ ７で 」 パぼで ‥７・えＸＡめはぃ：ア：あ：あ：あ",
-      "original_hex": "10 03 8b 0a 00 03 77 8a b8 00 77 a7 f2 00 f0 01 c0 f0 01 a0 01 98 bb 77 00 88 b9 00 77 00 ba 98 7b 00 00 bb da 02 03 14 7f a0 00 83 30 01 77 00 68 77 00 57 a7 88 77 55 55 9a 57 80 00 03 7a 55 55 a5 98 55 55 00 55 88 aa 55 55 8b 99 5a a0 22 9f 0b 80 03 08 89 09 00 9a 0b 88 0b 00 94 00 03 a5 f0 9e f0 01 c2 f0 01 a0 01 b0 bb 8b 54 05 0f aa b4 00 97 99 10 0d d0 1f 45 01 10 44 a4 00 00 00 4a 44 8a 00 a8 44 00 b4 00 9b 4a 44 00 b0 a8 af 04 d2 bb 22 1a 30 f0 51 f0 01 f0 01 f0 01 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_08d33e2598ae",
       "module": "高风险混杂",
       "address": "0x08684D31",
@@ -188073,18 +188177,6 @@
       "byte_length": 28,
       "original": "ゴ／ララ円ギラＳ く う円リ えたしベ くエゲ くこＧ",
       "original_hex": "8b ba 77 77 b7 88 77 cd 00 08 00 03 b7 78 00 04 10 0c 99 00 08 54 8a 00 08 0a c1 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_c13995c6f48f",
-      "module": "高风险混杂",
-      "address": "0x08684D50",
-      "byte_length": 132,
-      "original": "Ａえビ円ギぬけ ラた２ガたち：あ：あＦ：あっあゲ．リラ‥さぷブあきグリ う パ‥え\\C8あｉっポ６さ ２こ８ラこラ６ギレ ヂベ くパ ルラオ‥ギキオ８ぜギクツポちるっうたざえｂみう：：あ：あ：あゥ‥ギベオッぺパ ビゾ×ちボöぜ フオぞャきＯゃ  ギぉうぜ ＡÖうÄ",
-      "original_hex": "bb 04 97 b7 88 17 09 00 77 10 a3 87 10 11 f0 01 f0 01 c0 f0 01 50 01 8a b8 78 77 b0 0b 4d 98 01 07 89 78 00 03 00 9b b0 04 fd c8 01 dd 50 9f a7 0b 00 a3 0a a9 77 0a 77 a7 88 7a 00 92 99 00 08 9b 00 79 77 55 b0 88 57 55 a9 3f 88 58 62 9f 11 29 50 03 10 3c 04 d6 20 03 f0 f0 01 f0 01 f0 01 81 b0 88 99 55 a0 4e 9b 00 97 90 b9 11 9a f5 3f 00 6c 55 40 84 07 c9 34 00 00 88 33 03 3f 00 bb f2 03 f1 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -188553,18 +188645,6 @@
       "byte_length": 464,
       "original": "ァＥウポろ ァうｋいソいＥああぜあぉあけ  タあた き じ  ：あ：あ：あぞあぇッすキみたえいぞくぃたく‥ま：あｔ：あ：あゾあぃ：ィ もぃぞぇ ミもぇみいぃめ めぃぢもぢ ぃめセう はめたまたくたャたしめ３ ダも くぞも くぞも× てぞた２：あタあぞえ：つ０たつどみえ で っ：ぉ２ぃあお うでお ：ぜ：あハぞ：つミあえたトおぃえ ッぃえタゾまどエ ぞで でエっででででっ でカでどでえカタぉどで ゆた２タどぃづ ゴｂたう くでッはっ：ポたタニゴ えィニか えネ：へたみＩ は えラ ィヌ：ふミあｎたゆ：あＦあニニニ ミニゆィラ き リたぽィッほちヨきィ めニヨヌ え かタニラニくィ ヌリみァみまヌかたじ ねたやちニョネ よョ リみＡヤきゾガたＸたなネ くィネ９っｆィｌ１ベ うギ えィあギブけィギギギ：‥ズっあィけベ ゆ：ぬミあけ\\CC20い：あッあたテたう フ ゾウベたぽゾッほブグ へっあづグ あくゾ ベた４ぞまネけたぐみ９ブぃむギブ へベギく ばタロ し たクｋたなたＷゾみほみハたは‥ズたｅィ えくネョくィギネヌョ：‥タ",
       "original_hex": "7f bf 53 9f 2b 00 7f 03 df 02 5f 02 bf 01 01 3f 01 33 01 09 00 00 60 01 10 00 07 00 3d 00 00 f0 01 f0 01 f0 01 40 01 32 a0 0d 57 20 10 04 02 40 08 30 10 08 b0 1f f0 01 e8 f0 01 f0 01 90 01 30 f0 80 00 23 30 40 32 00 70 23 32 20 02 30 22 00 22 30 42 23 42 00 30 22 5e 03 00 1a 22 10 1f 10 08 10 84 10 0c 22 a4 00 91 23 00 08 40 23 00 08 40 23 b9 00 13 40 10 a3 f0 01 60 01 40 04 f0 12 a1 10 12 45 20 04 00 44 00 50 f0 33 a3 30 01 05 00 03 44 05 00 f0 3f f0 01 6a 40 f0 12 70 01 04 10 64 05 30 04 00 a0 30 04 60 90 1f 45 54 00 40 44 00 44 54 50 44 44 44 44 50 00 44 56 44 45 44 04 56 60 33 45 44 00 25 10 a3 60 45 30 43 00 8b d6 10 03 00 08 44 a0 1a 50 f0 9f 10 60 66 8b 00 04 80 66 06 00 04 68 f0 1d 10 20 c3 00 1a 00 04 77 00 80 67 f0 1c 70 01 e2 10 25 f0 01 c0 01 66 66 66 00 70 66 25 80 77 00 07 00 78 10 4f 80 a0 1e 11 76 07 80 00 22 66 76 67 00 04 00 06 60 66 77 66 08 80 00 67 78 20 7f 20 1f 67 06 10 3d 00 18 10 24 11 66 86 68 00 26 86 00 78 20 bb 74 07 90 87 10 d2 10 15 68 00 08 80 68 aa 50 da 80 e0 a2 99 00 03 88 00 04 80 01 88 98 09 80 88 88 88 f0 b0 8e 50 01 80 09 99 00 25 f0 17 70 01 09 fc 20 02 f0 01 a0 01 10 63 10 03 00 6c 00 90 53 99 10 4f 90 a0 1e 98 89 00 1d 50 01 43 89 00 01 08 90 00 99 10 a5 40 1f 68 09 10 39 20 aa 98 30 21 88 98 00 1d 99 88 08 00 46 60 7b 00 0c 00 10 58 df 10 15 10 d1 90 20 1e 20 6a 10 1a b0 8e 10 d9 80 00 04 08 68 86 08 80 88 68 67 86 f0 b0 60 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_0906e05e0e1f",
-      "module": "高风险混杂",
-      "address": "0x08689170",
-      "byte_length": 48,
-      "original": "ちÖ すちｐタＦツぉみぢ ｆたみ\\CC100322アみむぅぜ かぃナおぃＦ ケつの    たみ     ",
-      "original_hex": "11 f2 00 0d 11 e4 60 c0 62 33 20 42 00 da 10 20 fc 10 03 22 51 20 21 31 3f 00 06 30 65 05 30 c0 00 59 12 19 00 00 00 00 10 20 00 00 00 00 00 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -190831,18 +190911,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_0817ab856372",
-      "module": "高风险混杂",
-      "address": "0x0869B493",
-      "byte_length": 284,
-      "original": "ぬまて ソせポけｋえま たて  みあ   た え ぜ  ：あ：あ：あ：あ：あ：あｖ：あ：あみあ‥ うッ うゴ９Ｖねさ うＡ う７ うギｊぃつたもゲぞぁたがたうタあ６ｖ ぃみう さ円 う． うこ\\40びたう：あ：あ：あｌあミ うぢネ うび  ィたうば９ つよ うやたふラ うトえく  ぢき うョ あ だヨ  むヤ うドたと リ らガ う６ うれくら うび Ｏぶ うぼィ うタむトき むョ き だ５く だきあく ツきゲ ツ ねＡたうメたÖ もぞァィだうッあオ３ つ３ きえ うかィうＣ ゲ たヲ：あみびたうリぞＹÜッあたがたぜ Ｌ ムぃつたもＤたうヌぞうっそみビたもたうゥ",
-      "original_hex": "17 1f 13 00 5f 0e 9f 09 df 04 1f 00 10 13 00 00 20 01 00 00 00 10 00 04 00 3f 00 00 f0 01 f0 01 f0 01 f0 01 f0 01 f0 01 ea f0 01 f0 01 20 01 b0 00 03 a0 00 03 8b aa d0 18 0b 00 03 bb 00 03 a8 00 03 88 de 30 12 10 23 8a 40 2f 10 37 10 03 60 01 a7 ea 00 30 20 03 00 0b b7 00 03 b8 00 03 0a fd 40 47 10 03 f0 01 f0 01 f0 01 e0 01 70 00 03 42 68 00 03 47 00 00 80 10 03 46 aa 00 12 26 00 03 24 10 1c 77 00 03 64 04 08 00 00 42 07 00 03 86 00 01 00 41 76 00 00 21 74 00 03 95 10 14 00 78 00 27 87 00 03 a7 00 03 2a 08 27 00 03 47 00 c9 48 00 03 4a 80 00 03 60 21 64 07 00 21 86 00 07 00 41 a6 08 00 41 07 01 08 00 62 07 8a 00 62 00 18 bb 10 03 72 10 f2 00 23 40 7f 80 41 03 a0 01 55 a4 00 12 a4 00 07 04 00 03 06 80 03 bd 00 8a 00 10 7d f0 01 20 47 10 03 78 40 d3 f3 a0 01 10 37 10 3f 00 c6 00 71 30 12 10 23 be 10 03 67 40 03 50 0f 20 97 10 23 10 03 81 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_d0a84c6aa302",
       "module": "高风险混杂",
       "address": "0x0869B60F",
@@ -191617,18 +191685,6 @@
       "byte_length": 9,
       "original": "えィ：ぬたてィリ",
       "original_hex": "04 80 f0 17 10 13 80 78 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_0878c25abe39",
-      "module": "高风险混杂",
-      "address": "0x086A017C",
-      "byte_length": 150,
-      "original": "たあぅ：ピじちだみヌ マたラいｕい ゾぷみ うっア う ビナムァＶ うちＬい おゆたお イタだÖた ヌぃちえ►ぉタでÄれえハちちあでどスち ぐオちヒッＡぃあアチＯ\\CCF1ザ：あてａぞうちそヤＯぉでぃおぉ：ｏィイっオおっンてもィたやっりっへてラいＮ ンち くみうな２ぇｙだｗつＦゅどぇおツち み うゆ ご",
-      "original_hex": "10 01 31 f0 9c 3d 11 41 20 67 00 6f 10 77 02 e9 02 00 90 4d 20 00 03 50 51 00 03 00 97 65 71 7f d0 00 03 11 c6 02 00 05 25 10 05 00 52 60 41 f2 10 00 67 30 11 04 ef 33 60 44 f1 2a 04 6a 11 11 01 44 45 5d 11 00 39 55 11 6b a0 bb 30 01 51 61 c9 fc f1 8c f0 01 13 d5 40 03 11 0f 74 c9 33 44 30 05 33 f0 e3 80 52 50 55 05 50 7e 13 23 80 10 24 50 28 50 1d 13 77 02 c8 00 7e 11 00 08 20 03 15 a3 32 ed 41 eb 12 c0 35 45 32 05 62 11 00 20 00 03 25 00 3b ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -194467,18 +194523,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_82261f799d94",
-      "module": "高风险混杂",
-      "address": "0x086B9EF5",
-      "byte_length": 105,
-      "original": "‥す！  ・ きたさ あラる‥× さＥたｓ８８ Ｔ ボ／パ９／ＡÖ９ ろぉろボ\n\nぜぉベあ×もぉベろぁÖ へネ／ため う× いぱポ× ぱ」Ａぱ♀ぱÜ×みパべ ふベ！／ぱでィ いでぱ」ヒä♀ぱわでä こäみｓぞあ",
-      "original_hex": "b0 0d ab 00 00 af 00 07 10 0b 00 01 77 29 b0 b9 00 0b bf 10 e7 a9 a9 00 ce 00 9a ba 9b aa ba bb f2 aa 00 2b 33 2b 9a fb 3f 33 99 01 b9 23 33 99 2b 2f f2 00 1d 68 ba 10 22 00 03 b9 00 02 4b 9f b9 00 4b b4 bb 4b b6 4b f3 b9 20 9b 49 00 1c 99 ab ba 4b 44 80 00 02 44 4b b4 6b f4 b6 4b 2c 44 f4 00 0a f4 20 e7 40 01 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_60cf03c1c21f",
       "module": "高风险混杂",
       "address": "0x086B9F5F",
@@ -194509,18 +194553,6 @@
       "byte_length": 86,
       "original": "ョちｖ９ベベ・ う りケ ９ボケオ９パオオ パベオオニオオオネべ ｏたうオ うどどどおどオエエエ にど う\\lみああ むöたえ ほ♀ ほüつどオナ げナ♀ だごÜてぬウまヂ",
       "original_hex": "86 11 ea aa 99 99 af 00 03 00 28 59 00 aa 9a 59 55 aa 9b 55 55 00 9b 99 55 55 66 55 55 55 68 49 00 e3 10 03 55 00 03 45 45 45 05 45 55 54 54 54 00 16 45 00 03 fa 20 01 01 00 21 f5 10 04 00 1e b6 00 1e f6 12 45 55 65 00 3a 65 b6 00 41 3b f3 13 17 53 1f 92 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_9162e4c74fd5",
-      "module": "高风险混杂",
-      "address": "0x086BA27D",
-      "byte_length": 248,
-      "original": "エ×たずゴブゥ うグ ‥ブブ あペあ ポパ× ：ベたうひベ ゼゾＬ えボ 『 うぽ！タとパ／：：タあつにたうＦ ｓたずパでベＡで♀ ×で♀パひ♀パベツ『たちたふでで」 ｓ× ♀べでそぱででけだサ Öエどさ エ ３ぜべド：ｘ：あむｗてヌたきたうＦヂきむｗケö Ａエö  ゼエケさ：ベオ そパでオ×ポでドあ♂・パケオ・：いｋぞゴあＦブベボ８ベ８ぇ９９ い あ！／ うＡ ９９／／ベパ！！かボ／／９ボみぬ‥あ！ォ うパ８８ボパ く ぃ：：あ あアしあょベ９ボベィみて／９／Ａ９Ａヒ ニ９コオナＡドＡ ",
-      "original_hex": "54 b9 10 3e 8b 98 81 00 03 89 00 b0 98 98 00 01 9e 01 00 9f 9b b9 00 f0 99 10 03 1b 99 00 8f 90 c6 00 04 9a 00 b1 00 03 4f ab 60 14 9b ba f0 f0 60 01 12 16 10 03 c0 00 e7 10 3e 9b 44 99 bb 44 b6 00 b9 44 b6 9b 1b b6 9b 99 62 b1 10 11 10 1c 44 44 b4 00 e7 b9 00 b6 49 44 0f 4b 44 44 09 41 5b 00 f2 54 45 0b 00 54 00 a4 3f 49 95 f0 ec f0 01 21 eb 13 67 10 07 10 03 c0 92 07 21 eb 59 f5 00 bb 54 f5 00 00 8f 54 59 0b f0 99 55 00 0f 9b 44 55 b9 9f 44 95 01 b5 af 9b 59 55 af f0 02 df 40 8b 01 c0 98 99 9a a9 99 a9 32 aa aa 00 02 00 01 ab ba 00 03 bb 00 aa aa ba ba 99 9b ab ab 06 9a ba ba aa 9a 20 17 b0 01 ab 83 00 03 9b a9 a9 9a 9b 00 08 00 30 f0 f0 01 00 01 51 0c 01 36 99 aa 9a 99 80 20 13 ba aa ba bb aa bb 6b 00 66 aa 5a 55 65 bb 95 bb 00 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -194755,18 +194787,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_46cb673c89ba",
-      "module": "高风险混杂",
-      "address": "0x086BBB4F",
-      "byte_length": 5,
-      "original": "マもÖぉ",
-      "original_hex": "6f 23 f2 33 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_571c27c9ffda",
       "module": "高风险混杂",
       "address": "0x086BBB54",
@@ -194845,18 +194865,6 @@
       "byte_length": 8,
       "original": "ぜニそマぜぉÜ",
       "original_hex": "3f 66 0f 6f 3f 33 f3 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_95bf208752ba",
-      "module": "高风险混杂",
-      "address": "0x086BBD50",
-      "byte_length": 8,
-      "original": "ぉもぜぉめÖぉ",
-      "original_hex": "33 23 3f 33 22 f2 33 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -195109,18 +195117,6 @@
       "byte_length": 5,
       "original": "üマニニ",
       "original_hex": "f6 6f 66 66 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_348013e8887d",
-      "module": "高风险混杂",
-      "address": "0x086C00DA",
-      "byte_length": 35,
-      "original": "ちＲぞゆ Äめ ぞめイ  やウめ エおゆオあえなむめイオど Ｐ めÖ",
-      "original_hex": "11 cc 40 25 00 f1 22 00 40 22 52 00 00 24 53 22 00 54 05 25 55 01 04 15 21 22 52 55 45 00 ca 00 22 f2 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -195451,18 +195447,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_d1a85b86dc9d",
-      "module": "高风险混杂",
-      "address": "0x086C51EB",
-      "byte_length": 137,
-      "original": "てたひ：あ：あ：あ：あ：あっあカクえＩケ うネつて うゾェてまォ  ぃぅ さベぞョたｐョベベニヨビヂあＦガベいボ ギ うむＶあ！あ５ てÖネカナギ ガネナョラガニニこブベネヨ ぱ６ ぱベィむヲブベニゥむノニ ギギノニララルヌ ／ビラブＡベグ ｃみふ あカあｏオ びちｖäさ",
-      "original_hex": "13 10 1b f0 01 f0 01 f0 01 f0 01 f0 01 50 01 56 58 04 c3 59 00 03 68 12 13 00 03 90 82 13 1f 83 00 00 30 31 00 0b 99 40 86 10 e4 86 99 99 66 76 97 92 01 c0 87 99 02 9a 00 88 00 03 21 d0 01 ab 01 a6 00 13 f2 68 56 65 88 00 87 68 65 86 77 87 66 66 0a 98 99 68 76 00 4b a7 00 4b 99 80 21 7d 98 99 66 81 21 69 66 00 88 88 69 66 77 77 79 67 00 ba 97 77 98 bb 99 89 00 d7 20 1c 00 01 56 01 e3 55 00 47 11 ea f4 0b ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_8130f0613e78",
       "module": "高风险混杂",
       "address": "0x086C5456",
@@ -195757,18 +195741,6 @@
       "byte_length": 18,
       "original": "ぽでソでやめソやぢめどやめやややめ",
       "original_hex": "4f 44 5f 44 24 22 5f 24 42 22 45 24 22 24 24 24 22 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_9558893f9732",
-      "module": "高风险混杂",
-      "address": "0x086C96B0",
-      "byte_length": 5,
-      "original": "めぢÖ ",
-      "original_hex": "22 42 f2 00 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -196579,18 +196551,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_e90f61f3bda3",
-      "module": "高风险混杂",
-      "address": "0x086D0757",
-      "byte_length": 18,
-      "original": "ぺセむエ ビよ Öちホけまワまワ ",
-      "original_hex": "4e 5e 21 54 00 97 26 00 f2 11 6e 09 1f 7c 1f 7c 00 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_f9d10ac94a32",
       "module": "高风险混杂",
       "address": "0x086D0962",
@@ -196609,18 +196569,6 @@
       "byte_length": 4,
       "original": "ちぬあ",
       "original_hex": "11 17 01 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_ca33124d9521",
-      "module": "高风险混杂",
-      "address": "0x086D0AE9",
-      "byte_length": 12,
-      "original": "レ ソニÖぃまワまワ ",
-      "original_hex": "7a 00 5f 66 f2 30 1f 7c 1f 7c 00 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -198775,18 +198723,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_3994c1d09baf",
-      "module": "高风险混杂",
-      "address": "0x086E2488",
-      "byte_length": 31,
-      "original": "でめぢかゥあ►ト ぉもÖ  ほくかぉぉょ ぉトそぉうづトそト",
-      "original_hex": "44 22 42 06 81 01 ef 64 00 33 23 f2 00 00 1e 08 06 33 33 36 00 33 64 0f 33 03 43 64 0f 64 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_3d827c454078",
       "module": "高风险混杂",
       "address": "0x086E2687",
@@ -200059,18 +199995,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_77012433b2f8",
-      "module": "高风险混杂",
-      "address": "0x086EE684",
-      "byte_length": 7,
-      "original": "めめÖめめめ",
-      "original_hex": "22 22 f2 22 22 22 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_e55449377224",
       "module": "高风险混杂",
       "address": "0x086EE68B",
@@ -200149,18 +200073,6 @@
       "byte_length": 7,
       "original": "そぁめÄむめ",
       "original_hex": "0f 2f 22 f1 21 22 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_fbb230c6a2f6",
-      "module": "高风险混杂",
-      "address": "0x086EE884",
-      "byte_length": 7,
-      "original": "めめÖめめめ",
-      "original_hex": "22 22 f2 22 22 22 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -201319,36 +201231,12 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_e65da21a360e",
-      "module": "高风险混杂",
-      "address": "0x086FA7B4",
-      "byte_length": 7,
-      "original": "ぁそ  ぁÖ",
-      "original_hex": "2f 0f 00 00 2f f2 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_caed87209ed1",
       "module": "高风险混杂",
       "address": "0x086FA7D9",
       "byte_length": 5,
       "original": "そ  め",
       "original_hex": "0f 00 00 22 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_8c14a4c0a3ed",
-      "module": "高风险混杂",
-      "address": "0x086FA7E0",
-      "byte_length": 5,
-      "original": "Öむそ ",
-      "original_hex": "f2 21 0f 00 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -201691,18 +201579,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_f94ddd601d60",
-      "module": "高风险混杂",
-      "address": "0x086FDAD5",
-      "byte_length": 18,
-      "original": "キ ひろÖむまワまワ ロマモぺ  ",
-      "original_hex": "57 00 1b 2b f2 21 1f 7c 1f 7c 00 7b 6f 73 4e 00 00 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_b2c7b6588bb3",
       "module": "高风险混杂",
       "address": "0x086FDE58",
@@ -201793,18 +201669,6 @@
       "byte_length": 3,
       "original": "まぃ",
       "original_hex": "1f 30 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_3dd9e3c25ddb",
-      "module": "高风险混杂",
-      "address": "0x086FE379",
-      "byte_length": 4,
-      "original": "ナヌÖ",
-      "original_hex": "65 67 f2 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -203299,18 +203163,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_30be3918d346",
-      "module": "高风险混杂",
-      "address": "0x08705C21",
-      "byte_length": 6,
-      "original": "どöみう ",
-      "original_hex": "45 f5 20 03 00 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_714784422a91",
       "module": "高风险混杂",
       "address": "0x08705F68",
@@ -204175,18 +204027,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_0fb66242eb9d",
-      "module": "高风险混杂",
-      "address": "0x0870E7F7",
-      "byte_length": 7,
-      "original": "あÖ ヂたし",
-      "original_hex": "01 f2 00 92 10 0c ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_0bf0a91c496c",
       "module": "高风险混杂",
       "address": "0x0870E851",
@@ -204565,18 +204405,6 @@
       "byte_length": 4,
       "original": "ぇぉェ",
       "original_hex": "32 33 82 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_1b3a1eb3a74f",
-      "module": "高风险混杂",
-      "address": "0x08714009",
-      "byte_length": 4,
-      "original": "めÖぉ",
-      "original_hex": "22 f2 33 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -206497,18 +206325,6 @@
       "byte_length": 46,
       "original": "でで  ぉぉで おぇぉぉウめぉぉキぉっうぁ うぜ う ｏむをコお きウあぃたうぉあざぉきä",
       "original_hex": "44 44 00 00 33 33 44 00 05 32 33 33 53 22 33 33 57 33 50 03 2f 00 03 3f 00 03 00 e3 21 2d 5a 05 00 07 53 01 30 10 03 33 01 3c 33 07 f4 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_e84bb594c48a",
-      "module": "高风险混杂",
-      "address": "0x08720853",
-      "byte_length": 4,
-      "original": "ぇぇÖ",
-      "original_hex": "32 32 f2 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -209443,18 +209259,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_82fe9d82d7d3",
-      "module": "高风险混杂",
-      "address": "0x08730F8B",
-      "byte_length": 4,
-      "original": "あきÖ",
-      "original_hex": "01 07 f2 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_b54d022abe2f",
       "module": "高风险混杂",
       "address": "0x087311AC",
@@ -209587,18 +209391,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_8847a64fda0c",
-      "module": "高风险混杂",
-      "address": "0x08731F81",
-      "byte_length": 5,
-      "original": "へそ Ö",
-      "original_hex": "1d 0f 00 f2 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_f474202d68f9",
       "module": "高风险混杂",
       "address": "0x08731FBF",
@@ -209653,18 +209445,6 @@
       "byte_length": 35,
       "original": "モ ょオ テモカ ち ラが たヨモ  ぶチ うたチあＲツソに チニö",
       "original_hex": "73 00 36 55 00 63 73 56 00 11 00 77 37 00 10 76 73 00 00 48 61 00 03 10 61 01 cc 62 5f 16 00 61 66 f5 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_63022f2c9b3a",
-      "module": "高风险混杂",
-      "address": "0x08732CFF",
-      "byte_length": 39,
-      "original": "チぉオたオゆヌ うラカなあうヌなあ カあいぜ ｙッ うカ うょめニょちま Ö",
-      "original_hex": "61 33 55 10 55 25 67 00 03 77 56 15 01 03 67 15 01 00 56 01 02 3f 00 ed a0 00 03 56 00 03 36 22 66 36 11 1f 00 f2 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -210379,18 +210159,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_e4de18bb6bcd",
-      "module": "高风险混杂",
-      "address": "0x0873C1A2",
-      "byte_length": 10,
-      "original": "めめぁÖめつめめつ",
-      "original_hex": "22 22 2f f2 22 12 22 22 12 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_6a29f5331ca7",
       "module": "高风险混杂",
       "address": "0x0873C1AC",
@@ -210649,18 +210417,6 @@
       "byte_length": 4,
       "original": "ぽゅづ",
       "original_hex": "4f 35 43 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_cb74dd8b6efe",
-      "module": "高风险混杂",
-      "address": "0x0873E588",
-      "byte_length": 46,
-      "original": "チ  しあ２ めぉÜみうムもぞういナ ドそ ぜ ぶä ｏうレえダたうっÖん っテづ ゥたュ",
-      "original_hex": "61 00 00 0c 01 a3 00 22 33 f3 20 03 71 23 40 03 02 65 00 95 0f 00 3f 00 48 f4 00 e3 03 7a 04 91 10 03 50 f2 2e 00 50 63 43 00 81 10 85 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -212983,18 +212739,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_c040dd63ad0e",
-      "module": "高风险混杂",
-      "address": "0x0874CB3A",
-      "byte_length": 78,
-      "original": "１ｐゾま でで」レででゴリ で」ギリでゴギギ‥ うリ こトｃラちちラウぬ うラえＶリラもヤいゥヲベあヅぃあちひいホみうベ しソ８ う９Öゅ：あ：あ：あ：あ",
-      "original_hex": "a2 e4 90 1f 00 44 44 b4 7a 44 44 8b 78 00 44 b4 88 78 44 8b 88 88 b0 00 03 78 00 0a 64 d7 77 11 11 77 53 17 00 03 77 04 d0 78 77 23 74 02 81 7d 99 01 93 30 01 11 1b 02 6e 20 03 99 00 0c 5f a9 00 03 aa f2 35 f0 01 f0 01 f0 01 f0 01 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_53d1ad3552aa",
       "module": "高风险混杂",
       "address": "0x0874CE80",
@@ -213535,18 +213279,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_9962df342385",
-      "module": "高风险混杂",
-      "address": "0x0874F7BD",
-      "byte_length": 35,
-      "original": "ソでっででど ゃづでエぉぉででおぉぉぉづぇ えめ う ぉÖそ ぉぉÜ",
-      "original_hex": "5f 44 50 44 44 45 00 34 43 44 54 33 33 44 44 05 33 33 33 43 32 00 04 22 00 03 00 33 f2 0f 00 33 33 f3 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_2880d3855f84",
       "module": "高风险混杂",
       "address": "0x0874F7F2",
@@ -213589,18 +213321,6 @@
       "byte_length": 5,
       "original": "ロオ\n\nマ",
       "original_hex": "7b 55 fb 6f ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_302006880ff6",
-      "module": "高风险混杂",
-      "address": "0x0874FE23",
-      "byte_length": 65,
-      "original": "ま だユララメオラめ りエオでゆぉＺちいエぉままぷぉ ぬぉ äまぺベべオでら７ ｏÖ トぁ きめく が ゆ したうやぞき：あ：あ",
-      "original_hex": "1f 00 41 75 77 77 72 55 77 22 00 28 54 55 44 25 33 d4 11 02 54 33 1f 1f 4d 33 00 17 33 00 f4 1f 4e 99 49 55 44 27 a8 00 e3 f2 00 64 2f 00 07 22 08 00 37 00 25 00 0c 10 03 24 40 07 f0 01 f0 01 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -214549,18 +214269,6 @@
       "byte_length": 35,
       "original": "Ｒ\\CC05F0Ａ\\CC42な うお ♂\\CC30９ぉりぉゃた。エあこどでゃ づどででぢ",
       "original_hex": "cc fc 05 f0 bb fc 42 15 00 03 05 00 b5 fc 30 aa 33 28 33 34 10 ad 54 01 0a 45 44 34 00 43 45 44 44 42 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_fee2d279be87",
-      "module": "高风险混杂",
-      "address": "0x0875722B",
-      "byte_length": 5,
-      "original": "でではÖ",
-      "original_hex": "44 44 1a f2 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -215659,18 +215367,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_295cb7edf5b1",
-      "module": "高风险混杂",
-      "address": "0x0875D798",
-      "byte_length": 12,
-      "original": "ギÖく  ぁめあやめち",
-      "original_hex": "88 f2 08 00 00 2f 22 01 24 22 11 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_70d6f0fc2233",
       "module": "高风险混杂",
       "address": "0x0875D7A5",
@@ -216571,18 +216267,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_03775009a806",
-      "module": "高风险混杂",
-      "address": "0x08762DF0",
-      "byte_length": 154,
-      "original": "メヨ めヌニきめ ニキきメニÖそメあニÜァメニてぁ：ーＤメらつ：に：あ：あヂズ ｏ っキ うｃ ｗベ ぬむみめた 』 ムぉぉムタぉ Ｊ あオオオベケくオドベｅ ｘちスオいオぉムオオモ とぉえゥオオてクあ ぬぅ ぉベねぉぉベがぉみぉユ ：ュラちがオ ュギがドベのぉベちベのもぃÜもめぇあÜぼもっきめめぃあつ ",
-      "original_hex": "72 76 00 22 67 66 07 22 00 66 57 07 72 66 f2 0f 72 01 66 f3 7f 72 66 13 2f f0 ae be 72 27 12 f0 16 f0 01 f0 01 92 8e 00 e3 00 50 57 00 03 d7 00 eb 99 00 17 21 20 22 10 00 b2 00 71 33 33 71 60 33 00 c4 00 01 55 55 55 99 59 08 55 95 99 d9 00 ec 11 5d 55 02 55 33 71 55 55 73 00 14 33 04 81 55 55 13 58 01 00 17 31 00 33 99 18 33 33 99 37 33 20 33 75 00 f0 85 77 11 37 55 00 85 88 37 95 99 19 33 99 11 99 19 23 30 f3 23 22 32 01 f3 4a 23 50 07 22 22 30 01 12 00 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_666a20038334",
       "module": "高风险混杂",
       "address": "0x08763140",
@@ -217303,30 +216987,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_cd19a65ab9e7",
-      "module": "高风险混杂",
-      "address": "0x0876ACDA",
-      "byte_length": 7,
-      "original": "ぜÖマぁもぉ",
-      "original_hex": "3f f2 6f 2f 23 33 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_4b59e013c9f0",
-      "module": "高风险混杂",
-      "address": "0x0876AEDE",
-      "byte_length": 7,
-      "original": "ぜÖマぁもぉ",
-      "original_hex": "3f f2 6f 2f 23 33 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_f159ecfd5b88",
       "module": "高风险混杂",
       "address": "0x0876BA48",
@@ -217975,18 +217635,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_bcf915fad3a8",
-      "module": "高风险混杂",
-      "address": "0x0877252E",
-      "byte_length": 143,
-      "original": "ベヌネＡ äたう円 うベベかッ うおみうラニカ ニｂ う Öや ｚÜ ｑ うぅ Ö みぉつ ぇぉうそたぉぉそぅ う Öギ：あ  オ いベ っみベグぃさっＡ っ♂オＡ いＡ い９ い９ いみ９５ うベベルヌバ ベグニパグギニヒこギギニハィうゲ うニＢあでニあいみう ズゾうギクＴ：リ：あ",
-      "original_hex": "99 67 68 bb 00 f4 10 03 b7 00 03 99 99 06 a0 00 03 05 20 03 77 66 56 00 66 d6 00 03 00 f2 24 00 ee f3 00 e5 00 03 31 00 f2 00 20 33 12 00 32 33 03 0f 10 33 33 0f 31 00 03 00 f2 88 f0 01 00 00 55 00 02 99 00 50 20 99 89 30 0b 50 bb 00 50 b5 55 bb 00 02 bb 00 02 aa 00 02 aa 00 02 20 aa a6 00 03 99 99 79 67 96 00 99 89 66 9b 89 88 66 6b 0a 88 88 66 6a 80 03 8a 00 03 66 bc 01 44 66 01 02 20 03 00 8e 90 03 88 58 ce f0 78 f0 01 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_be69719a5cb0",
       "module": "高风险混杂",
       "address": "0x0877271D",
@@ -218179,18 +217827,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_b63b50c1d6b3",
-      "module": "高风险混杂",
-      "address": "0x08774220",
-      "byte_length": 12,
-      "original": "ベベグギベベポギベのÖ",
-      "original_hex": "99 99 89 88 99 99 9f 88 99 19 f2 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_99f45081a817",
       "module": "高风险混杂",
       "address": "0x0877513E",
@@ -218227,36 +217863,12 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_8e556f9d0e29",
-      "module": "高风险混杂",
-      "address": "0x08775B5C",
-      "byte_length": 28,
-      "original": "てめそぇむこめまぉち ソöちうみあめいまだでもÖ でぢ",
-      "original_hex": "13 22 0f 32 21 0a 22 1f 33 11 00 5f f5 11 03 20 01 22 02 1f 41 44 23 f2 00 44 42 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_1613ab8ab784",
       "module": "高风险混杂",
       "address": "0x08775F78",
       "byte_length": 6,
       "original": "ぉ Üめ ",
       "original_hex": "33 00 f3 22 00 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_63b7ca5ea167",
-      "module": "高风险混杂",
-      "address": "0x08775F7E",
-      "byte_length": 44,
-      "original": "ぁめ ： めめ まぽむまぁ ぜとぽとぁとÜで もづめぜめぢめÖこめぇぜぜ Ｊもたｍちワ",
-      "original_hex": "2f 22 00 f0 00 22 22 00 1f 4f 21 1f 2f 00 3f 14 4f 14 2f 14 f3 44 00 23 43 22 3f 22 42 22 f2 0a 22 32 3f 3f 00 c4 23 10 e1 11 7c ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -218377,18 +217989,6 @@
       "byte_length": 11,
       "original": "むぴラちだたう ヘぃ",
       "original_hex": "21 4c 77 11 41 10 03 00 6d 30 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_2578f253016d",
-      "module": "高风险混杂",
-      "address": "0x08776EAA",
-      "byte_length": 512,
-      "original": "ヌつ う こちち：ヨあどたぁＥ えむたえ：あ：あ：あ：あみＡッみうメィうちっめぅぉ イラなもララニム ぬチよラ０のオラ ダのオニダギアなぢゲ うめユララ いラ ラにちちぬダベベ ０グギブダギギギっボ うグ うなむめめ ヌなめつニニむム ちニにラ８チオヨ ブアオナブはオなえギのオなちＶぜベベ ベダベギベボグギえベベギギベ ぜちラ なつユニニムラちみニよ ぜナぬベアオ にベはオ０ベのオるダア ３キあごヌな ？ェ う９アあ ベっうはöÖだ：あむぺちェたぞき『ぞうゾたそ グ ｏちゥアな グギちちボねＡひ ダのＡひ０はＲふえふむＧふＧ うグギサづ ｓとみｗたÜダ くたＩ と３９９やとちちＦたｏぃうちちブはＡひ ベちＡひ８ちＲふかとつＲふや うたｏベ りめちベギブベボｐ こあいむうと０ ぜつちっちたｏち うベのちダぞベィぜちとＲむめつちＲむの ｏのはい ｗチ  う きＧあ ９ うそちふ   か：ｙ：あ：あョィあたちつだつノ けむ６ぅろた さぇぉみうつｄめ７ャぃあちだでめ 』ちめ でちでもつぇぉもぱちたまＧだいＴやタも まかででででも さううでジゾぜめめであぅ どでたきイむいぉにいじちぢ ねとプ クあちいさ た ぎもテぽ",
-      "original_hex": "67 12 00 03 00 0a 11 11 f0 76 01 45 10 2f bf 00 04 21 10 04 f0 01 f0 01 f0 01 f0 01 20 bb a0 20 03 72 80 03 11 50 22 31 33 00 52 77 15 23 77 77 66 71 00 17 61 26 77 a1 19 55 77 00 91 19 55 66 91 88 51 15 42 8a 00 03 22 75 77 77 00 02 77 00 77 16 11 11 17 91 99 99 00 a1 89 88 98 91 88 88 88 50 9a 00 03 89 00 03 15 21 22 22 00 67 15 22 12 66 66 21 71 00 11 66 16 77 a9 61 55 76 00 98 51 55 65 98 1a 55 15 04 88 19 55 15 11 d0 3f 99 99 00 99 91 99 88 99 9a 89 88 04 99 99 88 88 99 00 3f 11 77 00 15 12 75 66 66 71 77 11 20 66 26 00 3f 65 17 99 51 55 00 16 99 1a 55 a1 99 19 55 29 91 51 00 a4 57 01 3b 67 15 00 ac 82 00 03 aa 51 01 00 99 50 03 1a f5 f2 41 f0 01 21 4e 11 82 10 40 07 b1 40 03 90 10 0f 00 89 00 e3 11 81 51 15 00 89 88 11 11 9a 18 bb 1b 00 91 19 bb 1b a1 1a cc 1c 04 1c 21 c1 1c c1 00 03 89 88 5b 43 00 e7 14 20 eb 10 f3 91 00 08 10 c3 00 14 a4 aa aa 24 14 11 11 c0 10 e3 30 03 11 11 98 1a bb 1b 00 99 11 bb 1b a9 11 cc 1c 06 14 12 cc 1c 24 00 03 10 e3 99 00 28 22 11 99 88 98 99 9a e4 00 0a 01 02 21 03 14 a1 00 3f 12 11 50 11 10 e3 11 00 03 99 19 11 91 40 99 80 3f 11 14 cc 21 22 12 11 cc 21 19 00 e3 19 1a 02 00 eb 61 00 00 03 00 07 c1 01 00 aa 00 03 0f 11 1c 00 00 00 06 f0 ed f0 01 f0 01 86 80 01 10 11 12 41 12 69 00 09 21 a7 31 2b 10 00 0b 32 33 20 03 12 d8 22 a8 84 30 01 11 41 44 22 00 b2 11 22 00 44 11 44 23 12 32 33 23 4b 11 10 1f c1 41 02 ce 24 60 23 00 1f 06 44 44 44 44 23 00 0b 03 03 44 8d 90 3f 22 22 44 01 31 00 45 44 10 07 52 21 02 33 16 02 3d 11 42 00 18 14 9d 00 58 01 11 02 0b 00 10 00 38 23 63 4f ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -218683,18 +218283,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_dfc2e2c1a88e",
-      "module": "高风险混杂",
-      "address": "0x0877B9AB",
-      "byte_length": 6,
-      "original": "ゾグÖ ぽ",
-      "original_hex": "90 89 f2 00 4f ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_f787cfedacdd",
       "module": "高风险混杂",
       "address": "0x0877B9D5",
@@ -218719,36 +218307,12 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_2d1b64b7beb6",
-      "module": "高风险混杂",
-      "address": "0x0877BC7C",
-      "byte_length": 52,
-      "original": "だうÖぉ：あぜ テイぞ ア：いデ ぜ うぽｅ う し  くあめぉぇ みびぉぞうÜぉも うあ』 ろうÜで",
-      "original_hex": "41 03 f2 33 f0 01 3f 00 63 52 40 00 51 f0 02 94 00 3f 00 03 4f d9 00 03 00 0c 00 00 08 01 22 33 32 00 20 47 33 40 03 f3 33 23 00 03 01 b2 00 2b 03 f3 44 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_2d23400906da",
       "module": "高风险混杂",
       "address": "0x0877BCB1",
       "byte_length": 24,
       "original": "Üぽちがみあぞぇ うもめぇぇぇぇつももも ほぇ",
       "original_hex": "f3 4f 11 37 20 01 40 32 00 03 23 22 32 32 32 32 12 23 23 23 00 1e 32 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_96bc6733037f",
-      "module": "高风险混杂",
-      "address": "0x0877BCCA",
-      "byte_length": 5,
-      "original": "びめみÖ",
-      "original_hex": "47 22 20 f2 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -218845,18 +218409,6 @@
       "byte_length": 4,
       "original": "ぽぉた",
       "original_hex": "4f 33 10 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_9764019cd81d",
-      "module": "高风险混杂",
-      "address": "0x0877C4C0",
-      "byte_length": 97,
-      "original": "うョゃ３づおラぁ３ぇァ ぷÜ う ぇぁもめぉぉづで ゃぉトニヨゃヌニ ニばぇぽぉ３ぇぉゾたうづ２ の９ぉぉ２ゾ うやぼ うÖぉづぁや・９あト９ボたう９９ブ あれ２た\n\n ザ９もめ めげづもぇめÜ",
-      "original_hex": "03 86 34 a4 43 05 77 2f a4 32 7f 00 4d f3 00 03 00 32 2f 23 22 33 33 43 44 00 34 33 64 66 76 34 67 66 00 66 46 32 4f 33 a4 32 33 90 10 03 43 a3 00 19 aa 33 33 a3 90 00 03 24 4a 00 03 f2 33 43 2f 24 af aa 01 64 aa 9a 10 03 aa aa 98 00 01 2a a3 10 fb 00 8c aa 23 22 00 22 3a 43 23 32 22 f3 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -220315,18 +219867,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_a792c7d9929b",
-      "module": "高风险混杂",
-      "address": "0x08789E19",
-      "byte_length": 67,
-      "original": "オぉづ エオぉぉでエゅぉたづでエ う\nö  あソナ  オオそミう・ そでいぐトÖン：あ：あＦあハ： べたうな うにたうｍく  よだ ",
-      "original_hex": "55 33 43 00 54 55 33 33 44 54 35 33 10 43 44 54 00 03 fe f5 00 00 01 5f 65 00 00 55 55 0f 70 03 af 00 0f 44 02 39 64 f2 7e f0 01 f0 01 c0 01 6a f0 00 49 10 03 15 00 03 16 10 03 e1 08 00 00 26 41 00 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_f319d658e4e5",
       "module": "高风险混杂",
       "address": "0x08789E70",
@@ -221251,18 +220791,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_28aeb7f467d5",
-      "module": "高风险混杂",
-      "address": "0x0878FD27",
-      "byte_length": 48,
-      "original": "ぁ   ぁ  ：め  ：め  ぁめ  ぁめ  ぁめ  んめヂベるめめめめÖめめめ►めめÖ・めめ",
-      "original_hex": "2f 00 00 00 2f 00 00 f0 22 00 00 f0 22 00 00 2f 22 00 00 2f 22 00 00 2f 22 00 00 2e 22 92 99 29 22 22 22 22 f2 22 22 22 ef 22 22 f2 af 22 22 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_6632ed93d4ee",
       "module": "高风险混杂",
       "address": "0x0878FD80",
@@ -221305,18 +220833,6 @@
       "byte_length": 10,
       "original": "ぜマぉぉ：ぜテぉ ",
       "original_hex": "3f 6f 33 33 f0 3f 63 33 00 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_3b51c526c092",
-      "module": "高风险混杂",
-      "address": "0x0879054F",
-      "byte_length": 8,
-      "original": "ザめめそ めÖ",
-      "original_hex": "8c 22 22 0f 00 22 f2 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -222859,18 +222375,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_f7e5998470da",
-      "module": "高风险混杂",
-      "address": "0x0879A336",
-      "byte_length": 45,
-      "original": "：Ｔあぶい・づゆ うち３あバ キど うぽ うでぞうつもÖプィ：あぃめÖぉぞオぉ ぜやぇゅ",
-      "original_hex": "f0 ce 01 48 02 af 43 25 00 03 11 a4 01 96 00 57 45 00 03 4f 00 03 44 40 03 12 23 f2 9d 80 f0 01 30 22 f2 33 40 55 33 00 3f 24 32 35 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_30668d9d539f",
       "module": "高风险混杂",
       "address": "0x0879A363",
@@ -223495,18 +222999,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_7ee2466169b1",
-      "module": "高风险混杂",
-      "address": "0x0879E8FC",
-      "byte_length": 17,
-      "original": "めラÖむまだも か たÄとごちさ",
-      "original_hex": "22 77 f2 21 1f 41 23 00 06 00 10 f1 14 3b 11 0b ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_88f352a791d3",
       "module": "高风险混杂",
       "address": "0x0879E927",
@@ -223717,18 +223209,6 @@
       "byte_length": 162,
       "original": "みあぃィう ウぃｍむらてｚめいメてんめめｏ うｍィ Ｚｍめやイむイめちめむづ しめめド うぃメゆ う きイウオらぎめゃみにぃあ ペＲギョあョョグネネギベ ６ ユラベベめめ６９ィっうネネねちョョねうめギブるぇベ Ａみ♂トぉぞう えむめたＵげぉょぉ２ たみあ２ あ ｌ９そロ円９Ａ Ｕぃぅぃう Ü８ あゲ う／ うリ円 \nÖた",
       "original_hex": "20 01 30 80 03 00 53 30 e1 21 27 13 ee 22 02 72 13 2e 22 22 e3 00 03 e1 80 00 d4 e1 22 24 52 21 52 22 11 22 21 43 00 0c 22 22 95 00 03 30 72 25 00 03 00 07 52 53 55 27 38 22 34 20 16 30 01 00 9e cc 88 86 01 86 86 89 68 68 88 99 00 a7 00 75 77 99 99 22 22 a7 aa 80 50 03 68 68 18 11 86 86 18 03 22 88 98 29 32 99 00 bb 20 b5 64 33 40 03 00 04 21 22 10 cf 3a 33 36 33 a3 00 10 20 01 a3 00 01 00 e0 aa 0f 7b b7 aa bb 00 cf 30 31 30 03 00 f3 a9 00 01 8a 00 03 ba 00 03 78 b7 00 fe f2 10 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_d3eccde7c7aa",
-      "module": "高风险混杂",
-      "address": "0x087A1529",
-      "byte_length": 294,
-      "original": "つもっう：Üぃセ うぺ９ くて うゆ うっゾへむタゅ ｓ ｈエゆエゆほなでちぢたＹキ う  えひ  キいｍ あて う ä ゅウめちぢオちち めウてちぉぉなち ぉユなちめイ９９いめム９９ちメ う４ ９９む６９６ア６あ９／メ‥９９お うみ９！た。６レ９９レでき こきＡ／たく！！ レ６！／９ラ／９こＡ９ラき Ｍレたれ ィ み ‥９ベき パ グレ ミゴロ  おミ ララきたＹレ ええベル  グてひギリ  ７ギゲきゴゲ７\n\nたÖ：あ：あ：あミあラ：つゾふクなうぬミ：もテテ！９ あ ゴ／  ‥７ せっガ うミゾま／レ９ロ ９！ラき！／き リ／ どＷポÄ・‥あミ！ギＥあこラ：よ：あ：あ：あ：あ：あ",
-      "original_hex": "12 23 50 03 f0 f3 30 5e 00 03 4e aa 00 08 13 00 03 25 00 03 50 90 1d 21 60 35 00 e7 00 dc 54 25 54 25 1e 15 44 11 42 10 d3 57 00 03 00 00 04 1b 00 00 57 02 e1 00 01 13 00 03 00 f4 00 35 53 22 11 42 55 11 11 00 22 53 13 11 33 33 15 11 00 33 75 15 11 22 52 aa aa 02 22 71 aa aa 11 72 00 03 a5 00 aa aa 21 a7 aa a7 51 a7 01 aa ba 72 b0 aa aa 05 00 03 20 aa ab 10 ad a7 7a aa aa 7a 44 07 00 0a 07 bb ba 10 08 ab ab 00 7a a7 ab ba aa 77 ba aa 0a bb aa 77 07 00 c7 7a 10 2a 00 80 00 20 00 b0 aa 99 07 00 9b 00 89 7a 00 70 8b 7b 00 00 05 70 00 77 77 07 10 d3 7a 00 04 04 99 79 00 00 89 13 1b 88 78 00 00 a8 88 8a 07 8b 8a a8 fb 10 f2 f0 01 f0 01 f0 01 70 01 77 f0 12 90 1c 58 15 03 17 70 f0 23 63 63 ab aa 00 01 00 8b ba 00 00 b0 a8 00 0e 50 87 00 03 70 90 1f ba 7a aa 7b 00 aa ab 77 07 ab ba 07 00 78 ba 00 45 d1 9f f1 af b0 01 70 ab 88 bf 01 0a 77 f0 26 f0 01 f0 01 f0 01 f0 01 f0 01 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -223951,18 +223431,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_e54c0433e635",
-      "module": "高风险混杂",
-      "address": "0x087A33EC",
-      "byte_length": 87,
-      "original": "つ ｊ ぅベベち０ベのめッたｖベたうのめつベの つむギむむぉちつ ぇぉぇぉてぇぇぉ ちめめてつめつむかてめむぉぉ いみあてィ うだでゃち９ぉてた９９めいみつポ８９ Öまちビ",
-      "original_hex": "12 00 de 00 31 99 99 11 a1 99 19 22 a0 10 ea 99 10 03 19 22 12 99 19 00 12 21 88 21 21 33 11 12 00 32 33 32 33 13 32 32 33 00 11 22 22 13 12 22 12 21 06 13 22 21 33 33 00 02 20 01 13 80 00 03 41 44 34 11 aa 33 13 10 aa aa 22 02 20 12 9f a9 aa 00 f2 1f 11 97 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_8a4ea3d60ed9",
       "module": "高风险混杂",
       "address": "0x087A34D8",
@@ -223993,18 +223461,6 @@
       "byte_length": 29,
       "original": "むど９タあル８９ グムベぬゥメむで やつとでとめとでいて",
       "original_hex": "21 45 aa 60 01 79 a9 aa 00 89 71 99 17 81 72 21 44 00 24 12 14 44 14 22 14 44 02 13 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_ff650f55cdb6",
-      "module": "高风险混杂",
-      "address": "0x087A36E0",
-      "byte_length": 12,
-      "original": "ミ０えういちぞほつむÖ",
-      "original_hex": "70 a1 04 03 02 11 40 1e 12 21 f2 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -224059,18 +223515,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_4fc77cba140b",
-      "module": "高风险混杂",
-      "address": "0x087A3B44",
-      "byte_length": 26,
-      "original": "めのつめぅぉ ぉもあ ぉめÖ トも う ぇ ま う",
-      "original_hex": "22 19 12 22 31 33 00 33 23 01 00 33 22 f2 00 64 23 00 03 00 32 00 1f 00 03 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_5958979a9da4",
       "module": "高风险混杂",
       "address": "0x087A3B5E",
@@ -224089,18 +223533,6 @@
       "byte_length": 3,
       "original": "ちゆ",
       "original_hex": "11 25 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_9272c2955960",
-      "module": "高风险混杂",
-      "address": "0x087A40F9",
-      "byte_length": 39,
-      "original": "たうィッあヌめツヨをめめ ラＸめÖムめ\\2Fいめむめめめた う ィ く たむめ",
-      "original_hex": "10 03 80 a0 01 67 22 62 76 2d 22 22 00 77 d2 22 f2 71 22 fd 2f 02 22 21 22 22 22 10 00 03 00 80 00 08 00 10 21 22 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -224389,18 +223821,6 @@
       "byte_length": 4,
       "original": "ヌょÖ",
       "original_hex": "67 36 f2 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_b62912f469d3",
-      "module": "高风险混杂",
-      "address": "0x087A6027",
-      "byte_length": 17,
-      "original": "ラ ヌゃÖでトえぃぉ。うｄぁ ０",
-      "original_hex": "77 00 67 34 f2 44 64 04 30 33 ad 03 d8 2f 00 a1 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -225139,18 +224559,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_4bf32e137352",
-      "module": "高风险混杂",
-      "address": "0x087A9A13",
-      "byte_length": 8,
-      "original": "てÖベベ ヅベ",
-      "original_hex": "13 f2 99 99 00 93 99 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_6da1b67842d4",
       "module": "高风险混杂",
       "address": "0x087A9A1D",
@@ -225367,18 +224775,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_bfde79511a2a",
-      "module": "高风险混杂",
-      "address": "0x087AA9CE",
-      "byte_length": 52,
-      "original": "るちちベぁちちち Äぜめポぁゾポめ ぇぉむめぇちちめ ｎめベめÖめヂベいぉヅベちちつ みÖ ぜめぇめÖ",
-      "original_hex": "29 11 11 99 2f 11 11 11 00 f1 3f 22 9f 2f 90 9f 22 00 32 33 21 22 32 11 11 22 00 e2 22 99 22 f2 22 92 99 02 33 93 99 11 11 12 00 20 f2 00 3f 22 32 22 f2 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_40ef5f32ad16",
       "module": "高风险混杂",
       "address": "0x087AAD0B",
@@ -225463,18 +224859,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_4a1757e9f1b8",
-      "module": "高风险混杂",
-      "address": "0x087AB53F",
-      "byte_length": 76,
-      "original": "はぞでと：ひみあめ ｊめÖみき く かぃそめめゾあつ めめä めめゃそつめめぉ うぢÜィうずÜたう：／ユうÜひ ぞぅテゥヌォ パぞつちちやみゥゾンかぢ",
-      "original_hex": "1a 40 44 14 f0 1b 20 01 22 00 de 22 f2 20 07 00 08 00 06 30 0f 22 22 90 01 12 00 22 22 f4 00 22 22 34 0f 12 22 22 33 00 03 42 f3 80 03 3e f3 10 03 f0 ba 75 03 f3 1b 00 40 31 63 81 67 83 00 9b 40 12 11 11 24 20 81 90 7e 06 42 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_01b73f2aec20",
       "module": "高风险混杂",
       "address": "0x087AB58B",
@@ -225517,18 +224901,6 @@
       "byte_length": 3,
       "original": "あづ",
       "original_hex": "01 43 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_68804479bc89",
-      "module": "高风险混杂",
-      "address": "0x087AB959",
-      "byte_length": 22,
-      "original": "ぞめめぷÖ うぢやてえ あつ うラむぞきÄ",
-      "original_hex": "40 22 22 4d f2 00 03 42 24 13 04 00 01 12 00 03 77 21 40 07 f1 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -225709,18 +225081,6 @@
       "byte_length": 171,
       "original": "エまたらぜ う：ぇ►みつあめつぢぅぉだで うなとぉチ ｘと うま うこテニぉづめつぉたきづ でぉぉででてででぇちぉうし せでづ うゃｒ エ かタあぅぉ まみろぉ：あ８ぞくあミ うてゃめぅっぅたヅむ デとやい すぢだやめあム ゅだ うぷと スゃぅミｇぃあめみＡろち  ぴあ ぼつウ２：あ９ぃあょ やちあ６ あ『 ヘ だえィあて ヌたうに う ",
       "original_hex": "54 1f 10 27 3f 00 03 f0 32 ef 20 12 01 22 12 42 31 33 41 44 00 03 15 14 33 61 00 ec 14 00 03 1f 00 03 0a 63 66 33 43 22 12 33 10 07 43 00 44 33 33 44 44 13 44 44 32 11 33 03 0c 00 0e 44 43 00 03 34 e6 00 54 00 06 60 01 31 33 00 1f 20 2b 33 f0 01 a9 40 08 01 70 00 03 13 34 22 31 50 31 10 93 21 00 94 14 24 02 00 0d 42 41 24 22 01 71 00 35 41 00 03 4d 14 00 5d 34 31 70 db 30 01 22 20 bb 2b 11 00 00 4c 01 00 4a 12 53 a3 f0 01 aa 30 01 36 00 24 11 01 a7 00 01 b1 00 6d 00 41 04 80 01 13 00 67 10 03 16 00 03 00 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_21cd236c4e72",
-      "module": "高风险混杂",
-      "address": "0x087AD55C",
-      "byte_length": 146,
-      "original": "ぅぉぅ ぅぉぁ  たぉü たむツし ちもツぞ』うせぇぉ めＡろもろ９９』 ９９９は・０９９けüま９９ぃｑゃもつでぞめ えＡめぉぇ９／みちぅ ほチは０９チつぇぉてあいでぅあてとＤぞうで そむごたパあないＣぉぞむ ずむぅぉつめむ めつめてめでちてあでや』ても』パ リゃÖめうゼ うつ うそめしめ",
-      "original_hex": "31 33 31 00 31 33 2f 00 00 10 33 f6 00 10 21 62 0c 00 11 23 62 40 b2 03 0e 32 33 00 22 bb 2b 23 2b aa aa b2 00 aa aa aa 1a af a1 aa aa 09 f6 1f aa aa 30 e5 34 23 12 44 40 22 00 04 bb 22 33 32 aa ba 20 11 31 00 1e 61 1a a1 aa 61 12 32 33 13 01 02 44 31 01 13 14 be 40 03 44 00 0f 21 3b 10 9b 01 15 02 bd 33 40 21 00 3e 21 31 33 12 22 21 00 22 12 22 13 22 44 11 13 01 44 24 b2 13 23 b2 9b 00 78 34 f2 22 03 8f 00 03 12 00 03 0f 22 0c 22 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -226261,18 +225621,6 @@
       "byte_length": 8,
       "original": "ん\nちぁ►\nつ",
       "original_hex": "2e fe 11 2f ef fe 12 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_a4e4e43ad899",
-      "module": "高风险混杂",
-      "address": "0x087B224E",
-      "byte_length": 5,
-      "original": "ぁそÖ ",
-      "original_hex": "2f 0f f2 00 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -227879,30 +227227,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_10e63c16094e",
-      "module": "高风险混杂",
-      "address": "0x087BCE3C",
-      "byte_length": 126,
-      "original": "たぁ か：あ：あ：あ：あ：あ：あＮ：あみあグガ うギ  コョぞうタたうた円バ うタ ケドナカカナョカえばユニキネ Üブば オトギネニョギギ リラグギギギナギりベベ うノたｗョガノ グルギニグガブかロバ ｏめへイみたきネ うあいる リ くグ くバギÖず",
-      "original_hex": "10 2f 00 06 f0 01 f0 01 f0 01 f0 01 f0 01 f0 01 c8 f0 01 20 01 89 87 00 03 88 00 00 5a 86 40 03 60 10 03 10 b7 96 00 03 60 00 59 95 65 56 56 65 86 56 04 46 75 66 57 68 00 f3 98 46 00 55 64 88 68 66 86 88 88 00 78 77 89 88 88 88 65 88 28 99 99 00 03 69 10 eb 86 87 69 00 89 79 88 66 89 87 98 06 7b 96 00 e3 22 1d 52 20 10 07 68 00 03 01 02 29 00 78 00 08 89 00 08 96 88 f2 3e ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_a4859cb8127b",
-      "module": "高风险混杂",
-      "address": "0x087BD46C",
-      "byte_length": 7,
-      "original": "めそ  んÖ",
-      "original_hex": "22 0f 00 00 2e f2 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_fa77c35492c1",
       "module": "高风险混杂",
       "address": "0x087BDCE2",
@@ -228785,18 +228109,6 @@
       "byte_length": 15,
       "original": "ギギなそ ゼたうぶいぽクぃテ",
       "original_hex": "88 88 15 0f 00 8f 10 03 48 02 4f 58 30 63 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_2ae2944f036d",
-      "module": "高风险混杂",
-      "address": "0x087C744A",
-      "byte_length": 38,
-      "original": "ぽで エガガエでリクで どギでどエでエエメでたｏた►いÖ であ どィ うで",
-      "original_hex": "4f 44 00 54 87 87 54 44 78 58 44 00 45 88 44 45 54 44 54 54 72 44 10 e3 10 ef 02 f2 00 44 01 00 45 80 00 03 44 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -230027,18 +229339,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_1a04e4b772af",
-      "module": "高风险混杂",
-      "address": "0x087CDC50",
-      "byte_length": 34,
-      "original": "ぢぅホぁぇちニつちぇづ づめそ うÖｇ う くめ くたうや したう",
-      "original_hex": "42 31 6e 2f 32 11 66 12 11 32 43 00 43 22 0f 00 03 f2 db 00 03 00 08 22 00 08 10 03 24 00 0c 10 03 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_15d46d33f3e7",
       "module": "高风险混杂",
       "address": "0x087CDE4B",
@@ -230069,18 +229369,6 @@
       "byte_length": 6,
       "original": "ちめ ぉニ",
       "original_hex": "11 22 00 33 66 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_ca05c0e2a318",
-      "module": "高风险混杂",
-      "address": "0x087CE02F",
-      "byte_length": 131,
-      "original": "みそぃ ｏやめゃそめそÖä めあふちつちも：あ\n：あ：あ：あ：あ：あ：あミあぃ え つぞだやちた やめむぞちめづ あでめや  ででっまやむぢあ４えぞ ／マょッあÜニ こヌ ぃちメ  やちち もちむあめÖ  めもそみうたニバか うび ニヨてぢ ヌたうらめ：ミ：あ",
-      "original_hex": "20 0f 30 00 e3 24 22 34 0f 22 0f f2 f4 00 22 01 1c 11 12 11 23 f0 01 fe f0 01 f0 01 f0 01 f0 01 f0 01 f0 01 70 01 30 00 04 00 12 40 41 24 11 10 00 24 22 21 40 11 22 43 00 01 44 22 24 00 00 44 44 50 1f 24 21 42 01 a5 04 40 00 ba 6f 36 a0 01 f3 66 00 0a 67 00 30 11 72 00 00 24 11 11 00 23 11 21 01 22 f2 00 00 22 23 0f 20 03 10 66 96 06 00 03 47 00 66 76 13 42 00 67 10 03 27 22 f0 70 f0 01 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -230249,18 +229537,6 @@
       "byte_length": 30,
       "original": "ァ× ベパパぱベ×ベえ‥ きえあせたｓぃブ ぞ とＥギとぉ",
       "original_hex": "7f b9 00 99 9b 9b 4b 99 b9 99 04 b0 00 07 04 01 0e 10 e7 30 98 00 40 00 14 bf 88 14 33 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_f181e3d82495",
-      "module": "高风险混杂",
-      "address": "0x087CF066",
-      "byte_length": 84,
-      "original": "え うだ うぼち くぉぢ きÄ うむしそ ちめÖあｌあパブハブたｓみき‥ き‥たきベミベ ね う く×べ ベいパぱ ××え きえＷみき せ  に ブぶ：ぺィＶあ：ぇÜ",
-      "original_hex": "04 00 03 41 00 03 4a 11 00 08 33 42 00 07 f1 00 03 21 0c 0f 00 11 22 f2 01 e0 01 9b 98 6a 98 10 e7 20 07 b0 00 07 b0 10 07 99 70 99 00 18 00 03 00 08 b9 49 00 99 02 9b 4b 00 b9 b9 04 00 07 04 d1 20 07 00 0e 00 00 16 00 98 48 f0 4e 80 d0 01 f0 32 f3 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -230663,18 +229939,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_034e5b7960a6",
-      "module": "高风险混杂",
-      "address": "0x087D1BBD",
-      "byte_length": 6,
-      "original": "ラ めÖぢ",
-      "original_hex": "77 00 22 f2 42 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_fa924c61b6d2",
       "module": "高风险混杂",
       "address": "0x087D1BC3",
@@ -230699,36 +229963,12 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_453ea55983fb",
-      "module": "高风险混杂",
-      "address": "0x087D1E7F",
-      "byte_length": 26,
-      "original": "や♀えぞうｌダ「っＱみあぞもÖ ぞいぉギ ぜォラぃ",
-      "original_hex": "24 b6 04 40 03 e0 91 b3 50 cb 20 01 40 23 f2 00 40 02 33 88 00 3f 83 77 30 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_5dd31e981527",
       "module": "高风险混杂",
       "address": "0x087D1F5E",
       "byte_length": 63,
       "original": "も：ひミあえ ぞで ィオオオ ギネオ  ぞぉギ  ズぇ   \nむタばつち クナてむャカとＷ オオギニオニニネ ネニョネぉォぎ",
       "original_hex": "23 f0 1b 70 01 04 00 40 44 00 80 55 55 55 00 88 68 55 00 00 40 33 88 00 00 8e 32 00 00 00 fe 21 60 46 12 11 00 58 65 13 21 84 56 14 d1 00 55 55 88 66 55 66 66 68 00 68 66 86 68 33 83 38 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_ecbc8cb95dba",
-      "module": "高风险混杂",
-      "address": "0x087D2073",
-      "byte_length": 29,
-      "original": "づめÜ  ぽゃÖ ：でづィあツえ ゃぉそ ぉマづ ラあり",
-      "original_hex": "43 22 f3 00 00 4f 34 f2 00 f0 44 43 80 01 62 04 00 34 33 0f 00 33 6f 43 00 77 01 28 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -230759,18 +229999,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_3743c73a24a7",
-      "module": "高风险混杂",
-      "address": "0x087D2389",
-      "byte_length": 59,
-      "original": "とäｌあおÖユミあクオ  カみオ あｘ ィオニ どィ さ てぇ うむたうィ ｏüナニニョナョ ニギニギギニナマ ニギ",
-      "original_hex": "14 f4 e0 01 05 f2 75 70 01 58 55 00 00 56 20 55 00 01 ec 00 80 55 66 00 45 80 00 0b 00 13 32 00 03 21 10 03 80 00 e3 f6 65 66 66 86 65 86 00 66 88 66 88 88 66 65 6f 00 66 88 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_80c0ac50e230",
       "module": "高风险混杂",
       "address": "0x087D23C4",
@@ -230789,18 +230017,6 @@
       "byte_length": 3,
       "original": "ギギ",
       "original_hex": "88 88 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_d16ffa6ed123",
-      "module": "高风险混杂",
-      "address": "0x087D26C3",
-      "byte_length": 29,
-      "original": "あめ『たバ：ぞう ×ニギネち円ゥぃうギマニギギÖ ｇ め",
-      "original_hex": "01 22 b1 10 96 f0 40 03 00 b9 66 88 68 11 b7 81 30 03 88 6f 66 88 88 f2 00 db 00 22 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -230987,18 +230203,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_813ba5806c04",
-      "module": "高风险混杂",
-      "address": "0x087D45DD",
-      "byte_length": 7,
-      "original": "でゃÖそめぇ",
-      "original_hex": "44 34 f2 0f 22 32 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_253114545727",
       "module": "高风险混杂",
       "address": "0x087D45E4",
@@ -231089,18 +230293,6 @@
       "byte_length": 11,
       "original": "ゃそぞえぉそとÄ ぉ",
       "original_hex": "34 0f 40 04 33 0f 14 f1 00 33 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_033ba225bc32",
-      "module": "高风险混杂",
-      "address": "0x087D6ADF",
-      "byte_length": 5,
-      "original": "ぁめÖ ",
-      "original_hex": "2f 22 f2 00 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -231833,18 +231025,6 @@
       "byte_length": 23,
       "original": "テまちひぅうぞで ちだやてつやもとうめまゃづ",
       "original_hex": "63 1f 11 1b 31 03 40 44 00 11 41 24 13 12 24 23 14 03 22 1f 34 43 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_663407cc760f",
-      "module": "高风险混杂",
-      "address": "0x087D7E72",
-      "byte_length": 87,
-      "original": "めリガそ ガリそぁ ラい８Ü んたうつヨたう：ぞポち円ゾうッあクナヨラゾたうラギいたラリラァ ギラギ：ァギぉ らぞぇえぱもめイてたうイらｋたうたソÖ：。：あ：あ：あ：あィィ",
-      "original_hex": "22 78 87 0f 00 87 78 0f 2f 00 77 02 a9 f3 00 2e 10 03 12 76 10 03 f0 40 9f 11 b7 90 03 a0 01 58 65 76 77 90 10 03 77 88 02 10 77 78 77 7f 00 88 77 88 f0 7f 88 33 00 27 40 32 04 4b 23 22 52 13 10 03 52 27 df 10 03 10 5f f2 f0 ad f0 01 f0 01 f0 01 f0 01 80 80 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -234455,18 +233635,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_02952bf069a2",
-      "module": "高风险混杂",
-      "address": "0x087E857C",
-      "byte_length": 38,
-      "original": "つぷみそビ►ギそＱＱ  たみ  み  ‥あヘンぁホÖ ス」ぷビじケをふ へ",
-      "original_hex": "12 4d 20 0f 97 ef 88 0f cb cb 00 00 10 20 00 00 20 00 00 b0 01 6d 7e 2f 6e f2 00 5d b4 4d 97 3d 59 2d 1c 00 1d ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_9b8154004595",
       "module": "高风险混杂",
       "address": "0x087EA35D",
@@ -234903,18 +234071,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_efa22e2f2f88",
-      "module": "高风险混杂",
-      "address": "0x087EF006",
-      "byte_length": 4,
-      "original": "ついÖ",
-      "original_hex": "12 02 f2 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_f26126df4a0a",
       "module": "高风险混杂",
       "address": "0x087EF07A",
@@ -235125,18 +234281,6 @@
       "byte_length": 4,
       "original": "てへ►",
       "original_hex": "13 1d ef ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_6530e4b7084f",
-      "module": "高风险混杂",
-      "address": "0x087EF3A4",
-      "byte_length": 6,
-      "original": "いハぎ『Ö",
-      "original_hex": "02 6a 38 b1 f2 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -236689,18 +235833,6 @@
       "byte_length": 3,
       "original": "つた",
       "original_hex": "12 10 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_769340fcecf1",
-      "module": "高风险混杂",
-      "address": "0x087FDB7A",
-      "byte_length": 4,
-      "original": "みえÖ",
-      "original_hex": "20 04 f2 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -243833,36 +242965,12 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_e003f17301ae",
-      "module": "UI界面",
-      "address": "0x08325AD2",
-      "byte_length": 41,
-      "original": "まち とÄむ やÖめ ぞぉぉ  でぉ  ぞ３９ゲズそ・ゲｚく・９ｔくポボゼく・９",
-      "original_hex": "1f 11 00 14 f1 21 00 24 f2 22 00 40 33 33 00 00 44 33 00 00 40 a4 aa 8a 8e 0f af 8a ee 08 af aa e8 08 9f 9a 8f 08 af aa ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_c347ec450a41",
       "module": "UI界面",
       "address": "0x08325BCB",
       "byte_length": 31,
       "original": "ボ ・ま・ぞ１ちÄぞ２ちま ぜもま ：ぉも ッぶぉ ゲベ９８",
       "original_hex": "9a 00 af 1f af 40 a2 11 f1 40 a3 11 1f 00 3f 23 1f 00 f0 33 23 00 a0 48 33 00 8a 99 aa a9 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_4d8ecba48b22",
-      "module": "UI界面",
-      "address": "0x08325DD2",
-      "byte_length": 31,
-      "original": "まち とÄむ やÖめ ぞぉぉ  でぉ  ぞ３９ゲズそ・ゲｚく",
-      "original_hex": "1f 11 00 14 f1 21 00 24 f2 22 00 40 33 33 00 00 44 33 00 00 40 a4 aa 8a 8e 0f af 8a ee 08 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -252825,18 +251933,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_debdad8bc1d4",
-      "module": "UI界面",
-      "address": "0x08370367",
-      "byte_length": 6,
-      "original": "Öむ オゥ",
-      "original_hex": "f2 21 00 55 81 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_d4e491b3d08b",
       "module": "UI界面",
       "address": "0x0837036D",
@@ -254757,18 +253853,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_56a2522fd95e",
-      "module": "UI界面",
-      "address": "0x083711B1",
-      "byte_length": 6,
-      "original": "もがÖまチ",
-      "original_hex": "23 37 f2 1f 61 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_f3bed4660408",
       "module": "UI界面",
       "address": "0x083711BA",
@@ -255027,18 +254111,6 @@
       "byte_length": 4,
       "original": "ミづづ",
       "original_hex": "70 43 43 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_4511479d673b",
-      "module": "UI界面",
-      "address": "0x083712F0",
-      "byte_length": 6,
-      "original": "れ０Öむォ",
-      "original_hex": "2a a1 f2 21 83 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -255591,18 +254663,6 @@
       "byte_length": 7,
       "original": "Äポっがめあ",
       "original_hex": "f1 9f 50 37 22 01 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_69e0cdbb93fc",
-      "module": "UI界面",
-      "address": "0x083717CD",
-      "byte_length": 46,
-      "original": "ヅぬぇむたソイぜまｏ０ゾソァぞもチヅキぃソぞじむｋÖむぃま\n\nぅポぇま』むエヲたあまÖむタＥ",
-      "original_hex": "93 17 32 21 10 5f 52 3f 1f e3 a1 90 5f 7f 40 23 61 93 57 30 5f 40 3d 21 df f2 21 30 1f fb 31 9f 32 1f b2 21 54 7d 10 01 1f f2 21 60 bf ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -257307,18 +256367,6 @@
       "byte_length": 4,
       "original": "タをア",
       "original_hex": "60 2d 51 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_066e2ac6fcbb",
-      "module": "UI界面",
-      "address": "0x08372334",
-      "byte_length": 7,
-      "original": "づポÖまつラ",
-      "original_hex": "43 9f f2 1f 12 77 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -259961,18 +259009,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_7d7ba43b5c91",
-      "module": "UI界面",
-      "address": "0x083D2192",
-      "byte_length": 65,
-      "original": "ゥヌじめぽ：ぬ：あタあちÜみ うエま うと ソつ うちぞ８あワまちャダあüｕペぃうＦたさぞあむめえ ちめぼÖ うめえ しい うÖ",
-      "original_hex": "81 67 3d 22 4f f0 17 f0 01 60 01 11 f3 20 00 03 54 1f 00 03 14 00 5f 12 00 03 11 40 a9 01 7c 1f 11 84 91 01 f6 e9 9e 30 03 c0 10 0b 40 01 21 22 04 00 11 22 4a f2 00 03 22 04 00 0c 02 00 03 f2 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_7eb923b95df5",
       "module": "UI界面",
       "address": "0x083D21D3",
@@ -260003,18 +259039,6 @@
       "byte_length": 5,
       "original": "ラ：ヌョ",
       "original_hex": "77 f0 67 86 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_4dd57e172c96",
-      "module": "UI界面",
-      "address": "0x083D220B",
-      "byte_length": 13,
-      "original": "いツぶÖあ\nャやいひぽぢ",
-      "original_hex": "02 62 48 f2 01 fe 84 24 02 1b 4f 42 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -260989,30 +260013,6 @@
       "pointer_addresses": []
     },
     {
-      "id": "axvj_a839b5ae7db4",
-      "module": "UI界面",
-      "address": "0x083D4E9B",
-      "byte_length": 107,
-      "original": "ウポぜロモ\n\nァポぜロモァァポぜロモロモロモロモロモた え み  たあ：ち ：む め む２げ：ぇぼ ゃたぉぼぉぁぉぉゅぉむ うたへÄ うめ えあぉもあ ぉぉÖ うぶて うもそ うあむぇＦ ら うぁめぇぉため めめ：",
-      "original_hex": "53 9f 3f 7b 73 fb 7f 9f 3f 7b 73 7f 7f 9f 3f 7b 73 7b 73 7b 73 7b 73 7b 73 10 00 04 00 20 00 00 10 01 f0 11 00 f0 21 00 22 00 21 a3 3a f0 32 4a 00 34 10 33 4a 33 2f 33 33 35 33 21 00 03 10 1d f1 00 03 22 00 04 01 33 23 01 00 33 33 f2 00 03 48 13 00 03 23 0f 00 03 01 21 32 c0 00 27 00 03 2f 22 32 33 10 22 00 22 22 f0 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_af89f30c4c21",
-      "module": "UI界面",
-      "address": "0x083D4F06",
-      "byte_length": 30,
-      "original": "めめ Äぶま ぽちちたキぉぉめぞあみうめめそめめつ  めÖ",
-      "original_hex": "22 22 00 f1 48 1f 00 4f 11 11 10 57 33 33 22 40 01 20 03 22 22 0f 22 22 12 00 00 22 f2 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
       "id": "axvj_2c967dd1debb",
       "module": "UI界面",
       "address": "0x083D4F8D",
@@ -261319,18 +260319,6 @@
       "byte_length": 4,
       "original": "むエÖ",
       "original_hex": "21 54 f2 ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_d462a86d81ab",
-      "module": "UI界面",
-      "address": "0x083D5A70",
-      "byte_length": 13,
-      "original": "ボルベネ８バうぁぃルニÖ",
-      "original_hex": "9a 79 99 68 a9 96 03 2f 30 79 66 f2 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],

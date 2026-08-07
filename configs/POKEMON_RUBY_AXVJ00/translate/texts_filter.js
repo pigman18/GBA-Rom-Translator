@@ -11,12 +11,32 @@ function getAddressList(original) {
         .map((e) => e.address);
 }
 
+function isError1(translated) {
+    return translated.indexOf('Ö') !== -1;
+}
+
+function isError2(translated) {
+    return translated.indexOf('ｏ') !== -1;
+}
+
+function isError3(translated) {
+    return translated.split(' ').length > 6;
+}
+
 // 查出明显异常的译文
 let addressList = [];
 for(let tt of texts_translated) {
-    if ((tt.translated || '').indexOf('Ö') !== -1) {
+    let translated = (tt.translated || '');
+    let isError = isError1(translated) ||
+        isError2(translated) ||
+        isError3(translated);
+    if (isError) {
         // 根据原本反查地址
-        addressList.push(...getAddressList(tt.original));
+        let al = getAddressList(tt.original);
+        if (al.length > 0) {
+            console.log(`异常内容：${tt.translated}`);
+            addressList.push(...al);
+        }
     }
 }
 console.log(`--addrs "${[...new Set(addressList)].join(',')}"`);

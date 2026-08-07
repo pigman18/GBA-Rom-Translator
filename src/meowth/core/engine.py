@@ -1,8 +1,10 @@
 """Core translation engine - refactored from Pipeline with callback support."""
 
 import json
+import os
 import subprocess
 import sys
+import threading
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -206,6 +208,96 @@ def _is_cache_map(data: dict) -> bool:
     )
 
 
+def _put_cache_entry(cache: dict[str, str], original: str, translated: str) -> None:
+    """Store one pair under formatted / raw / unquoted keys."""
+    if not original or not translated:
+        return
+    key = format_original(original)
+    cache[key] = translated
+    if original != key:
+        cache[original] = translated
+    unwrapped = unwrap_quotes(original)
+    if unwrapped and unwrapped != key and unwrapped != original:
+        cache[unwrapped] = translated
+
+
+def _load_translation_cache(path: Path, usable) -> dict[str, str]:
+    """Load ``texts_translated.json`` as ``{原文: 译文}`` (legacy shapes OK)."""
+    if not path.is_file():
+        return {}
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    if not isinstance(raw, dict):
+        return {}
+    if _is_cache_map(raw) or (
+        raw
+        and not any(k in raw for k in ("entries", "free_texts", "tables"))
+    ):
+        out: dict[str, str] = {}
+        for orig, tr in raw.items():
+            if not isinstance(orig, str) or not isinstance(tr, str):
+                continue
+            # Disk keys may be raw or already formatted; normalize once.
+            key = format_original(orig)
+            if usable(key, tr) or usable(orig, tr):
+                _put_cache_entry(out, orig, tr)
+        return out
+    # Legacy entries / free_texts / tables
+    return _cache_map_from_data(raw)
+
+
+def _save_translation_cache(path: Path, cache: dict[str, str], usable=None) -> None:
+    """Write pure ``{原文: 译文}`` cache (dedupe by formatted key).
+
+    Only persists usable translations so EN→JP lexicon stubs etc. cannot
+    pollute the file or displace good Chinese on the next load.
+    """
+    path.parent.mkdir(parents=True, exist_ok=True)
+    compact: dict[str, str] = {}
+    for orig, tr in cache.items():
+        if not isinstance(orig, str) or not isinstance(tr, str) or not tr:
+            continue
+        key = format_original(orig)
+        if usable is not None and not (usable(key, tr) or usable(orig, tr)):
+            continue
+        # Prefer keeping an existing usable value if a duplicate key races in
+        prev = compact.get(key)
+        if prev and usable is not None and usable(key, prev) and prev != tr:
+            if not usable(key, tr):
+                continue
+        compact[key] = tr
+    path.write_text(
+        json.dumps(compact, ensure_ascii=False, indent=2),
+        encoding="utf-8",
+    )
+
+
+def _merge_lexicon_into_cache(
+    cache: dict[str, str], lexicon: dict[str, str], usable=None
+) -> int:
+    """Append lexicon into cache; lexicon wins on key collision when usable.
+
+    Skips non-usable lexicon values (e.g. English→Japanese mail names) so they
+    never overwrite or displace real Chinese cache entries.
+    """
+    n = 0
+    for orig, tr in (lexicon or {}).items():
+        if not isinstance(orig, str) or not isinstance(tr, str) or not tr:
+            continue
+        if usable is not None and not usable(orig, tr) and not usable(
+            format_original(orig), tr
+        ):
+            continue
+        key = format_original(orig)
+        prev = cache.get(key) or cache.get(orig)
+        if prev != tr:
+            n += 1
+        _put_cache_entry(cache, orig, tr)
+    return n
+
+
 def _strip_llm_newlines(text: str) -> str:
     """Remove literal newlines inserted by the LLM for formatting."""
     _PARA = "\x00PARA\x00"
@@ -351,73 +443,104 @@ class TranslationEngine:
             return True
         return False
 
-    def _merge_prior_translations(self, data: dict) -> int:
-        """Fill blanks from work_dir/texts_translated.json (GUI re-runs)."""
-        prior_path = Path(self.config.work_dir) / self.config.game / "texts_translated.json"
-        if not prior_path.exists():
-            return 0
-        try:
-            prior = json.loads(prior_path.read_text(encoding="utf-8"))
-        except (OSError, json.JSONDecodeError):
-            return 0
+    @staticmethod
+    def _has_translatable_jp(original: str) -> bool:
+        """False for placeholders like 「？」「？？？」with no kana/kanji to translate."""
+        import re
 
-        # 新版纯缓存 {原文: 译文}（无地址/hex）
-        if isinstance(prior, dict) and not any(
-            k in prior for k in ("entries", "free_texts", "tables")
-        ):
-            by_orig = _index_translation_cache(prior, self._usable_zh)
-            n = 0
-            for e in data.get("entries") or []:
-                if self._usable_zh(e.get("original") or "", e.get("translated") or ""):
-                    continue
-                orig = e.get("original") or ""
-                zh = _lookup_translation_cache(by_orig, orig)
-                if zh and self._usable_zh(orig, zh):
-                    e["translated"] = zh
-                    n += 1
-            return n
+        s = unwrap_quotes(original or "").strip()
+        if not s:
+            return False
+        return bool(re.search(r"[\u3040-\u30ff\u4e00-\u9fff]", s))
 
-        # 旧版 entries/free_texts/tables 结构（兼容）
-        by_addr: dict[str, str] = {}
-        raw_by_orig: dict[str, str] = {}
-        for e in prior.get("entries") or []:
-            orig = e.get("original") or ""
-            zh = e.get("translated") or ""
-            if not self._usable_zh(orig, zh):
-                continue
-            addr = (e.get("address") or "").upper()
-            if addr:
-                by_addr[addr] = zh
-            raw_by_orig[orig] = zh
-        # Also scan free_texts / tables shapes
-        for e in prior.get("free_texts") or []:
-            orig = e.get("original") or ""
-            zh = e.get("translated") or ""
-            if self._usable_zh(orig, zh):
-                raw_by_orig[orig] = zh
-                addr = (e.get("address") or "").upper()
-                if addr:
-                    by_addr[addr] = zh
-        for table in prior.get("tables") or []:
-            for e in table.get("entries") or []:
-                orig = e.get("original") or ""
-                zh = e.get("translated") or ""
-                if self._usable_zh(orig, zh):
-                    raw_by_orig[orig] = zh
-        by_orig = _index_translation_cache(raw_by_orig, self._usable_zh)
-
+    def _apply_cache_to_data(self, data: dict, cache: dict[str, str]) -> int:
+        """Fill entry.translated from cache map. Returns how many filled/updated."""
+        by_orig = _index_translation_cache(cache, self._usable_zh)
         n = 0
-        for e in data.get("entries") or []:
+
+        def _one(e: dict) -> None:
+            nonlocal n
             if e.get("_reject"):
-                continue
-            if self._usable_zh(e.get("original") or "", e.get("translated") or ""):
-                continue
+                return
             orig = e.get("original") or ""
-            addr = (e.get("address") or "").upper()
-            zh = by_addr.get(addr) or _lookup_translation_cache(by_orig, orig)
-            if zh and self._usable_zh(orig, zh):
+            zh = _lookup_translation_cache(by_orig, orig)
+            if not zh or not self._usable_zh(orig, zh):
+                return
+            if e.get("translated") != zh:
                 e["translated"] = zh
                 n += 1
+
+        for e in data.get("entries") or []:
+            _one(e)
+        for e in data.get("free_texts") or []:
+            _one(e)
+        for t in data.get("tables") or []:
+            for e in t.get("entries") or []:
+                _one(e)
+        return n
+
+    def _append_batch_to_cache(
+        self,
+        cache: dict[str, str],
+        output_path: Path,
+        batch: list[dict],
+        lock: threading.Lock,
+    ) -> int:
+        """Append usable batch results into cache and write disk. Returns added count."""
+        pairs: list[tuple[str, str]] = []
+        for e in batch:
+            orig = e.get("original") or ""
+            tr = e.get("translated") or ""
+            if self._cacheable_pair(orig, tr):
+                pairs.append((orig, tr))
+        if not pairs:
+            return 0
+        with lock:
+            for orig, tr in pairs:
+                _put_cache_entry(cache, orig, tr)
+            _save_translation_cache(output_path, cache, self._usable_zh)
+        return len(pairs)
+
+    def _cacheable_pair(self, original: str, translated: str) -> bool:
+        """True if this pair should be persisted to texts_translated.json."""
+        if not translated or not translated.strip():
+            return False
+        if self._usable_zh(original, translated):
+            return True
+        u = unwrap_quotes(original)
+        if u != original and self._usable_zh(u, translated):
+            return True
+        key = format_original(original)
+        if key != original and self._usable_zh(key, translated):
+            return True
+        return False
+
+    def _harvest_into_cache(self, data: dict, cache: dict[str, str]) -> int:
+        """Pull usable entry.translated (LLM/memory) into the cache map."""
+        n = 0
+
+        def _one(e: dict) -> None:
+            nonlocal n
+            if e.get("_reject"):
+                return
+            orig = e.get("original") or ""
+            tr = e.get("translated") or ""
+            if not self._cacheable_pair(orig, tr):
+                return
+            key = format_original(orig)
+            prev = cache.get(key) or cache.get(orig) or ""
+            if prev == tr:
+                return
+            _put_cache_entry(cache, orig, tr)
+            n += 1
+
+        for e in data.get("entries") or []:
+            _one(e)
+        for e in data.get("free_texts") or []:
+            _one(e)
+        for t in data.get("tables") or []:
+            for e in t.get("entries") or []:
+                _one(e)
         return n
 
     def _ensure_translator(self) -> Translator:
@@ -441,11 +564,40 @@ class TranslationEngine:
     def translate_texts(
         self, texts_path: Path, output_path: Path
     ) -> Path:
-        """Translate extracted texts JSON with parallel workers."""
+        """Translate texts.json against texts_translated.json cache.
+
+        Pipeline:
+          1. Load texts_translated.json
+          2. Merge lexicon into cache and write back
+          3. Diff texts.json vs cache → pending (skipped when seed_only)
+          4. LLM; on success append into cache immediately (skipped when seed_only)
+          5. Join texts.json + cache → translate.build.json
+        """
+        from ..config_loader import load_custom_translations
+        from ..modules import resolve_modules, stamp_entry_module
+
+        # --- 1. Load cache ---
+        cache = _load_translation_cache(output_path, self._usable_zh)
+        self._log(
+            "info",
+            f"[翻译缓存] 加载 {output_path.name}: {len(cache)} 键",
+        )
+
+        # --- 2. Append lexicon → write cache ---
+        self._custom_translations = load_custom_translations(self.config.game)
+        n_lex = _merge_lexicon_into_cache(
+            cache, self._custom_translations or {}, self._usable_zh
+        )
+        _save_translation_cache(output_path, cache, self._usable_zh)
+        self._log(
+            "info",
+            f"[翻译缓存] lexicon 追加/覆盖 {n_lex} 条 → {output_path}",
+        )
+
+        # Load corpus (needed for 3–5 / seed_only 5)
         data = json.loads(texts_path.read_text(encoding="utf-8"))
 
-        # 文本校验：rejects 黑名单；allows 可覆盖 rejects。
-        # 先按勾选模块收窄（若启用 module_filter），再标记 _reject。
+        # rejects / allows
         if data.get("entries"):
             from ..policy import rejects_ids, allows_ids
 
@@ -453,8 +605,6 @@ class TranslationEngine:
             if rejects_ids(gid) or allows_ids(gid):
                 active_modules = None
                 if self._feature("module_filter"):
-                    from ..modules import resolve_modules
-
                     preset = (
                         getattr(self.config, "preset", None)
                         or getattr(self.config, "funnel", None)
@@ -472,222 +622,23 @@ class TranslationEngine:
                     active_modules=active_modules,
                 )
 
-        # Reload custom translations (game ID may have changed since __init__)
-        from ..config_loader import load_custom_translations
-        self._custom_translations = load_custom_translations(self.config.game)
-
-        # Offline seeds first (config: seed_translate)
-        if self.config.seed_first and (
-            self._feature("seed_translate") or data.get("game_id") == self.config.game
-        ):
-            from ..seed_translate import (
-                looks_like_failed_zh_translation,
-                seed_translate_entry,
-            )
-
-            # Keep prior GUI/CLI Chinese across re-extract (only fill blanks)
-            merged = self._merge_prior_translations(data)
-            if merged:
-                self._log("info", f"Merged {merged} prior Chinese strings from work cache")
-
-            seeded = 0
-            held_failed = 0
-            ct = self._custom_translations or {}
-            for e in data.get("entries") or []:
-                if e.get("_reject"):
-                    continue
-                orig = e.get("original", "")
-                if self._usable_zh(orig, e.get("translated") or ""):
-                    continue
-                zh = seed_translate_entry(orig) or ct.get(orig) or ct.get(orig.strip('"'))
-                if zh:
-                    e["translated"] = zh
-                    seeded += 1
-                    continue
-                # looks_like_failed: skip LLM later; never wipe cache to "" (seed-only
-                # would leave permanent JP holes).
-                if (
-                    self.config.target_lang.startswith("zh")
-                    and looks_like_failed_zh_translation(orig, e.get("translated") or "")
-                ):
-                    held_failed += 1
-            self._log(
-                "info",
-                f"Applied AXVJ offline seeds ({seeded}); "
-                f"held {held_failed} failed ja→zh stubs (not cleared)",
-            )
-
         data = convert_format(data)
 
-        # Seed free_texts/tables after convert (config: seed_translate)
-        if self._feature("seed_translate") or data.get("game_id") == self.config.game:
-            from ..modules import resolve_modules, stamp_entry_module
-            from ..seed_translate import seed_translate_entry
-
+        # Active modules for pending + build filter
+        if self._feature("module_filter") or data.get("game_id") == self.config.game:
             preset = (
                 getattr(self.config, "preset", None)
                 or getattr(self.config, "funnel", None)
             )
-            active = set(
-                resolve_modules(modules=self.config.modules, preset=preset, game_id=self.config.game)
-            )
-            self._axvj_active_modules = active
-            seeded2 = 0
-            skipped_mod = 0
-
-            def _seed_or_hold(e: dict) -> None:
-                nonlocal seeded2, skipped_mod
-                if e.get("_reject"):
-                    return
-                mid = stamp_entry_module(e, game_id=self.config.game)
-                # Unresolved geo: keep existing translation; do not wipe / LLM
-                if mid is None:
-                    skipped_mod += 1
-                    return
-                if mid not in active:
-                    # Unchecked: do not wipe usable Chinese
-                    skipped_mod += 1
-                    return
-                orig = e.get("original") or ""
-                tr = e.get("translated") or ""
-                # Keep real Chinese; only clear JP-hold stubs for LLM retry
-                if tr and tr != orig and self._usable_zh(orig, tr):
-                    return
-                if tr == orig and not self.config.seed_only:
-                    e["translated"] = ""
-                ct = self._custom_translations or {}
-                zh = seed_translate_entry(orig) or ct.get(orig) or ct.get(orig.strip('"'))
-                if zh:
-                    e["translated"] = zh
-                    seeded2 += 1
-
-            for table in data.get("tables") or []:
-                for e in table.get("entries") or []:
-                    _seed_or_hold(e)
-            for e in data.get("free_texts") or []:
-                _seed_or_hold(e)
-            if seeded2 or skipped_mod:
-                self._log(
-                    "info",
-                    f"AXVJ seeds={seeded2}; hold JP (unchecked modules)={skipped_mod} "
-                    f"[modules={sorted(active)}]",
+            self._axvj_active_modules = set(
+                resolve_modules(
+                    modules=self.config.modules,
+                    preset=preset,
+                    game_id=self.config.game,
                 )
+            )
         else:
             self._axvj_active_modules = None
-
-        # Re-merge from texts_translated.json after module seeding (address-based)
-        from ..modules import _get_modules
-        dirty_mods = {
-            mid for mid, m in _get_modules(self.config.game).items()
-            if m.get("dirty")
-        }
-        prior_path = Path(self.config.work_dir) / self.config.game / "texts_translated.json"
-        if prior_path.exists():
-            try:
-                prior = json.loads(prior_path.read_text(encoding="utf-8"))
-            except (OSError, json.JSONDecodeError):
-                prior = None
-            if prior:
-                if isinstance(prior, dict) and not any(
-                    k in prior for k in ("entries", "free_texts", "tables")
-                ):
-                    # 新版纯缓存 {原文: 译文}：按格式化原文匹配，跳过 dirty 模块
-                    by_orig = _index_translation_cache(prior, self._usable_zh)
-                    n = 0
-                    for entry in data.get("free_texts") or []:
-                        if entry.get("_reject"):
-                            continue
-                        if entry.get("translated"):
-                            continue
-                        if entry.get("_axvj_module") in dirty_mods:
-                            continue
-                        zh = _lookup_translation_cache(
-                            by_orig, entry.get("original") or ""
-                        )
-                        if zh:
-                            entry["translated"] = zh
-                            n += 1
-                    for t in data.get("tables") or []:
-                        for entry in t.get("entries") or []:
-                            if entry.get("_reject"):
-                                continue
-                            if entry.get("translated"):
-                                continue
-                            if entry.get("_axvj_module") in dirty_mods:
-                                continue
-                            zh = _lookup_translation_cache(
-                                by_orig, entry.get("original") or ""
-                            )
-                            if zh:
-                                entry["translated"] = zh
-                                n += 1
-                    if n:
-                        self._log("info", f"Merged {n} entries from prior texts_translated.json")
-                    prior = None
-            if prior:
-                by_addr: dict[str, str] = {}
-                for e in prior.get("free_texts") or []:
-                    addr = (e.get("address") or "").upper()
-                    zh = e.get("translated") or ""
-                    if addr and zh and self._usable_zh(e.get("original", ""), zh):
-                        by_addr[addr] = zh
-                for t in prior.get("tables") or []:
-                    for e in t.get("entries") or []:
-                        addr = (e.get("address") or "").upper()
-                        zh = e.get("translated") or ""
-                        if addr and zh and self._usable_zh(e.get("original", ""), zh):
-                            by_addr[addr] = zh
-                n = 0
-                for entry in data.get("free_texts") or []:
-                    if entry.get("_reject"):
-                        continue
-                    if entry.get("translated"):
-                        continue
-                    if entry.get("_axvj_module") in dirty_mods:
-                        continue
-                    zh = by_addr.get((entry.get("address") or "").upper())
-                    if zh:
-                        entry["translated"] = zh
-                        n += 1
-                for t in data.get("tables") or []:
-                    for entry in t.get("entries") or []:
-                        if entry.get("_reject"):
-                            continue
-                        if entry.get("translated"):
-                            continue
-                        if entry.get("_axvj_module") in dirty_mods:
-                            continue
-                        zh = by_addr.get((entry.get("address") or "").upper())
-                        if zh:
-                            entry["translated"] = zh
-                            n += 1
-                if n:
-                    self._log("info", f"Merged {n} entries from prior texts_translated.json")
-
-        # Translate table entries (glossary)
-        for table in data["tables"]:
-            self._translate_table(table)
-
-        free_texts = data["free_texts"]
-        # IME kana rows: keep Japanese (input method grid)
-        import re
-
-        for e in free_texts:
-            if e.get("translated"):
-                continue
-            from ..modules import entry_matches
-
-            if not entry_matches(e, "姓名输入", game_id=self.config.game):
-                continue
-            orig = e.get("original", "")
-            compact = orig.replace(" ", "")
-            if re.fullmatch(r"[ぁ-んァ-ン]{5}", compact):
-                e["translated"] = orig
-            elif compact in ("やゆよわをん",):
-                e["translated"] = orig
-
-        # 垃圾/假文本过滤已统一由 rejects/allows（translate 开头标记 _reject）。
-        import os
 
         has_key = bool(self.config.api_key) or bool(
             self.config.api_key_env and os.environ.get(self.config.api_key_env)
@@ -695,68 +646,63 @@ class TranslationEngine:
         seed_only = self.config.seed_only or (
             self._feature("seed_on_no_key") and not has_key
         )
-        # Pending = empty translation, or stale JP-hold (translated == original)
-        # once the entry's module is active.
         active = getattr(self, "_axvj_active_modules", None)
+        by_orig = _index_translation_cache(cache, self._usable_zh)
 
-        def _needs_llm(e: dict) -> bool:
-            if e.get("_reject"):
-                return False
-            orig = e.get("original") or ""
-            tr = e.get("translated") or ""
-            if tr.strip() and tr.strip() != orig.strip():
-                return False
-            if active is not None:
-                from ..modules import stamp_entry_module
+        if not seed_only:
+            # --- 3. Diff: texts.json vs cache ---
+            free_texts = data.get("free_texts") or []
 
-                mid = stamp_entry_module(e, game_id=self.config.game)
-                # None / unchecked → do not call API
-                if mid is None or mid not in active:
+            def _needs_llm(e: dict) -> bool:
+                if e.get("_reject"):
                     return False
-            # empty or JP-hold on an active module
-            return True
+                orig = e.get("original") or ""
+                # Placeholders (？ / ？？？) — keep JP as-is, never call API
+                if not self._has_translatable_jp(orig):
+                    if not (e.get("translated") or "").strip():
+                        e["translated"] = orig
+                    return False
+                zh = _lookup_translation_cache(by_orig, orig)
+                if zh and self._usable_zh(orig, zh):
+                    return False
+                if active is not None:
+                    mid = stamp_entry_module(e, game_id=self.config.game)
+                    if mid is None or mid not in active:
+                        return False
+                return True
 
-        pending = [e for e in free_texts if _needs_llm(e)]
-        # Stable sort by address so the same ROM region always forms the same batches
-        pending.sort(key=lambda e: (e.get("address") or "", e.get("original") or ""))
-        if seed_only:
-            # Lexicon/custom only — never mass-clear; refill empties once more
-            from ..seed_translate import seed_translate_entry as _seed_fill
-
-            ct = self._custom_translations or {}
-            refilled = 0
+            # Also stamp keep-as-is on non-translatable within active modules
+            # (so build sees translated=original even if never pending).
+            skipped_placeholder = 0
             for e in free_texts:
                 if e.get("_reject"):
                     continue
+                if active is not None:
+                    mid = stamp_entry_module(e, game_id=self.config.game)
+                    if mid is None or mid not in active:
+                        continue
                 orig = e.get("original") or ""
-                if self._usable_zh(orig, e.get("translated") or ""):
-                    continue
-                zh = _seed_fill(orig) or ct.get(orig) or ct.get(orig.strip('"'))
-                if zh:
-                    e["translated"] = zh
-                    refilled += 1
-            for table in data.get("tables") or []:
-                for e in table.get("entries") or []:
-                    if e.get("_reject"):
-                        continue
-                    orig = e.get("original") or ""
-                    if self._usable_zh(orig, e.get("translated") or ""):
-                        continue
-                    zh = _seed_fill(orig) or ct.get(orig) or ct.get(orig.strip('"'))
-                    if zh:
-                        e["translated"] = zh
-                        refilled += 1
-            still = sum(
-                1
-                for e in free_texts
-                if not self._usable_zh(e.get("original") or "", e.get("translated") or "")
+                if not self._has_translatable_jp(orig):
+                    if not (e.get("translated") or "").strip():
+                        e["translated"] = orig
+                    skipped_placeholder += 1
+
+            pending = [e for e in free_texts if _needs_llm(e)]
+            pending.sort(
+                key=lambda e: (e.get("address") or "", e.get("original") or "")
             )
             self._log(
                 "info",
-                f"seed_only: lexicon refill +{refilled}; "
-                f"{still}/{len(free_texts)} free texts still empty (no mass clear)",
+                f"[翻译差集] 待翻 {len(pending)} / free_texts {len(free_texts)}"
+                + (
+                    f"（跳过占位/无假名汉字 {skipped_placeholder}）"
+                    if skipped_placeholder
+                    else ""
+                ),
             )
-        else:
+
+            # --- 4. LLM; success → append cache ---
+            cache_lock = threading.Lock()
             batches = [
                 pending[i : i + self.config.batch_size]
                 for i in range(0, len(pending), self.config.batch_size)
@@ -764,15 +710,21 @@ class TranslationEngine:
             total = len(batches)
             if total:
                 self._ensure_translator()
-                self._log("info", Messages.BATCH_PROGRESS.format(
-                    total=total, workers=self.config.max_workers
-                ))
+                self._log(
+                    "info",
+                    Messages.BATCH_PROGRESS.format(
+                        total=total, workers=self.config.max_workers
+                    ),
+                )
                 done_count = 0
 
                 def process_batch(idx_batch):
                     idx, batch = idx_batch
                     self._translate_free_batch(batch)
-                    return idx, batch
+                    appended = self._append_batch_to_cache(
+                        cache, output_path, batch, cache_lock
+                    )
+                    return idx, batch, appended
 
                 with ThreadPoolExecutor(max_workers=self.config.max_workers) as executor:
                     futures = {
@@ -781,25 +733,69 @@ class TranslationEngine:
                     }
                     for future in as_completed(futures):
                         done_count += 1
-                        idx, batch = future.result()
-                        self._log("info", Messages.BATCH_COMPLETE.format(
-                            current=done_count, total=total, batch_id=idx + 1
-                        ))
-                        sample = next((e for e in batch if e.get("translated")), None)
+                        idx, batch, appended = future.result()
+                        self._log(
+                            "info",
+                            Messages.BATCH_COMPLETE.format(
+                                current=done_count,
+                                total=total,
+                                batch_id=idx + 1,
+                            )
+                            + (f" (+cache {appended})" if appended else ""),
+                        )
+                        sample = next(
+                            (
+                                e
+                                for e in batch
+                                if self._usable_zh(
+                                    e.get("original") or "",
+                                    e.get("translated") or "",
+                                )
+                            ),
+                            None,
+                        )
                         if sample:
                             try:
-                                print(f"  e.g. {sample['original']!r} → {sample['translated']!r}")
+                                print(
+                                    f"  e.g. {sample['original']!r} → "
+                                    f"{sample['translated']!r}"
+                                )
                             except UnicodeEncodeError:
                                 print(f"  batch {idx + 1} done")
-                        self.callbacks.on_progress("translate", done_count, total,
-                            f"Batch {idx + 1} completed")
+                        self.callbacks.on_progress(
+                            "translate",
+                            done_count,
+                            total,
+                            f"Batch {idx + 1} completed",
+                        )
+        else:
+            self._log(
+                "info",
+                "[翻译] seed_only：跳过 API（流程 1→2→5）",
+            )
 
-        # Flatten back to entries for inject compatibility (config: flat_entry_format)
+        # --- 4b/5 prep: harvest memory translations → cache, always flush disk ---
+        harvested = self._harvest_into_cache(data, cache)
+        _save_translation_cache(output_path, cache, self._usable_zh)
+        try:
+            disk_n = len(json.loads(output_path.read_text(encoding="utf-8")))
+        except (OSError, json.JSONDecodeError):
+            disk_n = 0
+        self._log(
+            "info",
+            f"[翻译缓存] 落盘 {output_path.name}: {disk_n} 键"
+            + (f"（本轮新收获 {harvested}）" if harvested else ""),
+        )
+
+        # --- 5. texts.json + cache → translate.build.json ---
+        filled = self._apply_cache_to_data(data, cache)
+        self._log("info", f"[翻译缓存] 回填 entries {filled} 条")
+
         if self._feature("flat_entry_format") or data.get("game_id") == self.config.game:
             flat = []
-            for table in data["tables"]:
+            for table in data.get("tables") or []:
                 flat.extend(table.get("entries") or [])
-            flat.extend(data["free_texts"])
+            flat.extend(data.get("free_texts") or [])
             data = {
                 "game": self.config.game,
                 "game_id": self.config.game,
@@ -807,19 +803,10 @@ class TranslationEngine:
                 "modules": self.config.modules,
                 "count": len(flat),
                 "entries": flat,
-                "tables": data["tables"],
-                "free_texts": data["free_texts"],
+                "tables": data.get("tables") or [],
+                "free_texts": data.get("free_texts") or [],
             }
 
-        output_path.parent.mkdir(parents=True, exist_ok=True)
-        output_path.write_text(
-            json.dumps(_cache_map_from_data(data), ensure_ascii=False, indent=2),
-            encoding="utf-8",
-        )
-
-        # --- 翻译通路规划：决策 type + 编码 target_hex → translate.build.json ---
-        # translate 阶段不注入 ROM，只产出 build 中间产物；texts_translated.json
-        # 降级为翻译缓存文件。
         try:
             self._write_translate_build(data)
         except Exception as e:  # pragma: no cover
@@ -994,9 +981,14 @@ class TranslationEngine:
         """
         self._ensure_translator()
         if not self.translator:
-            # No LLM available — keep originals
+            # No LLM — do not wipe existing ZH; only fill blanks with original
             for entry in entries:
-                entry["translated"] = entry.get("original", "")
+                orig = entry.get("original", "")
+                tr = entry.get("translated") or ""
+                if self._usable_zh(orig.strip('"'), tr):
+                    continue
+                if not tr.strip():
+                    entry["translated"] = orig
             return
         import re
 
@@ -1027,9 +1019,8 @@ class TranslationEngine:
             try:
                 results = self.translator.translate_batch(protected_list, glossary_ctx)
             except Exception as e:
-                print(f"[Table batch LLM failed: {e}, keeping originals]")
-                for entry, _, _ in chunk:
-                    entry["translated"] = entry["original"].strip('"')
+                print(f"[Table batch LLM failed: {e}, keeping previous translations]")
+                # Do not write JP as fake「译文」— leave prior / empty for next run
                 continue
 
             for (entry, _, codes), result in zip(chunk, results):
@@ -1076,9 +1067,8 @@ class TranslationEngine:
         try:
             results = self.translator.translate_batch(protected_list, glossary_ctx)
         except Exception as e:
-            print(f"[Batch failed after retries: {e}, keeping originals]")
-            for entry in remaining:
-                entry["translated"] = entry["original"]
+            print(f"[Batch failed after retries: {e}, keeping previous translations]")
+            # Do not overwrite with JP original — empty stays empty for retry
             return
 
         # Restore and wrap

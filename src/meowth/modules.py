@@ -151,7 +151,7 @@ def get_default_modules(game_id: str = "") -> list[str]:
 # ---------------------------------------------------------------------------
 
 # Groups that use script-style strict pointer gates (dump taxonomy).
-_SCRIPT_GROUPS = frozenset({"剧情", "设施"})
+_SCRIPT_GROUPS = frozenset({"文本"})
 
 
 def _module_geo_bands(meta: dict[str, Any]) -> list[tuple[int, int]]:
@@ -270,7 +270,7 @@ def entry_matches(entry: dict[str, Any], *candidates: str, game_id: str = "") ->
 
 
 def entry_group(entry: dict[str, Any], game_id: str = "") -> str:
-    """Dump taxonomy group for this entry's module (e.g. 设施 / 界面 / 剧情)."""
+    """Dump taxonomy group for this entry's module (e.g. 文本 / 界面 / 词条)."""
     mid = entry_module(entry, game_id=game_id)
     if not mid:
         return ""
@@ -332,7 +332,7 @@ def clear_high_ui_geo_cache() -> None:
 
 
 def entry_is_script_like(entry: dict[str, Any], game_id: str = "") -> bool:
-    """剧情 / 设施 / 未归类 → strict script pointer policy."""
+    """文本组 / 未归类 → strict script pointer policy."""
     mid = entry_module(entry, game_id=game_id)
     if mid == "未归类":
         return True

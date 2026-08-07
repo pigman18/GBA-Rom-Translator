@@ -117,6 +117,11 @@ def format_original(text: str) -> str:
     unwrap quotes, map paragraph/layout tokens, normalize CR, classify
     layout vs semantic newlines.  Layout ``\\n`` becomes a space — so a cache
     written after formatting still hits when lookup uses the raw extract.
+
+    Idempotent: ``format_original(format_original(x)) == format_original(x)``.
+    ``_classify_newlines`` can keep collapsing remaining breaks after a prior
+    pass changes line lengths; run to fixpoint so cache keys do not drift
+    across save/load cycles (which would inflate pending on re-runs).
     """
     result = unwrap_quotes(text)
     for tok in _paragraph_codes():
@@ -124,7 +129,13 @@ def format_original(text: str) -> str:
     for tok in _strip_layout_codes():
         result = result.replace(tok, "")
     result = result.replace("\r\n", "\n").replace("\r", "\n")
-    return _classify_newlines(result)
+    # Fixpoint: classify until stable (pathological strings may need many passes).
+    for _ in range(32):
+        nxt = _classify_newlines(result)
+        if nxt == result:
+            break
+        result = nxt
+    return result
 
 
 def protect(text: str) -> tuple[str, list[tuple[str, str]]]:

@@ -1,10 +1,10 @@
 {
-  "build_id": "0.4.5+20260806T092908.4546ae7cff68",
+  "build_id": "0.4.5+20260806T213208.4546ae7cff68",
   "package_version": "0.4.5",
-  "timestamp_utc": "2026-08-06T09:29:08Z",
+  "timestamp_utc": "2026-08-06T21:32:08Z",
   "game": "POKEMON_RUBY_AXVJ00",
   "output_rom": "C:\\code\\GBA-Rom-Translator\\roms\\outputs\\POKEMON_RUBY_AXVJ00_translated.gba",
-  "output_rom_sha256": "066134eeb41bdcb8e7aa3d87e26f8978a6a3692cd3efa1f9664c48cdfad0ffa8",
+  "output_rom_sha256": "c6c30b655546b115eb45180f56b46220e16dc83e7e4ba87dbca095a8df09df53",
   "patch_root": "C:/code/GBA-Rom-Translator/configs/POKEMON_RUBY_AXVJ00/hook",
   "patch_tree_sha256": "4546ae7cff682e2aab9ebbfc3f08e7e2e72ad354774285929f40e3ebba58cf47",
   "patch_file_count": 69,
@@ -84,14 +84,14 @@
     "src/meowth/seed_translate.py": "41322de3c8acf047d5a4a8ece311034b150e3f149ca5dad8ec7a41545da5612d",
     "src/meowth/rom_writer.py": "0f838a7fa1f4d951e071c99da740404d7220d22f9c2151db8beeaed38d7da983",
     "src/meowth/font_patch.py": "ea3c0076eb6ad719f480d5c5d7d76a3a3f81c37a2eba4ba625a3d168f7357a64",
-    "src/meowth/core/engine.py": "ec28448ee8cedb0faf1b68ee4a66674b4b8bf235428c7dc48c2b729643af134e",
+    "src/meowth/core/engine.py": "77fc59e9b053de619553398de4557f1b6d3706ef598eeea2b78088a9fa83c1c9",
     "src/meowth/table_patch.py": "5a28f2e6e9e14da10d66016065129270f25ae14e814f2121229a6cb33a5b85d2"
   },
   "inject_stats": {
-    "in_place": 544,
-    "relocated": 647,
+    "in_place": 9928,
+    "relocated": 2150,
     "skipped": 0,
-    "entry_count": 2264,
+    "entry_count": 17287,
     "name_tables": {
       "特性名": {
         "lits_total": 0,
@@ -122,19 +122,27 @@
       "特性名",
       "宝可梦名",
       "招式名",
+      "训练家名",
       "地点名",
       "道具名",
       "道具说明",
       "招式说明",
       "特性说明",
-      "图鉴说明"
+      "图鉴说明",
+      "前期剧情",
+      "中期剧情",
+      "后期剧情",
+      "特殊文本",
+      "训练家对白",
+      "高风险混杂",
+      "UI界面"
     ],
     "geo": {
       "include": "",
       "exclude": "",
       "omit_band": "",
-      "before": 2264,
-      "after": 2264,
+      "before": 17287,
+      "after": 17287,
       "omit_range": null
     }
   },

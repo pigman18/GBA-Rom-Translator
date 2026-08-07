@@ -15,6 +15,74 @@ from .charmap import Charmap
 from .jp_pcs import decode_pcs
 
 
+def _parse_rom_offset(addr) -> int | None:
+    """``0x08XXXXXX`` / int → file offset; invalid → None."""
+    if addr is None or addr == "":
+        return None
+    try:
+        a = int(addr) if isinstance(addr, int) else int(str(addr).strip(), 0)
+    except (TypeError, ValueError):
+        return None
+    if a >= 0x08000000:
+        a -= 0x08000000
+    return a if a >= 0 else None
+
+
+def _slot_index_from_entry(
+    e: dict,
+    *,
+    offset: int,
+    stride: int,
+    count: int,
+    index_bias: int = 0,
+) -> int | None:
+    """Map an inject entry to a table slot — prefer ``address``, then ``table_index``."""
+    if stride <= 0 or count <= 0:
+        return None
+    rom_off = _parse_rom_offset(e.get("address"))
+    if rom_off is not None and rom_off >= offset:
+        delta = rom_off - offset
+        if delta % stride == 0:
+            idx = delta // stride
+            if 0 <= idx < count:
+                return idx
+    ti = e.get("table_index")
+    if ti is None or ti == "":
+        return None
+    try:
+        idx = int(ti) + int(index_bias)
+    except (TypeError, ValueError):
+        return None
+    if 0 <= idx < count:
+        return idx
+    return None
+
+
+def _exact_literal_refs(rom: bytes, table_offset: int) -> list[int]:
+    base_addr = base()
+    return [
+        lit
+        for lit in find_literal_refs(rom, table_offset)
+        if struct.unpack_from("<I", rom, lit)[0] == base_addr + table_offset
+    ]
+
+
+def _resolve_literal_table_base(
+    rom: bytes, offset: int, stride: int
+) -> tuple[int, int]:
+    """Literal pool may point at a NONE pad one slot before extract ``offset``.
+
+    Returns ``(lit_offset, prefix_slots)`` where ``prefix_slots`` is usually 0 or 1.
+    """
+    if _exact_literal_refs(rom, offset):
+        return offset, 0
+    if stride > 0 and offset >= stride:
+        prev = offset - stride
+        if _exact_literal_refs(rom, prev):
+            return prev, 1
+    return offset, 0
+
+
 def _merge_table_entries(
     rom: bytes,
     overlays: list[dict],
@@ -23,8 +91,9 @@ def _merge_table_entries(
     stride: int,
     count: int,
     module: str,
+    index_bias: int = 0,
 ) -> list[dict]:
-    """Start from full JP ROM table, then overlay any translated rows."""
+    """Start from full JP ROM table, then overlay translated rows by address."""
     merged = {
         int(e["table_index"]): dict(e)
         for e in rom_table_entries(
@@ -32,10 +101,10 @@ def _merge_table_entries(
         )
     }
     for e in overlays:
-        if "table_index" not in e:
-            continue
-        idx = int(e["table_index"])
-        if idx not in merged:
+        idx = _slot_index_from_entry(
+            e, offset=offset, stride=stride, count=count, index_bias=index_bias
+        )
+        if idx is None or idx not in merged:
             continue
         slot = merged[idx]
         if e.get("translated"):
@@ -276,19 +345,27 @@ def _process_literal_ref_table(
     if not matched:
         return write_offset, {}
 
+    # Game literals often point at a NONE pad one slot before extract start
+    # (招式名/特性名). Expand from that physical base; overlay by address.
+    lit_offset, prefix = _resolve_literal_table_base(bytes(rom), offset, stride)
+    total = count + prefix
+    if prefix:
+        print(
+            f"  {label}: literal base 0x{lit_offset:X} "
+            f"(extract 0x{offset:X}, +{prefix} pad slot)"
+        )
+
     full = _merge_table_entries(
         bytes(rom), matched,
-        offset=offset, stride=stride, count=count, module=module,
+        offset=lit_offset, stride=stride, count=total, module=module,
+        index_bias=prefix,
     )
     table = build_chs_table(
         full, encode,
-        stride=chs_stride, count=count, table_label=label,
+        stride=chs_stride, count=total, table_label=label,
     )
 
-    lits = [
-        lit for lit in find_literal_refs(bytes(rom), offset)
-        if struct.unpack_from("<I", rom, lit)[0] == base_addr + offset
-    ]
+    lits = _exact_literal_refs(bytes(rom), lit_offset)
 
     safe: list[int] = []
     for lit in lits:
@@ -324,6 +401,8 @@ def _process_literal_ref_table(
         print(f"  {label}: no widen sites among {len(lits)} lits")
     result["lits_total"] = len(lits)
     result["lits_safe"] = len(safe)
+    result["lit_offset"] = lit_offset
+    result["prefix_slots"] = prefix
     return write_offset, result
 
 
@@ -355,14 +434,16 @@ def _process_item_table(
         raise ValueError("table_patch: item struct table config missing")
 
     merged = {int(e["table_index"]): dict(e) for e in _item_rom_name_entries(bytes(rom), item_cfg)}
+    item_offset = int(item_cfg["offset"])
+    entry_size = int(item_cfg["entry_size"])
     for e in entries:
         em = _entry_module(e)
         if module and em and em != module:
             continue
-        if "table_index" not in e:
-            continue
-        idx = int(e["table_index"])
-        if idx not in merged:
+        idx = _slot_index_from_entry(
+            e, offset=item_offset, stride=entry_size, count=count
+        )
+        if idx is None or idx not in merged:
             continue
         if e.get("translated"):
             merged[idx]["translated"] = e["translated"]

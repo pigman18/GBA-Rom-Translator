@@ -10,7 +10,12 @@ import sys
 from pathlib import Path
 from typing import Any
 
-from .config_loader import get_charmap_path, get_game_patch_dir, game_config_dir
+from .config_loader import (
+    get_charmap_path,
+    get_game_patch_dir,
+    game_config_dir,
+    parse_int_addr,
+)
 
 _GAME_BIN_MAX = 0x10000  # 不得超过 PhraseOffsets @ 0x08810000
 _GAME_BIN_VMA = 0x08800000
@@ -52,7 +57,7 @@ def _generate_addrs_asm(cfg: dict[str, Any], output_path: Path, game_id: str = "
     if addrs:
         lines.append("; --- ROM addresses ---")
         for name in sorted(addrs):
-            lines.append(f"{name:<40s} equ 0x{addrs[name]:08X}")
+            lines.append(f"{name:<40s} equ 0x{parse_int_addr(addrs[name]):08X}")
         lines.append("")
     slots = _normalize_font_slots(cfg, game_id=game_id)
     if slots:
@@ -61,15 +66,19 @@ def _generate_addrs_asm(cfg: dict[str, Any], output_path: Path, game_id: str = "
             label = slot.get("label", "Unknown")
             addr = slot.get("addr")
             if addr is not None:
-                lines.append(f"FontChs{label:<35s} equ 0x{int(addr):08X}")
+                lines.append(
+                    f"FontChs{label:<35s} equ 0x{parse_int_addr(addr):08X}"
+                )
         lines.append("")
     if win:
         lines.append("; --- Window struct offsets ---")
         for name in sorted(win):
-            lines.append(f"{name:<40s} equ 0x{win[name]:02X}")
+            lines.append(f"{name:<40s} equ 0x{parse_int_addr(win[name]):02X}")
     if "escape_byte" in cfg:
         lines.append("")
-        lines.append(f"CHS_ESCAPE{'':37s} equ 0x{cfg['escape_byte']:02X}")
+        lines.append(
+            f"CHS_ESCAPE{'':37s} equ 0x{parse_int_addr(cfg['escape_byte']):02X}"
+        )
     else:
         lines.append("")
         lines.append(f"CHS_ESCAPE{'':37s} equ 0xF9")

@@ -87,7 +87,7 @@ works/POKEMON_RUBY_AXVJ00/tiles/
     0x087EE9C8_palette.png # 调色板可视化
 ```
 
-Meowth 流水线 tile 阶段从 `configs/<game_id>/tile/`（PNG + `*_meta.json`）调用 `tiles_patcher import`。
+Meowth 流水线 tile 阶段从 `configs/<game_id>/tiles/`（PNG + `meta/*_meta.json`）调用 `tiles_patcher import`（兼容旧目录名 `tile/`）。在 **build/字库之后** 执行，避免与 `0x09000000` 字库冲突。
 
 ### 导入 (import)
 

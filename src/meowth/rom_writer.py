@@ -5,6 +5,7 @@ from pathlib import Path
 from typing import Optional
 
 from .charmap import Charmap
+from .config_loader import parse_int_addr
 
 
 def _safe_truncate_encoded(encoded: bytes, maxlen: int) -> bytes:
@@ -61,17 +62,17 @@ class RomWriter:
         self.EXPANSION_START = (
             expansion_start
             if expansion_start is not None
-            else int(self._fp.get("expansion_start", 0x01000000))
+            else parse_int_addr(self._fp.get("expansion_start"), 0x01000000)
         )
         self.FONT_BOUNDARY = (
             font_boundary
             if font_boundary is not None
-            else int(self._fp.get("font_boundary", 0x01FD3000))
+            else parse_int_addr(self._fp.get("font_boundary"), 0x01FD3000)
         )
         self.MIN_POINTER_SOURCE = (
             min_pointer_source
             if min_pointer_source is not None
-            else int(self._fp.get("min_pointer_source", 0x0))
+            else parse_int_addr(self._fp.get("min_pointer_source"), 0x0)
         )
         self.write_offset = self.EXPANSION_START  # updated in inject_texts()
         self._line_width_default = line_width_default or 20
@@ -103,7 +104,7 @@ class RomWriter:
             addr = slot.get("addr")
             if addr is None:
                 continue
-            a = int(addr)
+            a = parse_int_addr(addr)
             if a >= self.POINTER_OFFSET:
                 a -= self.POINTER_OFFSET
             size = int(

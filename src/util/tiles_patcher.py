@@ -520,11 +520,11 @@ def detect_lz77(rom: bytes, offset: int) -> str:
     return "none"
 
 
-def find_free_space(rom: bytearray, needed: int, start: int = 0x09000000,
+def find_free_space(rom: bytearray, needed: int, start: int = 0x09200000,
                     fill: int = 0xFF) -> int:
     """
-    在 ROM 中查找空闲空间。默认从扩展区开始。
-    如果 start 超出 ROM 范围，返回 start（调用者负责扩展 ROM）。
+    在 ROM 中查找空闲空间。默认从字库 Sym 之后的扩展区开始（VMA 0x09200000）。
+    如果 start 超出 ROM 范围，返回文件末尾对应 GBA 地址（调用者负责扩展 ROM）。
     返回 GBA 地址，找不到返回 -1。
     """
     start_off = gba_address_to_offset(start) if start >= 0x08000000 else start

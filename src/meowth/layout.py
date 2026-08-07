@@ -175,14 +175,15 @@ def layout_texts(
     from .policy import filter_pointer_sources
     from .config_loader import (
         F9_PHRASE_DEFAULT, F9_EOS, module_write_op, load_game_config,
+        parse_int_addr,
     )
     from .text_wrap import wrap_text
 
     is_armips = bool(fp_cfg.get("expands_rom", False))
     fill_byte = fp_cfg.get("fill_byte", 0x00 if is_armips else 0xFF)
-    expansion_start = int(fp_cfg.get("expansion_start", 0x01000000))
-    font_boundary = int(fp_cfg.get("font_boundary", 0x01FD3000))
-    min_ptr_src = int(fp_cfg.get("min_pointer_source", 0x6000))
+    expansion_start = parse_int_addr(fp_cfg.get("expansion_start"), 0x01000000)
+    font_boundary = parse_int_addr(fp_cfg.get("font_boundary"), 0x01FD3000)
+    min_ptr_src = parse_int_addr(fp_cfg.get("min_pointer_source"), 0x6000)
 
     result = LayoutResult()
 
@@ -202,8 +203,13 @@ def layout_texts(
     # ---- name tables (expanded CHS tables) ----
     expanded_modules: set[str] = set()
     if is_armips:
-        from .table_patch import _load_table_patches, _merge_table_entries
-        from .tables import build_chs_table, find_literal_refs, base
+        from .table_patch import (
+            _load_table_patches,
+            _merge_table_entries,
+            _resolve_literal_table_base,
+            _exact_literal_refs,
+        )
+        from .tables import build_chs_table
 
         game_cfg = {}
         try:
@@ -239,14 +245,18 @@ def layout_texts(
             count = patch.get("count", 0)
             stride = patch.get("stride", 0)
             if chs_stride and count and stride:
+                lit_offset, prefix = _resolve_literal_table_base(
+                    bytes(rom), patch["offset"], stride
+                )
+                total = count + prefix
                 full = _merge_table_entries(
                     bytes(rom), matched,
-                    offset=patch["offset"], stride=stride,
-                    count=count, module=module,
+                    offset=lit_offset, stride=stride,
+                    count=total, module=module, index_bias=prefix,
                 )
                 table_bin = build_chs_table(
                     full, encode_tbl,
-                    stride=chs_stride, count=count, table_label=module,
+                    stride=chs_stride, count=total, table_label=module,
                 )
                 while write_offset % 4:
                     write_offset += 1
@@ -256,11 +266,7 @@ def layout_texts(
                     comment=f"name_table_{module}",
                 ))
                 # Retarget literal pool pointers
-                patch_offset = patch.get("offset", 0)
-                lits = [
-                    lit for lit in find_literal_refs(bytes(rom), patch_offset)
-                    if struct.unpack_from("<I", rom, lit)[0] == base() + patch_offset
-                ]
+                lits = _exact_literal_refs(bytes(rom), lit_offset)
                 new_gba = _gba_ptr(write_offset)
                 for lit in lits:
                     result.ptr_patches.append(PtrPatch(
@@ -659,7 +665,9 @@ def run_layout(
         game_bin = patch_dir / "out" / "game.bin"
 
     # ---- generate asm ----
-    expansion_start = int(fp_cfg.get("expansion_start", 0x01000000))
+    from .config_loader import parse_int_addr
+
+    expansion_start = parse_int_addr(fp_cfg.get("expansion_start"), 0x01000000)
     # VMA = ROM offset + 0x08000000 (GBA ROM mapping)
     expansion_vma = expansion_start + _POINTER_OFFSET
 
@@ -714,7 +722,9 @@ def _font_slots_end_offset(fp_cfg: dict[str, Any]) -> int:
         addr = slot.get("addr")
         if addr is None:
             continue
-        a = int(addr)
+        from .config_loader import parse_int_addr
+
+        a = parse_int_addr(addr)
         if a >= _POINTER_OFFSET:
             a -= _POINTER_OFFSET
         size = int(

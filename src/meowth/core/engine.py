@@ -2,6 +2,7 @@
 
 import json
 import os
+import shutil
 import subprocess
 import sys
 import threading
@@ -1322,29 +1323,37 @@ class TranslationEngine:
             translated_path = self.translate_texts(texts_path, translated_path)
             self.callbacks.on_stage_change("translate", "completed")
 
-            # --- tile stage: patch sprites on a ROM copy (input untouched) ---
-            base_rom = rom_path
+            # --- hook + build, then tile (tiles must not run before fonts) ---
+            output_rom = output_dir / f"{rom_path.stem}_translated.gba"
+            built = self.build_rom(rom_path, translated_path, output_rom)
+
             if self.config.tiles_dir or self._default_tiles_dir(rom_path).is_dir():
                 self.callbacks.on_stage_change("tile", "started")
-                base_rom = self._run_tiles(rom_path, work_dir)
+                built = self._run_tiles(built, work_dir)
+                # Ensure final deliverable path is the tile-patched ROM
+                if built.resolve() != output_rom.resolve():
+                    output_rom.parent.mkdir(parents=True, exist_ok=True)
+                    shutil.copy2(built, output_rom)
+                    built = output_rom
                 self.callbacks.on_stage_change("tile", "completed")
-
-            # --- hook + build stages: emitted inside build_rom ---
-            output_rom = output_dir / f"{rom_path.stem}_translated.gba"
-            return self.build_rom(base_rom, translated_path, output_rom)
+            return built
         except Exception as e:
             self.callbacks.on_error(e)
             raise
 
     def _default_tiles_dir(self, rom_path: Path) -> Path:
-        """Default tiles dir: configs/<game_id>/tile, else tiles_patcher's
-        legacy export dir src/util/works/{romId}/tiles."""
+        """Default tiles dir: configs/<game_id>/tiles (or tile), else util/works."""
         from ..config_loader import game_config_dir
 
         try:
-            cfg_tiles = game_config_dir(self.config.game or rom_path.stem) / "tile"
-            if cfg_tiles.is_dir():
-                return cfg_tiles
+            base = game_config_dir(self.config.game or rom_path.stem)
+            for name in ("tiles", "tile"):
+                cfg_tiles = base / name
+                if cfg_tiles.is_dir() and (
+                    list(cfg_tiles.glob("*_meta.json"))
+                    or list((cfg_tiles / "meta").glob("*_meta.json"))
+                ):
+                    return cfg_tiles
         except Exception:
             pass
         return (
@@ -1353,13 +1362,11 @@ class TranslationEngine:
         )
 
     def _run_tiles(self, rom_path: Path, work_dir: Path) -> Path:
-        """Tiles stage: run tiles_patcher import on the built ROM, in place.
+        """Tiles stage: import PNG edits into an already-built ROM.
 
-        Reads PNG/raw edits from ``config.tiles_dir`` (fallback to tiles_patcher's
-        default works dir) and patches them into ``rom_path`` (the build_rom
-        output), returning the same path. Must run after build_rom — the font
-        patch incbins fonts at 0x09000000, which collides with tiles_patcher's
-        default free-space relocation address.
+        Must run **after** ``build_rom``: fonts occupy ``0x09000000+``, and
+        tiles_patcher relocates oversized LZ to free space starting at
+        ``0x09200000``. Running before font patch would clobber or be clobbered.
         """
         tiles_dir = self.config.tiles_dir or self._default_tiles_dir(rom_path)
         if not tiles_dir.is_dir():
@@ -1371,8 +1378,8 @@ class TranslationEngine:
             self._log("info", f"no *_meta.json in tiles dir, skipping: {meta_dir}")
             return rom_path
 
-        tile_rom = Path(work_dir) / f"{rom_path.stem}_tiles{rom_path.suffix}"
-        tile_rom.parent.mkdir(parents=True, exist_ok=True)
+        tmp_out = Path(work_dir) / f"{Path(rom_path).stem}_tiles{Path(rom_path).suffix}"
+        tmp_out.parent.mkdir(parents=True, exist_ok=True)
         script = (
             Path(__file__).resolve().parent.parent.parent / "util" / "tiles_patcher.py"
         )
@@ -1383,18 +1390,20 @@ class TranslationEngine:
             str(rom_path),
             str(tiles_dir),
             "-o",
-            str(tile_rom),
+            str(tmp_out),
         ]
-        self._log("info", f"tiles: {len(meta_files)} meta(s) -> {tile_rom.name}")
+        self._log(
+            "info",
+            f"tiles: {len(meta_files)} meta(s) from {tiles_dir} -> {tmp_out.name}",
+        )
         r = subprocess.run(args, capture_output=True, text=True, timeout=180)
         if r.returncode != 0:
             raise RuntimeError(
                 f"tiles_patcher import failed:\n{r.stdout}\n{r.stderr}"
             )
-        self._log("info", f"tiles patched: {tile_rom.name}")
-        # tiles_patcher writes to *_tiles.gba; return it as the tile-patched base
-        # for build_rom (input ROM stays untouched).
-        return tile_rom
+        self._log("info", f"tiles patched from {tiles_dir}")
+        shutil.copy2(tmp_out, rom_path)
+        return Path(rom_path)
 
     def extract_texts(
         self,

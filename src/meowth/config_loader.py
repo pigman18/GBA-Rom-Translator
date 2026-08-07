@@ -59,6 +59,34 @@ F9_OP_MIN = 0x01
 F9_OP_MAX = 0x7E
 F9_EOS = 0xFF
 
+
+def parse_int_addr(val: Any, default: int | None = None) -> int:
+    """Parse config address/offset: int or ``0x…`` / bare-hex string.
+
+    Accepts legacy decimal ints so older configs keep working.
+    """
+    if val is None or val == "":
+        if default is not None:
+            return int(default)
+        raise ValueError("address value is empty")
+    if isinstance(val, bool):
+        raise ValueError(f"address must not be bool: {val!r}")
+    if isinstance(val, int):
+        return int(val)
+    s = str(val).strip().lower().replace("_", "")
+    try:
+        if s.startswith("0x"):
+            return int(s, 16)
+        # bare hex (e.g. "080032F8") or decimal string
+        if any(c in "abcdef" for c in s):
+            return int(s, 16)
+        return int(s, 0)
+    except ValueError as exc:
+        if default is not None:
+            return int(default)
+        raise ValueError(f"invalid address: {val!r}") from exc
+
+
 WRITE_TYPE_OP = "op"
 WRITE_TYPE_APPEND = "append"  # alias: type=append / append="0x02"
 

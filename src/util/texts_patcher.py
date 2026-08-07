@@ -199,8 +199,8 @@ def _parse_eos_byte(val: Any) -> int:
 
 
 def _struct_entry_size(read: dict) -> int:
-    """行步长：``entry_size`` 或 ``stride``。"""
-    return int(read.get("entry_size") or read.get("stride") or 0)
+    """行步长：只认 ``entry_size``（不用 stride，避免与 type=stride 混淆）。"""
+    return int(read.get("entry_size") or 0)
 
 
 def _struct_name_window(read: dict, entry_size: int) -> int:
@@ -331,7 +331,7 @@ def extract_stride(rom: bytes, mod: dict, game_code: str) -> list[dict]:
 
 
 def extract_struct(rom: bytes, mod: dict, game_code: str) -> list[dict]:
-    """结构体行表：按行 stride 步进，名称读到 eos（默认 FF）；byte_length=原文实际长。"""
+    """结构体行表：按行 entry_size 步进，名称读到 eos（默认 FF）；byte_length=原文实际长。"""
     mid = mod["id"]
     start = parse_addr(mod.get("start"))
     end = parse_addr(mod.get("end"))

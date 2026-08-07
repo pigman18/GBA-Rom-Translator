@@ -12,7 +12,7 @@
       "end": "0x39dca7",
       "type": "struct",
       "read": {
-        "stride": 40,
+        "entry_size": 40,
         "desc_ptr_offset": 16
       },
       "relocate": true,

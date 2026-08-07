@@ -448,8 +448,8 @@ def tables_from_modules_inject(game_id: str = "") -> dict[str, Any]:
             else:
                 raise ValueError(f"module {mid}: need end or layout.count for ptr_table")
         elif typ == "struct_table":
-            # row size: entry_size or stride; name is eos-terminated (not a 2nd stride)
-            unit = int(layout.get("entry_size") or layout.get("stride") or 0)
+            # row size: entry_size only（不用 read.stride，避免与 type=stride 混淆）
+            unit = int(layout.get("entry_size") or 0)
             if unit:
                 entry["entry_size"] = unit
             # max name window for legacy readers (optional)
@@ -476,7 +476,7 @@ def tables_from_modules_inject(game_id: str = "") -> dict[str, Any]:
                 entry["count"] = int(legacy_count)
             else:
                 raise ValueError(
-                    f"module {mid}: need end+entry_size/stride or layout.count"
+                    f"module {mid}: need end+entry_size or layout.count"
                 )
         else:  # fixed_table
             if "stride" in layout:

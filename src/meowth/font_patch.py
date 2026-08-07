@@ -224,6 +224,7 @@ def apply_font_patch(
     n_hook = write_pointer_redirect_asm(
         work_dir / "translate.build.json",
         build_dir / "gen" / "pointer_redirect.asm",
+        rom_path=build_dir / "baserom.gba",
     )
     if n_hook:
         print(f"[hook] pointer_redirect.asm: {n_hook} type=hook entries")

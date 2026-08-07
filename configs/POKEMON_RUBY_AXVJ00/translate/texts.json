@@ -193,7 +193,6 @@
       "type": "scan",
       "relocate": true,
       "hook": true,
-      "word_count": 3,
       "filters": [
         {
           "type": "require_pointer_filter",

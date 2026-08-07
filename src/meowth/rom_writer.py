@@ -132,16 +132,19 @@ class RomWriter:
         category: str = "",
         original: str = "",
         lz_spans: list | None = None,
+        expand: bool = False,
     ) -> list[int]:
-        """S5 rewrite gate."""
+        """S5 rewrite gate (optionally discover all sites pointing at the body)."""
         from .extract import trusted_lz_spans
-        from .policy import filter_pointer_sources
+        from .policy import expand_pointer_sources, filter_pointer_sources
 
-        spans = lz_spans if lz_spans is not None else trusted_lz_spans(rom)
-        return filter_pointer_sources(
-            rom,
-            pointer_sources,
-            text_address,
+        # 必须复用 inject 缓存的 lz_spans；每条 relocate 重扫 ROM ≈ 0.8s → 进度假死
+        spans = lz_spans
+        if spans is None:
+            spans = getattr(self, "_axvj_lz_spans", None)
+        if spans is None:
+            spans = trusted_lz_spans(rom)
+        kwargs = dict(
             category=category,
             original=original,
             expected_pointer=self._axvj_expected_pointer(text_address),
@@ -149,6 +152,11 @@ class RomWriter:
             min_pointer_source=self.MIN_POINTER_SOURCE,
             text_spans=getattr(self, "_inject_text_spans", None),
         )
+        if expand:
+            return expand_pointer_sources(
+                rom, text_address, pointer_sources, **kwargs
+            )
+        return filter_pointer_sources(rom, pointer_sources, text_address, **kwargs)
 
     def _axvj_text_target_ok(self, rom: bytearray, address: int, entry: dict) -> bool:
         """注入安全门（已被 rejects/allows 取代）。
@@ -193,8 +201,13 @@ class RomWriter:
         self, rom: bytearray, encoded: bytes, pointer_sources: list,
         *, expected_target: int | None = None, category: str = "",
         original: str = "", lz_spans: list | None = None,
+        expand_ptrs: bool = False,
     ) -> None:
-        """Write text to expansion area and update pointers (raises on failure)."""
+        """Write text to expansion area and update pointers (raises on failure).
+
+        ``expand_ptrs``：全 ROM 发现共字串指针（仅 hook/特例需要）。默认关闭——
+        对每条 relocate 做一次 ``rom.find`` 会把 Inject 拖成近似卡死。
+        """
         encoded = self._axvj_pad_relocated(encoded)
         if self.write_offset + len(encoded) >= self.FONT_BOUNDARY:
             raise RuntimeError(f"Approaching font boundary at 0x{self.write_offset:X}")
@@ -202,7 +215,8 @@ class RomWriter:
         if need > len(rom):
             rom.extend(b"\x00" * (need - len(rom) + 0x1000))
 
-        if self._is_armips and expected_target is not None:
+        ptr_addrs: list[int] | None = None
+        if expected_target is not None:
             ptr_addrs = self._filter_axvj_pointer_sources(
                 rom,
                 pointer_sources,
@@ -210,12 +224,15 @@ class RomWriter:
                 category=category,
                 original=original,
                 lz_spans=lz_spans,
+                expand=expand_ptrs,
             )
-            if not ptr_addrs:
+            if not ptr_addrs and self._is_armips:
                 raise RuntimeError(
                     f"no verified AXVJ pointer sources for 0x{expected_target:X}: "
                     f"{pointer_sources}"
                 )
+
+        if self._is_armips and expected_target is not None and ptr_addrs is not None:
             rom[self.write_offset : self.write_offset + len(encoded)] = encoded
             new_pointer = self.POINTER_OFFSET + self.write_offset
             for ptr_addr in ptr_addrs:
@@ -226,13 +243,21 @@ class RomWriter:
         rom[self.write_offset : self.write_offset + len(encoded)] = encoded
         new_pointer = self.POINTER_OFFSET + self.write_offset
         wrote_ptr = False
-        for ptr_src in pointer_sources:
-            ptr_addr = self._to_rom_offset(int(str(ptr_src).replace("0x", ""), 16))
-            if ptr_addr < self.MIN_POINTER_SOURCE:
-                continue
-            if ptr_addr + 4 <= len(rom):
-                rom[ptr_addr : ptr_addr + 4] = new_pointer.to_bytes(4, "little")
-                wrote_ptr = True
+        if ptr_addrs is not None:
+            for ptr_addr in ptr_addrs:
+                if ptr_addr < self.MIN_POINTER_SOURCE:
+                    continue
+                if ptr_addr + 4 <= len(rom):
+                    rom[ptr_addr : ptr_addr + 4] = new_pointer.to_bytes(4, "little")
+                    wrote_ptr = True
+        else:
+            for ptr_src in pointer_sources:
+                ptr_addr = self._to_rom_offset(int(str(ptr_src).replace("0x", ""), 16))
+                if ptr_addr < self.MIN_POINTER_SOURCE:
+                    continue
+                if ptr_addr + 4 <= len(rom):
+                    rom[ptr_addr : ptr_addr + 4] = new_pointer.to_bytes(4, "little")
+                    wrote_ptr = True
         if not wrote_ptr:
             raise RuntimeError(f"no valid pointer sources updated: {pointer_sources}")
         self.write_offset += len(encoded)
@@ -519,9 +544,15 @@ class RomWriter:
             )
             if ptrs:
                 try:
-                    # expected_target=None → 走宽松指针改写（弱化 filter）
+                    # 不传 expected_target：走宽松改指针（快）。共字串全量扩展只在
+                    # type=hook → pointer_redirect（条目极少）里做。
                     self._write_relocated(
-                        rom, target, ptrs, category=category, original=original
+                        rom,
+                        target,
+                        ptrs,
+                        category=category,
+                        original=original,
+                        lz_spans=getattr(self, "_axvj_lz_spans", None),
                     )
                     stats["relocated"] += 1
                     return

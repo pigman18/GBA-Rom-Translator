@@ -3,6 +3,11 @@
 Layout (VMA):
   .org HOOK_STRING_POOL   — F9/PCS byte streams
   .org <pointer_slot>     — .word <label>  (rewrite pointer sources)
+
+Shared UI literals often have many menu-table consumers while extract only
+registers one pointer (e.g. nature-table sentinel for ``やめる``). When a
+baserom is provided, pointer sites are expanded to every LE word that still
+points at the entry body, then S5-filtered.
 """
 from __future__ import annotations
 
@@ -70,10 +75,34 @@ def collect_hook_entries(entries: Iterable[dict]) -> list[dict]:
     return out
 
 
+def _expand_hook_pointer_sources(
+    rom: bytes | bytearray,
+    entry: dict,
+) -> list[int]:
+    """Listed + discovered pointer file offsets for one hook body."""
+    from .policy import expand_pointer_sources
+
+    addr = entry.get("address")
+    if addr is None:
+        return [
+            _rom_offset(_parse_addr(p))
+            for p in (entry.get("pointer_sources") or [])
+        ]
+    return expand_pointer_sources(
+        rom,
+        _parse_addr(addr),
+        entry.get("pointer_sources") or [],
+        category=str(entry.get("module") or entry.get("category") or ""),
+        original=str(entry.get("original") or ""),
+        min_pointer_source=MIN_POINTER_SOURCE,
+    )
+
+
 def render_pointer_redirect_asm(
     hook_entries: list[dict],
     *,
     pool_org: int = HOOK_STRING_POOL,
+    rom: bytes | bytearray | None = None,
 ) -> str:
     """Return asm text. Empty stub when no hook entries."""
     lines: list[str] = [
@@ -90,23 +119,34 @@ def render_pointer_redirect_asm(
     lines.append(".align 4")
     lines.append("")
 
-    labels: list[tuple[str, dict]] = []
+    labels: list[tuple[str, dict, list[int]]] = []
     for i, e in enumerate(hook_entries):
         label = f"hook_str_{i:04d}"
         eid = e.get("id") or ""
         mid = e.get("module") or ""
-        lines.append(f"; id={eid} module={mid}")
+        if rom is not None:
+            ptr_offs = _expand_hook_pointer_sources(rom, e)
+        else:
+            ptr_offs = []
+            for p in e.get("pointer_sources") or []:
+                off = _rom_offset(_parse_addr(p))
+                if off >= MIN_POINTER_SOURCE:
+                    ptr_offs.append(off)
+        n_listed = len(e.get("pointer_sources") or [])
+        extra = f" ptrs={len(ptr_offs)}"
+        if rom is not None and len(ptr_offs) != n_listed:
+            extra += f" (listed {n_listed}, expanded)"
+        lines.append(f"; id={eid} module={mid}{extra}")
         lines.append(f"{label}:")
         lines.extend(_byte_lines(e["_blob"]))
         lines.append("")
-        labels.append((label, e))
+        labels.append((label, e, ptr_offs))
 
     lines.append("; --- pointer redirects ---")
     lines.append("")
-    for label, e in labels:
+    for label, e, ptr_offs in labels:
         wrote = False
-        for p in e.get("pointer_sources") or []:
-            off = _rom_offset(_parse_addr(p))
+        for off in ptr_offs:
             if off < MIN_POINTER_SOURCE:
                 continue
             gba = _gba_addr(off)
@@ -126,13 +166,20 @@ def write_pointer_redirect_asm(
     out_path: Path,
     *,
     pool_org: int = HOOK_STRING_POOL,
+    rom: bytes | bytearray | None = None,
+    rom_path: Path | None = None,
 ) -> int:
     """Write asm from translate.build.json. Returns hook entry count."""
     entries: list[dict] = []
     if build_json_path and build_json_path.is_file():
         data = json.loads(build_json_path.read_text(encoding="utf-8"))
         entries = collect_hook_entries(data.get("entries") or [])
-    text = render_pointer_redirect_asm(entries, pool_org=pool_org)
+    rom_bytes = rom
+    if rom_bytes is None and rom_path is not None and Path(rom_path).is_file():
+        rom_bytes = Path(rom_path).read_bytes()
+    text = render_pointer_redirect_asm(
+        entries, pool_org=pool_org, rom=rom_bytes
+    )
     out_path.parent.mkdir(parents=True, exist_ok=True)
     out_path.write_text(text, encoding="utf-8", newline="\n")
     return len(entries)

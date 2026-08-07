@@ -3610,8 +3610,6 @@ texts:
       type: scan
       relocate: true
       hook: true
-      # 短 UI：一行最多汉字数
-      word_count: 3
       filters:
         - type: require_pointer_filter
           value: true

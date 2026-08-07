@@ -940,6 +940,70 @@ def entry_has_registry_ptr(entry: dict) -> bool:
     return False
 
 
+def discover_pointer_sources(
+    rom: bytes | bytearray,
+    text_address: int,
+) -> list[str]:
+    """S5 helper: every LE site whose word is the GBA pointer to ``text_address``.
+
+    Shared UI literals (e.g. ``やめる``) often have dozens of menu-table consumers;
+    extract may only register one (table sentinel). Discovery is class-based:
+    same body → all current references, then ``filter_pointer_sources``.
+    """
+    text_off = _file(text_address)
+    expected = text_off + BASE()
+    pat = struct.pack("<I", expected)
+    out: list[str] = []
+    start = 0
+    while True:
+        i = rom.find(pat, start)
+        if i < 0:
+            break
+        out.append(f"0x{i + BASE():08X}")
+        start = i + 1
+    return out
+
+
+def expand_pointer_sources(
+    rom: bytes | bytearray,
+    text_address: int,
+    pointer_sources: Iterable | None = None,
+    *,
+    category: str = "",
+    original: str = "",
+    expected_pointer: int | None = None,
+    lz_spans: list[tuple[int, int]] | None = None,
+    min_pointer_source: int = 0x6000,
+    text_spans: list[tuple[int, int]] | None = None,
+) -> list[int]:
+    """Union listed + discovered pointer sites, then apply S5 filter."""
+    text_off = _file(text_address)
+    if expected_pointer is None:
+        expected_pointer = text_off + BASE()
+    merged: list[Any] = []
+    seen: set[int] = set()
+    for ptr_src in list(pointer_sources or []) + discover_pointer_sources(rom, text_off):
+        try:
+            ptr_addr = _file(int(str(ptr_src).replace("0x", ""), 16))
+        except ValueError:
+            continue
+        if ptr_addr in seen:
+            continue
+        seen.add(ptr_addr)
+        merged.append(ptr_src)
+    return filter_pointer_sources(
+        rom,
+        merged,
+        text_off,
+        category=category,
+        original=original,
+        expected_pointer=expected_pointer,
+        lz_spans=lz_spans,
+        min_pointer_source=min_pointer_source,
+        text_spans=text_spans,
+    )
+
+
 def filter_pointer_sources(
     rom: bytes | bytearray,
     pointer_sources: Iterable,

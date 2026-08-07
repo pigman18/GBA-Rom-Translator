@@ -16,18 +16,18 @@
 ## 标准命令（模块清单以本文件为准）
 
 默认用 **`--seed-only`**（词库 + 种子 + work 缓存，不调 LLM）。  
-默认**不勾**（`modules.json` 里已 `default: false`）：`姓名输入`、`默认名字`、`赛事娱乐`、`高风险混杂`、`未归类`。  
-**默认包含 `物种名`**（已写入下方 `--modules`）；其余跳过项不要擅自加回。
+默认**不勾** `高风险混杂`（`modules.json` / texts 里 `default: false`）。  
+**默认包含 `宝可梦名`（物种）与 `UI界面`**（菜单短标含「关闭背包」「取消」等）；其余跳过项不要擅自加回。
 
 ```bat
 cd /d C:\code\GBA-Rom-Translator
 set PYTHONPATH=%cd%\src
-C:\Python314\python.exe -m meowth full roms/origin/POKEMON_RUBY_AXVJ00.gba -o roms/outputs --work-dir work --source ja --target zh-Hans --seed-only --modules 物种名,属性名,性格名,特性名,招式名,训练家类名,地点名,道具名,道具说明,招式说明,特性说明,图鉴条目,开场家园,早期城镇,中期城镇,后期与联盟,岛屿或通关后,道路与洞窟,宝可梦中心,商店,电脑与仓库,缆线与通信,标准脚本串,标题与主菜单,存档与电源,设置选项,背包界面,状态界面,队伍底栏,队伍选项,开始菜单,战斗菜单,战斗提示,战斗报文,对战设施,登场与胜负白,训练家名,图鉴界面
+C:\Python314\python.exe -m meowth full roms/origin/POKEMON_RUBY_AXVJ00.gba -o roms/outputs --work-dir work --source ja --target zh-Hans --seed-only --modules 属性名,性格名,特性名,宝可梦名,招式名,训练家名,地点名,道具名,道具说明,招式说明,特性说明,图鉴说明,UI界面,前期剧情,中期剧情,后期剧情,特殊文本,训练家对白
 ```
 
 - 输入 ROM：`roms/origin/POKEMON_RUBY_AXVJ00.gba`
 - 需要 LLM 补译时再临时加 `--provider` / `--api-key-env`（**禁止**把 API key 写入仓库文档）。
-- 模块名 `道路与洞窟` 中间无空格（勿写成 `道路与 洞窟`）。
+- 默认**不勾** `高风险混杂`（及姓名输入类，若另有独立模块）。
 - 输出：`roms/outputs/POKEMON_RUBY_AXVJ00_translated.gba`（及 `.build.json`）。
 
 ## 与「禁止代打」的关系

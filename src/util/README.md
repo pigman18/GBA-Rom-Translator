@@ -228,3 +228,85 @@ python gdb_patcher.py find 0xF909F6A4 --rom path\to\zh.gba \
 | `find-live` | 坏值 | RAM 命中 |
 
 **重要：** 若 `PC≈0x00000004` 且 `r1/LR≈F909F6A5/A6`，说明已经崩过，再 `goto` 没有排查价值。
+
+---
+
+# texts_patcher.py
+
+按 `src/util/configs/<game_id>.yaml` 的模块地址带导出 / 搜索 PCS 文本；对明显坏地址（LLM 404 等）从区间中挖洞剔除。
+
+在仓库根目录运行（或把 `src/util` 加入 `PYTHONPATH`）。
+
+## 导出 (export)
+
+```bash
+python src/util/texts_patcher.py export <rom.gba> [--config yaml] [--module 模块名] [-o texts.json]
+```
+
+默认按 yaml 全部模块扫 PCS，写出 `configs/<game_id>/translate/texts.json`。
+
+## 搜索 (scan)
+
+```bash
+python src/util/texts_patcher.py scan <rom.gba> <关键字> [--module 模块名] [--start ADDR] [--end ADDR]
+```
+
+在区间内按解码后原文子串命中，打印地址与句子。
+
+## 挖洞预览 / 执行 (remove-preview / remove)
+
+对坏地址：落在某模块带 `[A,B]` 内则切成 `[A,X-1]` + `[X+1,B]`（空段丢弃）。地址可为 VMA（`0x08……`）或文件偏移。
+
+地址来源（至少一种）：
+
+| 参数 | 说明 |
+|------|------|
+| `--addrs` | 逗号分隔地址；PowerShell 请加引号 |
+| `--from-translated [PATH]` | 读 `texts_translated.json` 中 `status=404` 的 `original`，经同游戏 `texts.json` 反查 `address`；省略 PATH 则用 `configs/<game_id>/translate/texts_translated.json` |
+
+二者可并用（去重并集）。**不**改缓存格式；缓存本身无 address 字段。
+
+| 子命令 | 写盘 | 行为 |
+|--------|------|------|
+| `remove-preview` | 否 | 打印将改哪些模块、区间前后对比、ROM 该起点原文、`texts.json` 将删条目 |
+| `remove` | 是 | 同上算法写 yaml；同步 `texts.json` 的 modules 区间，并删除等于坏点或已出带的 entries |
+
+**不**自动全量 `export`；需要整库重扫时再跑 `export`。
+
+```bash
+# 预览（不写盘）— PowerShell 请给 --addrs 加引号，否则 0x… 会被当成数字吃掉
+python src/util/texts_patcher.py remove-preview roms/origin/POKEMON_RUBY_AXVJ00.gba \
+  --addrs "0x08376A3C,0x086F0B14"
+
+# 按翻译缓存 404 反查地址后预览 / 执行
+python src/util/texts_patcher.py remove-preview roms/origin/POKEMON_RUBY_AXVJ00.gba \
+  --from-translated
+python src/util/texts_patcher.py remove roms/origin/POKEMON_RUBY_AXVJ00.gba \
+  --from-translated
+
+# 指定缓存路径，并可与 --addrs 并用
+python src/util/texts_patcher.py remove-preview roms/origin/POKEMON_RUBY_AXVJ00.gba \
+  --from-translated configs/POKEMON_RUBY_AXVJ00/translate/texts_translated.json \
+  --addrs "0x08376A3C"
+
+# 执行：改 yaml + 同步 texts.json
+python src/util/texts_patcher.py remove roms/origin/POKEMON_RUBY_AXVJ00.gba \
+  --addrs "0x08376A3C,0x086F0B14"
+
+# 可选指定配置
+python src/util/texts_patcher.py remove-preview roms/origin/POKEMON_RUBY_AXVJ00.gba \
+  --addrs "0x08376A3C" \
+  --config src/util/configs/POKEMON_RUBY_AXVJ00.yaml
+```
+
+| 参数 | 说明 |
+|------|------|
+| `rom` | 原盘 ROM（只读解码原文用） |
+| `--addrs` | 逗号分隔；VMA 或文件偏移（可与 `--from-translated` 并用） |
+| `--from-translated` | 可选 PATH；从 404 原文反查地址 |
+| `--config` | yaml；默认按 ROM stem / game_code 解析 |
+
+**示例命中（Ruby AXVJ）：**
+
+- `0x08376A3C` → 文件 `0x376A3C` → 模块 **UI界面**
+- `0x086F0B14` → 文件 `0x6F0B14` → 模块 **高风险混杂**

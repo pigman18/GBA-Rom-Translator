@@ -10,6 +10,10 @@ texts_patcher.py
   python texts_patcher.py export <rom.gba>
   python texts_patcher.py export <rom.gba> --module 物种名
   python texts_patcher.py scan <rom.gba> キーワード [--start 0x..] [--end 0x..]
+  python texts_patcher.py remove-preview <rom.gba> --addrs 0x08376A3C,0x086F0B14
+  python texts_patcher.py remove <rom.gba> --addrs 0x08376A3C,0x086F0B14
+  python texts_patcher.py remove-preview <rom.gba> --from-translated
+  python texts_patcher.py remove <rom.gba> --from-translated [texts_translated.json]
 """
 
 from __future__ import annotations
@@ -55,12 +59,20 @@ if str(_SRC) not in sys.path:
 
 
 def parse_addr(v: Any) -> int:
+    """``0x…`` 十六进制；无前缀时含 a–f 按十六进制，否则十进制。
+
+    无前缀十进制兼容 PowerShell 把 ``0x08376A3C`` 吃成 ``137849404``。
+    """
     if isinstance(v, int):
         return v
     s = str(v).strip().lower().replace("_", "")
+    if not s:
+        return 0
     if s.startswith("0x"):
         return int(s, 16)
-    return int(s, 16) if s else 0
+    if any(c in "abcdef" for c in s):
+        return int(s, 16)
+    return int(s, 10)
 
 
 def parse_int(v: Any) -> int:
@@ -175,6 +187,11 @@ def default_output_path(game_id: str, module: str | None = None) -> Path:
     if module:
         return base / f"texts_{module}.json"
     return base / "texts.json"
+
+
+def default_translated_path(game_id: str) -> Path:
+    """``configs/<game_id>/translate/texts_translated.json``。"""
+    return REPO_ROOT / "configs" / game_id / "translate" / "texts_translated.json"
 
 
 def _modules_as_dict(modules_list: list[dict]) -> dict[str, dict]:
@@ -731,8 +748,601 @@ def scan_keyword(
     return hits
 
 
+# ---------------------------------------------------------------------------
+# remove-preview / remove：按坏地址切开模块区间
+# ---------------------------------------------------------------------------
+
+
+def normalize_file_off(addr: int | str) -> int:
+    """VMA（0x08……）或文件偏移 → 文件偏移。"""
+    a = parse_addr(addr)
+    if a >= BASE:
+        a -= BASE
+    return a
+
+
+def _fmt_file_off(n: int) -> str:
+    return f"0x{n:X}"
+
+
+def split_band(lo: int, hi: int, cuts: list[int]) -> list[tuple[int, int]]:
+    """``[lo, hi]`` 挖掉 cuts 中落在带内的点 → 若干闭区间。"""
+    if hi < lo:
+        return []
+    xs = sorted({c for c in cuts if lo <= c <= hi})
+    if not xs:
+        return [(lo, hi)]
+    out: list[tuple[int, int]] = []
+    cur = lo
+    for c in xs:
+        if c > cur:
+            out.append((cur, c - 1))
+        cur = c + 1
+    if cur <= hi:
+        out.append((cur, hi))
+    return [(a, b) for a, b in out if b >= a]
+
+
+def parse_addrs_arg(s: str | None, *, allow_empty: bool = False) -> list[int]:
+    """``0xA,0xB`` → 文件偏移列表（去重保序）。"""
+    seen: set[int] = set()
+    out: list[int] = []
+    for part in (s or "").split(","):
+        part = part.strip()
+        if not part:
+            continue
+        fo = normalize_file_off(part)
+        if fo in seen:
+            continue
+        seen.add(fo)
+        out.append(fo)
+    if not out and not allow_empty:
+        raise SystemExit("--addrs 不能为空")
+    return out
+
+
+def load_404_originals(path: Path) -> set[str]:
+    """读 texts_translated.json，收集 status==404 的 original。"""
+    if not path.is_file():
+        raise SystemExit(f"texts_translated.json 不存在: {path}")
+    try:
+        raw = json.loads(path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        raise SystemExit(f"无法读取 texts_translated.json: {path}: {e}") from e
+    if not isinstance(raw, list):
+        raise SystemExit(
+            f"texts_translated.json 应为 status 数组: {path}"
+        )
+    out: set[str] = set()
+    for item in raw:
+        if not isinstance(item, dict):
+            continue
+        try:
+            st = int(item.get("status") or 0)
+        except (TypeError, ValueError):
+            continue
+        if st != 404:
+            continue
+        orig = item.get("original")
+        if isinstance(orig, str) and orig:
+            out.add(orig)
+    return out
+
+
+def addrs_from_translated(
+    translated_path: Path, texts_path: Path
+) -> tuple[list[int], dict[str, Any]]:
+    """404 originals → texts.json entries 反查文件偏移。
+
+    返回 ``(addrs, stats)``；stats 含 n_404 / n_addrs / n_unmatched / unmatched_sample。
+    """
+    bad = load_404_originals(translated_path)
+    if not texts_path.is_file():
+        raise SystemExit(f"texts.json 不存在（无法反查地址）: {texts_path}")
+    try:
+        doc = json.loads(texts_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        raise SystemExit(f"无法读取 texts.json: {texts_path}: {e}") from e
+
+    seen: set[int] = set()
+    addrs: list[int] = []
+    matched_origs: set[str] = set()
+    for e in doc.get("entries") or []:
+        if not isinstance(e, dict):
+            continue
+        orig = e.get("original")
+        if not isinstance(orig, str) or orig not in bad:
+            continue
+        addr = e.get("address") or ""
+        if not addr:
+            continue
+        fo = normalize_file_off(addr)
+        matched_origs.add(orig)
+        if fo in seen:
+            continue
+        seen.add(fo)
+        addrs.append(fo)
+
+    unmatched = sorted(bad - matched_origs)
+    stats: dict[str, Any] = {
+        "n_404": len(bad),
+        "n_addrs": len(addrs),
+        "n_unmatched": len(unmatched),
+        "unmatched_sample": unmatched[:5],
+        "translated_path": str(translated_path),
+        "texts_path": str(texts_path),
+    }
+    return addrs, stats
+
+
+def resolve_remove_cuts(
+    addrs_arg: str | None,
+    from_translated: str | None,
+    game_id: str,
+) -> tuple[list[int], dict[str, Any] | None]:
+    """合并 ``--addrs`` 与 ``--from-translated`` → 文件偏移列表。
+
+    ``from_translated``: ``None`` 未启用；``""`` 用默认路径；否则为显式路径。
+    返回 ``(cuts, translated_stats|None)``。
+    """
+    cuts: list[int] = []
+    seen: set[int] = set()
+    if addrs_arg is not None and str(addrs_arg).strip():
+        for fo in parse_addrs_arg(addrs_arg, allow_empty=True):
+            if fo not in seen:
+                seen.add(fo)
+                cuts.append(fo)
+
+    translated_stats: dict[str, Any] | None = None
+    if from_translated is not None:
+        tpath = (
+            default_translated_path(game_id)
+            if str(from_translated).strip() == ""
+            else Path(from_translated)
+        )
+        texts_path = default_output_path(game_id)
+        extra, translated_stats = addrs_from_translated(tpath, texts_path)
+        for fo in extra:
+            if fo not in seen:
+                seen.add(fo)
+                cuts.append(fo)
+
+    return cuts, translated_stats
+
+
+def plan_module_removes(
+    modules: list[dict], cuts: list[int]
+) -> list[dict[str, Any]]:
+    """对每个受影响模块生成切开计划。
+
+    每项::
+      {
+        "id": str,
+        "hits": [file_off, ...],
+        "band_diffs": [{"old": (lo,hi), "new": [(lo,hi), ...]}, ...],
+        "new_ranges": [{"start": "0x..", "end": "0x.."}, ...],
+        "new_start": "0x..",
+        "new_end": "0x..",
+        "had_ranges": bool,
+      }
+    """
+    plans: list[dict[str, Any]] = []
+    for mod in modules:
+        mid = mod.get("id") or ""
+        bands = _module_bands(mod)
+        if not bands:
+            continue
+        had_ranges = bool(mod.get("ranges"))
+        band_diffs: list[dict[str, Any]] = []
+        new_bands: list[tuple[int, int]] = []
+        hits: list[int] = []
+        changed = False
+        for lo_s, hi_s in bands:
+            lo, hi = parse_addr(lo_s), parse_addr(hi_s)
+            # yaml 带一般为文件偏移；若误写成 VMA 则归一
+            if lo >= BASE:
+                lo -= BASE
+            if hi >= BASE:
+                hi -= BASE
+            in_band = [c for c in cuts if lo <= c <= hi]
+            pieces = split_band(lo, hi, cuts)
+            if in_band:
+                hits.extend(in_band)
+                changed = True
+                band_diffs.append({"old": (lo, hi), "new": pieces})
+            new_bands.extend(pieces)
+            if pieces != [(lo, hi)]:
+                changed = True
+        if not changed:
+            continue
+        # 合并后去重排序
+        new_bands = sorted(set(new_bands), key=lambda t: t[0])
+        if not new_bands:
+            raise SystemExit(
+                f"模块 {mid!r} 剔除后无剩余区间（cuts={[_fmt_file_off(c) for c in hits]}）"
+            )
+        new_ranges = [
+            {"start": _fmt_file_off(a), "end": _fmt_file_off(b)}
+            for a, b in new_bands
+        ]
+        plans.append(
+            {
+                "id": mid,
+                "hits": sorted(set(hits)),
+                "band_diffs": band_diffs,
+                "new_ranges": new_ranges,
+                "new_start": _fmt_file_off(min(a for a, _ in new_bands)),
+                "new_end": _fmt_file_off(max(b for _, b in new_bands)),
+                "had_ranges": had_ranges or len(new_bands) > 1,
+            }
+        )
+    return plans
+
+
+def preview_lost_rom_strings(
+    rom: bytes, cuts: list[int]
+) -> list[dict[str, Any]]:
+    """坏地址起点的 PCS 解码（remove 后不再落在带内）。"""
+    from meowth.extract import read_pcs
+    from meowth.jp_pcs import decode_pcs
+
+    rows: list[dict[str, Any]] = []
+    for fo in cuts:
+        if fo < 0 or fo >= len(rom):
+            rows.append(
+                {
+                    "address": f"0x{BASE + fo:08X}",
+                    "file_off": _fmt_file_off(fo),
+                    "ok": False,
+                    "reason": "地址超出 ROM",
+                }
+            )
+            continue
+        raw = read_pcs(rom, fo, MAX_PCS)
+        if raw is None:
+            rows.append(
+                {
+                    "address": f"0x{BASE + fo:08X}",
+                    "file_off": _fmt_file_off(fo),
+                    "ok": False,
+                    "reason": "非 PCS 起点 / 解码失败",
+                }
+            )
+            continue
+        text = decode_pcs(raw)
+        rows.append(
+            {
+                "address": f"0x{BASE + fo:08X}",
+                "file_off": _fmt_file_off(fo),
+                "ok": True,
+                "byte_length": len(raw),
+                "original": text,
+                "original_hex": raw.hex(" "),
+            }
+        )
+    return rows
+
+
+def preview_texts_json_hits(
+    texts_path: Path, cuts: list[int]
+) -> list[dict[str, Any]]:
+    """texts.json 中 address 恰好等于剔除点的条目。"""
+    if not texts_path.is_file():
+        return []
+    try:
+        doc = json.loads(texts_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return []
+    cut_set = set(cuts)
+    hits: list[dict[str, Any]] = []
+    for e in doc.get("entries") or []:
+        addr = e.get("address") or ""
+        if not addr:
+            continue
+        fo = normalize_file_off(addr)
+        if fo not in cut_set:
+            continue
+        hits.append(
+            {
+                "id": e.get("id") or "",
+                "module": e.get("module") or "",
+                "address": addr,
+                "original": (e.get("original") or "")[:80],
+            }
+        )
+    return hits
+
+
+def _print_remove_plan(
+    plans: list[dict[str, Any]],
+    rom_lost: list[dict[str, Any]],
+    json_hits: list[dict[str, Any]],
+) -> None:
+    if not plans:
+        print("[i] 无模块区间命中这些地址，无需修改")
+    else:
+        print(f"[i] 将修改 {len(plans)} 个模块：")
+        for p in plans:
+            hits = p["hits"]
+            if len(hits) <= 12:
+                hits_s = [_fmt_file_off(h) for h in hits]
+            else:
+                hits_s = [_fmt_file_off(h) for h in hits[:8]] + [
+                    f"…(+{len(hits) - 8})"
+                ]
+            print(f"\n## 模块 {p['id']}  hits={hits_s}")
+            for d in p["band_diffs"]:
+                lo, hi = d["old"]
+                news = d["new"]
+                new_s = ", ".join(
+                    f"[{_fmt_file_off(a)}, {_fmt_file_off(b)}]" for a, b in news
+                ) or "(空)"
+                print(
+                    f"  {_fmt_file_off(lo)}–{_fmt_file_off(hi)}  →  {new_s}"
+                )
+            print(
+                f"  新 start/end = {p['new_start']} … {p['new_end']}  "
+                f"(ranges×{len(p['new_ranges'])})"
+            )
+
+    print("\n## ROM 将少掉的内容（坏地址起点）")
+    for r in rom_lost[:50]:
+        if r.get("ok"):
+            orig = (r.get("original") or "").replace("\n", "\\n")
+            if len(orig) > 100:
+                orig = orig[:100] + "…"
+            print(
+                f"  {r['address']}  len={r.get('byte_length')}  {orig!r}"
+            )
+        else:
+            print(f"  {r['address']}  [{r.get('reason')}]")
+    if len(rom_lost) > 50:
+        print(f"  … 另有 {len(rom_lost) - 50} 条")
+
+    print(f"\n## texts.json 将删除的条目：{len(json_hits)}")
+    for h in json_hits[:50]:
+        print(
+            f"  [{h.get('module')}] {h.get('address')}  "
+            f"{(h.get('original') or '')!r}"
+        )
+    if len(json_hits) > 50:
+        print(f"  … 另有 {len(json_hits) - 50} 条")
+
+
+def apply_removes_to_yaml(
+    cfg: dict, plans: list[dict[str, Any]]
+) -> dict:
+    """按计划改写 cfg['texts']['modules']（原地），返回 cfg。"""
+    by_id = {p["id"]: p for p in plans}
+    mods = cfg["texts"]["modules"]
+    for mod in mods:
+        mid = mod.get("id") or ""
+        plan = by_id.get(mid)
+        if not plan:
+            continue
+        mod["start"] = plan["new_start"]
+        mod["end"] = plan["new_end"]
+        if plan["had_ranges"] or len(plan["new_ranges"]) > 1:
+            mod["ranges"] = list(plan["new_ranges"])
+        elif "ranges" in mod and len(plan["new_ranges"]) == 1:
+            # 单段：可只保留 start/end，去掉 ranges 以免冗余
+            mod.pop("ranges", None)
+        elif len(plan["new_ranges"]) == 1:
+            mod.pop("ranges", None)
+    return cfg
+
+
+def save_yaml_config(path: Path, cfg: dict) -> None:
+    try:
+        import yaml
+    except ImportError as e:
+        raise SystemExit("需要 PyYAML：pip install pyyaml") from e
+
+    class _Dumper(yaml.SafeDumper):
+        pass
+
+    def _str_representer(dumper, data):
+        if isinstance(data, str) and data.startswith("0x"):
+            return dumper.represent_scalar("tag:yaml.org,2002:str", data)
+        return dumper.represent_str(data)
+
+    _Dumper.add_representer(str, _str_representer)
+    text = yaml.dump(
+        cfg,
+        Dumper=_Dumper,
+        allow_unicode=True,
+        sort_keys=False,
+        default_flow_style=False,
+        width=120,
+    )
+    path.write_text(text, encoding="utf-8")
+
+
+def _band_covers(bands: list[tuple[int, int]], fo: int) -> bool:
+    return any(lo <= fo <= hi for lo, hi in bands)
+
+
+def sync_texts_json(
+    texts_path: Path,
+    plans: list[dict[str, Any]],
+    cuts: list[int],
+) -> tuple[int, int]:
+    """同步 modules 区间；删除坏点 / 已出带条目。返回 (删条目数, 改模块数)。"""
+    if not texts_path.is_file():
+        return 0, 0
+    doc = json.loads(texts_path.read_text(encoding="utf-8"))
+    mods_obj = doc.get("modules")
+    if not isinstance(mods_obj, dict):
+        mods_obj = {}
+        doc["modules"] = mods_obj
+
+    cut_set = set(cuts)
+    plan_by_id = {p["id"]: p for p in plans}
+    # 更新模块元数据，并建剩余带索引
+    remain_bands: dict[str, list[tuple[int, int]]] = {}
+    n_mod = 0
+    for mid, plan in plan_by_id.items():
+        meta = dict(mods_obj.get(mid) or {})
+        meta["start"] = plan["new_start"]
+        meta["end"] = plan["new_end"]
+        if plan["had_ranges"] or len(plan["new_ranges"]) > 1:
+            meta["ranges"] = list(plan["new_ranges"])
+        else:
+            meta.pop("ranges", None)
+        mods_obj[mid] = meta
+        remain_bands[mid] = [
+            (parse_addr(r["start"]), parse_addr(r["end"]))
+            for r in plan["new_ranges"]
+        ]
+        n_mod += 1
+
+    # 未改模块：用现有 start/end/ranges 建带（供「出带」判断仅针对已改模块）
+    entries = doc.get("entries") or []
+    kept: list[dict] = []
+    n_del = 0
+    for e in entries:
+        mid = e.get("module") or ""
+        addr = e.get("address") or ""
+        if not addr:
+            kept.append(e)
+            continue
+        fo = normalize_file_off(addr)
+        if fo in cut_set:
+            n_del += 1
+            continue
+        if mid in remain_bands and not _band_covers(remain_bands[mid], fo):
+            n_del += 1
+            continue
+        kept.append(e)
+    doc["entries"] = kept
+    doc["count"] = len(kept)
+    texts_path.write_text(
+        json.dumps(doc, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return n_del, n_mod
+
+
+def cmd_remove_preview(
+    rom_path: Path,
+    addrs: str | None,
+    *,
+    from_translated: str | None = None,
+    config_path: Path | None = None,
+) -> int:
+    cfg_path = resolve_config(rom_path, config_path)
+    cfg = load_yaml_config(cfg_path)
+    game_id = str(cfg.get("game_id") or rom_path.stem)
+    cuts, tstats = resolve_remove_cuts(addrs, from_translated, game_id)
+    print(f"[i] config={cfg_path}")
+    if tstats is not None:
+        print(
+            f"[i] from-translated: 404={tstats['n_404']} → "
+            f"addrs={tstats['n_addrs']} (unmatched={tstats['n_unmatched']}) "
+            f"path={tstats['translated_path']}"
+        )
+        for s in tstats.get("unmatched_sample") or []:
+            preview = s.replace("\n", "\\n")
+            if len(preview) > 60:
+                preview = preview[:60] + "…"
+            print(f"    unmatched: {preview!r}")
+    if not cuts:
+        print("[i] 无剔除地址，无需修改")
+        return 0
+    if len(cuts) <= 20:
+        print(f"[i] cuts(file)={[ _fmt_file_off(c) for c in cuts ]}")
+    else:
+        sample = ", ".join(_fmt_file_off(c) for c in cuts[:8])
+        print(f"[i] cuts(file)=[{sample}, …] total={len(cuts)}")
+    plans = plan_module_removes(list(cfg["texts"]["modules"] or []), cuts)
+    rom = rom_path.read_bytes()
+    rom_lost = preview_lost_rom_strings(rom, cuts)
+    texts_path = default_output_path(game_id)
+    json_hits = preview_texts_json_hits(texts_path, cuts)
+    _print_remove_plan(plans, rom_lost, json_hits)
+    return 0
+
+
+def cmd_remove(
+    rom_path: Path,
+    addrs: str | None,
+    *,
+    from_translated: str | None = None,
+    config_path: Path | None = None,
+) -> int:
+    cfg_path = resolve_config(rom_path, config_path)
+    cfg = load_yaml_config(cfg_path)
+    game_id = str(cfg.get("game_id") or rom_path.stem)
+    cuts, tstats = resolve_remove_cuts(addrs, from_translated, game_id)
+    print(f"[i] config={cfg_path}")
+    if tstats is not None:
+        print(
+            f"[i] from-translated: 404={tstats['n_404']} → "
+            f"addrs={tstats['n_addrs']} (unmatched={tstats['n_unmatched']}) "
+            f"path={tstats['translated_path']}"
+        )
+        for s in tstats.get("unmatched_sample") or []:
+            preview = s.replace("\n", "\\n")
+            if len(preview) > 60:
+                preview = preview[:60] + "…"
+            print(f"    unmatched: {preview!r}")
+    if not cuts:
+        print("[i] 无剔除地址，未写入")
+        return 0
+    if len(cuts) <= 20:
+        print(f"[i] cuts(file)={[ _fmt_file_off(c) for c in cuts ]}")
+    else:
+        sample = ", ".join(_fmt_file_off(c) for c in cuts[:8])
+        print(f"[i] cuts(file)=[{sample}, …] total={len(cuts)}")
+    plans = plan_module_removes(list(cfg["texts"]["modules"] or []), cuts)
+    if not plans:
+        print("[i] 无模块区间命中，未写入")
+        return 0
+    rom = rom_path.read_bytes()
+    rom_lost = preview_lost_rom_strings(rom, cuts)
+    texts_path = default_output_path(game_id)
+    json_hits = preview_texts_json_hits(texts_path, cuts)
+    _print_remove_plan(plans, rom_lost, json_hits)
+
+    apply_removes_to_yaml(cfg, plans)
+    save_yaml_config(cfg_path, cfg)
+    print(f"\n[ok] wrote yaml → {cfg_path}")
+
+    n_del, n_mod = sync_texts_json(texts_path, plans, cuts)
+    if texts_path.is_file():
+        print(
+            f"[ok] synced texts.json → {texts_path} "
+            f"(modules={n_mod}, deleted_entries={n_del})"
+        )
+    else:
+        print(f"[i] texts.json 不存在，跳过同步: {texts_path}")
+    return 0
+
+
+def _add_remove_args(p: argparse.ArgumentParser) -> None:
+    p.add_argument(
+        "--addrs",
+        default=None,
+        help='逗号分隔地址（VMA 或文件偏移）；PowerShell 请加引号: --addrs "0x08376A3C,0x086F0B14"',
+    )
+    p.add_argument(
+        "--from-translated",
+        nargs="?",
+        const="",
+        default=None,
+        metavar="PATH",
+        help=(
+            "从 texts_translated.json 的 status=404 经 texts.json 反查地址；"
+            "省略 PATH 则用 configs/<game_id>/translate/texts_translated.json"
+        ),
+    )
+    p.add_argument("--config", type=Path, default=None)
+
+
 def main(argv: list[str] | None = None) -> int:
-    ap = argparse.ArgumentParser(description="texts_patcher: export / scan")
+    ap = argparse.ArgumentParser(
+        description="texts_patcher: export / scan / remove-preview / remove"
+    )
     sub = ap.add_subparsers(dest="cmd", required=True)
 
     p_ex = sub.add_parser("export", help="按 yaml texts.modules 导出 texts.json")
@@ -797,6 +1407,20 @@ def main(argv: list[str] | None = None) -> int:
         help="可选：把命中列表写成 JSON",
     )
 
+    p_rp = sub.add_parser(
+        "remove-preview",
+        help="预览：按坏地址切开模块区间（不写盘）",
+    )
+    p_rp.add_argument("rom", type=Path)
+    _add_remove_args(p_rp)
+
+    p_rm = sub.add_parser(
+        "remove",
+        help="执行：切开 yaml 模块区间并同步 texts.json",
+    )
+    p_rm.add_argument("rom", type=Path)
+    _add_remove_args(p_rm)
+
     args = ap.parse_args(argv)
     if args.cmd == "export":
         export_texts(
@@ -818,6 +1442,16 @@ def main(argv: list[str] | None = None) -> int:
             module=args.module,
         )
         return 0
+    if args.cmd in ("remove-preview", "remove"):
+        if args.addrs is None and args.from_translated is None:
+            ap.error("需要 --addrs 和/或 --from-translated")
+        fn = cmd_remove_preview if args.cmd == "remove-preview" else cmd_remove
+        return fn(
+            args.rom,
+            args.addrs,
+            from_translated=args.from_translated,
+            config_path=args.config,
+        )
     ap.error(f"unknown command {args.cmd}")
     return 2
 

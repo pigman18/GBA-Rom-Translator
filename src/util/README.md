@@ -310,9 +310,68 @@ python gdb_patcher.py find 0xF909F6A4 --rom path\to\zh.gba \
 
 # texts_patcher.py
 
-按 `src/util/configs/<game_id>.yaml` 的模块地址带导出 / 搜索 PCS 文本；对明显坏地址（LLM 404 等）从区间中挖洞剔除。
+按 `src/util/configs/<game_id>.yaml` 的模块地址带导出 / 搜索 PCS 文本；坏句写入全局 `texts.omit_ranges`，模块 `ranges` 保持粗带。
 
 在仓库根目录运行（或把 `src/util` 加入 `PYTHONPATH`）。
+
+## `texts:` 配置要点
+
+```yaml
+texts:
+  omit_ranges:                 # 全局跳过（闭区间）；所有模块 export/scan 共用
+    - { start: '0x100C0E', end: '0x100C22' }
+  filters:                     # 按 module.type 默认闸；类型名必须以 _filter 结尾
+    scan:
+      - { type: character_filter, value: '[üÜ►♂♀]' }
+      - { type: dialogue_shape_filter, value: true }
+      - { type: min_byte_length_filter, value: 8 }
+      - { type: garbage_heuristic_filter, value: true }
+    stride: []
+    struct: []
+    stride_ptr: []
+  modules:
+    - id: 前期剧情
+      start: '0x100000'        # 粗带；洞写 omit，不要切碎 ranges
+      end: '0x15C6AF'          # 与中期等模块勿重叠（export 按模块顺序 seen_addr 去重）
+      type: scan
+    - id: UI界面
+      filters:                 # 覆盖同 type 的 value
+        - { type: dialogue_shape_filter, value: false }
+        - { type: min_byte_length_filter, value: 4 }
+```
+
+| 属性 | 层级 | 含义 |
+|------|------|------|
+| `texts.omit_ranges` | 全局 | 跳过地址带；`export`/`scan` = 模块带 − omit |
+| `texts.filters.<type>` | 全局 | 该 `module.type` 的默认 `*_filter` 列表 |
+| `modules[].ranges` / `start`+`end` | 模块 | 粗扫描母带（相邻模块勿互相覆盖） |
+| `modules[].filters` | 模块 | 覆盖全局同 `type` 的 `value` |
+| `require_pointer` / `min_byte_length` | 模块 | 旧字段；无同名 `*_filter` 时仍生效 |
+
+### `texts.filters` / `FilterContext`
+
+合并顺序：`texts.filters.<module.type>` → `module.filters`；同一 `type` **后写覆盖** `value`。`type` 必须以 `_filter` 结尾。
+
+每条候选构造 `FilterContext`（`NamedTuple`）后再跑闸：
+
+| 字段 | 含义 |
+|------|------|
+| `address` / `address_vma` | 文件偏移 / `0x08……` VMA |
+| `raw` / `byte_length` | PCS 字节与长度 |
+| `original` / `original_plain` | 解码原文；plain 已剥 `\CC` / `\n\l\p` / `\xx` |
+| `is_pointer_based` / `pointer_offs` | 是否有指针命中 |
+| `module_id` / `module_type` | 当前模块 |
+
+| filter `type` | `value` | 保留条件 |
+|---------------|---------|----------|
+| `character_filter` | 正则 | **plain** 不匹配该模式（用于踢 `ü`/`►` 等） |
+| `dialogue_shape_filter` | bool | `true`：像对白（`ポケモン` / 助词+`！？`/`\l\p`/`。`）；指针短标放行 |
+| `min_byte_length_filter` / `max_byte_length_filter` | int | 字节长度上下限 |
+| `require_pointer_filter` | bool | `true`：必须有指针 |
+| `garbage_heuristic_filter` | bool | `true`：拒绝垃圾假名/拉丁混扫（**不**把 `Ａボタン` 当垃圾） |
+| `address_filter` | 正则或 `{start,end}` | 正则命中地址则拒；或落在禁止区间则拒 |
+
+**勿**把 `character_filter` 默认设成 `[Ａ-Ｚａ-ｚ]`：会误杀 `Ａボタンで…` 一类 UI/说明。需要踢全角拉丁碎屑时用 `garbage_heuristic_filter`，或模块级更窄正则。
 
 ## 导出 (export)
 
@@ -320,7 +379,7 @@ python gdb_patcher.py find 0xF909F6A4 --rom path\to\zh.gba \
 python src/util/texts_patcher.py export <rom.gba> [--config yaml] [--module 模块名] [-o texts.json]
 ```
 
-默认按 yaml 全部模块扫 PCS，写出 `configs/<game_id>/translate/texts.json`。
+默认按 yaml 全部模块扫 PCS（已减 `omit_ranges`），写出 `configs/<game_id>/translate/texts.json`。
 
 ## 搜索 (scan)
 
@@ -332,79 +391,53 @@ python src/util/texts_patcher.py scan <rom.gba> <关键字> [--module 模块名]
 
 ## 标记无意义 404 (mark-404)
 
-对 `texts_translated.json` 中 `status=200` 且译文含「这是一段乱码 / 这是一段明显乱码」的条目：
+对 `texts_translated.json` 中 `status=200`：
 
-- 洗掉标记与 `|||` 后**没有可用汉字**，或原文像垃圾假名串 → 改为 `status=404`（去掉 `translated`）
-- 有可用汉字且原文正常 → **清洗译文**，保持 200
-- 无乱码标记 → 不动
-
-写回同一缓存文件；打印 `→404` / `cleaned` / `unchanged`。常在 `--from-translated` 挖洞前跑。
+- 译文含「这是一段乱码 / 明显乱码」→ 无可用汉字或原文垃圾则 **404**；否则清洗译文保持 200
+- 无乱码标记但原文像垃圾假名/代码误扫（性别符+全角拉丁、高重复片假名等）→ **404**
 
 ```bash
 python src/util/texts_patcher.py mark-404
-python src/util/texts_patcher.py mark-404 --translated configs/POKEMON_RUBY_AXVJ00/translate/texts_translated.json
-python src/util/texts_patcher.py mark-404 --game-id POKEMON_RUBY_AXVJ00
 ```
 
-| 参数 | 说明 |
-|------|------|
-| `--translated` | 缓存路径；省略则用 `configs/<game_id>/translate/texts_translated.json` |
-| `--game-id` | 未指定 `--translated` 时的默认游戏 ID |
+## 邻近合并碎 ranges (migrate-omit)
+
+把模块内间距 ≤ `--max-gap`（默认 32）的碎 `ranges` 合并；**大缝保留为多段**，不写入 omit。并确保存在 `texts.omit_ranges`。
+
+```bash
+python src/util/texts_patcher.py migrate-omit roms/origin/POKEMON_RUBY_AXVJ00.gba
+python src/util/texts_patcher.py migrate-omit --max-gap 64
+```
 
 ## 挖洞预览 / 执行 (remove-preview / remove)
 
-对坏句：**整句字节区间**挖洞。起点 `X`、长度 `L`（来自 `texts.json` 的 `byte_length`，否则 ROM `read_pcs`）→ 从模块带中剔除 `[X, X+L-1]`，即 `[A,B]` 变成 `[A,X-1]` + `[X+L,B]`。只挖起点 1 字节会导致再扫时从句中冒出更多乱码。
+对坏句：**整句字节区间**写入全局 `texts.omit_ranges`（merge），**不**再把模块 `ranges` 切碎。
 
 地址来源（至少一种）：
 
 | 参数 | 说明 |
 |------|------|
 | `--addrs` | 逗号分隔**句起点**；PowerShell 请加引号 |
-| `--from-translated [PATH]` | 读 `texts_translated.json` 中 `status=404` 的 `original`，经同游戏 `texts.json` 反查起点；省略 PATH 则用 `configs/<game_id>/translate/texts_translated.json` |
-
-二者可并用（去重并集后再按长度扩成整句）。**不**改缓存格式。
+| `--from-translated [PATH]` | 读 `status=404` 的 `original`，经 `texts.json` 反查起点 |
 
 | 子命令 | 写盘 | 行为 |
 |--------|------|------|
-| `remove-preview` | 否 | 打印将改哪些模块、区间前后对比、ROM 整句摘要、`texts.json` 将删条目 |
-| `remove` | 是 | 同上算法写 yaml；同步 `texts.json` 的 modules 区间，并删除落在剔除整句内或已出带的 entries |
-
-**不**自动全量 `export`；需要整库重扫时再跑 `export`。
+| `remove-preview` | 否 | 预览将 merge 的 omit、命中模块、将删 entries |
+| `remove` | 是 | 写 `texts.omit_ranges`；同步 `texts.json`（删本次洞内条目） |
 
 ```bash
-# 预览（不写盘）— PowerShell 请给 --addrs 加引号，否则 0x… 会被当成数字吃掉
 python src/util/texts_patcher.py remove-preview roms/origin/POKEMON_RUBY_AXVJ00.gba \
   --addrs "0x08376A3C,0x086F0B14"
 
-# 按翻译缓存 404 反查起点后预览 / 执行（整句挖洞）
 python src/util/texts_patcher.py remove-preview roms/origin/POKEMON_RUBY_AXVJ00.gba \
   --from-translated
 python src/util/texts_patcher.py remove roms/origin/POKEMON_RUBY_AXVJ00.gba \
   --from-translated
-
-# 指定缓存路径，并可与 --addrs 并用
-python src/util/texts_patcher.py remove-preview roms/origin/POKEMON_RUBY_AXVJ00.gba \
-  --from-translated configs/POKEMON_RUBY_AXVJ00/translate/texts_translated.json \
-  --addrs "0x08376A3C"
-
-# 执行：改 yaml + 同步 texts.json
-python src/util/texts_patcher.py remove roms/origin/POKEMON_RUBY_AXVJ00.gba \
-  --addrs "0x08376A3C,0x086F0B14"
-
-# 可选指定配置
-python src/util/texts_patcher.py remove-preview roms/origin/POKEMON_RUBY_AXVJ00.gba \
-  --addrs "0x08376A3C" \
-  --config src/util/configs/POKEMON_RUBY_AXVJ00.yaml
 ```
 
 | 参数 | 说明 |
 |------|------|
-| `rom` | 原盘 ROM（只读解码 / 无 texts 条目时测长度） |
-| `--addrs` | 逗号分隔句起点；VMA 或文件偏移 |
+| `rom` | 原盘 ROM（只读解码 / 测长度） |
+| `--addrs` | 逗号分隔句起点 |
 | `--from-translated` | 可选 PATH；从 404 原文反查起点 |
 | `--config` | yaml；默认按 ROM stem / game_code 解析 |
-
-**示例命中（Ruby AXVJ）：**
-
-- `0x08376A3C` → 文件 `0x376A3C` → 模块 **UI界面**（剔除整句长度）
-- `0x086F0B14` → 文件 `0x6F0B14` → 模块 **高风险混杂**

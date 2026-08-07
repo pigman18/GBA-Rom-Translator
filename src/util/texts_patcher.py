@@ -15,9 +15,10 @@ texts_patcher.py
   python texts_patcher.py remove-preview <rom.gba> --from-translated
   python texts_patcher.py remove <rom.gba> --from-translated [texts_translated.json]
   python texts_patcher.py mark-404 [--translated PATH] [--game-id ID]
+  python texts_patcher.py migrate-omit [rom.gba] [--config yaml]
 
-挖洞按整句字节区间：起点 X、长度 L → 剔除 [X, X+L-1]，
-再扫时不会从句中字节冒出新乱码起点。
+跳过带写在 ``texts.omit_ranges``（全局）；模块 ``ranges`` 保持粗带。
+remove 整句洞 merge 进 omit，不再把模块 ranges 切碎。
 """
 
 from __future__ import annotations
@@ -29,7 +30,7 @@ import re
 import struct
 import sys
 from pathlib import Path
-from typing import Any
+from typing import Any, NamedTuple
 
 SCRIPT_DIR = Path(__file__).resolve().parent
 REPO_ROOT = SCRIPT_DIR.parents[1]
@@ -354,12 +355,314 @@ def _module_bands(mod: dict) -> list[list[str]]:
     return bands
 
 
+def _as_file_off_pair(lo: int, hi: int) -> tuple[int, int]:
+    if lo >= BASE:
+        lo -= BASE
+    if hi >= BASE:
+        hi -= BASE
+    return lo, hi
+
+
+def parse_omit_range_list(raw: Any) -> list[tuple[int, int]]:
+    """yaml ``omit_ranges`` / ``ranges`` 条目 → 文件偏移闭区间列表。"""
+    if not raw:
+        return []
+    out: list[tuple[int, int]] = []
+    for r in raw:
+        if isinstance(r, dict):
+            lo, hi = parse_addr(r.get("start")), parse_addr(r.get("end"))
+        elif isinstance(r, (list, tuple)) and len(r) >= 2:
+            lo, hi = parse_addr(r[0]), parse_addr(r[1])
+        else:
+            continue
+        lo, hi = _as_file_off_pair(lo, hi)
+        if hi >= lo >= 0:
+            out.append((lo, hi))
+    return out
+
+
+def get_texts_omit_ranges(cfg: dict) -> list[tuple[int, int]]:
+    texts = cfg.get("texts") or {}
+    return merge_spans(parse_omit_range_list(texts.get("omit_ranges")))
+
+
+def omit_ranges_to_yaml(
+    spans: list[tuple[int, int]],
+) -> list[dict[str, str]]:
+    return [
+        {"start": _fmt_file_off(a), "end": _fmt_file_off(b)}
+        for a, b in merge_spans(spans)
+    ]
+
+
+def set_texts_omit_ranges(cfg: dict, spans: list[tuple[int, int]]) -> None:
+    texts = cfg.setdefault("texts", {})
+    omit_yaml = omit_ranges_to_yaml(spans)
+    modules = texts.pop("modules", None)
+    # omit_ranges 紧挨 texts:，在 modules 之前
+    rest = {k: v for k, v in texts.items() if k != "omit_ranges"}
+    texts.clear()
+    texts["omit_ranges"] = omit_yaml
+    texts.update(rest)
+    if modules is not None:
+        texts["modules"] = modules
+
+
+def module_band_tuples(mod: dict) -> list[tuple[int, int]]:
+    return parse_omit_range_list(
+        [
+            {"start": lo, "end": hi}
+            for lo, hi in _module_bands(mod)
+        ]
+    )
+
+
+def effective_module_bands(
+    mod: dict, omit: list[tuple[int, int]]
+) -> list[list[str]]:
+    """模块粗带减去全局 omit → 实际扫描区间（字符串形式）。"""
+    omit_m = merge_spans(omit)
+    out: list[list[str]] = []
+    for lo, hi in module_band_tuples(mod):
+        for a, b in split_band(lo, hi, omit_m):
+            out.append([f"0x{a:X}", f"0x{b:X}"])
+    return out
+
+
+# ---------------------------------------------------------------------------
+# texts.filters：统一 *_filter + FilterContext
+# ---------------------------------------------------------------------------
+
+
+class FilterContext(NamedTuple):
+    """单条 PCS 候选的过滤上下文。"""
+
+    address: int
+    address_vma: int
+    raw: bytes
+    byte_length: int
+    original: str
+    original_plain: str
+    is_pointer_based: bool
+    pointer_offs: list[int]
+    module_id: str
+    module_type: str
+
+
+def plain_original(original: str) -> str:
+    """剥 \\CC / \\n\\l\\p / \\xx，供 character_filter 等使用。"""
+    s = original or ""
+    s = re.sub(r"\\CC[0-9A-Fa-f]+", "", s)
+    s = re.sub(r"\\[nlp]", "", s)
+    s = re.sub(r"\\[0-9A-Fa-f]{2}", "", s)
+    return s
+
+
+def resolve_filters(cfg: dict, mod: dict) -> list[dict[str, Any]]:
+    """texts.filters.<type> + module.filters；同 type 后写覆盖 value。"""
+    mtype = str(mod.get("type") or "scan")
+    texts = cfg.get("texts") or {}
+    by_type = texts.get("filters") or {}
+    base = list(by_type.get(mtype) or [])
+    extra = list(mod.get("filters") or [])
+    # 合并：先 base 再 extra，同 type 后写覆盖
+    merged: dict[str, dict[str, Any]] = {}
+    order: list[str] = []
+    for spec in base + extra:
+        if not isinstance(spec, dict):
+            continue
+        t = str(spec.get("type") or "").strip()
+        if not t:
+            continue
+        if not t.endswith("_filter"):
+            raise SystemExit(
+                f"filter type 必须以 _filter 结尾: {t!r} (module={mod.get('id')!r})"
+            )
+        if t not in merged:
+            order.append(t)
+        merged[t] = dict(spec)
+    return [merged[t] for t in order]
+
+
+def _dialogue_shape_ok(ctx: FilterContext) -> bool:
+    """对白形态：指针短标可留；否则须像真脚本句（\\n 单独不够）。"""
+    o = ctx.original or ""
+    plain = ctx.original_plain or ""
+    if ctx.is_pointer_based:
+        return True
+    jp = len(re.findall(r"[\u3040-\u30ff]", o))
+    if jp < 8:
+        return False
+    if "ポケモン" in o:
+        return True
+    plain_no_btn = re.sub(r"[Ａ-Ｚａ-ｚ]ボタン", "", plain)
+    fw = len(re.findall(r"[Ａ-Ｚａ-ｚ]", plain_no_btn))
+    hw = len(re.findall(r"[A-Za-z]", plain_no_btn))
+    if fw + hw >= 1:
+        return False
+    has_particle = bool(re.search(r"[はがをに]", o))
+    # ！？ / \\l\\p 须带格助词，避免乱码里碰巧出现？或 \\l
+    if (
+        ("！" in o or "？" in o or "！" in plain or "？" in plain)
+        and has_particle
+        and jp >= 8
+    ):
+        return True
+    if ("\\l" in o or "\\p" in o) and has_particle and jp >= 10:
+        return True
+    if (
+        ("。" in o or "。" in plain or "‥" in o)
+        and re.search(r"[はがを]", o)
+        and jp >= 12
+    ):
+        return True
+    return False
+
+
+def _looks_garbage_original(original: str) -> bool:
+    """窄启发式（garbage_heuristic_filter / mark-404）。
+
+    不做无 address 的 ``axvj_entry_is_garbage``。
+    全角 Ａボタン / Ｂボタン 不算垃圾。
+    """
+    o = original or ""
+    try:
+        from meowth.policy import is_garbage_jp
+
+        if is_garbage_jp(o):
+            return True
+    except Exception:
+        pass
+
+    plain = plain_original(o)
+    # 去掉按钮标签后再计全角拉丁，避免误杀「Ａボタンで…」
+    plain_no_btn = re.sub(r"[Ａ-Ｚａ-ｚ]ボタン", "", plain)
+
+    latin = len(re.findall(r"[A-Za-zÄäÖöÜüß]", plain))
+    jp = len(re.findall(r"[\u3040-\u30ff]", o))
+    fw_letter = len(re.findall(r"[Ａ-Ｚａ-ｚ]", plain_no_btn))
+    if latin >= 3 and jp >= 5:
+        return True
+    if fw_letter >= 3 and jp >= 3:
+        return True
+    if ("♂" in o or "♀" in o) and (
+        fw_letter >= 1 or "Ｂ" in plain_no_btn or "Ａ" in plain_no_btn
+    ):
+        return True
+    if len(plain.strip()) <= 8 and fw_letter >= 1 and jp >= 1:
+        return True
+    for block in set(re.findall(r"[ァ-ン]{2}", o)):
+        if o.count(block) >= 3:
+            return True
+    if (
+        jp >= 12
+        and not re.search(r"[はがをのにてもだ]", o)
+        and not re.search(r"[\u4e00-\u9fff]", o)
+        and "ポケモン" not in o
+        and "\\CC" not in o
+    ):
+        for block in set(re.findall(r"[ァ-ン]{2}", o)):
+            if o.count(block) >= 2:
+                return True
+    return False
+
+
+def apply_one_filter(ctx: FilterContext, spec: dict[str, Any]) -> bool:
+    """True=保留，False=拒绝。"""
+    t = str(spec.get("type") or "")
+    val = spec.get("value")
+
+    if t == "character_filter":
+        pat = str(val or "")
+        if not pat:
+            return True
+        return re.search(pat, ctx.original_plain or "") is None
+
+    if t == "dialogue_shape_filter":
+        if not bool(val):
+            return True
+        return _dialogue_shape_ok(ctx)
+
+    if t == "min_byte_length_filter":
+        try:
+            n = int(val)
+        except (TypeError, ValueError):
+            return True
+        return ctx.byte_length >= n
+
+    if t == "max_byte_length_filter":
+        try:
+            n = int(val)
+        except (TypeError, ValueError):
+            return True
+        return ctx.byte_length <= n
+
+    if t == "require_pointer_filter":
+        if not bool(val):
+            return True
+        return bool(ctx.is_pointer_based)
+
+    if t == "garbage_heuristic_filter":
+        if not bool(val):
+            return True
+        return not _looks_garbage_original(ctx.original)
+
+    if t == "address_filter":
+        # value: 正则匹配 0x… VMA/file hex，或 {start,end} 禁止区间
+        if isinstance(val, dict):
+            lo = normalize_file_off(val.get("start") or 0)
+            hi = normalize_file_off(val.get("end") or 0)
+            if hi < lo:
+                lo, hi = hi, lo
+            return not (lo <= ctx.address <= hi)
+        pat = str(val or "")
+        if not pat:
+            return True
+        hex_s = f"0x{ctx.address:X}"
+        vma_s = f"0x{ctx.address_vma:08X}"
+        return re.search(pat, hex_s) is None and re.search(pat, vma_s) is None
+
+    raise SystemExit(f"未知 filter type: {t!r}")
+
+
+def apply_filters(ctx: FilterContext, filters: list[dict[str, Any]]) -> bool:
+    for spec in filters:
+        if not apply_one_filter(ctx, spec):
+            return False
+    return True
+
+
+def make_filter_context(
+    *,
+    fo: int,
+    raw: bytes,
+    original: str,
+    ptrs: list[int],
+    module_id: str,
+    module_type: str,
+) -> FilterContext:
+    return FilterContext(
+        address=fo,
+        address_vma=BASE + fo,
+        raw=raw,
+        byte_length=len(raw),
+        original=original,
+        original_plain=plain_original(original),
+        is_pointer_based=bool(ptrs),
+        pointer_offs=list(ptrs),
+        module_id=module_id,
+        module_type=module_type,
+    )
+
+
 def extract_scan(
     rom: bytes,
     mod: dict,
     game_code: str,
     *,
     ptr_index: dict[int, list[int]] | None = None,
+    omit_ranges: list[tuple[int, int]] | None = None,
+    filters: list[dict[str, Any]] | None = None,
 ) -> list[dict]:
     from meowth.extract import (
         SCRIPT_BANK_MIN,
@@ -371,11 +674,28 @@ def extract_scan(
     from meowth.policy import looks_like_translatable
 
     mid = mod["id"]
-    bands = _module_bands(mod)
+    mtype = str(mod.get("type") or "scan")
+    bands = effective_module_bands(mod, omit_ranges or [])
     if not bands:
         return []
-    min_bl = mod.get("min_byte_length")
-    max_bl = mod.get("max_byte_length")
+    filt = list(filters or [])
+    # 兼容旧字段：并入 filter 语义（不覆盖已有同 type）
+    if mod.get("min_byte_length") is not None and not any(
+        str(f.get("type")) == "min_byte_length_filter" for f in filt
+    ):
+        filt.append(
+            {"type": "min_byte_length_filter", "value": int(mod["min_byte_length"])}
+        )
+    if mod.get("max_byte_length") is not None and not any(
+        str(f.get("type")) == "max_byte_length_filter" for f in filt
+    ):
+        filt.append(
+            {"type": "max_byte_length_filter", "value": int(mod["max_byte_length"])}
+        )
+    if mod.get("require_pointer") and not any(
+        str(f.get("type")) == "require_pointer_filter" for f in filt
+    ):
+        filt.append({"type": "require_pointer_filter", "value": True})
 
     if ptr_index is not None:
         out: list[dict] = []
@@ -412,20 +732,24 @@ def extract_scan(
                         if a in seen:
                             a = end + 1
                             continue
-                        bl = len(raw)
-                        if min_bl is not None and bl < int(min_bl):
-                            a = end + 1
-                            continue
-                        if max_bl is not None and bl > int(max_bl):
-                            a = end + 1
-                            continue
                         ptrs = list(ptr_index.get(a, []))
+                        ctx = make_filter_context(
+                            fo=a,
+                            raw=raw,
+                            original=text,
+                            ptrs=ptrs,
+                            module_id=str(mid),
+                            module_type=mtype,
+                        )
+                        if filt and not apply_filters(ctx, filt):
+                            a = end + 1
+                            continue
                         seen.add(a)
                         e = {
                             "address": f"0x{BASE + a:08X}",
                             "original": text,
                             "original_hex": raw.hex(" "),
-                            "byte_length": bl,
+                            "byte_length": len(raw),
                             "is_pointer_based": bool(ptrs),
                             "pointer_sources": [
                                 f"0x{BASE + q:08X}" for q in ptrs
@@ -440,10 +764,32 @@ def extract_scan(
 
     out = []
     for e in scan_addr_bands(rom, bands):
-        bl = int(e.get("byte_length") or 0)
-        if min_bl is not None and bl < int(min_bl):
-            continue
-        if max_bl is not None and bl > int(max_bl):
+        text = e.get("original") or ""
+        addr = e.get("address") or ""
+        fo = normalize_file_off(addr) if addr else 0
+        ohex = (e.get("original_hex") or "").replace(" ", "")
+        try:
+            raw = bytes.fromhex(ohex) if ohex else b""
+        except ValueError:
+            raw = b""
+        if not raw.endswith(b"\xff"):
+            raw = raw + b"\xff"
+        ptrs_s = e.get("pointer_sources") or e.get("pointer_addresses") or []
+        ptrs: list[int] = []
+        for p in ptrs_s:
+            try:
+                ptrs.append(normalize_file_off(p))
+            except Exception:
+                pass
+        ctx = make_filter_context(
+            fo=fo,
+            raw=raw if raw else b"\xff",
+            original=text,
+            ptrs=ptrs,
+            module_id=str(mid),
+            module_type=mtype,
+        )
+        if filt and not apply_filters(ctx, filt):
             continue
         out.append(_stamp(dict(e), mid=mid, game_code=game_code))
     return out
@@ -455,6 +801,8 @@ def extract_module(
     game_code: str,
     *,
     ptr_index: dict[int, list[int]] | None = None,
+    omit_ranges: list[tuple[int, int]] | None = None,
+    filters: list[dict[str, Any]] | None = None,
 ) -> list[dict]:
     rtype = str(mod.get("type") or "scan")
     if rtype == "stride":
@@ -464,7 +812,14 @@ def extract_module(
     if rtype in ("stride_ptr", "ptr_stride"):
         return extract_stride_ptr(rom, mod, game_code)
     if rtype in ("scan", "addr_bands"):
-        return extract_scan(rom, mod, game_code, ptr_index=ptr_index)
+        return extract_scan(
+            rom,
+            mod,
+            game_code,
+            ptr_index=ptr_index,
+            omit_ranges=omit_ranges,
+            filters=filters,
+        )
     # needle/prefix/pointer: corpus already in texts.json; no Meowth re-scan
     return []
 
@@ -507,6 +862,12 @@ def export_texts(
 
     modules = list(cfg["texts"]["modules"] or [])
     modules_dict = _modules_as_dict(modules)
+    omit_ranges = get_texts_omit_ranges(cfg)
+    if omit_ranges:
+        print(
+            f"[i] texts.omit_ranges ×{len(omit_ranges)} "
+            f"(bytes={sum(b - a + 1 for a, b in omit_ranges)})"
+        )
     if module:
         modules = [m for m in modules if (m.get("id") or "") == module]
         if not modules:
@@ -531,7 +892,14 @@ def export_texts(
     for mod in modules:
         mid = mod.get("id") or ""
         rtype = str(mod.get("type") or "scan")
-        chunk = extract_module(rom, mod, game_code, ptr_index=ptr_index)
+        chunk = extract_module(
+            rom,
+            mod,
+            game_code,
+            ptr_index=ptr_index,
+            omit_ranges=omit_ranges,
+            filters=resolve_filters(cfg, mod),
+        )
         if not chunk and rtype in ("needle", "prefix", "pointer"):
             skipped[rtype] = skipped.get(rtype, 0) + 1
             continue
@@ -769,7 +1137,7 @@ def scan_keyword(
 
 
 # ---------------------------------------------------------------------------
-# remove-preview / remove：按坏句整段字节区间切开模块带
+# remove-preview / remove：整句洞 merge 进 texts.omit_ranges（不切碎模块 ranges）
 # ---------------------------------------------------------------------------
 
 
@@ -1017,74 +1385,44 @@ def _fo_in_spans(spans: list[tuple[int, int]], fo: int) -> bool:
     return any(a <= fo <= b for a, b in spans)
 
 
-def plan_module_removes(
+def spans_hitting_modules(
+    modules: list[dict], spans: list[tuple[int, int]]
+) -> list[tuple[int, int]]:
+    """只保留至少落在某个模块粗带内的 omit span。"""
+    spans = merge_spans(spans)
+    hit: list[tuple[int, int]] = []
+    for a, b in spans:
+        for mod in modules:
+            for lo, hi in module_band_tuples(mod):
+                if _span_overlaps(lo, hi, a, b):
+                    hit.append((a, b))
+                    break
+            else:
+                continue
+            break
+    return merge_spans(hit)
+
+
+def module_hit_summary(
     modules: list[dict], spans: list[tuple[int, int]]
 ) -> list[dict[str, Any]]:
-    """对每个受影响模块生成切开计划（挖掉整句字节区间）。
-
-    每项::
-      {
-        "id": str,
-        "hits": [(start,end), ...],
-        "band_diffs": [{"old": (lo,hi), "new": [(lo,hi), ...]}, ...],
-        "new_ranges": [{"start": "0x..", "end": "0x.."}, ...],
-        "new_start": "0x..",
-        "new_end": "0x..",
-        "had_ranges": bool,
-      }
-    """
+    """预览：每个模块被哪些洞命中（不改 ranges）。"""
     spans = merge_spans(spans)
-    plans: list[dict[str, Any]] = []
+    rows: list[dict[str, Any]] = []
     for mod in modules:
         mid = mod.get("id") or ""
-        bands = _module_bands(mod)
+        bands = module_band_tuples(mod)
         if not bands:
             continue
-        had_ranges = bool(mod.get("ranges"))
-        band_diffs: list[dict[str, Any]] = []
-        new_bands: list[tuple[int, int]] = []
         hits: list[tuple[int, int]] = []
-        changed = False
-        for lo_s, hi_s in bands:
-            lo, hi = parse_addr(lo_s), parse_addr(hi_s)
-            if lo >= BASE:
-                lo -= BASE
-            if hi >= BASE:
-                hi -= BASE
-            in_band = [
-                (a, b) for a, b in spans if _span_overlaps(lo, hi, a, b)
-            ]
-            pieces = split_band(lo, hi, spans)
-            if in_band:
-                hits.extend(in_band)
-                changed = True
-                band_diffs.append({"old": (lo, hi), "new": pieces})
-            new_bands.extend(pieces)
-            if pieces != [(lo, hi)]:
-                changed = True
-        if not changed:
-            continue
-        new_bands = sorted(set(new_bands), key=lambda t: t[0])
-        if not new_bands:
-            raise SystemExit(
-                f"模块 {mid!r} 剔除后无剩余区间（hits={[ _fmt_span(a, b) for a, b in hits ]})"
-            )
-        new_ranges = [
-            {"start": _fmt_file_off(a), "end": _fmt_file_off(b)}
-            for a, b in new_bands
-        ]
-        plans.append(
-            {
-                "id": mid,
-                "hits": merge_spans(hits),
-                "band_diffs": band_diffs,
-                "new_ranges": new_ranges,
-                "new_start": _fmt_file_off(min(a for a, _ in new_bands)),
-                "new_end": _fmt_file_off(max(b for _, b in new_bands)),
-                "had_ranges": had_ranges or len(new_bands) > 1,
-            }
-        )
-    return plans
+        for lo, hi in bands:
+            for a, b in spans:
+                if _span_overlaps(lo, hi, a, b):
+                    hits.append((max(a, lo), min(b, hi)))
+        hits = merge_spans(hits)
+        if hits:
+            rows.append({"id": mid, "hits": hits, "bands": bands})
+    return rows
 
 
 def preview_lost_rom_strings(
@@ -1166,16 +1504,30 @@ def preview_texts_json_hits(
     return hits
 
 
-def _print_remove_plan(
-    plans: list[dict[str, Any]],
+def _print_omit_plan(
+    *,
+    old_omit: list[tuple[int, int]],
+    new_omit: list[tuple[int, int]],
+    added: list[tuple[int, int]],
+    module_rows: list[dict[str, Any]],
     rom_lost: list[dict[str, Any]],
     json_hits: list[dict[str, Any]],
 ) -> None:
-    if not plans:
-        print("[i] 无模块区间命中这些地址，无需修改")
+    print(
+        f"[i] texts.omit_ranges: {len(old_omit)} → {len(new_omit)} "
+        f"(+{len(added)} merged spans)"
+    )
+    if added:
+        sample = [_fmt_span(a, b) for a, b in added[:12]]
+        if len(added) > 12:
+            sample.append(f"…(+{len(added) - 12})")
+        print(f"[i] new holes: {sample}")
+
+    if not module_rows:
+        print("[i] 无模块粗带命中这些地址（仍会写入全局 omit）")
     else:
-        print(f"[i] 将修改 {len(plans)} 个模块：")
-        for p in plans:
+        print(f"[i] 命中 {len(module_rows)} 个模块粗带（ranges 不切开）：")
+        for p in module_rows:
             hits = p["hits"]
             if len(hits) <= 12:
                 hits_s = [_fmt_span(a, b) for a, b in hits]
@@ -1183,28 +1535,7 @@ def _print_remove_plan(
                 hits_s = [_fmt_span(a, b) for a, b in hits[:8]] + [
                     f"…(+{len(hits) - 8})"
                 ]
-            print(f"\n## 模块 {p['id']}  hits={hits_s}")
-            for d in p["band_diffs"]:
-                lo, hi = d["old"]
-                news = d["new"]
-                if len(news) <= 8:
-                    new_s = ", ".join(
-                        f"[{_fmt_file_off(a)}, {_fmt_file_off(b)}]"
-                        for a, b in news
-                    ) or "(空)"
-                else:
-                    head = ", ".join(
-                        f"[{_fmt_file_off(a)}, {_fmt_file_off(b)}]"
-                        for a, b in news[:4]
-                    )
-                    new_s = f"{head}, … (共{len(news)}段)"
-                print(
-                    f"  {_fmt_file_off(lo)}–{_fmt_file_off(hi)}  →  {new_s}"
-                )
-            print(
-                f"  新 start/end = {p['new_start']} … {p['new_end']}  "
-                f"(ranges×{len(p['new_ranges'])})"
-            )
+            print(f"  ## {p['id']}  hits={hits_s}")
 
     print("\n## ROM 将少掉的内容（整句区间）")
     for r in rom_lost[:50]:
@@ -1233,25 +1564,10 @@ def _print_remove_plan(
         print(f"  … 另有 {len(json_hits) - 50} 条")
 
 
-def apply_removes_to_yaml(
-    cfg: dict, plans: list[dict[str, Any]]
+def apply_omit_to_yaml(
+    cfg: dict, new_omit: list[tuple[int, int]]
 ) -> dict:
-    """按计划改写 cfg['texts']['modules']（原地），返回 cfg。"""
-    by_id = {p["id"]: p for p in plans}
-    mods = cfg["texts"]["modules"]
-    for mod in mods:
-        mid = mod.get("id") or ""
-        plan = by_id.get(mid)
-        if not plan:
-            continue
-        mod["start"] = plan["new_start"]
-        mod["end"] = plan["new_end"]
-        if plan["had_ranges"] or len(plan["new_ranges"]) > 1:
-            mod["ranges"] = list(plan["new_ranges"])
-        elif "ranges" in mod and len(plan["new_ranges"]) == 1:
-            mod.pop("ranges", None)
-        elif len(plan["new_ranges"]) == 1:
-            mod.pop("ranges", None)
+    set_texts_omit_ranges(cfg, new_omit)
     return cfg
 
 
@@ -1281,56 +1597,55 @@ def save_yaml_config(path: Path, cfg: dict) -> None:
     path.write_text(text, encoding="utf-8")
 
 
-def _band_covers(bands: list[tuple[int, int]], fo: int) -> bool:
-    return any(lo <= fo <= hi for lo, hi in bands)
-
-
-def sync_texts_json(
+def sync_texts_json_omit(
     texts_path: Path,
-    plans: list[dict[str, Any]],
+    *,
     spans: list[tuple[int, int]],
+    omit_all: list[tuple[int, int]],
+    cfg: dict,
 ) -> tuple[int, int]:
-    """同步 modules 区间；删除落在剔除整句内 / 已出带的条目。"""
+    """同步全局 omit 与 modules 元数据；只删除本次 ``spans`` 命中的条目。"""
     if not texts_path.is_file():
         return 0, 0
     doc = json.loads(texts_path.read_text(encoding="utf-8"))
+    doc["omit_ranges"] = omit_ranges_to_yaml(omit_all)
+
     mods_obj = doc.get("modules")
     if not isinstance(mods_obj, dict):
         mods_obj = {}
         doc["modules"] = mods_obj
 
-    plan_by_id = {p["id"]: p for p in plans}
-    remain_bands: dict[str, list[tuple[int, int]]] = {}
     n_mod = 0
-    for mid, plan in plan_by_id.items():
+    for mod in cfg.get("texts", {}).get("modules") or []:
+        mid = mod.get("id") or ""
+        if not mid:
+            continue
         meta = dict(mods_obj.get(mid) or {})
-        meta["start"] = plan["new_start"]
-        meta["end"] = plan["new_end"]
-        if plan["had_ranges"] or len(plan["new_ranges"]) > 1:
-            meta["ranges"] = list(plan["new_ranges"])
+        if mod.get("start") is not None:
+            meta["start"] = mod["start"]
+        if mod.get("end") is not None:
+            meta["end"] = mod["end"]
+        if mod.get("ranges"):
+            meta["ranges"] = list(mod["ranges"])
         else:
             meta.pop("ranges", None)
+        for k in ("label", "group", "default", "description", "type"):
+            if k in mod:
+                meta[k] = mod[k]
         mods_obj[mid] = meta
-        remain_bands[mid] = [
-            (parse_addr(r["start"]), parse_addr(r["end"]))
-            for r in plan["new_ranges"]
-        ]
         n_mod += 1
 
+    kill = merge_spans(spans)
     entries = doc.get("entries") or []
     kept: list[dict] = []
     n_del = 0
     for e in entries:
-        mid = e.get("module") or ""
         addr = e.get("address") or ""
         if not addr:
             kept.append(e)
             continue
         fo = normalize_file_off(addr)
-        if _fo_in_spans(spans, fo):
-            n_del += 1
-            continue
-        if mid in remain_bands and not _band_covers(remain_bands[mid], fo):
+        if kill and _fo_in_spans(kill, fo):
             n_del += 1
             continue
         kept.append(e)
@@ -1353,6 +1668,149 @@ def _print_cuts_summary(spans: list[tuple[int, int]]) -> None:
             f"[i] omit(spans)=[{sample}, …] "
             f"spans={len(spans)} bytes={total_bytes}"
         )
+
+
+def merge_nearby_ranges(
+    pieces: list[tuple[int, int]], *, max_gap: int = 32
+) -> list[tuple[int, int]]:
+    """合并间距 ≤ max_gap 的碎段；大缝保留为多段 ranges（不进 omit）。"""
+    if not pieces:
+        return []
+    xs = sorted((min(a, b), max(a, b)) for a, b in pieces)
+    out: list[tuple[int, int]] = [xs[0]]
+    for a, b in xs[1:]:
+        la, lb = out[-1]
+        gap = a - lb - 1
+        if gap <= max_gap:
+            out[-1] = (la, max(lb, b))
+        else:
+            out.append((a, b))
+    return out
+
+
+def coalesce_module_to_cover(
+    mod: dict,
+    *,
+    max_gap: int = 32,
+) -> list[tuple[int, int]] | None:
+    """碎 ranges → 邻近合并后的粗带列表。不产生 omit 洞。"""
+    rtype = str(mod.get("type") or "scan")
+    if rtype not in ("scan", "addr_bands"):
+        return None
+    pieces = module_band_tuples(mod)
+    if len(pieces) <= 1:
+        return None
+    merged = merge_nearby_ranges(pieces, max_gap=max_gap)
+    if merged == sorted((min(a, b), max(a, b)) for a, b in pieces):
+        if len(merged) == len(pieces):
+            return None
+    return merged
+
+
+def migrate_fragmented_ranges(
+    cfg: dict, *, max_gap: int = 32
+) -> dict[str, int]:
+    """碎 ranges 邻近合并；确保 texts.omit_ranges 存在。大缝不进 omit。"""
+    texts = cfg.setdefault("texts", {})
+    if "omit_ranges" not in texts:
+        texts["omit_ranges"] = list(texts.get("omit_ranges") or [])
+    mods = list(texts.get("modules") or [])
+    n_mod = 0
+    n_ranges_before = 0
+    n_ranges_after = 0
+    for mod in mods:
+        pieces = module_band_tuples(mod)
+        n_before = len(pieces) if pieces else (1 if mod.get("start") else 0)
+        n_ranges_before += n_before
+        merged = coalesce_module_to_cover(mod, max_gap=max_gap)
+        if not merged:
+            n_ranges_after += n_before
+            continue
+        mod["start"] = _fmt_file_off(merged[0][0])
+        mod["end"] = _fmt_file_off(merged[-1][1])
+        mod["ranges"] = [
+            {"start": _fmt_file_off(a), "end": _fmt_file_off(b)}
+            for a, b in merged
+        ]
+        n_mod += 1
+        n_ranges_after += len(merged)
+    # 保留已有 omit，不因合并而追加大缝
+    omit = get_texts_omit_ranges(cfg)
+    set_texts_omit_ranges(cfg, omit)
+    return {
+        "modules_coalesced": n_mod,
+        "ranges_before": n_ranges_before,
+        "ranges_after": n_ranges_after,
+        "omit_before": len(omit),
+        "omit_after": len(omit),
+        "holes_added": 0,
+        "max_gap": max_gap,
+    }
+
+
+def sync_texts_json_modules_meta(texts_path: Path, cfg: dict) -> int:
+    """只同步 modules 元数据 / omit_ranges 快照，不删条目。"""
+    if not texts_path.is_file():
+        return 0
+    doc = json.loads(texts_path.read_text(encoding="utf-8"))
+    doc["omit_ranges"] = omit_ranges_to_yaml(get_texts_omit_ranges(cfg))
+    mods_obj = doc.get("modules")
+    if not isinstance(mods_obj, dict):
+        mods_obj = {}
+        doc["modules"] = mods_obj
+    n_mod = 0
+    for mod in cfg.get("texts", {}).get("modules") or []:
+        mid = mod.get("id") or ""
+        if not mid:
+            continue
+        meta = dict(mods_obj.get(mid) or {})
+        if mod.get("start") is not None:
+            meta["start"] = mod["start"]
+        if mod.get("end") is not None:
+            meta["end"] = mod["end"]
+        if mod.get("ranges"):
+            meta["ranges"] = list(mod["ranges"])
+        else:
+            meta.pop("ranges", None)
+        for k in ("label", "group", "default", "description", "type"):
+            if k in mod:
+                meta[k] = mod[k]
+        mods_obj[mid] = meta
+        n_mod += 1
+    texts_path.write_text(
+        json.dumps(doc, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return n_mod
+
+
+def cmd_migrate_omit(
+    rom_path: Path | None = None,
+    *,
+    config_path: Path | None = None,
+    max_gap: int = 32,
+) -> int:
+    if config_path is not None:
+        cfg_path = config_path
+    elif rom_path is not None:
+        cfg_path = resolve_config(rom_path, None)
+    else:
+        cfg_path = CONFIGS_DIR / "POKEMON_RUBY_AXVJ00.yaml"
+    cfg = load_yaml_config(cfg_path)
+    stats = migrate_fragmented_ranges(cfg, max_gap=max_gap)
+    save_yaml_config(cfg_path, cfg)
+    print(f"[ok] migrate-omit → {cfg_path}")
+    print(
+        f"     modules_coalesced={stats['modules_coalesced']}  "
+        f"ranges {stats['ranges_before']}→{stats['ranges_after']}  "
+        f"omit={stats['omit_after']}  max_gap={stats['max_gap']}"
+    )
+    game_id = str(cfg.get("game_id") or "POKEMON_RUBY_AXVJ00")
+    texts_path = default_output_path(game_id)
+    if texts_path.is_file():
+        n_mod = sync_texts_json_modules_meta(texts_path, cfg)
+        print(f"[ok] synced texts.json modules meta ×{n_mod} (entries unchanged)")
+    return 0
 
 
 def cmd_remove_preview(
@@ -1384,11 +1842,25 @@ def cmd_remove_preview(
     texts_path = default_output_path(game_id)
     rom = rom_path.read_bytes()
     spans = expand_starts_to_spans(starts, texts_path=texts_path, rom=rom)
+    spans = spans_hitting_modules(list(cfg["texts"]["modules"] or []), spans)
     _print_cuts_summary(spans)
-    plans = plan_module_removes(list(cfg["texts"]["modules"] or []), spans)
+    old_omit = get_texts_omit_ranges(cfg)
+    new_omit = merge_spans(old_omit + spans)
+    added: list[tuple[int, int]] = []
+    for a, b in spans:
+        added.extend(split_band(a, b, old_omit))
+    added = merge_spans(added)
+    module_rows = module_hit_summary(list(cfg["texts"]["modules"] or []), spans)
     rom_lost = preview_lost_rom_strings(rom, spans)
     json_hits = preview_texts_json_hits(texts_path, spans)
-    _print_remove_plan(plans, rom_lost, json_hits)
+    _print_omit_plan(
+        old_omit=old_omit,
+        new_omit=new_omit,
+        added=added,
+        module_rows=module_rows,
+        rom_lost=rom_lost,
+        json_hits=json_hits,
+    )
     return 0
 
 
@@ -1421,20 +1893,36 @@ def cmd_remove(
     texts_path = default_output_path(game_id)
     rom = rom_path.read_bytes()
     spans = expand_starts_to_spans(starts, texts_path=texts_path, rom=rom)
-    _print_cuts_summary(spans)
-    plans = plan_module_removes(list(cfg["texts"]["modules"] or []), spans)
-    if not plans:
-        print("[i] 无模块区间命中，未写入")
+    spans = spans_hitting_modules(list(cfg["texts"]["modules"] or []), spans)
+    if not spans:
+        print("[i] 无模块粗带命中，未写入")
         return 0
+    _print_cuts_summary(spans)
+    old_omit = get_texts_omit_ranges(cfg)
+    new_omit = merge_spans(old_omit + spans)
+    added: list[tuple[int, int]] = []
+    for a, b in spans:
+        added.extend(split_band(a, b, old_omit))
+    added = merge_spans(added)
+    module_rows = module_hit_summary(list(cfg["texts"]["modules"] or []), spans)
     rom_lost = preview_lost_rom_strings(rom, spans)
     json_hits = preview_texts_json_hits(texts_path, spans)
-    _print_remove_plan(plans, rom_lost, json_hits)
+    _print_omit_plan(
+        old_omit=old_omit,
+        new_omit=new_omit,
+        added=added,
+        module_rows=module_rows,
+        rom_lost=rom_lost,
+        json_hits=json_hits,
+    )
 
-    apply_removes_to_yaml(cfg, plans)
+    apply_omit_to_yaml(cfg, new_omit)
     save_yaml_config(cfg_path, cfg)
-    print(f"\n[ok] wrote yaml → {cfg_path}")
+    print(f"\n[ok] wrote yaml omit_ranges → {cfg_path}")
 
-    n_del, n_mod = sync_texts_json(texts_path, plans, spans)
+    n_del, n_mod = sync_texts_json_omit(
+        texts_path, spans=spans, omit_all=new_omit, cfg=cfg
+    )
     if texts_path.is_file():
         print(
             f"[ok] synced texts.json → {texts_path} "
@@ -1458,40 +1946,6 @@ def _translated_has_garbled_mark(tr: str) -> bool:
 
 def _has_useful_zh(s: str) -> bool:
     return bool(re.search(r"[\u4e00-\u9fff]{2,}", s or ""))
-
-
-def _looks_garbage_original(original: str) -> bool:
-    """窄启发式：假名乱串 / 拉丁杂糅（is_garbage_jp 不够时的补充）。"""
-    o = original or ""
-    try:
-        from meowth.policy import is_garbage_jp
-
-        if is_garbage_jp(o):
-            return True
-    except Exception:
-        pass
-    try:
-        from meowth.extract import axvj_entry_is_garbage
-
-        if axvj_entry_is_garbage({"original": o}):
-            return True
-    except Exception:
-        pass
-
-    latin = len(re.findall(r"[A-Za-zÄäÖöÜüß]", o))
-    jp = len(re.findall(r"[\u3040-\u30ff]", o))
-    fw_alnum = len(re.findall(r"[Ａ-Ｚａ-ｚ０-９]", o))
-    if latin >= 3 and jp >= 5:
-        return True
-    if fw_alnum >= 3 and jp >= 3:
-        return True
-    if len(re.findall(r"[ぁ-ん]{1,2}\s+[ぁ-ん]{1,2}", o)) >= 4:
-        return True
-    if jp >= 15:
-        particles = sum(o.count(p) for p in "はがをのにてもだ")
-        if particles == 0 and "ポケモン" not in o and "\\CC" not in o:
-            return True
-    return False
 
 
 def clean_garbled_translated(tr: str) -> str | None:
@@ -1552,6 +2006,10 @@ def mark_404_in_translated(
         if not isinstance(tr, str):
             tr = ""
         if not _translated_has_garbled_mark(tr):
+            if _looks_garbage_original(orig):
+                out.append({"status": 404, "original": orig})
+                n_404 += 1
+                continue
             out.append(
                 {"status": 200, "original": orig, "translated": tr}
             )
@@ -1692,21 +2150,21 @@ def main(argv: list[str] | None = None) -> int:
 
     p_rp = sub.add_parser(
         "remove-preview",
-        help="预览：按坏地址切开模块区间（不写盘）",
+        help="预览：整句洞 merge 进 texts.omit_ranges（不写盘）",
     )
     p_rp.add_argument("rom", type=Path)
     _add_remove_args(p_rp)
 
     p_rm = sub.add_parser(
         "remove",
-        help="执行：切开 yaml 模块区间并同步 texts.json",
+        help="执行：merge texts.omit_ranges 并同步 texts.json（不切碎模块 ranges）",
     )
     p_rm.add_argument("rom", type=Path)
     _add_remove_args(p_rm)
 
     p_m4 = sub.add_parser(
         "mark-404",
-        help="译文含乱码标记：无意义→404，有用中文→清洗，写回 texts_translated.json",
+        help="乱码标记/假200垃圾原文→404，清洗污染译文；写回 texts_translated.json",
     )
     p_m4.add_argument(
         "--translated",
@@ -1718,6 +2176,25 @@ def main(argv: list[str] | None = None) -> int:
         "--game-id",
         default="POKEMON_RUBY_AXVJ00",
         help="未指定 --translated 时用此 game_id 解析默认路径",
+    )
+
+    p_mig = sub.add_parser(
+        "migrate-omit",
+        help="碎 ranges 并回粗带，缝写入 texts.omit_ranges",
+    )
+    p_mig.add_argument(
+        "rom",
+        type=Path,
+        nargs="?",
+        default=None,
+        help="可选 ROM（用于 resolve 配置）；省略则默认 AXVJ yaml",
+    )
+    p_mig.add_argument("--config", type=Path, default=None)
+    p_mig.add_argument(
+        "--max-gap",
+        type=int,
+        default=32,
+        help="邻近 ranges 合并的最大缝隙字节数（默认 32；大缝保留为多段）",
     )
 
     args = ap.parse_args(argv)
@@ -1755,6 +2232,10 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_mark_404(
             translated=args.translated,
             game_id=args.game_id,
+        )
+    if args.cmd == "migrate-omit":
+        return cmd_migrate_omit(
+            args.rom, config_path=args.config, max_gap=args.max_gap
         )
     ap.error(f"unknown command {args.cmd}")
     return 2

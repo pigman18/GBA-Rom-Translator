@@ -15,6 +15,7 @@ from ..config_loader import (
     load_game_config,
     get_game_patch_dir,
     get_charmap_path,
+    module_wrap_kwargs,
     set_active_game_id,
 )
 from ..font_patch import apply_font_patch
@@ -1231,7 +1232,14 @@ class TranslationEngine:
                 entry["translated"] = ""
                 entry["_cache_status"] = CACHE_STATUS_GARBLED
                 continue
-            translated = wrap_text(translated, target_lang=self.config.target_lang)
+            translated = wrap_text(
+                translated,
+                target_lang=self.config.target_lang,
+                **module_wrap_kwargs(
+                    self.config.game,
+                    entry.get("module") or entry.get("_axvj_module"),
+                ),
+            )
             if (
                 self._feature("failed_zh_detection")
                 and self.config.target_lang.startswith("zh")
@@ -1289,7 +1297,14 @@ class TranslationEngine:
                 entry["translated"] = ""
                 entry["_cache_status"] = CACHE_STATUS_GARBLED
                 continue
-            translated = wrap_text(translated, target_lang=self.config.target_lang)
+            translated = wrap_text(
+                translated,
+                target_lang=self.config.target_lang,
+                **module_wrap_kwargs(
+                    self.config.game,
+                    entry.get("module") or entry.get("_axvj_module"),
+                ),
+            )
             if looks_like_failed_zh_translation(entry.get("original", ""), translated):
                 entry["translated"] = ""
             else:
@@ -1943,15 +1958,15 @@ class TranslationEngine:
 
         self.charmap.encode = _encode
 
-        from ..config_loader import DEFAULT_LINE_WIDTH, module_line_widths
+        from ..config_loader import DEFAULT_WORD_COUNT, module_word_counts
 
-        line_width_default = DEFAULT_LINE_WIDTH
-        line_width_modules = module_line_widths(self.config.game)
+        word_count_default = DEFAULT_WORD_COUNT
+        word_count_modules = module_word_counts(self.config.game)
         writer = RomWriter(self.charmap, game=self.config.game,
                           target_lang=self.config.target_lang,
                           fp_cfg=fp_cfg,
-                          line_width_default=line_width_default,
-                          line_width_modules=line_width_modules)
+                          word_count_default=word_count_default,
+                          word_count_modules=word_count_modules)
 
         # Load ROM. If font patch expands itself (ARMIPS), do not pre-pad
         # (0xFF padding breaks free-space detection after armips).

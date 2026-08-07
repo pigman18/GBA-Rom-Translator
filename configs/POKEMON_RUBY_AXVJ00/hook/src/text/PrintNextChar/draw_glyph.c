@@ -31,6 +31,11 @@ static void pitch_reset(TextPrinter *win)
     st->base_tx = win_u8(win, WIN_CURSOR_TILE_X);
 }
 
+void Chinese_PitchReset(TextPrinter *win)
+{
+    pitch_reset(win);
+}
+
 static uint8_t *vram_tile(TextPrinter *win, uint16_t tile)
 {
     uint8_t *tpl = win_template(win);
@@ -357,24 +362,47 @@ void DrawGlyph_Chinese_Adv(TextPrinter *win, const uint8_t *glyph_src, unsigned 
     uint16_t key = chs_pitch_key(win);
     unsigned last;
     int linear;
+    int newline_reset = 0;
 
     if (char_base != st->char_base || key != st->pitch_key) {
+        /* Window / line fingerprint changed (incl. FE bumping Y).
+         * FE is handled by vanilla (not PrintNextChar_C) — reset here. */
         st->char_base = char_base;
         st->pitch_key = key;
         st->write_op = 0;
         st->last_adv = (uint8_t)CHS_GLYPH_ADVANCE_PX;
         pitch_reset(win);
+        newline_reset = 1;
+    } else if (st->chs_px != 0 && cur_tx <= st->base_tx) {
+        /* FE reset CURSOR_TILE_X to line start while chs_px still mid-run
+         * → first glyph would start at startPixel=chs_px&7 (左缘切半). */
+        pitch_reset(win);
+        newline_reset = 1;
     } else if (st->chs_px != 0) {
         last = st->last_adv ? st->last_adv : CHS_GLYPH_ADVANCE_PX;
         {
             uint8_t expect = (uint8_t)(st->base_tx + ((st->chs_px + last - 1) >> 3));
-            if (cur_tx != expect)
+            if (cur_tx != expect) {
                 pitch_reset(win);
+                newline_reset = 1;
+            }
         }
     } else {
         st->base_tx = cur_tx;
     }
 
     linear = DrawGlyph_ShouldUseLinear(win, st->write_op);
+    /*
+     * Linear 8+4: pass2 (startPixel==0) does not advance TILE_OFFSET, so the
+     * next glyph's pass1 reuses those VRAM tiles. Same-line overlap is
+     * intentional; after FE the next row still shares that offset → left
+     * edge of 捉/性 appears as a sliver at the end of the previous line.
+     * Bump offset on newline so the new row gets fresh tiles.
+     */
+    if (newline_reset && linear) {
+        uint16_t off = win_u16(win, WIN_TILE_OFFSET);
+        win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
+    }
+
     drawGlyph_Adv(win, glyph_src, linear, adv_px);
 }

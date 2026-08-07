@@ -16,6 +16,10 @@
 - 入口：`drawGlyph12()` ← Font_Patch **8+4** + ROM `CopyGlyph2bppTo4bpp`（IWRAM 拼好再 32-bit 拷 VRAM；禁止对 VRAM 字节写，否则半字镜像→重影）
 - 取字：`base + (index << 7)`
 - 步进：`CHS_GLYPH_ADVANCE_PX = 12`
+- **换行（FE/FB/FA）后必须 `chs_px = 0`**（`pitch_reset`），否则下一行首字相位错 → 左缘切半
+  - `FE` 由原版处理；下一字 `DrawGlyph_Chinese_Adv` 在 `pitch_key`/行首变化时 `pitch_reset`
+  - **Linear**：换行时 `TILE_OFFSET += 2`，避免下一行 pass1 覆写仍挂在上一行行尾的 pass2 字模 → 行尾半个「捉/性」
+  - **禁止**写 `WIN_CURSOR_X=0`（会整体左偏）
 - 落点：[`draw_glyph.c`](../configs/POKEMON_RUBY_AXVJ00/hook/src/text/PrintNextChar/draw_glyph.c)
 - **Linear 地板**：野外/说明 `0x100`，商店说明 `0x228`（见 `CHS_TILE_LAYOUT.md`）；无 `next_abs` sticky
 - **调色**：`CopyGlyph(C,E,D)` → `15→C` / `14→E` / `0→D`；右缘填 D，不碰左缘

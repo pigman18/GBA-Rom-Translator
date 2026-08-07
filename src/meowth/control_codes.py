@@ -13,7 +13,7 @@ from typing import Any
 from .pcs_codes import CONTROL_CODE_REGEX
 
 # Gen3/HMA defaults when codec.json is absent
-_DEFAULT_LINE_WIDTH = 32
+_DEFAULT_WORD_COUNT = 32
 _DEFAULT_SEMANTIC_RATIO = 0.75
 _DEFAULT_PARAGRAPH_CODES = ("\\.", "\\p")
 _DEFAULT_STRIP_LAYOUT = ("\\l", "\\n")
@@ -38,15 +38,16 @@ def _protect_cfg() -> dict[str, Any]:
         return {}
 
 
-def _line_width() -> int:
+def _word_count() -> int:
     cfg = _protect_cfg()
-    return int(cfg.get("line_width", _DEFAULT_LINE_WIDTH))
+    raw = cfg.get("word_count", cfg.get("line_width", _DEFAULT_WORD_COUNT))
+    return int(raw)
 
 
 def _semantic_threshold() -> int:
     cfg = _protect_cfg()
     ratio = float(cfg.get("semantic_threshold_ratio", _DEFAULT_SEMANTIC_RATIO))
-    return int(_line_width() * ratio)
+    return int(_word_count() * ratio)
 
 
 def _paragraph_codes() -> tuple[str, ...]:

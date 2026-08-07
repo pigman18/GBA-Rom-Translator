@@ -98,8 +98,10 @@ struct ChineseTileState {
 #ifndef CHS_MODE2_PITCH12
 #define CHS_MODE2_PITCH12 0
 #endif
+/* FE/FB newline: DrawGlyph_Chinese_Adv clears chs_px when cur_tx returns to
+ * line start or pitch_key (Y) changes — see draw_glyph.c. */
 #ifndef CHS_LINE_FEED_PATCH
-#define CHS_LINE_FEED_PATCH 0
+#define CHS_LINE_FEED_PATCH 1
 #endif
 
 #define chinese_tile_state() ((volatile struct ChineseTileState *)ADDR_CHINESE_TILE_STATE)
@@ -201,6 +203,8 @@ int PrintNextChar_C(TextPrinter *win, uint32_t cur_char);
 
 void DrawGlyph_Chinese(TextPrinter *win, const uint8_t *glyph_src);
 void DrawGlyph_Chinese_Adv(TextPrinter *win, const uint8_t *glyph_src, unsigned adv_px);
+/* Clear ChineseTileState pitch after FE/FB/FA (optional asm hook). */
+void Chinese_PitchReset(TextPrinter *win);
 int  DrawGlyph_ShouldUseLinear(TextPrinter *win, uint8_t write_op);
 void drawGlyph12(TextPrinter *win, const uint8_t *src18, int linear);
 void drawGlyph_Adv(TextPrinter *win, const uint8_t *src128, int linear, unsigned adv_px);

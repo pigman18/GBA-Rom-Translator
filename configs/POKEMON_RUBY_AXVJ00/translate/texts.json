@@ -138,7 +138,9 @@
       "start": "0x3984DC",
       "end": "0x39A647",
       "type": "scan",
-      "line_width": 14,
+      "word_count": 7,
+      "wrap_pages": false,
+      "max_lines": 3,
       "relocate": true,
       "hook": true
     },
@@ -191,7 +193,7 @@
       "type": "scan",
       "relocate": true,
       "hook": true,
-      "line_width": 5,
+      "word_count": 3,
       "filters": [
         {
           "type": "require_pointer_filter",

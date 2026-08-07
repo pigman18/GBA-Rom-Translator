@@ -4,7 +4,7 @@
     "address_space": "file_offset",
     "match_rule": "smallest fuzzy span first; band fully inside",
     "address_family": "FILL: RS | FRLG | Emerald",
-    "note": "default=true（除物种名/姓名输入/默认名字/其它组与未归类）。line_width 不在 dump 配置，见 Meowth translate/modules.inject.json（默认20）。",
+    "note": "default=true（除物种名/姓名输入/默认名字/其它组与未归类）。word_count 在 Meowth translate/texts.json modules（默认14）。",
     "taxonomy": "MODULE_TAXONOMY.md"
   },
   "modules": [

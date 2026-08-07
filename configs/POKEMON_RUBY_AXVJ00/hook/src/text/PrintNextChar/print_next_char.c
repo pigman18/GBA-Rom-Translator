@@ -160,6 +160,13 @@ int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
     if (scene_is_battle_interface_dest(win))
         return 0;
 
+    /* FE/FB/FA: clear Chinese pitch before vanilla newline/scroll/clear.
+     * Otherwise next F9 00 keeps chs_px mid-run → 左缘切半. */
+    if (cur_char == 0xFEu || cur_char == 0xFBu || cur_char == 0xFAu) {
+        Chinese_PitchReset(win);
+        return 0;
+    }
+
     if (draw_sym_punct(win, cur_char))
         return 1;
 

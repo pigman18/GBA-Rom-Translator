@@ -4,7 +4,7 @@
 
   ],
   "protect": {
-    "line_width": 32,
+    "word_count": 32,
     "semantic_threshold_ratio": 0.75,
     "paragraph_codes": [
       "\\.",

@@ -48,8 +48,8 @@ class RomWriter:
                  font_boundary: int | None = None,
                  min_pointer_source: int | None = None,
                  fp_cfg: dict | None = None,
-                 line_width_default: int | None = None,
-                 line_width_modules: dict[str, int] | None = None):
+                 word_count_default: int | None = None,
+                 word_count_modules: dict[str, int] | None = None):
         self.charmap = charmap or Charmap(target_lang=target_lang)
         self.target_lang = target_lang
         self.game = game
@@ -75,8 +75,9 @@ class RomWriter:
             else parse_int_addr(self._fp.get("min_pointer_source"), 0x0)
         )
         self.write_offset = self.EXPANSION_START  # updated in inject_texts()
-        self._line_width_default = line_width_default or 20
-        self._line_width_modules = line_width_modules or {}
+        from .config_loader import DEFAULT_WORD_COUNT
+        self._word_count_default = word_count_default or DEFAULT_WORD_COUNT
+        self._word_count_modules = word_count_modules or {}
 
     def _to_rom_offset(self, addr: int) -> int:
         """Convert GBA pointer (0x08xxxxxx) to ROM file offset if needed."""
@@ -158,9 +159,12 @@ class RomWriter:
         """
         return True
 
-    def _axvj_prepare_zh_text(self, text: str, line_width: int | None = None) -> str:
+    def _axvj_prepare_zh_text(
+        self, text: str, word_count: int | None = None, module_id: str | None = None
+    ) -> str:
         """Normalize LLM artifacts and re-wrap for narrow AXVJ boxes."""
         import re
+        from .config_loader import module_wrap_kwargs
         from .text_wrap import wrap_text
 
         t = (
@@ -171,7 +175,10 @@ class RomWriter:
         t = re.sub(r"(?<![\\])\{([^\\}]+)\}", r"\1", t)
         t = t.replace("\x00LSCROLL\x00", "\\l").replace("LSCROLL", "")
         t = t.replace("\\p", "\n\n").replace("\\n", "\n")
-        return wrap_text(t, line_width=line_width, target_lang=self.target_lang)
+        kwargs = module_wrap_kwargs(self.game, module_id)
+        if word_count is not None:
+            kwargs["word_count"] = word_count
+        return wrap_text(t, target_lang=self.target_lang, **kwargs)
 
     def _axvj_pad_relocated(self, encoded: bytes) -> bytes:
         """Pad AXVJ relocated strings for the title-menu 26-byte blind copy."""
@@ -618,9 +625,11 @@ class RomWriter:
             raise ValueError(f"Entry {entry_id}: translated == original '{original}'")
 
         if self._is_armips and self.target_lang.startswith("zh"):
-            module_id = entry.get("_axvj_module")
-            lw = self._line_width_modules.get(module_id, self._line_width_default) if module_id else self._line_width_default
-            translated = self._axvj_prepare_zh_text(translated, line_width=lw)
+            module_id = entry.get("_axvj_module") or entry.get("module")
+            wc = self._word_count_modules.get(module_id, self._word_count_default) if module_id else self._word_count_default
+            translated = self._axvj_prepare_zh_text(
+                translated, word_count=wc, module_id=module_id
+            )
 
         try:
             encoded = self.charmap.encode(translated)

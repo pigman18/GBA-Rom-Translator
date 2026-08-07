@@ -7,7 +7,7 @@
       extract/config.json
       translate/
         config.json            # protect / skip / allows / rejects
-        texts.json             # entries + modules（含 write/read/line_width）
+        texts.json             # entries + modules（含 write/read/word_count）
         texts_translated.json  # 翻译缓存（status 200/404 数组）
         lexicon/
       font/config.json + charmap.txt
@@ -15,7 +15,8 @@
       inject/config.json       # pointer deny / brand_compact_skip
 
 模块定义与语料均在 ``translate/texts.json``；inject 的 ``read``/``write``/
-``line_width`` 也写在 texts.json 的 modules 上。``line_width`` 缺省 20。
+``word_count`` 写在 texts.json 的 modules 上（一行最多汉字数，缺省 14）。
+旧字段 ``line_width`` 读取时会映射为 ``word_count``，配置侧请改用 ``word_count``。
 """
 
 from __future__ import annotations
@@ -46,7 +47,8 @@ STAGE_HOOK = "hook"
 STAGE_INJECT = "translate"  # inject policy merged into translate/config.json
 STAGE_MODULES = "modules"
 
-DEFAULT_LINE_WIDTH = 20
+# Max 汉字 per line (texts.json module ``word_count``).
+DEFAULT_WORD_COUNT = 14
 
 # F9 channel protocol (AXVJ Chinese):
 #   F9 00 01  — 旁载单字 (auto)
@@ -139,7 +141,10 @@ _INJECT_MODULE_KEYS = (
     "read",
     "write",
     "layout",
-    "line_width",
+    "word_count",
+    "wrap_pages",
+    "max_lines",
+    "line_width",  # read-only migrate → word_count in load_modules_inject
     "chs_stride",
     "patch_type",
     "widen_fn",
@@ -306,7 +311,7 @@ def load_game_identity(game_id: str) -> dict[str, Any]:
 def load_modules_inject(game_id: str = "") -> dict[str, dict[str, Any]]:
     """Inject config keyed by module id from ``texts.json`` modules only.
 
-    Reads ``read`` / ``write`` / ``line_width`` / … from each module entry
+    Reads ``read`` / ``write`` / ``word_count`` / … from each module entry
     in ``translate/texts.json``. Legacy ``modules.inject.json`` is ignored.
     """
     gid = game_id or _active_game_id
@@ -326,6 +331,10 @@ def load_modules_inject(game_id: str = "") -> dict[str, dict[str, Any]]:
             if not isinstance(meta, dict):
                 continue
             inj = {k: meta[k] for k in _INJECT_MODULE_KEYS if k in meta}
+            # Migrate discarded line_width → word_count
+            if "word_count" not in inj and "line_width" in inj:
+                inj["word_count"] = inj["line_width"]
+            inj.pop("line_width", None)
             if inj:
                 out[mid] = inj
 
@@ -519,31 +528,56 @@ def module_write_type_code(game_id: str, module_id: str | None) -> int | None:
     return module_write_op(game_id, module_id)
 
 
-def module_line_width(game_id: str, module_id: str | None) -> int:
-    """Per-module wrap width from texts.json modules; default 20."""
+def module_word_count(game_id: str, module_id: str | None) -> int:
+    """Per-module wrap Hanzi count from texts.json; default 14."""
     if not module_id:
-        return DEFAULT_LINE_WIDTH
+        return DEFAULT_WORD_COUNT
     inj = load_modules_inject(game_id).get(module_id) or {}
-    lw = inj.get("line_width")
-    if lw is None:
-        return DEFAULT_LINE_WIDTH
+    raw = inj.get("word_count")
+    if raw is None:
+        return DEFAULT_WORD_COUNT
     try:
-        return int(lw)
+        return int(raw)
     except (TypeError, ValueError):
-        return DEFAULT_LINE_WIDTH
+        return DEFAULT_WORD_COUNT
 
 
-def module_line_widths(game_id: str = "") -> dict[str, int]:
-    """Map module id → line_width for modules that override the default."""
+def module_word_counts(game_id: str = "") -> dict[str, int]:
+    """Map module id → word_count for modules that override the default."""
     gid = game_id or _active_game_id or ""
     out: dict[str, int] = {}
     for mid, cfg in load_modules_inject(gid).items():
-        if "line_width" in cfg:
-            try:
-                out[mid] = int(cfg["line_width"])
-            except (TypeError, ValueError):
-                pass
+        if "word_count" not in cfg:
+            continue
+        try:
+            out[mid] = int(cfg["word_count"])
+        except (TypeError, ValueError):
+            pass
     return out
+
+
+def module_wrap_kwargs(game_id: str, module_id: str | None) -> dict[str, Any]:
+    """Kwargs for :func:`meowth.text_wrap.wrap_text` from module meta.
+
+    ``wrap_pages`` default True (dialogue). Shop/item desc sets false + max_lines.
+    """
+    kwargs: dict[str, Any] = {
+        "word_count": module_word_count(game_id, module_id),
+        "wrap_pages": True,
+    }
+    if not module_id:
+        return kwargs
+    inj = load_modules_inject(game_id).get(module_id) or {}
+    if "wrap_pages" in inj:
+        kwargs["wrap_pages"] = bool(inj["wrap_pages"])
+    if "max_lines" in inj:
+        try:
+            kwargs["max_lines"] = int(inj["max_lines"])
+        except (TypeError, ValueError):
+            pass
+    elif not kwargs["wrap_pages"]:
+        kwargs["max_lines"] = 2
+    return kwargs
 
 
 def load_game_config(game_id: str) -> dict[str, Any]:
@@ -578,8 +612,8 @@ def load_game_config(game_id: str) -> dict[str, Any]:
     if tables:
         profile["tables"] = tables
 
-    # No global translate line_width — default 20 at use sites
-    profile["line_width"] = DEFAULT_LINE_WIDTH
+    # Wrap default for legacy callers (prefer module word_count at use sites)
+    profile["word_count"] = DEFAULT_WORD_COUNT
 
     font_cfg = load_font_config(game_id)
     patch_cfg = load_stage_config(game_id, STAGE_PATCH)
@@ -625,12 +659,16 @@ def load_modules(game_id: str) -> dict[str, dict[str, Any]]:
             f"got {type(mods).__name__}"
         )
 
-    # Ensure no line_width left on dump modules (inject owns wrap width)
+    # Keep word_count on modules; drop discarded line_width if any
     cleaned = {}
     for mid, meta in mods.items():
         if not isinstance(meta, dict):
             continue
-        cleaned[mid] = {k: v for k, v in meta.items() if k != "line_width"}
+        m = dict(meta)
+        if "word_count" not in m and "line_width" in m:
+            m["word_count"] = m["line_width"]
+        m.pop("line_width", None)
+        cleaned[mid] = m
     _modules_cache[game_id] = cleaned
     print(f"[配置]   模块数: {len(cleaned)}")
     return cleaned
@@ -677,7 +715,7 @@ def load_policy(game_id: str = "") -> dict[str, Any]:
         inject = _read_json(stage_dir(gid, STAGE_PATCH) / "inject_policy.json")
     if inject:
         for key, val in inject.items():
-            if key not in ("modules", "protect", "skip", "line_width", "_meta"):
+            if key not in ("modules", "protect", "skip", "word_count", "line_width", "_meta"):
                 merged[key] = val
 
     tr = load_stage_config(gid, STAGE_TRANSLATE, "codec.json", "skip.json")
@@ -700,7 +738,7 @@ def load_policy(game_id: str = "") -> dict[str, Any]:
 
 
 def load_codec(game_id: str = "") -> dict[str, Any]:
-    """Translate protect + font charmap knobs. No global line_width."""
+    """Translate protect + font charmap knobs."""
     gid = game_id or _active_game_id
     if not gid:
         return {}
@@ -712,6 +750,7 @@ def load_codec(game_id: str = "") -> dict[str, Any]:
     if legacy:
         out.update(legacy)
         out.pop("line_width", None)
+        out.pop("word_count", None)
 
     tr = load_stage_config(gid, STAGE_TRANSLATE, "codec.json")
     if tr.get("protect"):

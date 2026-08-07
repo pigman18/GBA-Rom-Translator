@@ -225,6 +225,9 @@ def plan_entry(
     game_id: str = "",
 ) -> dict:
     """决策单个条目的 type + target_hex。不改动 entry。"""
+    from .config_loader import module_wrap_kwargs
+    from .text_wrap import wrap_text
+
     original = _original_of(entry)
     translated = _translated_of(entry)
     byte_length = entry.get("byte_length", 0) or 0
@@ -260,9 +263,16 @@ def plan_entry(
     allow_hook = module_allows_hook(game_id, module_id)
     ptrs = _ptr_sources(entry)
 
+    # 按模块 word_count / wrap_pages 再折行后再编码。
+    to_encode = wrap_text(
+        translated,
+        target_lang="zh-Hans",
+        **module_wrap_kwargs(game_id, module_id),
+    )
+
     # 编码（F9 00 单字流等）
     try:
-        encoded = charmap.encode(translated)
+        encoded = charmap.encode(to_encode)
     except Exception:
         return {
             "type": "keep",

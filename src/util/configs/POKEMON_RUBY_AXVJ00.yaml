@@ -3560,7 +3560,10 @@ texts:
       start: '0x3984DC'
       end: '0x39A647'
       type: scan
-      line_width: 14
+      # 商店说明：约 7 字/行 × 3 行；禁 \\p；末行 spill 靠绘制复位
+      word_count: 7
+      wrap_pages: false
+      max_lines: 3
       relocate: true
       hook: true
     - id: 招式说明
@@ -3607,7 +3610,8 @@ texts:
       type: scan
       relocate: true
       hook: true
-      line_width: 5
+      # 短 UI：一行最多汉字数
+      word_count: 3
       filters:
         - type: require_pointer_filter
           value: true

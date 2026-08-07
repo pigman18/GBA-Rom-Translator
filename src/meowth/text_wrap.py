@@ -1,25 +1,24 @@
 """Auto line-wrapping for translated GBA Pokemon text.
 
-Inserts \\n (newline) and \\p (page break) so text fits GBA text boxes.
+``word_count`` = max **汉字个数** per line. Inserts ``\\n`` (and optionally
+``\\p``) so text fits GBA text boxes.
 
-Design:
-  - A text box shows 2 lines.
-  - Each line holds ~15 CJK characters (width 2 each) or ~30 ASCII chars.
-  - \\n = newline within same box, \\p = page break (wait for A, clear box).
-
-Three-level break handling:
-  - \\n\\n (literal double newline) = paragraph break → \\p (page break)
-  - \\n (literal single newline) = semantic newline → forced line break
-  - No newline = continuous text → auto-wrap at LINE_WIDTH
+Shop / item-desc boxes only honor ``FE`` (``\\n``); ``FB`` (``\\p``) does not
+page-clear — set ``wrap_pages=False`` + ``max_lines`` for those modules.
 """
+
+from __future__ import annotations
 
 import re
 
-LINES_PER_BOX = 2      # lines per text box
+LINES_PER_BOX = 2  # lines per text box (dialogue)
 
-# Variable width estimates
-_VAR_WIDTHS = {"player": 6, "rival": 6}
-_DEFAULT_VAR_WIDTH = 8
+# Default max Hanzi per line (module ``word_count`` may override).
+DEFAULT_WORD_COUNT = 14
+
+# Player/rival name vars: ~6 halfwidth slots → count as 6 units
+_VAR_UNITS = {"player": 6, "rival": 6}
+_DEFAULT_VAR_UNITS = 8
 
 # HMA color/style bracket codes (zero display width)
 _COLOR_NAMES = {
@@ -38,6 +37,7 @@ _NO_BREAK_BEFORE = set("。，！？、）」』】〉》：；…～")
 _NO_BREAK_AFTER = set("（「『【〈《")
 
 # Common compound words that should not be split across lines
+# (still count as len(chars) toward word_count — never as 1).
 _COMPOUNDS = [
     "宝可梦", "红白机", "精灵球", "训练师", "道馆主", "冠军联盟",
     "大木博士", "小智", "小茂", "火箭队", "四天王",
@@ -58,64 +58,101 @@ _TOKEN_RE = re.compile(
     re.DOTALL,
 )
 
+# Hard line-break markers (literal backslash codes or real newlines)
+_HARD_BREAK_RE = re.compile(r"\\n|\n")
 
-def wrap_text(text: str, line_width: int | None = None,
-              lines_per_box: int = LINES_PER_BOX, target_lang: str = "zh-Hans") -> str:
+
+def wrap_text(
+    text: str,
+    word_count: int | None = None,
+    lines_per_box: int = LINES_PER_BOX,
+    target_lang: str = "zh-Hans",
+    *,
+    wrap_pages: bool = True,
+    max_lines: int | None = None,
+) -> str:
     """Wrap translated text to fit GBA text boxes.
 
-    Handles three levels of breaks from the input:
-    - \\n\\n (or \\p, \\.) = paragraph break → always emits \\p
-    - \\n (single) = semantic newline → forced line break within text flow
-    - continuous text = auto-wrapped at line_width
+    ``word_count`` is max Hanzi per line.
+    ``wrap_pages``: if True (dialogue), insert ``\\p`` every ``lines_per_box``
+    lines; if False (shop/item desc), only ``\\n``, never ``\\p``.
+    ``max_lines``: when set (typical 2 with wrap_pages=False), truncate.
+    For ``wrap_pages=False`` (shop/desc): seed ``\\n``/``\\p`` are stripped and
+    the string is reflowed by ``word_count`` — otherwise early hard breaks
+    plus ``max_lines`` truncate causes short lines and missing text.
     """
     if not text:
         return text
 
-    if line_width is None:
-        line_width = 20
+    if word_count is None:
+        word_count = DEFAULT_WORD_COUNT
 
     text = text.replace("\r\n", "\n").replace("\r", "\n")
 
-    # Step 1: Split on paragraph breaks (\\p, \\., \\n\\n)
+    if not wrap_pages:
+        # Shop/desc: only FE works; flatten seed layout then reflow by count.
+        return _wrap_lines_only(text, word_count, max_lines or lines_per_box)
+
+    # Dialogue: paragraph breaks → \\p between boxes
     _PARA = "\x00PARA\x00"
     text = text.replace("\\.", _PARA)
     text = text.replace("\\p", _PARA)
     text = text.replace("\n\n", _PARA)
 
     paragraphs = text.split(_PARA)
-
-    # Step 2: Process each paragraph
-    wrapped_paras = []
+    wrapped_paras: list[str] = []
     for para in paragraphs:
-        if not para.strip():
+        if not para.strip() and "\\l" not in para:
             continue
-
-        # Split on semantic newlines (single \n from _classify_newlines)
-        segments = para.split("\n")
-
-        # Strip leftover \\n codes; keep \\l (AXVJ ▼ / line-scroll) as a
-        # zero-width token so rom_writer does not need a brittle sentinel.
-        cleaned_segments = []
-        for seg in segments:
-            s = seg.replace("\\n", "")
-            if s.strip() or "\\l" in s:
-                cleaned_segments.append(s)
-
-        if not cleaned_segments:
-            continue
-
-        # Wrap each segment into display lines, then distribute into boxes
-        all_lines: list[str] = []
-        for seg in cleaned_segments:
-            seg_lines = _wrap_to_lines(seg, line_width)
-            all_lines.extend(seg_lines)
-
-        wrapped_paras.append(_distribute_lines(all_lines, lines_per_box))
+        all_lines = _segment_and_wrap(para, word_count)
+        if all_lines:
+            wrapped_paras.append(_distribute_lines(all_lines, lines_per_box, wrap_pages=True))
 
     return "\\p".join(wrapped_paras)
 
-def _token_width(token: str) -> int:
-    """Return display width of a token."""
+
+def _wrap_lines_only(text: str, word_count: int, max_lines: int) -> str:
+    """Shop/desc: strip seed ``\\n``/``\\p``, reflow by word_count, no ``\\p``.
+
+    Seed translations often insert ``\\n`` mid-phrase (e.g. after 「比精灵球」).
+    Preserving those as hard breaks + truncating to ``max_lines`` yields
+    under-full lines and drops the rest of the sentence.
+    """
+    # Keep \\l; drop layout breaks so word_count owns line cuts.
+    flat = (
+        text.replace("\\.", "")
+        .replace("\\p", "")
+        .replace("\\n", "")
+        .replace("\n", "")
+    )
+    all_lines = _wrap_to_lines(flat, word_count)
+    if max_lines is not None and max_lines > 0:
+        all_lines = all_lines[: max(1, int(max_lines))]
+    return _distribute_lines(all_lines, lines_per_box=10**9, wrap_pages=False)
+
+
+def _segment_and_wrap(text: str, word_count: int) -> list[str]:
+    """Split on hard ``\\n`` / real newlines, wrap each segment at word_count."""
+    # Keep \\l inside segments; split only on \\n / \\n
+    parts = _HARD_BREAK_RE.split(text)
+    all_lines: list[str] = []
+    for seg in parts:
+        # Drop empty pieces from consecutive breaks; keep \\l-only
+        if not seg.strip() and "\\l" not in seg:
+            continue
+        # Remove any stray \\n left inside (should not remain after split)
+        seg = seg.replace("\\n", "")
+        if not seg.strip() and "\\l" not in seg:
+            continue
+        all_lines.extend(_wrap_to_lines(seg, word_count))
+    return all_lines
+
+
+def _token_units(token: str) -> int:
+    """How many ``word_count`` slots a token consumes (汉字个数).
+
+    Compounds like 「精灵球」 count as 3, never 1.
+    """
     if token.startswith("\\btn"):
         return 2
     if token.startswith("\\"):
@@ -124,18 +161,20 @@ def _token_width(token: str) -> int:
         name = token[1:-1].lower()
         if name in _COLOR_NAMES:
             return 0
-        return _VAR_WIDTHS.get(name, _DEFAULT_VAR_WIDTH)
-    w = 0
+        return _VAR_UNITS.get(name, _DEFAULT_VAR_UNITS)
+    cjk = 0
+    narrow = 0
     for ch in token:
-        if _is_wide(ch):
-            w += 2
+        if _is_cjk(ch):
+            cjk += 1
         else:
-            w += 1
-    return w
+            narrow += 1
+    # Halfwidth: 2 glyphs ≈ 1 汉字 slot
+    return cjk + ((narrow + 1) // 2 if narrow else 0)
 
 
-def _is_wide(ch: str) -> bool:
-    """Return True for CJK / fullwidth characters (width 2)."""
+def _is_cjk(ch: str) -> bool:
+    """CJK / fullwidth — one word_count unit."""
     cp = ord(ch)
     return (
         0x4E00 <= cp <= 0x9FFF
@@ -156,34 +195,37 @@ def _can_break_before(tokens: list[str], idx: int) -> bool:
     return True
 
 
-def _wrap_to_lines(text: str, line_width: int) -> list[str]:
-    """Wrap a continuous text segment into a list of display lines."""
+def _wrap_to_lines(text: str, word_count: int) -> list[str]:
+    """Wrap by Hanzi count; ``word_count`` = max 汉字 per line."""
     tokens = _TOKEN_RE.findall(text)
     if not tokens:
         return [text] if text else []
 
+    budget = max(1, int(word_count))
     lines: list[list[str]] = [[]]
-    line_pos = 0
+    line_units = 0
 
     for i, tok in enumerate(tokens):
-        w = _token_width(tok)
+        w = _token_units(tok)
 
-        if w > 0 and line_pos > 0 and line_pos + w > line_width:
+        if w > 0 and line_units > 0 and line_units + w > budget:
             if _can_break_before(tokens, i):
                 lines.append([])
-                line_pos = 0
+                line_units = 0
 
         lines[-1].append(tok)
-        line_pos += w
+        line_units += w
 
     return ["".join(line) for line in lines if line]
 
 
-def _distribute_lines(lines: list[str], lines_per_box: int) -> str:
-    """Distribute wrapped lines into text boxes.
-
-    Uses \\n for newlines within a box, \\p for page breaks between boxes.
-    """
+def _distribute_lines(
+    lines: list[str],
+    lines_per_box: int,
+    *,
+    wrap_pages: bool = True,
+) -> str:
+    """Join lines with ``\\n``; optionally ``\\p`` every ``lines_per_box``."""
     if not lines:
         return ""
 
@@ -192,7 +234,7 @@ def _distribute_lines(lines: list[str], lines_per_box: int) -> str:
 
     for i, line in enumerate(lines):
         if i > 0:
-            if line_in_box >= lines_per_box:
+            if wrap_pages and line_in_box >= lines_per_box:
                 parts.append("\\p")
                 line_in_box = 0
             else:

@@ -162,8 +162,8 @@ def layout_texts(
     game: str = "",
     target_lang: str = "zh-Hans",
     custom_translations: dict[str, str] | None = None,
-    line_width_default: int | None = None,
-    line_width_modules: dict[str, int] | None = None,
+    word_count_default: int | None = None,
+    word_count_modules: dict[str, int] | None = None,
     on_progress=None,
 ) -> LayoutResult:
     """Decide placement for every entry and return a LayoutResult.
@@ -304,8 +304,9 @@ def layout_texts(
 
         # Prepare text
         if is_armips and target_lang.startswith("zh"):
-            lw = (line_width_modules or {}).get(category, line_width_default or 20)
-            translated = _prepare_zh_text(translated, line_width=lw)
+            from .config_loader import DEFAULT_WORD_COUNT
+            wc = (word_count_modules or {}).get(category, word_count_default or DEFAULT_WORD_COUNT)
+            translated = _prepare_zh_text(translated, word_count=wc)
 
         # ---- encode with phrase codes (same as build_rom) ----
         # PhraseTable stores expanded F9 00+PCS streams, so \\n/controls are OK.
@@ -754,7 +755,7 @@ def _axvj_pad_relocated(encoded: bytes) -> bytes:
     return body + bytes([0xFF]) + bytes([0xFF] * 25)
 
 
-def _prepare_zh_text(text: str, line_width: int = 20) -> str:
+def _prepare_zh_text(text: str, word_count: int = 14) -> str:
     from .text_wrap import wrap_text
     t = (
         text.replace("{\\n}", "\n")
@@ -764,4 +765,4 @@ def _prepare_zh_text(text: str, line_width: int = 20) -> str:
     t = re.sub(r"(?<![\\])\{([^\\}]+)\}", r"\1", t)
     t = t.replace("\x00LSCROLL\x00", "\\l").replace("LSCROLL", "")
     t = t.replace("\\p", "\n\n").replace("\\n", "\n")
-    return wrap_text(t, line_width=line_width, target_lang="zh-Hans")
+    return wrap_text(t, word_count=word_count, target_lang="zh-Hans")

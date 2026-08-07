@@ -29,7 +29,7 @@
         "stride": 4
       },
       "relocate": false,
-      "hook": false
+      "hook": true
     },
     "特性名": {
       "label": "词条·特性",
@@ -41,11 +41,6 @@
       "type": "stride",
       "read": {
         "stride": 8
-      },
-      "write": {
-        "stride": 16,
-        "patch": "literal_ref_widen",
-        "widen": "mul8_to_mul16"
       },
       "relocate": false,
       "hook": false
@@ -61,11 +56,6 @@
       "read": {
         "stride": 6
       },
-      "write": {
-        "stride": 24,
-        "patch": "literal_ref_widen",
-        "widen": "mul6_to_mul24"
-      },
       "relocate": false,
       "hook": false
     },
@@ -79,11 +69,6 @@
       "type": "stride",
       "read": {
         "stride": 8
-      },
-      "write": {
-        "stride": 16,
-        "patch": "literal_ref_widen",
-        "widen": "mul8_to_mul16"
       },
       "relocate": false,
       "hook": false
@@ -134,11 +119,6 @@
         "entry_size": 40,
         "name_stride": 8,
         "desc_ptr_offset": 16
-      },
-      "write": {
-        "stride": 16,
-        "patch": "item",
-        "patch_type": "item"
       },
       "relocate": false,
       "hook": false

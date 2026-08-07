@@ -548,6 +548,37 @@ def iter_entry_ptr_offs(entry: dict) -> list[int]:
     return out
 
 
+def collect_entry_text_spans(entries: Iterable[dict]) -> list[tuple[int, int]]:
+    """Corpus text bodies as ``[lo, hi)`` file offsets (for mid-body fake-ptr reject)."""
+    spans: list[tuple[int, int]] = []
+    for e in entries:
+        raw = e.get("address")
+        if raw in (None, ""):
+            continue
+        try:
+            addr = _file(int(str(raw).replace("0x", ""), 16))
+        except (TypeError, ValueError):
+            continue
+        bl = int(e.get("byte_length") or 0)
+        if bl <= 0 or addr < 0:
+            continue
+        spans.append((addr, addr + bl))
+    return spans
+
+
+def ptr_site_in_text_body(
+    ptr_off: int, text_spans: Iterable[tuple[int, int]] | None
+) -> bool:
+    """True if pointer *site* lies inside any corpus text body (PCS coincidence)."""
+    if not text_spans:
+        return False
+    off = _file(ptr_off)
+    for lo, hi in text_spans:
+        if lo <= off < hi:
+            return True
+    return False
+
+
 def is_live_aligned_text_ptr(
     rom: bytes | bytearray, ptr_off: int, string_off: int
 ) -> bool:
@@ -922,8 +953,14 @@ def filter_pointer_sources(
     expected_pointer: int,
     lz_spans: list[tuple[int, int]] | None = None,
     min_pointer_source: int = 0x6000,
+    text_spans: list[tuple[int, int]] | None = None,
 ) -> list[int]:
-    """S5: keep only pointer sites that currently reference ``text_address``."""
+    """S5: keep only pointer sites that currently reference ``text_address``.
+
+    Drops sites that fall inside corpus text bodies (``text_spans``): those are
+    almost always PCS bytes that coincidentally equal a bus address, not real
+    pointer slots (e.g. move-desc stride colliding with story relocates).
+    """
     from .extract import ptr_in_trusted_lz, trusted_lz_spans
     from .modules import entry_group_in, entry_is_script_like
 
@@ -941,6 +978,8 @@ def filter_pointer_sources(
             continue
         ptr_addr = _file(ptr_addr)
         if ptr_addr + 4 > len(rom):
+            continue
+        if ptr_site_in_text_body(ptr_addr, text_spans):
             continue
         if ptr_addr in title_gfx_ptr_deny():
             continue

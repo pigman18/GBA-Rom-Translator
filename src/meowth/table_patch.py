@@ -144,37 +144,63 @@ def _ldr_pc_target(insn_off: int, h: int) -> int | None:
     return base + imm * 4
 
 
+def _try_widen_mul6_at(rom: bytearray, abs_i: int) -> bool:
+    """If ``rom[abs_i..]`` is classic species*6, widen final lsl to #3 (*24)."""
+    if abs_i < 0 or abs_i + 6 > len(rom):
+        return False
+    h0 = struct.unpack_from("<H", rom, abs_i)[0]
+    h1 = struct.unpack_from("<H", rom, abs_i + 2)[0]
+    h2 = struct.unpack_from("<H", rom, abs_i + 4)[0]
+    ok0, ra, rb = _is_lsl_imm(h0, 1)
+    if not ok0:
+        return False
+    if (h1 >> 9) != 0b0001100:
+        return False
+    rc = h1 & 0x7
+    rn = (h1 >> 3) & 0x7
+    rm = (h1 >> 6) & 0x7
+    if not ((rn == ra and rm == rb) or (rn == rb and rm == ra)):
+        return False
+    ok2, rd2, rm2 = _is_lsl_imm(h2, 1)
+    if not ok2 or rd2 != rc or rm2 != rc:
+        return False
+    # Already widened?
+    ok24, rd24, rm24 = _is_lsl_imm(h2, 3)
+    if ok24 and rd24 == rc and rm24 == rc:
+        return False
+    new_h2 = (h2 & ~0x07C0) | (3 << 6)
+    struct.pack_into("<H", rom, abs_i + 4, new_h2)
+    return True
+
+
 def _patch_mul6_to_mul24(rom: bytearray, literal_off: int) -> int:
-    """Near a gSpeciesNames literal, widen species*6 index to *24.
+    """Near a gSpeciesNames literal, widen every species*6 index to *24.
+
+    Must patch **all** matches in the window — a single early false hit (or a
+    helper that shares the pool) used to leave the real dex *6 intact while the
+    literal was already retargeted at the ×24 table (e.g. species 284 → slot 71).
 
     Patterns:
       lsls rA, rB, #1 ; adds rC, rA, rB ; lsls rC, rC, #1   (*6)
-      (also classic where A==C)
     """
-    start = max(0, literal_off - 0x80)
-    for abs_i in range(start, literal_off - 4, 2):
-        h0 = struct.unpack_from("<H", rom, abs_i)[0]
-        h1 = struct.unpack_from("<H", rom, abs_i + 2)[0]
-        h2 = struct.unpack_from("<H", rom, abs_i + 4)[0]
-        ok0, ra, rb = _is_lsl_imm(h0, 1)
-        if not ok0:
+    n = 0
+    # Before and after the pool entry: *6 often sits on either side of the ldr.
+    start = max(0, literal_off - 0x100)
+    end = min(len(rom) - 4, literal_off + 0x100)
+    for abs_i in range(start, end, 2):
+        if _try_widen_mul6_at(rom, abs_i):
+            n += 1
+    # Also widen near every ldr that loads this literal (wider call-site cover).
+    ldr_lo = max(0, literal_off - 0x400)
+    ldr_hi = min(len(rom) - 2, literal_off + 0x40)
+    for i in range(ldr_lo, ldr_hi, 2):
+        h = struct.unpack_from("<H", rom, i)[0]
+        if _ldr_pc_target(i, h) != literal_off:
             continue
-        # adds rC, rA, rB
-        if (h1 >> 9) != 0b0001100:
-            continue
-        rc = h1 & 0x7
-        rn = (h1 >> 3) & 0x7
-        rm = (h1 >> 6) & 0x7
-        if not ((rn == ra and rm == rb) or (rn == rb and rm == ra)):
-            continue
-        ok2, rd2, rm2 = _is_lsl_imm(h2, 1)
-        if not ok2 or rd2 != rc or rm2 != rc:
-            continue
-        # lsls rc, rc, #1 -> #3  => *6 becomes *24
-        new_h2 = (h2 & ~0x07C0) | (3 << 6)
-        struct.pack_into("<H", rom, abs_i + 4, new_h2)
-        return 1
-    return 0
+        for abs_i in range(max(0, i - 0x80), min(len(rom) - 4, i + 0x40), 2):
+            if _try_widen_mul6_at(rom, abs_i):
+                n += 1
+    return n
 
 
 def _is_lsr_imm(h: int, imm: int) -> tuple[bool, int, int]:
@@ -504,6 +530,9 @@ def inject_name_tables(
     Reads patch config from ``tables_cfg`` (or auto-loads from game config).
     Only tables with ``chs_stride`` set are processed;
     ``patch_type: "item"`` uses item-specific logic (gItems struct).
+
+    Modules with ``relocate`` not explicitly true are skipped (no write widen);
+    those entries inject via plan type/target_hex instead.
     """
     if tables_cfg is None:
         from .tables import _tbl
@@ -513,9 +542,12 @@ def inject_name_tables(
     if not patches:
         return write_offset, {}
 
-    def encode(text: str) -> bytes:
-        from .config_loader import F9_PHRASE_DEFAULT, get_active_game_id, module_write_op
+    from .config_loader import F9_PHRASE_DEFAULT, get_active_game_id, module_write_op
+    from .translate_plan import module_allows_table_widen
 
+    game_id = get_active_game_id() or ""
+
+    def encode(text: str) -> bytes:
         raw = charmap.encode(text)
         if len(raw) < 4 or raw[0] != 0xF9 or raw[1] != F9_PHRASE_DEFAULT:
             return raw
@@ -532,9 +564,13 @@ def inject_name_tables(
 
     stats: dict[str, dict] = {}
     for patch in patches:
+        mid = patch.get("module") or patch["tables_key"]
+        if not module_allows_table_widen(game_id, mid):
+            print(f"  {mid}: skip write widen (relocate!=true; use type/target_hex)")
+            continue
         while write_offset % 4:
             write_offset += 1
-        encode._module = patch.get("module")  # type: ignore[attr-defined]
+        encode._module = mid  # type: ignore[attr-defined]
         patch_type = patch.get("patch_type", "literal_ref_widen")
         if patch_type == "item":
             write_offset, tbl_stats = _process_item_table(

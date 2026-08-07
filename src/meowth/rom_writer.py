@@ -146,6 +146,7 @@ class RomWriter:
             expected_pointer=self._axvj_expected_pointer(text_address),
             lz_spans=spans,
             min_pointer_source=self.MIN_POINTER_SOURCE,
+            text_spans=getattr(self, "_inject_text_spans", None),
         )
 
     def _axvj_text_target_ok(self, rom: bytearray, address: int, entry: dict) -> bool:
@@ -284,7 +285,7 @@ class RomWriter:
         Returns (rom, stats).
         Raises ValueError on any write failure — never silently skips.
 
-        注入前按 id 去重；同一 id 只处理一次。in_place/upgrade 若会覆盖
+        注入前按 id 去重；同一 id 只处理一次。in_place 若会覆盖
         其它条目的 relocate ``pointer_sources`` 则跳过（防 F9 写入指针槽）。
         """
         if not isinstance(rom, bytearray):
@@ -345,14 +346,17 @@ class RomWriter:
                 tables_cfg=tables_cfg,
             )
             stats["name_tables"] = table_stats
-            # Modules handled by table_patch — skip them from main pointer loop
-            for patch_key, tbl in tables_cfg.items():
-                if isinstance(tbl, dict) and tbl.get("chs_stride"):
+            # Only modules that actually widened — relocate:false stays in main loop
+            for patch_key in table_stats:
+                tbl = tables_cfg.get(patch_key) if isinstance(tables_cfg, dict) else None
+                if isinstance(tbl, dict):
                     expanded_modules.add(tbl.get("module") or patch_key)
-                    # legacy english table key as well
-                    expanded_modules.add(patch_key)
+                expanded_modules.add(patch_key)
 
         self._axvj_lz_spans = lz_spans
+        from .policy import collect_entry_text_spans
+
+        self._inject_text_spans = collect_entry_text_spans(entries)
         self._inject_ptr_slots = self._collect_relocate_pointer_slots(entries)
         self._inject_processed_ids: set[str] = set()
         baseline = bytes(rom) if self._is_armips else b""
@@ -397,7 +401,13 @@ class RomWriter:
         return rom, stats
 
     def _collect_relocate_pointer_slots(self, entries: list[dict]) -> set[int]:
-        """收集 relocate/hook 计划的 pointer_sources（ROM 文件偏移），供 in_place 避让。"""
+        """收集 relocate/hook 计划的 pointer_sources（ROM 文件偏移），供 in_place 避让。
+
+        丢弃落在语料正文区间内的站点（PCS 巧合假指针）。
+        """
+        from .policy import ptr_site_in_text_body
+
+        text_spans = getattr(self, "_inject_text_spans", None)
         slots: set[int] = set()
         for e in entries:
             plan = e.get("_plan")
@@ -417,18 +427,24 @@ class RomWriter:
                     off = self._to_rom_offset(int(str(p).replace("0x", ""), 16))
                 except (TypeError, ValueError):
                     continue
-                if off >= 0:
-                    slots.add(off)
+                if off < 0:
+                    continue
+                if ptr_site_in_text_body(off, text_spans):
+                    continue
+                slots.add(off)
         return slots
 
     def _body_covers_pointer_slot(
-        self, address: int, byte_length: int, *, entry_id: str = ""
+        self, address: int, write_length: int, *, entry_id: str = ""
     ) -> list[int]:
-        """若 [address, address+byte_length) 覆盖任一 relocate 指针槽，返回命中槽列表。"""
+        """若 [address, address+write_length) 覆盖任一 relocate 指针槽，返回命中槽列表。
+
+        ``write_length`` 应为实际写入字节数（不要用整槽 byte_length 虚高误判）。
+        """
         slots = getattr(self, "_inject_ptr_slots", None) or set()
-        if not slots or byte_length <= 0:
+        if not slots or write_length <= 0:
             return []
-        end = address + byte_length
+        end = address + write_length
         hits = sorted(p for p in slots if address <= p < end)
         return hits
 
@@ -437,14 +453,16 @@ class RomWriter:
     ) -> None:
         """按 translate.build.json 的 type 注入（翻译通路）。
 
-        f980/upgrade → F9 80 短语引用写入原槽位（槽位不足则保留原文）
-        in_place     → target_hex 写入原地址
+        in_place     → target_hex 写入原地址（含 F900 整串或 F9 80 短语引用）
+        upgrade/f980 → 旧 build 别名，按 in_place 处理
         relocate     → target_hex 写入扩展区并改写指针（弱化指针验证）
         hook         → 跳过（armips pointer_redirect.asm 已写）
         keep         → 保留原文，日志打印
         """
         entry_id = entry.get("id", "?")
         ptype = plan.get("type") or "keep"
+        if ptype in ("f980", "upgrade"):
+            ptype = "in_place"
         category = plan.get("module") or entry.get("module") or ""
         original = entry.get("original", "")
 
@@ -463,35 +481,21 @@ class RomWriter:
             stats["hook_skipped"] = stats.get("hook_skipped", 0) + 1
             return
 
-        if ptype in ("f980", "upgrade", "in_place"):
+        if ptype == "in_place":
+            write_len = min(len(target), byte_length) if target else 0
             clobber = self._body_covers_pointer_slot(
-                address, byte_length, entry_id=str(entry_id)
+                address, write_len, entry_id=str(entry_id)
             )
             if clobber:
                 print(
                     f"  KEEP {entry_id} @ 0x{address:X} (cat={category}): "
-                    f"保留原文（{ptype} 会覆盖 relocate 指针槽 "
+                    f"保留原文（in_place 会覆盖 relocate 指针槽 "
                     f"{', '.join(f'0x{p:X}' for p in clobber[:4])}"
                     f"{'…' if len(clobber) > 4 else ''}）"
                 )
                 stats["skipped_ptr_clobber"] = stats.get("skipped_ptr_clobber", 0) + 1
                 stats["kept"] = stats.get("kept", 0) + 1
                 return
-
-        if ptype in ("f980", "upgrade"):
-            # F9 80 短语引用（5 字节），写入原槽位；槽位不足则保留原文
-            if byte_length >= len(target):
-                self._write_in_place_v2(rom, address, target, byte_length)
-                stats["in_place"] += 1
-            else:
-                print(
-                    f"  KEEP {entry_id} @ 0x{address:X} (cat={category}): "
-                    f"保留原文（F9-80 短语 {len(target)}B 超槽位 {byte_length}B）"
-                )
-                stats["kept"] = stats.get("kept", 0) + 1
-            return
-
-        if ptype == "in_place":
             if len(target) <= byte_length:
                 self._write_in_place_v2(rom, address, target, byte_length)
                 stats["in_place"] += 1
@@ -577,7 +581,9 @@ class RomWriter:
         target = bytes([0xF9, F9_PHRASE_DEFAULT, (int(code) >> 8) & 0xFF, int(code) & 0xFF, F9_EOS])
         if byte_length < len(target):
             return False
-        clobber = self._body_covers_pointer_slot(address, byte_length, entry_id=entry_id)
+        clobber = self._body_covers_pointer_slot(
+            address, len(target), entry_id=entry_id
+        )
         if clobber:
             print(
                 f"  KEEP {entry_id} @ 0x{address:X} (cat={category}): "
@@ -701,7 +707,7 @@ class RomWriter:
                 encoded = _safe_truncate_encoded(encoded, original_length - 1)
                 print(f"    -> after truncation: {encoded.hex()}")
             clobber = self._body_covers_pointer_slot(
-                address, original_length, entry_id=str(entry_id)
+                address, len(encoded), entry_id=str(entry_id)
             )
             if clobber:
                 print(
@@ -735,7 +741,7 @@ class RomWriter:
                 encoded = _safe_truncate_encoded(encoded, original_length - 1)
                 print(f"    -> after truncation: {encoded.hex()}")
             clobber = self._body_covers_pointer_slot(
-                address, original_length, entry_id=str(entry_id)
+                address, len(encoded), entry_id=str(entry_id)
             )
             if clobber:
                 print(

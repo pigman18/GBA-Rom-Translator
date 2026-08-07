@@ -997,32 +997,48 @@ class TranslationEngine:
         for s, code in phrase_codes.items():
             phrases_by_code[code] = s
 
+        from ..translate_plan import module_write_build_meta
+
+        game_id = self.config.game or ""
+        entry_rows = []
+        for e, p in zip(flat, plans):
+            mid = e.get("module") or e.get("_axvj_module") or ""
+            row = {
+                "id": e.get("id", ""),
+                "type": p["type"],
+                "address": e.get("address", ""),
+                "byte_length": e.get("byte_length", 0),
+                "module": mid,
+                "original": e.get("original", ""),
+                "translated": e.get("translated", ""),
+                "original_hex": e.get("original_hex", ""),
+                "target_hex": p.get("target_hex", ""),
+                "_reject": bool(e.get("_reject")),
+            }
+            ptrs = p.get("pointer_sources") or []
+            if ptrs:
+                row["pointer_sources"] = ptrs
+            if p.get("phrase_code") is not None:
+                row["phrase_code"] = p["phrase_code"]
+            if p.get("reason"):
+                row["reason"] = p["reason"]
+            if e.get("check_score") is not None:
+                row["check_score"] = e.get("check_score")
+            hits = list(e.get("check_hits") or [])
+            if hits:
+                row["check_hits"] = hits
+            wmeta = module_write_build_meta(game_id, mid)
+            if wmeta is not None:
+                row["write"] = wmeta
+            entry_rows.append(row)
+
         payload = {
             "game_id": self.config.game,
             "modules": list(self.config.modules or []) if self.config.modules else active_list,
             "active_modules": active_list,
             "count": len(flat),
             "phrases": phrases_by_code,
-            "entries": [
-                {
-                    "id": e.get("id", ""),
-                    "type": p["type"],
-                    "address": e.get("address", ""),
-                    "byte_length": e.get("byte_length", 0),
-                    "module": e.get("module") or e.get("_axvj_module") or "",
-                    "original": e.get("original", ""),
-                    "translated": e.get("translated", ""),
-                    "original_hex": e.get("original_hex", ""),
-                    "target_hex": p.get("target_hex", ""),
-                    "pointer_sources": p.get("pointer_sources") or [],
-                    "phrase_code": p.get("phrase_code"),
-                    "reason": p.get("reason"),
-                    "_reject": bool(e.get("_reject")),
-                    "check_score": e.get("check_score"),
-                    "check_hits": list(e.get("check_hits") or []),
-                }
-                for e, p in zip(flat, plans)
-            ],
+            "entries": entry_rows,
         }
         build_dir = Path(self.config.work_dir) / self.config.game
         build_dir.mkdir(parents=True, exist_ok=True)
@@ -1032,7 +1048,7 @@ class TranslationEngine:
         )
         from collections import Counter as _C
 
-        _types = _C(p["type"] for p in plans)
+        _types = _C(row["type"] for row in entry_rows)
         self._log(
             "info",
             "[翻译通路] translate.build.json → "

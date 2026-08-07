@@ -3472,7 +3472,7 @@ texts:
     read:
       stride: 4
     relocate: false
-    hook: false
+    hook: true
   - id: 特性名
     label: 词条·特性
     group: 词条
@@ -3483,10 +3483,6 @@ texts:
     type: stride
     read:
       stride: 8
-    write:
-      stride: 16
-      patch: literal_ref_widen
-      widen: mul8_to_mul16
     relocate: false
     hook: false
   - id: 宝可梦名
@@ -3499,10 +3495,6 @@ texts:
     type: stride
     read:
       stride: 6
-    write:
-      stride: 24
-      patch: literal_ref_widen
-      widen: mul6_to_mul24
     relocate: false
     hook: false
   - id: 招式名
@@ -3515,10 +3507,6 @@ texts:
     type: stride
     read:
       stride: 8
-    write:
-      stride: 16
-      patch: literal_ref_widen
-      widen: mul8_to_mul16
     relocate: false
     hook: false
   - id: 训练家名
@@ -3560,10 +3548,6 @@ texts:
       entry_size: 40
       name_stride: 8
       desc_ptr_offset: 16
-    write:
-      stride: 16
-      patch: item
-      patch_type: item
     relocate: false
     hook: false
   - id: 道具说明

@@ -1,13 +1,13 @@
 """翻译通路规划：为每条目决策注入 type 并编码 target_hex。
 
 type:
-  in_place — F900 编码字节 ≤ 原始槽位，原地写入（最高优先）
+  in_place — 写入原槽：F900 整串，或越槽时的 F9 80 短语引用（带 ``phrase_code``）
   relocate — 编码超槽位且有指针源且模块 ``relocate=true``，写扩展区 + 指针改写
-  upgrade  — relocate 不可用但允许短语，F9 80 原地（槽位 ≥ 5）
   hook     — 前序失败且模块 ``hook=true`` 且有指针：生成 pointer_redirect.asm
   keep     — 都无法满足，保留原文（ROM 不动）
 
 优先级链：F900 原地 → relocate → F9 80 原地 → hook → keep。
+（旧 build 里的 upgrade/f980 视为 in_place 别名。）
 
 translate 阶段只做决策与编码（不注入 ROM），产出 translate.build.json，
 build 阶段按 type 注入（hook 交 armips）。
@@ -26,8 +26,9 @@ PLAN_TYPE_RANK: dict[str, int] = {
     "relocate": 50,
     "hook": 45,
     "in_place": 30,
-    "upgrade": 20,
-    "f980": 20,
+    # legacy aliases (read-only compat with old translate.build.json)
+    "upgrade": 30,
+    "f980": 30,
     "keep": 10,
 }
 
@@ -122,11 +123,32 @@ def module_allows_hook(game_id: str, module_id: str | None) -> bool:
 
 
 def module_allows_phrase(game_id: str, module_id: str | None) -> bool:
-    """该模块是否允许 F9 80 短语引用（f980 / upgrade）。
+    """该模块是否允许 F9 80 短语引用（仍写入原槽，type=in_place）。
 
     ``relocate=false`` 只禁止改指针，**不禁止** F9 80 短语原地。
     """
     return True
+
+
+def module_allows_table_widen(game_id: str, module_id: str | None) -> bool:
+    """是否允许 write 扩表（literal_ref_widen / item 等）。
+
+    与 ``module_allows_relocate`` 不同：不因 stride/struct 类型恒 false。
+    仅当模块配置显式 ``relocate: true`` 时扩表；``false`` 或未写则否。
+    """
+    meta = _module_meta(game_id, module_id)
+    return bool(meta.get("relocate"))
+
+
+def module_write_build_meta(game_id: str, module_id: str | None) -> dict | None:
+    """build.json 仅在本轮真会扩表时附加 write（无用则不出现）。"""
+    if not module_allows_table_widen(game_id, module_id):
+        return None
+    meta = _module_meta(game_id, module_id)
+    write = meta.get("write")
+    if not isinstance(write, dict) or not write:
+        return None
+    return dict(write)
 
 
 def _encode_phrase_ref(code: int) -> bytes:
@@ -250,12 +272,12 @@ def plan_entry(
             "pointer_sources": ptrs,
         }
 
-    # type 3: 超槽位且 relocate 不可用但允许短语 → F9 80 短语引用原地
+    # type 3: 超槽位且 relocate 不可用但允许短语 → F9 80 短语引用仍原地写入
     if allow_phrase and byte_length >= 5:
         code = phrase_codes.get(s)
         if code is not None:
             return {
-                "type": "upgrade",
+                "type": "in_place",
                 "target_hex": _encode_phrase_ref(code).hex(" "),
                 "phrase_code": code,
             }

@@ -1,4 +1,4 @@
-"""Fixed name tables — layouts from ``translate/modules.inject.json``.
+"""Fixed name tables — layouts from ``translate/texts.json`` modules (read/write).
 
 Used at extract (read JP rows) and again at build (widen/reloc Chinese tables).
 Assembled into a legacy tables dict by ``tables_from_modules_inject``.

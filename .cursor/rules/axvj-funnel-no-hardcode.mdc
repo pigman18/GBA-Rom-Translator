@@ -22,7 +22,7 @@ alwaysApply: true
 | 5 | 政策 Policy | 译 / 留日 / 另表处理？ | **按域**的政策（见下） | `keep_for_stable_inject` 式剧情白名单 |
 | 6 | 译文 Translate | 译文从哪来？ | 词库/LLM/种子**模板**（按域） | 手改成品 ROM 字节 |
 | 7 | 改写 Rewrite | 可否改指针？ | 与 2–4 同一套规则 | 运行时补丁脚本改单个指针 |
-| 8 | 版本 Version | 本次产物是谁？ | `.build.json` / 补丁树哈希 | 无版本空口说改过了 |
+| 8 | 版本 Version | 本次产物是谁？ | 输出 ROM sha / `roms/bak` / 译文缓存 | 无版本空口说改过了 |
 
 实现落点：规则进 [`axvj_policy.py`](tools/Meowth-AXVJ/src/meowth/axvj_policy.py)（及表注入模块）；**禁止**在 `rom_writer` / extract / 随机 script 再堆平行 if 地址。
 
@@ -69,10 +69,10 @@ alwaysApply: true
 
 ## 出事流程（结合版本）
 
-1. 用 `<rom>.gba.build.json` / `build_history.jsonl` **回退到上一可玩 build**（补丁树哈希对齐）。
-2. Diff `patch_files` + `key_src_sha256` + `inject_stats.geo`，定位是哪一**类**规则坏了。
+1. 用 `roms/bak/` 可玩 `_zh.gba`（按 sha）**回退**；对照 `configs/.../texts_translated.json`。
+2. Diff 相关源码与译文缓存，定位是哪一**类**规则坏了。
 3. **换思路**：改漏斗某一层的动态条件；黑屏优先 **Geo 地址带 leave-one-out**；禁止再加一条 1+1 地址，禁止关整域剧本当解法。
-4. 新 build 必须带新 `build_id`；用户可玩验收通过前，不得宣称完成。
+4. 用户可玩验收通过前，不得宣称完成；可玩通过后务必 bak 留盘。
 
 ## 自检
 

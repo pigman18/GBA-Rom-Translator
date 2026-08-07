@@ -1,5 +1,0 @@
-{
-  "_meta": {
-    "note": "Inject overrides only. Prefer write/line_width on texts.json modules (from yaml). F9 00=侧载; F9 80=短语默认; write.op=0x01..0x7E。"
-  }
-}

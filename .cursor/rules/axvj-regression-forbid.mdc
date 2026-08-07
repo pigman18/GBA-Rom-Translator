@@ -24,7 +24,7 @@ alwaysApply: true
 
 ## 必须（版本）
 
-- 每次 Build 写 `.build.json` + `build_history.jsonl`。
-- 出问题先回退可玩版本，再换漏斗层思路；禁止坏基线上无限 1+1。
+- 交付物只生成 `{gameId}_translated.gba`（不写 `.gba.build.json` / `build_history.jsonl`）。
+- 出问题先回退可玩 ROM 备份（`roms/bak/`），再换漏斗层思路；禁止坏基线上无限 1+1。
 - 小范围验证版本号用后缀：`0.3.7-hotfix-1`（按 Domain 缩窄）；已验证可玩的命名漏斗为 **`ui_shell`（界面壳层）**，见 `axvj_funnels.py`。
-- **真回滚**还须：可玩 `_zh.gba` 进 `roms/bak/`（按 sha）、`key_src` 含 extract/modules、译文 JSON 哈希；仅 `patch_tree` 对齐≠已回滚。失误总账见 [`axvj-no-unsolicited-deviations.mdc`](axvj-no-unsolicited-deviations.mdc)。
+- **真回滚**还须：可玩 `_zh.gba` 进 `roms/bak/`（按 sha）、译文缓存 `configs/.../texts_translated.json`、key_src；仅口头对齐≠已回滚。失误总账见 [`axvj-no-unsolicited-deviations.mdc`](axvj-no-unsolicited-deviations.mdc)。

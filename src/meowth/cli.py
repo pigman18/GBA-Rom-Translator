@@ -11,13 +11,18 @@ from .translator import PROVIDER_PRESETS
 
 
 def _default_translated_path(texts_json: Path) -> Path:
-    """Infer ``work/<game_id>/texts_translated.json`` from a texts JSON."""
+    """Infer ``configs/<game_id>/translate/texts_translated.json``."""
+    from .config_loader import texts_translated_path
+
     try:
         meta = json.loads(texts_json.read_text(encoding="utf-8"))
     except (OSError, ValueError):
         meta = {}
     gid = meta.get("game_id") or meta.get("game") or "AXVJ"
-    return Path("work") / gid / "texts_translated.json"
+    try:
+        return texts_translated_path(str(gid))
+    except Exception:
+        return Path("configs") / str(gid) / "translate" / "texts_translated.json"
 
 
 def _load_env():
@@ -213,7 +218,7 @@ def extract(rom_path, output, source, target, modules):
 
 @main.command("seed-translate")
 @click.argument("texts_json", type=click.Path(exists=True))
-@click.option("-o", "--output", default=None, help="Output path (default: work/<game_id>/texts_translated.json)")
+@click.option("-o", "--output", default=None, help="Output path (default: configs/<game_id>/translate/texts_translated.json)")
 @click.option("--only-seeded", is_flag=True, help="Keep only entries that got a seed translation")
 def seed_translate(texts_json, output, only_seeded):
     """Offline ja→zh seed translations for AXVJ (no API key)."""
@@ -228,7 +233,7 @@ def seed_translate(texts_json, output, only_seeded):
 
 @main.command()
 @click.argument("texts_json", type=click.Path(exists=True))
-@click.option("-o", "--output", default=None, help="Output path (default: work/<game_id>/texts_translated.json)")
+@click.option("-o", "--output", default=None, help="Output path (default: configs/<game_id>/translate/texts_translated.json)")
 @click.option("--batch-size", default=30, help="Texts per LLM batch")
 @click.option("--workers", default=10, help="Parallel translation threads")
 @click.option("--source", default="en", help="Source language code (default: from config or en)")

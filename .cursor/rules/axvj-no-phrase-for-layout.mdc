@@ -8,7 +8,7 @@ alwaysApply: true
 ## 必须
 
 - **无用户当轮明确指令**时，禁止修改 `configs/**/translate/lexicon/**`、短语表或其它译文文件来「凑显示 / 躲裁切 / 躲超框」。
-- 窗宽不够、字被裁、叠字等 **绘制/布局问题**：用 `modules.inject.json` 的 `write.type=op`（新 op + `PrintNextChar`/`draw_glyph` 分支）或字体/窗几何修复。
+- 窗宽不够、字被裁、叠字等 **绘制/布局问题**：用 texts.json modules 的 `write.type=op`（新 op + `PrintNextChar`/`draw_glyph` 分支）或字体/窗几何修复。
 - 用户明确说「改译文 / 改短语 / 改成××」时，才允许动 lexicon。
 
 ## 禁止

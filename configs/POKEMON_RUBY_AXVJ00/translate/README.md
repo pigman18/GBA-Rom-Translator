@@ -5,8 +5,8 @@
 | 文件 / 目录 | 作用 |
 |-------------|------|
 | `config.json` | `protect`（折行等）+ `skip`（强制留日） |
-| `modules.json` | dump 地址带 / 勾选范围（见解包 README） |
-| `modules.inject.json` | `read`/`write.type`/`write.stride`/line_width |
+| `texts.json` | 语料 entries + modules（含 write/read/line_width） |
+| `texts_translated.json` | 翻译缓存（status 200/404 数组） |
 | `lexicon/` | 短语与词表精确译文（构建时覆盖） |
 | **本 README** | `skip` 原文 ↔ 中文对照 + 原因 |
 

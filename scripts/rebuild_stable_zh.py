@@ -149,19 +149,6 @@ def main() -> None:
         try:
             w.save_rom(buf, path)
             print("saved", path)
-            from meowth.build_record import record_build
-
-            rec = record_build(
-                output_rom=path,
-                game="ruby_jp",
-                inject_stats={
-                    "relocated": stats.get("relocated"),
-                    "skipped": stats.get("skipped"),
-                    "entry_count": len(inject),
-                },
-                notes="rebuild_stable_zh",
-            )
-            print("build_id", rec["build_id"])
         except OSError as e:
             print("skip save", path, e)
 

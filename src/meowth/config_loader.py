@@ -7,15 +7,15 @@
       extract/config.json
       translate/
         config.json            # protect / skip / allows / rejects
-        texts.json             # entries + modules 定义（取代 modules.json）
-        modules.inject.json    # read / write.type / write.stride / line_width
+        texts.json             # entries + modules（含 write/read/line_width）
+        texts_translated.json  # 翻译缓存（status 200/404 数组）
         lexicon/
       font/config.json + charmap.txt
       patch/                   # ARMIPS
       inject/config.json       # pointer deny / brand_compact_skip
 
-模块定义与语料均在 ``translate/texts.json``；inject ``read``/``write`` 仍可
-由 ``modules.inject.json`` 覆盖。``line_width`` 缺省 20。
+模块定义与语料均在 ``translate/texts.json``；inject 的 ``read``/``write``/
+``line_width`` 也写在 texts.json 的 modules 上。``line_width`` 缺省 20。
 """
 
 from __future__ import annotations
@@ -106,7 +106,7 @@ def module_write_op(game_id: str, module_id: str | None) -> int | None:
     return _parse_write_op_value(write.get(typ))
 
 # Fields that may live on a module entry in ``translate/texts.json`` modules
-# (or modules.inject.json) and feed inject-style readers.
+# and feed inject-style readers.
 _INJECT_MODULE_KEYS = (
     "read",
     "write",
@@ -121,6 +121,11 @@ _INJECT_MODULE_KEYS = (
 def texts_json_path(game_id: str) -> Path:
     """``configs/<game_id>/translate/texts.json``（语料 + modules 定义）。"""
     return stage_dir(game_id, STAGE_TRANSLATE) / "texts.json"
+
+
+def texts_translated_path(game_id: str) -> Path:
+    """``configs/<game_id>/translate/texts_translated.json``（翻译缓存）。"""
+    return stage_dir(game_id, STAGE_TRANSLATE) / "texts_translated.json"
 
 
 def load_texts_doc(game_id: str) -> dict[str, Any]:
@@ -271,10 +276,10 @@ def load_game_identity(game_id: str) -> dict[str, Any]:
 
 
 def load_modules_inject(game_id: str = "") -> dict[str, dict[str, Any]]:
-    """Inject config keyed by module id (skips ``_meta``).
+    """Inject config keyed by module id from ``texts.json`` modules only.
 
-    v2: read/write/line_width live on ``translate/modules.json`` module
-    entries; legacy ``modules.inject.json`` fills any gaps.
+    Reads ``read`` / ``write`` / ``line_width`` / … from each module entry
+    in ``translate/texts.json``. Legacy ``modules.inject.json`` is ignored.
     """
     gid = game_id or _active_game_id
     if not gid:
@@ -296,13 +301,6 @@ def load_modules_inject(game_id: str = "") -> dict[str, dict[str, Any]]:
             if inj:
                 out[mid] = inj
 
-    raw = _read_json(stage_dir(gid, STAGE_TRANSLATE) / "modules.inject.json")
-    for k, v in raw.items():
-        if k == "_meta" or not isinstance(v, dict):
-            continue
-        merged = dict(v)
-        merged.update(out.get(k, {}))
-        out[k] = merged
     _modules_inject_cache[gid] = out
     return out
 
@@ -477,7 +475,7 @@ def module_write_type_code(game_id: str, module_id: str | None) -> int | None:
 
 
 def module_line_width(game_id: str, module_id: str | None) -> int:
-    """Per-module wrap width from ``modules.inject.json``; default 20."""
+    """Per-module wrap width from texts.json modules; default 20."""
     if not module_id:
         return DEFAULT_LINE_WIDTH
     inj = load_modules_inject(game_id).get(module_id) or {}

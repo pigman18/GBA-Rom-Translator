@@ -141,13 +141,7 @@ def convert_format(data: dict) -> dict:
 
 
 def _cache_map_from_data(data: dict) -> dict[str, str]:
-    """把 entries / tables+free_texts 结构压成纯缓存 ``{原文: 译文}``。
-
-    - 跳过 ``_reject``、空翻译、译文等于原文的条目
-    - texts_translated.json 仅作翻译缓存，不含地址/hex
-    - 键用 :func:`format_original`（与 LLM 预处理一致），避免排版换行
-      格式化后精确匹配失败
-    """
+    """Legacy: flatten entries into ``{原文: 译文}`` (upgrade path only)."""
     cache: dict[str, str] = {}
     flat: list[dict] = list(data.get("entries") or [])
     if not flat:
@@ -162,7 +156,6 @@ def _cache_map_from_data(data: dict) -> dict[str, str]:
         if tr and tr != orig:
             key = format_original(orig)
             cache[key] = tr
-            # 兼容旧查找：仍保留未格式化键（若不同）
             if orig and orig != key:
                 cache.setdefault(orig, tr)
             unwrapped = unwrap_quotes(orig)
@@ -171,117 +164,198 @@ def _cache_map_from_data(data: dict) -> dict[str, str]:
     return cache
 
 
-def _index_translation_cache(
-    prior: dict,
-    usable,
-) -> dict[str, str]:
-    """Expand a ``{原文: 译文}`` map so raw / unquoted / formatted keys all hit."""
-    by_orig: dict[str, str] = {}
-    for orig, tr in prior.items():
-        if not usable(orig, tr):
-            continue
-        by_orig[orig] = tr
-        key = format_original(orig)
-        by_orig[key] = tr
-        unwrapped = unwrap_quotes(orig)
-        if unwrapped:
-            by_orig[unwrapped] = tr
-    return by_orig
+# texts_translated.json status codes
+CACHE_STATUS_OK = 200
+CACHE_STATUS_GARBLED = 404
+GARBLED_MARKERS = frozenset({"这是一段乱码", "这是一段明显乱码"})
 
 
-def _lookup_translation_cache(by_orig: dict[str, str], original: str) -> str | None:
-    """Lookup translation trying raw, unquoted, then formatted original."""
+def _is_garbled_marker(text: str) -> bool:
+    return (text or "").strip() in GARBLED_MARKERS
+
+
+def _cache_key(original: str) -> str:
+    return format_original(original or "")
+
+
+def _put_cache_rec(
+    cache: dict[str, dict],
+    original: str,
+    *,
+    status: int,
+    translated: str | None = None,
+) -> None:
+    """Upsert one record keyed by formatted original."""
     if not original:
+        return
+    key = _cache_key(original)
+    rec: dict = {"status": int(status), "original": original}
+    if status == CACHE_STATUS_OK and translated:
+        rec["translated"] = translated
+    cache[key] = rec
+
+
+def _lookup_cache_rec(cache: dict[str, dict], original: str) -> dict | None:
+    if not original or not cache:
         return None
-    if original in by_orig:
-        return by_orig[original]
-    unwrapped = unwrap_quotes(original)
-    if unwrapped in by_orig:
-        return by_orig[unwrapped]
-    return by_orig.get(format_original(original))
+    for cand in (original, unwrap_quotes(original), format_original(original)):
+        if cand and cand in cache:
+            return cache[cand]
+    return None
+
+
+def _zh_from_cache(cache: dict[str, dict], original: str, usable) -> str | None:
+    """Return usable Chinese for original if status==200."""
+    rec = _lookup_cache_rec(cache, original)
+    if not rec or rec.get("status") != CACHE_STATUS_OK:
+        return None
+    tr = rec.get("translated") or ""
+    orig = rec.get("original") or original
+    if usable(orig, tr) or usable(original, tr) or usable(format_original(original), tr):
+        return tr
+    return None
+
+
+def _is_cache_resolved(cache: dict[str, dict], original: str, usable) -> bool:
+    """True if we should not call LLM (200 with ZH, or 404 garbled)."""
+    rec = _lookup_cache_rec(cache, original)
+    if not rec:
+        return False
+    st = rec.get("status")
+    if st == CACHE_STATUS_GARBLED:
+        return True
+    if st == CACHE_STATUS_OK:
+        return _zh_from_cache(cache, original, usable) is not None
+    return False
+
+
+def _is_status_cache_list(data) -> bool:
+    return isinstance(data, list)
 
 
 def _is_cache_map(data: dict) -> bool:
-    """纯缓存 map（{原文: 译文}，无 entries/tables/free_texts）。"""
-    return bool(data) and not any(
+    """Legacy pure ``{原文: 译文}`` map (no entries/tables/free_texts)."""
+    return isinstance(data, dict) and bool(data) and not any(
         k in data for k in ("entries", "free_texts", "tables")
     )
 
 
-def _put_cache_entry(cache: dict[str, str], original: str, translated: str) -> None:
-    """Store one pair under formatted / raw / unquoted keys."""
-    if not original or not translated:
-        return
-    key = format_original(original)
-    cache[key] = translated
-    if original != key:
-        cache[original] = translated
-    unwrapped = unwrap_quotes(original)
-    if unwrapped and unwrapped != key and unwrapped != original:
-        cache[unwrapped] = translated
+def _load_translation_cache(
+    path: Path,
+    usable,
+    *,
+    fallback_path: Path | None = None,
+) -> dict[str, dict]:
+    """Load texts_translated.json → ``{fmt_orig: {status, original, translated?}}``.
 
+    Supports: status array (new), legacy ``{原文:译文}`` map, legacy entries shapes.
+    """
+    paths = [path]
+    if fallback_path is not None and fallback_path != path:
+        paths.append(fallback_path)
 
-def _load_translation_cache(path: Path, usable) -> dict[str, str]:
-    """Load ``texts_translated.json`` as ``{原文: 译文}`` (legacy shapes OK)."""
-    if not path.is_file():
+    raw = None
+    for p in paths:
+        if not p.is_file():
+            continue
+        try:
+            raw = json.loads(p.read_text(encoding="utf-8"))
+            break
+        except (OSError, json.JSONDecodeError):
+            continue
+    if raw is None:
         return {}
-    try:
-        raw = json.loads(path.read_text(encoding="utf-8"))
-    except (OSError, json.JSONDecodeError):
-        return {}
+
+    out: dict[str, dict] = {}
+
+    # New: [{status, original, translated?}, ...]
+    if isinstance(raw, list):
+        for item in raw:
+            if not isinstance(item, dict):
+                continue
+            orig = item.get("original")
+            if not isinstance(orig, str) or not orig:
+                continue
+            try:
+                st = int(item.get("status") or 0)
+            except (TypeError, ValueError):
+                continue
+            if st == CACHE_STATUS_GARBLED:
+                _put_cache_rec(out, orig, status=CACHE_STATUS_GARBLED)
+            elif st == CACHE_STATUS_OK:
+                tr = item.get("translated") or ""
+                if isinstance(tr, str) and (usable(orig, tr) or usable(format_original(orig), tr)):
+                    _put_cache_rec(out, orig, status=CACHE_STATUS_OK, translated=tr)
+        return out
+
     if not isinstance(raw, dict):
         return {}
+
+    # Legacy map {原文: 译文}
     if _is_cache_map(raw) or (
-        raw
-        and not any(k in raw for k in ("entries", "free_texts", "tables"))
+        raw and not any(k in raw for k in ("entries", "free_texts", "tables"))
     ):
-        out: dict[str, str] = {}
         for orig, tr in raw.items():
             if not isinstance(orig, str) or not isinstance(tr, str):
                 continue
-            # Disk keys may be raw or already formatted; normalize once.
-            key = format_original(orig)
-            if usable(key, tr) or usable(orig, tr):
-                _put_cache_entry(out, orig, tr)
+            if usable(orig, tr) or usable(format_original(orig), tr):
+                _put_cache_rec(out, orig, status=CACHE_STATUS_OK, translated=tr)
         return out
+
     # Legacy entries / free_texts / tables
-    return _cache_map_from_data(raw)
+    for orig, tr in _cache_map_from_data(raw).items():
+        if usable(orig, tr) or usable(format_original(orig), tr):
+            _put_cache_rec(out, orig, status=CACHE_STATUS_OK, translated=tr)
+    return out
 
 
-def _save_translation_cache(path: Path, cache: dict[str, str], usable=None) -> None:
-    """Write pure ``{原文: 译文}`` cache (dedupe by formatted key).
-
-    Only persists usable translations so EN→JP lexicon stubs etc. cannot
-    pollute the file or displace good Chinese on the next load.
-    """
+def _save_translation_cache(path: Path, cache: dict[str, dict], usable=None) -> None:
+    """Write status array to texts_translated.json."""
     path.parent.mkdir(parents=True, exist_ok=True)
-    compact: dict[str, str] = {}
-    for orig, tr in cache.items():
-        if not isinstance(orig, str) or not isinstance(tr, str) or not tr:
+    rows: list[dict] = []
+    seen: set[str] = set()
+    for key, rec in cache.items():
+        if not isinstance(rec, dict):
             continue
-        key = format_original(orig)
-        if usable is not None and not (usable(key, tr) or usable(orig, tr)):
+        orig = rec.get("original") or key
+        if not isinstance(orig, str) or not orig:
             continue
-        # Prefer keeping an existing usable value if a duplicate key races in
-        prev = compact.get(key)
-        if prev and usable is not None and usable(key, prev) and prev != tr:
-            if not usable(key, tr):
-                continue
-        compact[key] = tr
+        canon = _cache_key(orig)
+        if canon in seen:
+            continue
+        seen.add(canon)
+        try:
+            st = int(rec.get("status") or 0)
+        except (TypeError, ValueError):
+            continue
+        if st == CACHE_STATUS_GARBLED:
+            rows.append({"status": CACHE_STATUS_GARBLED, "original": orig})
+            continue
+        if st != CACHE_STATUS_OK:
+            continue
+        tr = rec.get("translated") or ""
+        if not isinstance(tr, str) or not tr:
+            continue
+        if usable is not None and not (
+            usable(orig, tr) or usable(canon, tr)
+        ):
+            continue
+        rows.append({
+            "status": CACHE_STATUS_OK,
+            "original": orig,
+            "translated": tr,
+        })
+    rows.sort(key=lambda r: r.get("original") or "")
     path.write_text(
-        json.dumps(compact, ensure_ascii=False, indent=2),
+        json.dumps(rows, ensure_ascii=False, indent=2),
         encoding="utf-8",
     )
 
 
 def _merge_lexicon_into_cache(
-    cache: dict[str, str], lexicon: dict[str, str], usable=None
+    cache: dict[str, dict], lexicon: dict[str, str], usable=None
 ) -> int:
-    """Append lexicon into cache; lexicon wins on key collision when usable.
-
-    Skips non-usable lexicon values (e.g. English→Japanese mail names) so they
-    never overwrite or displace real Chinese cache entries.
-    """
+    """Merge lexicon as status=200; lexicon wins. Skips non-usable values."""
     n = 0
     for orig, tr in (lexicon or {}).items():
         if not isinstance(orig, str) or not isinstance(tr, str) or not tr:
@@ -290,11 +364,15 @@ def _merge_lexicon_into_cache(
             format_original(orig), tr
         ):
             continue
-        key = format_original(orig)
-        prev = cache.get(key) or cache.get(orig)
-        if prev != tr:
-            n += 1
-        _put_cache_entry(cache, orig, tr)
+        prev = _lookup_cache_rec(cache, orig)
+        if (
+            prev
+            and prev.get("status") == CACHE_STATUS_OK
+            and prev.get("translated") == tr
+        ):
+            continue
+        _put_cache_rec(cache, orig, status=CACHE_STATUS_OK, translated=tr)
+        n += 1
     return n
 
 
@@ -453,9 +531,8 @@ class TranslationEngine:
             return False
         return bool(re.search(r"[\u3040-\u30ff\u4e00-\u9fff]", s))
 
-    def _apply_cache_to_data(self, data: dict, cache: dict[str, str]) -> int:
-        """Fill entry.translated from cache map. Returns how many filled/updated."""
-        by_orig = _index_translation_cache(cache, self._usable_zh)
+    def _apply_cache_to_data(self, data: dict, cache: dict[str, dict]) -> int:
+        """Fill entry.translated from status=200 cache. Returns how many filled."""
         n = 0
 
         def _one(e: dict) -> None:
@@ -463,12 +540,20 @@ class TranslationEngine:
             if e.get("_reject"):
                 return
             orig = e.get("original") or ""
-            zh = _lookup_translation_cache(by_orig, orig)
-            if not zh or not self._usable_zh(orig, zh):
+            rec = _lookup_cache_rec(cache, orig)
+            if rec and rec.get("status") == CACHE_STATUS_GARBLED:
+                # Keep original for inject; mark so plan can keep
+                if not (e.get("translated") or "").strip():
+                    e["translated"] = orig
+                e["_cache_status"] = CACHE_STATUS_GARBLED
+                return
+            zh = _zh_from_cache(cache, orig, self._usable_zh)
+            if not zh:
                 return
             if e.get("translated") != zh:
                 e["translated"] = zh
                 n += 1
+            e["_cache_status"] = CACHE_STATUS_OK
 
         for e in data.get("entries") or []:
             _one(e)
@@ -481,29 +566,41 @@ class TranslationEngine:
 
     def _append_batch_to_cache(
         self,
-        cache: dict[str, str],
+        cache: dict[str, dict],
         output_path: Path,
         batch: list[dict],
         lock: threading.Lock,
     ) -> int:
-        """Append usable batch results into cache and write disk. Returns added count."""
-        pairs: list[tuple[str, str]] = []
+        """Append batch 200/404 results into cache and write disk."""
+        updates: list[tuple[str, int, str | None]] = []
         for e in batch:
             orig = e.get("original") or ""
+            if e.get("_cache_status") == CACHE_STATUS_GARBLED or _is_garbled_marker(
+                e.get("translated") or ""
+            ):
+                updates.append((orig, CACHE_STATUS_GARBLED, None))
+                continue
             tr = e.get("translated") or ""
             if self._cacheable_pair(orig, tr):
-                pairs.append((orig, tr))
-        if not pairs:
+                updates.append((orig, CACHE_STATUS_OK, tr))
+        if not updates:
             return 0
         with lock:
-            for orig, tr in pairs:
-                _put_cache_entry(cache, orig, tr)
+            for orig, st, tr in updates:
+                if st == CACHE_STATUS_GARBLED:
+                    _put_cache_rec(cache, orig, status=CACHE_STATUS_GARBLED)
+                else:
+                    _put_cache_rec(
+                        cache, orig, status=CACHE_STATUS_OK, translated=tr or ""
+                    )
             _save_translation_cache(output_path, cache, self._usable_zh)
-        return len(pairs)
+        return len(updates)
 
     def _cacheable_pair(self, original: str, translated: str) -> bool:
-        """True if this pair should be persisted to texts_translated.json."""
+        """True if this pair should be persisted as status=200."""
         if not translated or not translated.strip():
+            return False
+        if _is_garbled_marker(translated):
             return False
         if self._usable_zh(original, translated):
             return True
@@ -515,8 +612,8 @@ class TranslationEngine:
             return True
         return False
 
-    def _harvest_into_cache(self, data: dict, cache: dict[str, str]) -> int:
-        """Pull usable entry.translated (LLM/memory) into the cache map."""
+    def _harvest_into_cache(self, data: dict, cache: dict[str, dict]) -> int:
+        """Pull entry translations / 404 markers into the cache map."""
         n = 0
 
         def _one(e: dict) -> None:
@@ -524,14 +621,25 @@ class TranslationEngine:
             if e.get("_reject"):
                 return
             orig = e.get("original") or ""
+            if e.get("_cache_status") == CACHE_STATUS_GARBLED or _is_garbled_marker(
+                e.get("translated") or ""
+            ):
+                prev = _lookup_cache_rec(cache, orig)
+                if not prev or prev.get("status") != CACHE_STATUS_GARBLED:
+                    _put_cache_rec(cache, orig, status=CACHE_STATUS_GARBLED)
+                    n += 1
+                return
             tr = e.get("translated") or ""
             if not self._cacheable_pair(orig, tr):
                 return
-            key = format_original(orig)
-            prev = cache.get(key) or cache.get(orig) or ""
-            if prev == tr:
+            prev = _lookup_cache_rec(cache, orig)
+            if (
+                prev
+                and prev.get("status") == CACHE_STATUS_OK
+                and prev.get("translated") == tr
+            ):
                 return
-            _put_cache_entry(cache, orig, tr)
+            _put_cache_rec(cache, orig, status=CACHE_STATUS_OK, translated=tr)
             n += 1
 
         for e in data.get("entries") or []:
@@ -567,20 +675,35 @@ class TranslationEngine:
         """Translate texts.json against texts_translated.json cache.
 
         Pipeline:
-          1. Load texts_translated.json
+          1. Load texts_translated.json (status array)
           2. Merge lexicon into cache and write back
           3. Diff texts.json vs cache → pending (skipped when seed_only)
-          4. LLM; on success append into cache immediately (skipped when seed_only)
+          4. LLM; on success append 200/404 into cache (skipped when seed_only)
           5. Join texts.json + cache → translate.build.json
         """
-        from ..config_loader import load_custom_translations
+        from ..config_loader import load_custom_translations, texts_translated_path
         from ..modules import resolve_modules, stamp_entry_module
 
+        # Prefer configs/.../texts_translated.json; fall back to work/ for load
+        gid = self.config.game or ""
+        try:
+            cfg_cache_path = texts_translated_path(gid) if gid else output_path
+        except Exception:
+            cfg_cache_path = output_path
+        output_path = cfg_cache_path
+        work_fallback = (
+            Path(self.config.work_dir) / gid / "texts_translated.json"
+            if gid
+            else None
+        )
+
         # --- 1. Load cache ---
-        cache = _load_translation_cache(output_path, self._usable_zh)
+        cache = _load_translation_cache(
+            output_path, self._usable_zh, fallback_path=work_fallback
+        )
         self._log(
             "info",
-            f"[翻译缓存] 加载 {output_path.name}: {len(cache)} 键",
+            f"[翻译缓存] 加载 {output_path}: {len(cache)} 条",
         )
 
         # --- 2. Append lexicon → write cache ---
@@ -601,8 +724,8 @@ class TranslationEngine:
         if data.get("entries"):
             from ..policy import rejects_ids, allows_ids
 
-            gid = self.config.game or data.get("game_id") or data.get("game") or ""
-            if rejects_ids(gid) or allows_ids(gid):
+            gid2 = self.config.game or data.get("game_id") or data.get("game") or ""
+            if rejects_ids(gid2) or allows_ids(gid2):
                 active_modules = None
                 if self._feature("module_filter"):
                     preset = (
@@ -613,7 +736,7 @@ class TranslationEngine:
                         resolve_modules(
                             modules=self.config.modules,
                             preset=preset,
-                            game_id=gid,
+                            game_id=gid2,
                         )
                     )
                 self._apply_check_reject(
@@ -647,7 +770,6 @@ class TranslationEngine:
             self._feature("seed_on_no_key") and not has_key
         )
         active = getattr(self, "_axvj_active_modules", None)
-        by_orig = _index_translation_cache(cache, self._usable_zh)
 
         if not seed_only:
             # --- 3. Diff: texts.json vs cache ---
@@ -662,8 +784,8 @@ class TranslationEngine:
                     if not (e.get("translated") or "").strip():
                         e["translated"] = orig
                     return False
-                zh = _lookup_translation_cache(by_orig, orig)
-                if zh and self._usable_zh(orig, zh):
+                # 200 with ZH or 404 garbled → skip
+                if _is_cache_resolved(cache, orig, self._usable_zh):
                     return False
                 if active is not None:
                     mid = stamp_entry_module(e, game_id=self.config.game)
@@ -671,9 +793,8 @@ class TranslationEngine:
                         return False
                 return True
 
-            # Also stamp keep-as-is on non-translatable within active modules
-            # (so build sees translated=original even if never pending).
             skipped_placeholder = 0
+            skipped_resolved = 0
             for e in free_texts:
                 if e.get("_reject"):
                     continue
@@ -686,19 +807,22 @@ class TranslationEngine:
                     if not (e.get("translated") or "").strip():
                         e["translated"] = orig
                     skipped_placeholder += 1
+                elif _is_cache_resolved(cache, orig, self._usable_zh):
+                    skipped_resolved += 1
 
             pending = [e for e in free_texts if _needs_llm(e)]
             pending.sort(
                 key=lambda e: (e.get("address") or "", e.get("original") or "")
             )
+            extra = []
+            if skipped_placeholder:
+                extra.append(f"占位 {skipped_placeholder}")
+            if skipped_resolved:
+                extra.append(f"已缓存/404 {skipped_resolved}")
             self._log(
                 "info",
                 f"[翻译差集] 待翻 {len(pending)} / free_texts {len(free_texts)}"
-                + (
-                    f"（跳过占位/无假名汉字 {skipped_placeholder}）"
-                    if skipped_placeholder
-                    else ""
-                ),
+                + (f"（跳过 {'、'.join(extra)}）" if extra else ""),
             )
 
             # --- 4. LLM; success → append cache ---
@@ -774,16 +898,17 @@ class TranslationEngine:
                 "[翻译] seed_only：跳过 API（流程 1→2→5）",
             )
 
-        # --- 4b/5 prep: harvest memory translations → cache, always flush disk ---
+        # --- 4b/5 prep: harvest + always flush disk ---
         harvested = self._harvest_into_cache(data, cache)
         _save_translation_cache(output_path, cache, self._usable_zh)
         try:
-            disk_n = len(json.loads(output_path.read_text(encoding="utf-8")))
+            disk_raw = json.loads(output_path.read_text(encoding="utf-8"))
+            disk_n = len(disk_raw) if isinstance(disk_raw, list) else len(disk_raw)
         except (OSError, json.JSONDecodeError):
             disk_n = 0
         self._log(
             "info",
-            f"[翻译缓存] 落盘 {output_path.name}: {disk_n} 键"
+            f"[翻译缓存] 落盘 {output_path.name}: {disk_n} 条"
             + (f"（本轮新收获 {harvested}）" if harvested else ""),
         )
 
@@ -1025,7 +1150,12 @@ class TranslationEngine:
 
             for (entry, _, codes), result in zip(chunk, results):
                 clean = _strip_llm_newlines(result)
-                entry["translated"] = restore(clean, codes)
+                translated = restore(clean, codes)
+                if _is_garbled_marker(translated):
+                    entry["translated"] = ""
+                    entry["_cache_status"] = CACHE_STATUS_GARBLED
+                else:
+                    entry["translated"] = translated
 
     def _translate_free_batch(self, batch: list[dict]):
         """Translate a batch of free text entries via LLM."""
@@ -1074,7 +1204,16 @@ class TranslationEngine:
         # Restore and wrap
         for i, entry in enumerate(remaining):
             clean = _strip_llm_newlines(results[i])
+            # Detect fixed garbled marker BEFORE restore/wrap (marker has no codes)
+            if _is_garbled_marker(clean) or _is_garbled_marker(results[i]):
+                entry["translated"] = ""
+                entry["_cache_status"] = CACHE_STATUS_GARBLED
+                continue
             translated = restore(clean, codes_list[i])
+            if _is_garbled_marker(translated):
+                entry["translated"] = ""
+                entry["_cache_status"] = CACHE_STATUS_GARBLED
+                continue
             translated = wrap_text(translated, target_lang=self.config.target_lang)
             if (
                 self._feature("failed_zh_detection")
@@ -1093,7 +1232,12 @@ class TranslationEngine:
             self._feature("failed_zh_detection")
             and self.config.target_lang.startswith("zh")
         ):
-            retry = [e for e in remaining if not e.get("translated")]
+            retry = [
+                e
+                for e in remaining
+                if not e.get("translated")
+                and e.get("_cache_status") != CACHE_STATUS_GARBLED
+            ]
             if retry and len(retry) < len(remaining):
                 self._translate_free_batch_once(retry)
 
@@ -1119,7 +1263,15 @@ class TranslationEngine:
 
         for i, entry in enumerate(remaining):
             clean = _strip_llm_newlines(results[i])
+            if _is_garbled_marker(clean) or _is_garbled_marker(results[i]):
+                entry["translated"] = ""
+                entry["_cache_status"] = CACHE_STATUS_GARBLED
+                continue
             translated = restore(clean, codes_list[i])
+            if _is_garbled_marker(translated):
+                entry["translated"] = ""
+                entry["_cache_status"] = CACHE_STATUS_GARBLED
+                continue
             translated = wrap_text(translated, target_lang=self.config.target_lang)
             if looks_like_failed_zh_translation(entry.get("original", ""), translated):
                 entry["translated"] = ""
@@ -1151,7 +1303,7 @@ class TranslationEngine:
             self.callbacks.on_stage_change("translate", "started")
             texts_path = self._extract_texts(rom_path, work_dir)
 
-            from ..config_loader import load_custom_translations
+            from ..config_loader import load_custom_translations, texts_translated_path
             self._custom_translations = load_custom_translations(self.config.game)
 
             self._fonts_from_bdf = False
@@ -1163,9 +1315,11 @@ class TranslationEngine:
             elif is_cjk_language(self.config.target_lang):
                 self._ensure_default_fonts(work_dir)
 
-            translated_path = self.translate_texts(
-                texts_path, work_dir / self.config.game / "texts_translated.json"
-            )
+            try:
+                translated_path = texts_translated_path(self.config.game)
+            except Exception:
+                translated_path = work_dir / self.config.game / "texts_translated.json"
+            translated_path = self.translate_texts(texts_path, translated_path)
             self.callbacks.on_stage_change("translate", "completed")
 
             # --- tile stage: patch sprites on a ROM copy (input untouched) ---
@@ -1568,19 +1722,15 @@ class TranslationEngine:
             self._fonts_from_bdf = False
             raise
 
-    def _rebuild_data_from_build_plan(self, cache_map: dict) -> dict:
-        """从 translate.build.json 重建注入数据，用纯缓存 map 覆盖翻译。
-
-        texts_translated.json 变纯缓存（{原文: 译文}）后不含地址/hex，
-        build 依赖 translate 阶段生成的 translate.build.json（含完整 entries）。
-        """
+    def _rebuild_data_from_build_plan(self, cache: dict[str, dict]) -> dict:
+        """从 translate.build.json 重建注入数据，用 status 缓存覆盖翻译。"""
         build_path = (
             Path(self.config.work_dir) / self.config.game / "translate.build.json"
         )
         if not build_path.is_file():
             self._log(
                 "warning",
-                "texts_translated.json 是纯缓存 map，但缺少 translate.build.json，"
+                "texts_translated.json 是翻译缓存，但缺少 translate.build.json，"
                 "无法重建注入条目（请先运行 translate/full）",
             )
             return {"tables": [], "free_texts": []}
@@ -1593,14 +1743,15 @@ class TranslationEngine:
             )
             return {"tables": [], "free_texts": []}
         entries = bp.get("entries") or []
-        by_orig = _index_translation_cache(
-            cache_map, lambda o, t: bool(t) and t != o
-        )
         n = 0
         for e in entries:
             orig = e.get("original") or ""
-            tr = _lookup_translation_cache(by_orig, orig)
-            if tr and tr != orig:
+            rec = _lookup_cache_rec(cache, orig)
+            if rec and rec.get("status") == CACHE_STATUS_GARBLED:
+                e["translated"] = orig
+                continue
+            tr = _zh_from_cache(cache, orig, self._usable_zh)
+            if tr:
                 e["translated"] = tr
                 n += 1
         self._log(
@@ -1625,8 +1776,11 @@ class TranslationEngine:
             self._log("info", Messages.DETECTED_GAME.format(game=self.config.game))
 
         data = json.loads(translations_path.read_text(encoding="utf-8"))
-        if _is_cache_map(data):
-            data = self._rebuild_data_from_build_plan(data)
+        if _is_status_cache_list(data) or (
+            isinstance(data, dict) and _is_cache_map(data)
+        ):
+            cache = _load_translation_cache(translations_path, self._usable_zh)
+            data = self._rebuild_data_from_build_plan(cache)
         data = convert_format(data)
 
         # Load game config (for charmap, expansion decision, font patch, etc.)
@@ -2055,32 +2209,5 @@ class TranslationEngine:
             except OSError:
                 pass
 
-        try:
-            import os
-
-            from ..build_record import record_build
-
-            rec = record_build(
-                output_rom=output_path,
-                game=self.config.game,
-                inject_stats={
-                    "in_place": stats.get("in_place"),
-                    "relocated": stats.get("relocated"),
-                    "skipped": 0,
-                    "entry_count": len(all_entries),
-                    "name_tables": stats.get("name_tables") or {},
-                    "modules": list(getattr(self, "_axvj_inject_modules", []) or []),
-                    "geo": getattr(self, "_axvj_geo_meta", None) or {},
-                },
-                notes=os.environ.get("MEOWTH_AXVJ_BUILD_NOTES", ""),
-            )
-            self._log(
-                "info",
-                f"Build record {rec['build_id']} "
-                f"(patch={rec['patch_tree_sha256'][:12]}…) "
-                f"→ {output_path.name}.build.json",
-            )
-        except Exception as e:
-            self._log("warning", f"Build record failed (non-fatal): {e}")
         self.callbacks.on_stage_change("build", "completed")
         return output_path

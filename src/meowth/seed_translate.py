@@ -171,14 +171,20 @@ def seed_translate_file(inp: Path, out: Path, *, only_seeded: bool = False) -> t
     else:
         kept_entries = entries
 
-    cache: dict[str, str] = {}
+    cache_rows: list[dict] = []
     for e in kept_entries:
         orig = e.get("original", "")
         tr = e.get("translated") or ""
         if tr and tr != orig:
-            cache[orig] = tr
+            cache_rows.append({
+                "status": 200,
+                "original": orig,
+                "translated": tr,
+            })
 
     out = Path(out)
     out.parent.mkdir(parents=True, exist_ok=True)
-    out.write_text(json.dumps(cache, ensure_ascii=False, indent=2), encoding="utf-8")
+    out.write_text(
+        json.dumps(cache_rows, ensure_ascii=False, indent=2), encoding="utf-8"
+    )
     return n_seed, n_total

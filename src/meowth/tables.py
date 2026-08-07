@@ -61,8 +61,10 @@ def iter_table_cfgs(game_id: str = ""):
 
 
 def item_data_cfg() -> dict:
-    """Struct name table（含 entry_size + name_stride）。"""
+    """Struct name table（``entry_size``；名称按窗内 eos 截断）。"""
     for _, c in iter_table_cfgs():
+        if "entry_size" in c and c.get("offset") is not None:
+            return c
         if "entry_size" in c and "name_stride" in c:
             return c
     return {}
@@ -148,7 +150,7 @@ def extract_module(rom: bytes, module_id: str) -> list[dict]:
     if not c:
         return []
     mid = c.get("module") or module_id
-    if "entry_size" in c and "name_stride" in c and "offset" in c:
+    if "entry_size" in c and "offset" in c:
         return _extract_struct_names(rom, c, mid)
     if "table" in c and "count" in c and "offset" not in c:
         return _extract_ptr_names(rom, c, mid)
@@ -168,9 +170,13 @@ def _extract_struct_names(rom: bytes, c: dict, mid: str) -> list[dict]:
     BASE_VAL = base()
     entries: list[dict] = []
     table_ptr = BASE_VAL + c["offset"]
+    entry_size = int(c["entry_size"])
+    name_win = int(
+        c.get("name_stride") or c.get("name_max") or c.get("desc_ptr_offset") or entry_size
+    )
     for i in range(c["count"]):
-        off = c["offset"] + i * c["entry_size"]
-        text, raw = _slot_text(rom, off, c["name_stride"])
+        off = c["offset"] + i * entry_size
+        text, raw = _slot_text(rom, off, name_win)
         if not text or set(text) <= {"？", "ー", "-", " "}:
             continue
         entries.append({
@@ -178,7 +184,7 @@ def _extract_struct_names(rom: bytes, c: dict, mid: str) -> list[dict]:
             "address": f"0x{BASE_VAL + off:08X}",
             "table_index": i,
             "table_base": f"0x{table_ptr:08X}",
-            "byte_length": c["name_stride"],
+            "byte_length": len(raw),
             "original_hex": raw.hex(" "),
             "original": text,
             "translated": "",

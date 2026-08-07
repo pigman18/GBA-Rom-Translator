@@ -3547,8 +3547,8 @@ texts:
       end: '0x39dca7'
       type: struct
       read:
-        entry_size: 40
-        name_stride: 8
+        # 行步长；名称读到 eos（默认 FF），byte_length=原文实际长（勿再配 name_stride）
+        stride: 40
         desc_ptr_offset: 16
       relocate: true
       hook: true

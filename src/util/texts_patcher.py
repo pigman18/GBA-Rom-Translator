@@ -167,15 +167,53 @@ def identify_rom(rom: bytes) -> str:
     return rom[0xAC:0xB0].decode("ascii", errors="replace")
 
 
-def _slot_text(rom: bytes, off: int, stride: int) -> tuple[str, bytes]:
+def _slot_text(
+    rom: bytes, off: int, window: int, *, eos: int = 0xFF
+) -> tuple[str, bytes]:
+    """在 ``[off, off+window)`` 内读到 ``eos``（默认 FF）为止；返回 (解码, 含 eos 的原文)。"""
     from meowth.jp_pcs import decode_pcs
 
-    slot = rom[off : off + stride]
-    if 0xFF not in slot:
+    if window <= 0 or off < 0 or off >= len(rom):
+        return "", b""
+    slot = rom[off : off + window]
+    marker = eos & 0xFF
+    if marker not in slot:
         return "", slot
-    end = slot.index(0xFF)
+    end = slot.index(marker)
     raw = slot[: end + 1]
     return decode_pcs(raw), raw
+
+
+def _parse_eos_byte(val: Any) -> int:
+    """``read.eos`` / ``read.suffix``；默认 ``0xFF``。"""
+    if val is None or val == "":
+        return 0xFF
+    if isinstance(val, int):
+        return val & 0xFF
+    s = str(val).strip().lower().replace("_", "")
+    if s.startswith("0x"):
+        return int(s, 16) & 0xFF
+    if any(c in "abcdef" for c in s):
+        return int(s, 16) & 0xFF
+    return int(s, 10) & 0xFF
+
+
+def _struct_entry_size(read: dict) -> int:
+    """行步长：``entry_size`` 或 ``stride``。"""
+    return int(read.get("entry_size") or read.get("stride") or 0)
+
+
+def _struct_name_window(read: dict, entry_size: int) -> int:
+    """名称搜索上限：可选 name_max/name_stride/desc_ptr_offset，否则整行。"""
+    for key in ("name_max", "name_stride", "desc_ptr_offset"):
+        if read.get(key) is not None:
+            try:
+                n = int(read[key])
+                if n > 0:
+                    return min(n, entry_size) if entry_size else n
+            except (TypeError, ValueError):
+                pass
+    return entry_size
 
 
 def _stamp(
@@ -293,27 +331,29 @@ def extract_stride(rom: bytes, mod: dict, game_code: str) -> list[dict]:
 
 
 def extract_struct(rom: bytes, mod: dict, game_code: str) -> list[dict]:
+    """结构体行表：按行 stride 步进，名称读到 eos（默认 FF）；byte_length=原文实际长。"""
     mid = mod["id"]
     start = parse_addr(mod.get("start"))
     end = parse_addr(mod.get("end"))
     read = mod.get("read") or {}
-    entry_size = int(read.get("entry_size") or 0)
-    name_stride = int(read.get("name_stride") or 0)
-    if not entry_size or not name_stride or end < start:
+    entry_size = _struct_entry_size(read)
+    if not entry_size or end < start:
         return []
+    eos = _parse_eos_byte(read.get("eos", read.get("suffix")))
+    name_window = _struct_name_window(read, entry_size)
     count = (end - start + 1) // entry_size
     out: list[dict] = []
     table_ptr = BASE + start
     for i in range(count):
         off = start + i * entry_size
-        text, raw = _slot_text(rom, off, name_stride)
+        text, raw = _slot_text(rom, off, name_window, eos=eos)
         if not text or set(text) <= {"？", "ー", "-", " "}:
             continue
         e = {
             "address": f"0x{BASE + off:08X}",
             "table_index": i,
             "table_base": f"0x{table_ptr:08X}",
-            "byte_length": name_stride,
+            "byte_length": len(raw),
             "original_hex": raw.hex(" "),
             "original": text,
             "translated": "",

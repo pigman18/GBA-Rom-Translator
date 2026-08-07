@@ -261,21 +261,29 @@ def _item_rom_name_entries(rom: bytes, item_cfg: dict) -> list[dict]:
     """Every item name slot from gItems (for merge / CHS table build)."""
     offset = item_cfg["offset"]
     entry_size = item_cfg["entry_size"]
-    name_stride = item_cfg["name_stride"]
+    name_win = int(
+        item_cfg.get("name_stride")
+        or item_cfg.get("name_max")
+        or item_cfg.get("desc_ptr_offset")
+        or entry_size
+    )
     count = item_cfg["count"]
     out: list[dict] = []
     for i in range(count):
         off = offset + i * entry_size
-        raw = bytes(rom[off : off + name_stride])
+        window = bytes(rom[off : off + name_win])
         text = ""
-        if 0xFF in raw:
-            text = decode_pcs(raw[: raw.index(0xFF) + 1])
+        raw = window
+        if 0xFF in window:
+            raw = window[: window.index(0xFF) + 1]
+            text = decode_pcs(raw)
         out.append(
             {
                 "table_index": i,
                 "original_hex": raw.hex(" "),
                 "original": text,
                 "translated": "",
+                "byte_length": len(raw) if text else 0,
                 "module": item_cfg.get("module") or "",
             }
         )
@@ -453,7 +461,7 @@ def _process_item_table(
     if not item_cfg:
         # tables 键已改为模块 id；按形态回退
         for _k, v in (tables_cfg or {}).items():
-            if isinstance(v, dict) and "entry_size" in v and "name_stride" in v:
+            if isinstance(v, dict) and "entry_size" in v and v.get("offset") is not None:
                 item_cfg = v
                 break
     if not item_cfg:

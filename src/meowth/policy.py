@@ -609,10 +609,7 @@ def is_item_desc_table_ptr(ptr_off: int) -> bool:
     cfg = item_data_cfg()
     for req in ("offset", "count", "entry_size", "desc_ptr_offset"):
         if req not in cfg:
-            raise ValueError(
-                f"item struct table config missing {req!r} "
-                "(need 道具名 module read/entry_size in texts.json)"
-            )
+            return False
     base = int(cfg["offset"])
     count = int(cfg["count"])
     entry_size = int(cfg["entry_size"])

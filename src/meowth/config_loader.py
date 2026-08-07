@@ -448,19 +448,36 @@ def tables_from_modules_inject(game_id: str = "") -> dict[str, Any]:
             else:
                 raise ValueError(f"module {mid}: need end or layout.count for ptr_table")
         elif typ == "struct_table":
-            for f in ("entry_size", "name_stride", "desc_ptr_offset"):
-                if f in layout:
-                    entry[f] = layout[f]
+            # row size: entry_size or stride; name is eos-terminated (not a 2nd stride)
+            unit = int(layout.get("entry_size") or layout.get("stride") or 0)
+            if unit:
+                entry["entry_size"] = unit
+            # max name window for legacy readers (optional)
+            name_win = (
+                layout.get("name_max")
+                or layout.get("name_stride")
+                or layout.get("desc_ptr_offset")
+                or unit
+            )
+            if name_win:
+                entry["name_stride"] = int(name_win)
+            if "desc_ptr_offset" in layout:
+                entry["desc_ptr_offset"] = layout["desc_ptr_offset"]
+            if "eos" in layout:
+                entry["eos"] = layout["eos"]
+            elif "suffix" in layout:
+                entry["eos"] = layout["suffix"]
             if offset is None:
                 raise ValueError(f"module {mid}: missing start/offset")
             entry["offset"] = offset
-            unit = int(layout.get("entry_size") or 0)
             if end is not None and unit:
                 entry["count"] = _derive_table_count(offset, end, unit)
             elif legacy_count is not None:
                 entry["count"] = int(legacy_count)
             else:
-                raise ValueError(f"module {mid}: need end+entry_size or layout.count")
+                raise ValueError(
+                    f"module {mid}: need end+entry_size/stride or layout.count"
+                )
         else:  # fixed_table
             if "stride" in layout:
                 entry["stride"] = layout["stride"]

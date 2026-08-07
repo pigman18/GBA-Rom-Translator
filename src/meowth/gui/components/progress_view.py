@@ -1,7 +1,7 @@
 """Progress view: horizontal stage timeline aligned with config packs.
 
   translate/ → translate (extract + fonts + texts)
-  tile/ → tile (row_patcher sprite import)
+  tile/ → tile (tiles_patcher sprite import)
   hook/ → hook (ARMIPS function injection)
   build → build (abstract: text injection + pack, no config folder)
 """

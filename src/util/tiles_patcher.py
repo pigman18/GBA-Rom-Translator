@@ -1,6 +1,6 @@
 #!/usr/bin/env python3
 """
-row_patcher.py - GBA ROM 图形导出导入工具
+tiles_patcher.py - GBA ROM 图形导出导入工具
 
 支持格式: 4bpp, 8bpp, 1bpp, palette, tilemap, raw
 支持压缩: none, lz77, lz77_swap, auto
@@ -94,6 +94,9 @@ def _lz77_find_matches(data: bytes) -> list:
                 break
             dist = i - j
             if dist > 0xFFF:
+                continue
+            # 游戏解压器不支持 dist=1 (RLE) 回引, 只复制首字节后出错
+            if dist < 2:
                 continue
             m = 0
             maxl = min(18, n - i)
@@ -317,6 +320,27 @@ def encode_tiles_4bpp_from_raw(images: list[Image.Image], width_tiles: int,
                         idx1 = _find_nearest_color(p1[:3], palette, exclude_index_zero=True) if p1[3] > 0 else 0
                         byte = ((idx1 & 0xF) << 4) | (idx0 & 0xF)
                         result.append(byte)
+    return bytes(result)
+
+
+def encode_tiles_8bpp_from_raw(images: list[Image.Image], width_tiles: int,
+                               height_tiles: int, palette: list) -> bytes:
+    """
+    将 PNG 列表编码为 8bpp raw tile 数据，使用 palette 索引匹配。
+    每个像素 → palette 最近色索引 → 1 字节。
+    """
+    result = bytearray()
+    for img in images:
+        for ty in range(0, img.height, 8):
+            for tx in range(0, img.width, 8):
+                for row in range(8):
+                    for col in range(8):
+                        p = img.getpixel((tx + col, ty + row))
+                        if p[3] == 0:
+                            result.append(0)
+                        else:
+                            idx = _find_nearest_color(p[:3], palette, exclude_index_zero=False)
+                            result.append(idx)
     return bytes(result)
 
 
@@ -648,6 +672,91 @@ def _get_export_dir(rom_path: Path) -> Path:
     return script_dir / "works" / rom_id / "tiles"
 
 
+def _util_configs_dir() -> Path:
+    return Path(__file__).resolve().parent / "configs"
+
+
+def resolve_game_yaml(rom_path: Path, config: Path | None = None) -> Path:
+    """``configs/<rom_stem>.yaml``；可由 ``--config`` 覆盖。"""
+    if config is not None:
+        return Path(config)
+    cand = _util_configs_dir() / f"{_get_rom_id(rom_path)}.yaml"
+    if cand.is_file():
+        return cand
+    raise FileNotFoundError(
+        f"找不到游戏 yaml: {cand}；请传 --config"
+    )
+
+
+def load_tiles_presets(yaml_path: Path) -> list[dict]:
+    """读取 ``tiles.presets`` 列表（每项含 id）。"""
+    try:
+        import yaml
+    except ImportError as e:
+        raise SystemExit("需要 PyYAML：pip install pyyaml") from e
+    data = yaml.safe_load(yaml_path.read_text(encoding="utf-8"))
+    if not isinstance(data, dict):
+        raise SystemExit(f"无效 yaml: {yaml_path}")
+    tiles = data.get("tiles") or {}
+    presets = tiles.get("presets") if isinstance(tiles, dict) else None
+    if not isinstance(presets, list):
+        raise SystemExit(f"yaml 缺少 tiles.presets: {yaml_path}")
+    out: list[dict] = []
+    for m in presets:
+        if not isinstance(m, dict):
+            continue
+        mid = str(m.get("id") or "").strip()
+        if not mid:
+            continue
+        out.append(m)
+    return out
+
+
+def load_tiles_preset(yaml_path: Path, preset_id: str) -> dict:
+    """从 ``tiles.presets`` 按 id 取预设 dict。"""
+    presets = load_tiles_presets(yaml_path)
+    ids = [str(m.get("id") or "") for m in presets]
+    for m in presets:
+        if str(m.get("id") or "").strip() == preset_id:
+            return m
+    raise SystemExit(
+        f"预设 '{preset_id}' 不存在于 {yaml_path}；可用: {ids}"
+    )
+
+
+def apply_tiles_preset_to_args(args, preset: dict) -> None:
+    """把 yaml tiles 预设字段填入 export argparse namespace。"""
+    args.address = preset["address"]
+    args.format = preset.get("format", "4bpp")
+    args.compression = preset.get("compression", "auto")
+    args.palette = preset.get("palette")
+    args.palette_size = int(preset.get("palette_size", 96))
+    if "bank_list" in preset:
+        bl = preset["bank_list"]
+        if isinstance(bl, list):
+            args.bank_list = ",".join(str(x) for x in bl)
+        else:
+            args.bank_list = bl
+    else:
+        args.bank_list = None
+    if "pointers" in preset and preset["pointers"] is not None:
+        ptrs = preset["pointers"]
+        args.pointers = list(ptrs) if isinstance(ptrs, list) else [ptrs]
+    else:
+        args.pointers = None
+    args.compose = preset.get("compose")
+    args.sprite_size = preset.get("sprite_size", "8x8")
+    args.count = int(preset.get("count", 1))
+    if preset.get("raw_size") is not None:
+        args.raw_size = str(preset["raw_size"])
+    else:
+        args.raw_size = None
+    if preset.get("name"):
+        args.name = preset["name"]
+    else:
+        args.name = None
+
+
 # ─────────────────────────────────────────────
 # Probe (自动检测参数)
 # ─────────────────────────────────────────────
@@ -763,6 +872,25 @@ def _is_valid_gba555(data: bytes) -> bool:
             has_non_zero = True
     # 必须有至少一些非零颜色 (排除全零数据)
     return has_non_zero
+
+
+def _auto_palette_size(data: bytes, max_size: int = 512) -> int:
+    """从 palette 数据检测实际大小（最大 max_size 字节，默认 512）。
+    从 max_size 向下按 32 字节步进，返回最大的有效 GBA555 块。
+    首色必须是黑色 (0x0000) 且至少 3 个非零色。
+    """
+    if len(data) < 32 or data[0] != 0 or data[1] != 0:
+        return 96
+    best = 96
+    for sz in range(min(max_size, len(data)), 31, -32):
+        chunk = data[:sz]
+        if not _is_valid_gba555(chunk):
+            continue
+        unique = len(set((chunk[i], chunk[i + 1]) for i in range(0, sz, 2)))
+        if unique >= 3:
+            best = sz
+            break
+    return best
 
 
 def _find_palette_near(rom: bytes, target_offset: int,
@@ -1017,6 +1145,47 @@ def probe_data(rom: bytes, search_data: bytes) -> list:
 
 def cmd_export(args):
     rom_path = Path(args.rom)
+
+    if getattr(args, "all", False):
+        if args.preset or args.address:
+            print("错误: --all 不能与 --preset / address 同时使用")
+            sys.exit(1)
+        try:
+            yaml_path = resolve_game_yaml(rom_path, getattr(args, "config", None))
+        except FileNotFoundError as e:
+            print(f"错误: {e}")
+            sys.exit(1)
+        presets = load_tiles_presets(yaml_path)
+        if not presets:
+            print(f"错误: {yaml_path} 中 tiles.presets 为空")
+            sys.exit(1)
+        print(f"导出全部预设 ({len(presets)}) ← {yaml_path.name}")
+        for p in presets:
+            one = argparse.Namespace(**vars(args))
+            apply_tiles_preset_to_args(one, p)
+            pid = str(p.get("id") or "")
+            print(f"\n=== 预设: {pid} ===")
+            _cmd_export_one(one)
+        return
+
+    if args.preset:
+        try:
+            yaml_path = resolve_game_yaml(rom_path, getattr(args, "config", None))
+        except FileNotFoundError as e:
+            print(f"错误: {e}")
+            sys.exit(1)
+        p = load_tiles_preset(yaml_path, args.preset)
+        apply_tiles_preset_to_args(args, p)
+        print(f"预设: {args.preset} ({yaml_path.name})")
+
+    if args.address is None:
+        print("错误: 需要 --preset / --all 或 address 参数")
+        sys.exit(1)
+    _cmd_export_one(args)
+
+
+def _cmd_export_one(args):
+    rom_path = Path(args.rom)
     rom = rom_path.read_bytes()
     addr = _normalize_gba_addr(args.address) if isinstance(args.address, str) else args.address
     offset = gba_address_to_offset(addr)
@@ -1070,9 +1239,16 @@ def cmd_export(args):
             pal_data = lz77_decompress(rom[pal_offset:], swap=pal_swap)
             print(f"调色板解压: {len(pal_data)} bytes ({pal_comp})")
         else:
-            pal_data = rom[pal_offset:pal_offset + 96]
-        palette_banks = decode_palette_gba555(pal_data, bank_count=3)
-        palette_flat = palette_to_rgb_list(pal_data, bank_count=3)
+            # raw: 先读大块再自动检测实际大小
+            chunk = rom[pal_offset:pal_offset + 512]
+            pal_sz = _auto_palette_size(chunk)
+            if pal_sz != args.palette_size:
+                print(f"调色板大小自动检测: {pal_sz} bytes (原指定 {args.palette_size})")
+                args.palette_size = pal_sz
+            pal_data = chunk[:pal_sz]
+        pal_bank_count = len(pal_data) // 32
+        palette_banks = decode_palette_gba555(pal_data, bank_count=pal_bank_count)
+        palette_flat = palette_to_rgb_list(pal_data, bank_count=pal_bank_count)
         # 保存调色板可视化
         palette_path = meta_dir / f"{prefix}_palette.png"
         pal_img = render_palette_image(palette_flat)
@@ -1084,42 +1260,87 @@ def cmd_export(args):
         palette_flat = [(i * 17, i * 17, i * 17) for i in range(16)]
         palette_banks = [palette_flat[:16]]
 
-    # ── 解析 sprite 参数 ──
-    sprite_w, sprite_h = [int(x) for x in args.sprite_size.split("x")]
-    tile_w, tile_h = sprite_w // 8, sprite_h // 8
-    count = int(args.count)
-    tiles_per_sprite = tile_w * tile_h
-
-    # ── 可选：按 sprite 指定调色板 bank ──
+    # ── compose 分支 ──
+    compose_info = getattr(args, "compose", None)
     bank_list = None
-    if args.bank_list:
-        bank_list = [int(x) for x in args.bank_list.split(",")]
-        if len(bank_list) != count:
-            print(f"警告: --bank-list 长度 {len(bank_list)} != --count {count}")
-            bank_list = (bank_list + [0] * count)[:count]
-
-    # ── 切分 sprite 并保存 ──
-    if bank_list and palette_banks:
+    if compose_info and palette_flat:
+        comp_type = compose_info["type"]
+        if comp_type == "banner":
+            l = compose_info["left"]; r = compose_info["right"]
+            left_img = decode_tiles(raw_data[:l["width"] * l["height"] * 64],
+                                     bpp, l["width"], l["height"], count=1, palette=palette_flat)[0]
+            right_img = decode_tiles(raw_data[l["width"] * l["height"] * 64:
+                                              (l["width"] * l["height"] + r["width"] * r["height"]) * 64],
+                                      bpp, r["width"], r["height"], count=1, palette=palette_flat)[0]
+            composed = Image.new("RGBA", (left_img.width + right_img.width,
+                                          max(left_img.height, right_img.height)), (0, 0, 0, 0))
+            composed.paste(left_img, (0, 0))
+            composed.paste(right_img, (left_img.width, 0))
+            sprite_w, sprite_h = composed.width, composed.height
+            count = 1
+            composed.save(output_dir / f"{prefix}_compose.png")
+            print(f"导出 {prefix}_compose.png ({composed.width}×{composed.height})")
+        elif comp_type == "logo":
+            tm_addr = compose_info["tilemap_address"]
+            tm_off = gba_address_to_offset(_normalize_gba_addr(tm_addr)
+                                           if isinstance(tm_addr, str) else tm_addr)
+            map_data = lz77_decompress(rom[tm_off:], swap=True)
+            tw = compose_info["width"]; th = compose_info["height"]
+            composed = Image.new("RGBA", (tw * 8, th * 8), (0, 0, 0, 0))
+            n = len(raw_data) // 64
+            for row in range(th):
+                for col in range(tw):
+                    idx = map_data[row * tw + col]
+                    if idx >= n: continue
+                    t = decode_tiles(raw_data[idx * 64:(idx + 1) * 64],
+                                     bpp, 1, 1, count=1, palette=palette_flat)[0]
+                    composed.paste(t, (col * 8, row * 8))
+            composed.save(output_dir / f"{prefix}_compose.png")
+            print(f"导出 {prefix}_compose.png ({composed.width}×{composed.height})")
+            sprite_w, sprite_h = composed.width, composed.height
+            count = 1
+        else:
+            print(f"错误: 未知 compose 类型 '{comp_type}'")
+            sys.exit(1)
         images = []
-        tile_size = {1: 8, 4: 32, 8: 64}[bpp]
-        bytes_per_sprite = tiles_per_sprite * tile_size
-        for i in range(count):
-            bank = bank_list[i]
-            if bank >= len(palette_banks):
-                print(f"警告: sprite {i} 指定 bank {bank} 超出可用 bank ({len(palette_banks)})，回退 bank0")
-                bank = 0
-            slice_data = raw_data[i * bytes_per_sprite:(i + 1) * bytes_per_sprite]
-            img = decode_tiles(slice_data, bpp, tile_w, tile_h,
-                               count=1, palette=palette_banks[bank])[0]
-            images.append(img)
     else:
-        images = decode_tiles(raw_data, bpp, tile_w, tile_h,
-                              count=count, palette=palette_flat)
-    for i, img in enumerate(images):
-        png_path = output_dir / f"{prefix}_{i:02d}.png"
-        img.save(png_path)
+        # ── 标准 sprite 切分 ──
+        # ── 解析 sprite 参数 ──
+        sprite_w, sprite_h = [int(x) for x in args.sprite_size.split("x")]
+        tile_w, tile_h = sprite_w // 8, sprite_h // 8
+        count = int(args.count)
+        tiles_per_sprite = tile_w * tile_h
 
-    print(f"导出 {count} 个 sprite → {output_dir}")
+        # ── 可选：按 sprite 指定调色板 bank ──
+        bank_list = None
+        if args.bank_list:
+            bank_list = [int(x) for x in args.bank_list.split(",")]
+            if len(bank_list) != count:
+                print(f"警告: --bank-list 长度 {len(bank_list)} != --count {count}")
+                bank_list = (bank_list + [0] * count)[:count]
+
+        # ── 切分 sprite 并保存 ──
+        if bank_list and palette_banks:
+            images = []
+            tile_size = {1: 8, 4: 32, 8: 64}[bpp]
+            bytes_per_sprite = tiles_per_sprite * tile_size
+            for i in range(count):
+                bank = bank_list[i]
+                if bank >= len(palette_banks):
+                    print(f"警告: sprite {i} 指定 bank {bank} 超出可用 bank ({len(palette_banks)})，回退 bank0")
+                    bank = 0
+                slice_data = raw_data[i * bytes_per_sprite:(i + 1) * bytes_per_sprite]
+                img = decode_tiles(slice_data, bpp, tile_w, tile_h,
+                                   count=1, palette=palette_banks[bank])[0]
+                images.append(img)
+        else:
+            images = decode_tiles(raw_data, bpp, tile_w, tile_h,
+                                  count=count, palette=palette_flat)
+        for i, img in enumerate(images):
+            png_path = output_dir / f"{prefix}_{i:02d}.png"
+            img.save(png_path)
+
+        print(f"导出 {count} 个 sprite → {output_dir}")
 
     # ── 扫描指针源 ──
     pointer_sources = []
@@ -1147,6 +1368,14 @@ def cmd_export(args):
             print(f"自动扫描到 {len(pointer_sources)} 个指针源")
 
     # ── 生成 meta.json ──
+    tiles_per_sprite_val = (sprite_w // 8) * (sprite_h // 8)
+    spice_files = [
+        {"index": i, "file": f"{prefix}_compose.png"}
+        for i in range(count)
+    ] if compose_info else [
+        {"index": i, "file": f"{prefix}_{i:02d}.png"}
+        for i in range(count)
+    ]
     meta = {
         "name": args.name or prefix,
         "rom_address": f"0x{addr:08X}",
@@ -1156,25 +1385,26 @@ def cmd_export(args):
         "sprite_size_px": [sprite_w, sprite_h],
         "sprite_count": count,
         "tile_size_px": [8, 8],
-        "tiles_per_sprite": tiles_per_sprite,
+        "tiles_per_sprite": tiles_per_sprite_val,
         "tile_order": "row_major",
         "palette": {
             "rom_address": f"0x{_normalize_gba_addr(args.palette):08X}" if args.palette else None,
             "format": "gbapal555",
-            "bank_count": 3,
+            "bank_count": pal_bank_count,
+            "palette_size": args.palette_size,
             "colors_per_bank": 16,
         } if args.palette else None,
-        "palette_bank_per_sprite": bank_list,
+        "palette_bank_per_sprite": bank_list if not compose_info else None,
         "pointer_sources": pointer_sources,
-        "sprites": [
-            {"index": i, "file": f"{prefix}_{i:02d}.png"}
-            for i in range(count)
-        ],
+        "sprites": spice_files,
     }
+    if compose_info:
+        meta["compose"] = compose_info
 
     meta_path = meta_dir / f"{prefix}_meta.json"
     meta_path.write_text(json.dumps(meta, indent=2, ensure_ascii=False))
     print(f"元数据: {meta_path}")
+
 
 
 # ─────────────────────────────────────────────
@@ -1206,12 +1436,18 @@ def cmd_fix_palette(args):
             continue
         pal_addr = int(meta["palette"]["rom_address"], 16)
         pal_off = gba_address_to_offset(pal_addr)
+        pal_bank_count = meta["palette"].get("bank_count", 3)
+        pal_size = meta["palette"].get("palette_size", 96)
         pal_comp = detect_lz77(rom, pal_off)
         if pal_comp in ("lz77", "lz77_swap"):
             pal_data = lz77_decompress(bytes(rom[pal_off:]), swap=(pal_comp == "lz77_swap"))
         else:
-            pal_data = bytes(rom[pal_off:pal_off + 96])
-        palette_flat = palette_to_rgb_list(pal_data, bank_count=3)
+            chunk = bytes(rom[pal_off:pal_off + 512])
+            pal_sz = _auto_palette_size(chunk)
+            if "palette_size" not in meta["palette"]:
+                pal_size = pal_sz
+            pal_data = bytes(rom[pal_off:pal_off + pal_size])
+        palette_flat = palette_to_rgb_list(pal_data, bank_count=pal_bank_count)
 
         meta_changed = 0
         for sp in meta.get("sprites", []):
@@ -1271,43 +1507,119 @@ def cmd_import(args):
             pal_addr = int(meta["palette"]["rom_address"], 16)
             pal_offset = gba_address_to_offset(pal_addr)
             pal_comp = detect_lz77(rom, pal_offset)
+            pal_bank_count = meta["palette"].get("bank_count", 3)
+            pal_size = meta["palette"].get("palette_size", 96)
             if pal_comp in ("lz77", "lz77_swap"):
                 pal_swap = pal_comp == "lz77_swap"
                 pal_data = lz77_decompress(bytes(rom[pal_offset:]), swap=pal_swap)
             else:
-                pal_data = bytes(rom[pal_offset:pal_offset + 96])
-            palette_flat = palette_to_rgb_list(pal_data, bank_count=3)
-            palette_banks = decode_palette_gba555(pal_data, bank_count=3)
+                chunk = bytes(rom[pal_offset:pal_offset + 512])
+                pal_sz = _auto_palette_size(chunk)
+                if "palette_size" not in meta["palette"]:
+                    pal_size = pal_sz
+                    print(f"  调色板自动检测: {pal_size} bytes")
+                pal_data = bytes(rom[pal_offset:pal_offset + pal_size])
+            palette_flat = palette_to_rgb_list(pal_data, bank_count=pal_bank_count)
+            palette_banks = decode_palette_gba555(pal_data, bank_count=pal_bank_count)
 
         # ── 读取所有 sprite ──
         all_raw = bytearray()
-        for i in range(count):
-            # 优先读 .raw，没有则读 .png
-            raw_file = tiles_dir / f"{prefix}_{i:02d}.raw"
-            png_file = tiles_dir / f"{prefix}_{i:02d}.png"
-
-            if raw_file.exists():
-                sprite_data = raw_file.read_bytes()
-                all_raw.extend(sprite_data)
-            elif png_file.exists():
-                img = Image.open(png_file).convert("RGBA")
-                if bpp == 4:
-                    if args.snap_palette and palette_flat:
-                        img, snap_stats = normalize_images_to_palette(
-                            [img], palette_flat, args.palette_threshold)
-                        img = img[0]
-                        if snap_stats["changed"]:
-                            print(f"  {png_file.name}: 颜色吸附 {snap_stats['changed']} px:")
-                            for (fr, to), c in snap_stats["remaps"]:
-                                print(f"      {fr} -> {to}  x{c}")
-                    sprite_data = encode_tiles_4bpp_from_raw(
-                        [img], tile_w, tile_h, palette_flat or [])
-                else:
-                    sprite_data = encode_tiles_4bpp([img], tile_w, tile_h)
-                all_raw.extend(sprite_data)
+        compose_meta = meta.get("compose")
+        if compose_meta and palette_flat:
+            comp_type = compose_meta["type"]
+            # 从 meta 中读取实际文件名，兼容旧的硬编码名称
+            sprite_file = meta.get("sprites", [{}])[0].get("file", f"{prefix}_compose.png")
+            png_file = tiles_dir / sprite_file
+            if not png_file.exists():
+                print(f"错误: 找不到 {png_file}")
+                sys.exit(1)
+            img = Image.open(png_file).convert("RGBA")
+            if args.snap_palette:
+                img, snap_stats = normalize_images_to_palette(
+                    [img], palette_flat, args.palette_threshold)
+                img = img[0]
+                if snap_stats["changed"]:
+                    print(f"  {png_file.name}: 颜色吸附 {snap_stats['changed']} px:")
+                    for (fr, to), c in snap_stats["remaps"]:
+                        print(f"      {fr} -> {to}  x{c}")
+            if comp_type == "banner":
+                l = compose_meta["left"]; r = compose_meta["right"]
+                lw_px = l["width"] * 8; lh_px = l["height"] * 8
+                rw_px = r["width"] * 8; rh_px = r["height"] * 8
+                left_img = img.crop((0, 0, lw_px, lh_px))
+                right_img = img.crop((lw_px, 0, lw_px + rw_px, rh_px))
+                all_raw.extend(encode_tiles_8bpp_from_raw(
+                    [left_img], l["width"], l["height"], palette_flat))
+                all_raw.extend(encode_tiles_8bpp_from_raw(
+                    [right_img], r["width"], r["height"], palette_flat))
+            elif comp_type == "logo":
+                tm_addr = compose_meta["tilemap_address"]
+                tm_off = gba_address_to_offset(
+                    _normalize_gba_addr(tm_addr) if isinstance(tm_addr, str) else tm_addr)
+                map_data = lz77_decompress(rom[tm_off:], swap=True)
+                tw = compose_meta["width"]; th = compose_meta["height"]
+                if img.size != (tw * 8, th * 8):
+                    print(f"错误: 图片尺寸 {img.size} ≠ 期望 {tw*8}×{th*8}, 图片可能被编辑过")
+                    sys.exit(1)
+                orig_tiles = lz77_decompress(rom[offset:], swap=True)
+                new_tiles = bytearray(orig_tiles)
+                ts = 64; n = len(orig_tiles) // ts
+                for row in range(th):
+                    for col in range(tw):
+                        idx = map_data[row * tw + col]
+                        if idx >= n: continue
+                        px = col * 8; py = row * 8
+                        tile_img = img.crop((px, py, px + 8, py + 8))
+                        td = encode_tiles_8bpp_from_raw([tile_img], 1, 1, palette_flat)
+                        new_tiles[idx * ts:(idx + 1) * ts] = td
+                all_raw = new_tiles
             else:
-                print(f"警告: 找不到 {prefix}_{i:02d}.raw 或 .png，跳过")
-                continue
+                print(f"错误: 未知 compose 类型 '{comp_type}'")
+                sys.exit(1)
+            print(f"compose 分解: {len(all_raw)} bytes")
+        else:
+            for i in range(count):
+                # 优先读 .raw，没有则读 .png
+                raw_file = tiles_dir / f"{prefix}_{i:02d}.raw"
+                png_file = tiles_dir / f"{prefix}_{i:02d}.png"
+
+                if raw_file.exists():
+                    sprite_data = raw_file.read_bytes()
+                    all_raw.extend(sprite_data)
+                elif png_file.exists():
+                    img = Image.open(png_file).convert("RGBA")
+                    if bpp == 8:
+                        if args.snap_palette and palette_flat:
+                            img, snap_stats = normalize_images_to_palette(
+                                [img], palette_flat, args.palette_threshold)
+                            img = img[0]
+                            if snap_stats["changed"]:
+                                print(f"  {png_file.name}: 颜色吸附 {snap_stats['changed']} px:")
+                                for (fr, to), c in snap_stats["remaps"]:
+                                    print(f"      {fr} -> {to}  x{c}")
+                        sprite_data = encode_tiles_8bpp_from_raw(
+                            [img], tile_w, tile_h, palette_flat or [])
+                    elif bpp == 4:
+                        if args.snap_palette and palette_flat:
+                            img, snap_stats = normalize_images_to_palette(
+                                [img], palette_flat, args.palette_threshold)
+                            img = img[0]
+                            if snap_stats["changed"]:
+                                print(f"  {png_file.name}: 颜色吸附 {snap_stats['changed']} px:")
+                                for (fr, to), c in snap_stats["remaps"]:
+                                    print(f"      {fr} -> {to}  x{c}")
+                        sprite_data = encode_tiles_4bpp_from_raw(
+                            [img], tile_w, tile_h, palette_flat or [])
+                    else:
+                        sprite_data = encode_tiles_4bpp([img], tile_w, tile_h)
+                    all_raw.extend(sprite_data)
+                else:
+                    print(f"警告: 找不到 {prefix}_{i:02d}.raw 或 .png，跳过")
+                    continue
+        # 标准导入：如果没有读到任何一个 sprite，中止
+        if not compose_meta and len(all_raw) < meta.get("raw_size", 1):
+            print(f"错误: {prefix} 未读取到任何 sprite 数据 (期望 {meta['raw_size']} bytes, 实际 {len(all_raw)} bytes)。请重新 export 后重试。")
+            sys.exit(1)
 
         print(f"读取 {count} 个 sprite，共 {len(all_raw)} bytes")
 
@@ -1387,6 +1699,26 @@ def cmd_import(args):
             except Exception as e:
                 print(f"错误: 0x{prefix} 写入后自校验失败: {e}")
                 sys.exit(1)
+
+    # ── 写入新调色板 (--new-palette) ──
+    if getattr(args, "new_palette", None):
+        # 用第一个 meta 的 palette 地址作为源
+        src_meta = json.loads(meta_files[0].read_text())
+        pal_src = src_meta.get("palette", {}).get("rom_address")
+        if pal_src:
+            pal_off = gba_address_to_offset(_normalize_gba_addr(pal_src))
+            pal_comp = detect_lz77(rom, pal_off)
+            if pal_comp in ("lz77", "lz77_swap"):
+                pal_raw = lz77_decompress(bytes(rom[pal_off:]), swap=(pal_comp == "lz77_swap"))
+            else:
+                pal_raw = bytes(rom[pal_off:pal_off + _auto_palette_size(bytes(rom[pal_off:pal_off + 512]))])
+            dst_addr = _normalize_gba_addr(args.new_palette) if isinstance(args.new_palette, str) else args.new_palette
+            dst_off = gba_address_to_offset(dst_addr)
+            need = len(pal_raw)
+            if dst_off + need > len(rom):
+                rom.extend(b"\x00" * (dst_off + need - len(rom)))
+            rom[dst_off:dst_off + need] = pal_raw
+            print(f"调色板写入: 0x{dst_addr:08X} ({need} bytes)")
 
     # ── 保存 ──
     output_path.write_bytes(rom)
@@ -1482,7 +1814,7 @@ def cmd_probe(args):
         # 生成建议命令
         addr_hex = f"0x{offset_to_gba_address(data_offset):08X}"
         cmd = (
-            f"python row_patcher.py export {rom_path} {addr_hex} "
+            f"python tiles_patcher.py export {rom_path} {addr_hex} "
             f"--format {bpp}bpp --sprite-size {w}x{h} --count {count} "
             f"--compression {compression}"
         )
@@ -1616,7 +1948,7 @@ def cmd_scan_palettes(args):
 
     if candidates:
         print(f"\n使用方法:")
-        print(f"  python row_patcher.py probe {rom_path} --hex-file data.txt --palette 0x{offset_to_gba_address(candidates[0][0]):08X}")
+        print(f"  python tiles_patcher.py probe {rom_path} --hex-file data.txt --palette 0x{offset_to_gba_address(candidates[0][0]):08X}")
 
 
 # ─────────────────────────────────────────────
@@ -1630,15 +1962,19 @@ def main():
         epilog="""
 示例:
   # 导出 type icons (输出到 works/{romId}/tiles/)
-  python row_patcher.py export rom.gba 0x087EE9C8 \\
+  python tiles_patcher.py export rom.gba 0x087EE9C8 \\
     --format 4bpp --sprite-size 32x16 --count 23 \\
     --compression lz77_swap --palette 0x087EF450
 
+  # 按 yaml 预设 / 全部预设
+  python tiles_patcher.py export rom.gba --preset type_icons
+  python tiles_patcher.py export rom.gba --all -o configs/POKEMON_RUBY_AXVJ00/tile
+
   # 导入修改后的 sprite
-  python row_patcher.py import rom.gba tiles/ -o output.gba
+  python tiles_patcher.py import rom.gba tiles/ -o output.gba
 
   # 用 hex 字符串搜索并自动检测参数
-  python row_patcher.py probe rom.gba --hex "000000009099999989888888"
+  python tiles_patcher.py probe rom.gba --hex "000000009099999989888888"
         """,
     )
     sub = parser.add_subparsers(dest="command", required=True)
@@ -1646,7 +1982,7 @@ def main():
     # ── export ──
     p_export = sub.add_parser("export", help="导出 ROM 图形为 PNG")
     p_export.add_argument("rom", help="ROM 文件路径")
-    p_export.add_argument("address", help="数据起始 GBA 地址 (如 0x087EE9C8)")
+    p_export.add_argument("address", nargs="?", help="数据起始 GBA 地址 (如 0x087EE9C8)")
     p_export.add_argument("--format", default="4bpp",
                           choices=["1bpp", "4bpp", "8bpp", "palette", "tilemap", "raw"],
                           help="数据格式 (默认: 4bpp)")
@@ -1663,6 +1999,21 @@ def main():
     p_export.add_argument("--no-scan", action="store_true",
                           help="禁用自动指针扫描")
     p_export.add_argument("--name", help="数据名称 (默认用地址)")
+    p_export.add_argument("--palette-size", type=int, default=96,
+                          help="调色板大小 (bytes, 默认 96)")
+    p_export.add_argument(
+        "--preset",
+        help="预设 id，读取 configs/<gameId>.yaml 的 tiles.presets",
+    )
+    p_export.add_argument(
+        "--all",
+        action="store_true",
+        help="导出 tiles.presets 中的全部预设（与 --preset / address 互斥）",
+    )
+    p_export.add_argument(
+        "--config",
+        help="游戏 yaml（默认 configs/<rom_stem>.yaml）",
+    )
     p_export.add_argument("-o", "--output", help="输出目录 (默认: works/{romId}/tiles)")
 
     # ── import ──
@@ -1674,6 +2025,8 @@ def main():
                           help="导入时不对 PNG 颜色做调色板相似度吸附 (默认开启)")
     p_import.add_argument("--palette-threshold", type=int, default=None,
                           help="相似度阈值 (平方 RGB 距离)，超过则保留原色不吸附 (默认无限制)")
+    p_import.add_argument("--new-palette",
+                          help="导入后将新调色板写入指定 GBA 地址 (如 0x09000000)")
 
     # ── fix-palette ──
     p_fix = sub.add_parser("fix-palette",

@@ -1337,7 +1337,7 @@ class TranslationEngine:
             raise
 
     def _default_tiles_dir(self, rom_path: Path) -> Path:
-        """Default tiles dir: configs/<game_id>/tile, else row_patcher's
+        """Default tiles dir: configs/<game_id>/tile, else tiles_patcher's
         legacy export dir src/util/works/{romId}/tiles."""
         from ..config_loader import game_config_dir
 
@@ -1353,12 +1353,12 @@ class TranslationEngine:
         )
 
     def _run_tiles(self, rom_path: Path, work_dir: Path) -> Path:
-        """Tiles stage: run row_patcher import on the built ROM, in place.
+        """Tiles stage: run tiles_patcher import on the built ROM, in place.
 
-        Reads PNG/raw edits from ``config.tiles_dir`` (fallback to row_patcher's
+        Reads PNG/raw edits from ``config.tiles_dir`` (fallback to tiles_patcher's
         default works dir) and patches them into ``rom_path`` (the build_rom
         output), returning the same path. Must run after build_rom — the font
-        patch incbins fonts at 0x09000000, which collides with row_patcher's
+        patch incbins fonts at 0x09000000, which collides with tiles_patcher's
         default free-space relocation address.
         """
         tiles_dir = self.config.tiles_dir or self._default_tiles_dir(rom_path)
@@ -1374,7 +1374,7 @@ class TranslationEngine:
         tile_rom = Path(work_dir) / f"{rom_path.stem}_tiles{rom_path.suffix}"
         tile_rom.parent.mkdir(parents=True, exist_ok=True)
         script = (
-            Path(__file__).resolve().parent.parent.parent / "util" / "row_patcher.py"
+            Path(__file__).resolve().parent.parent.parent / "util" / "tiles_patcher.py"
         )
         args = [
             sys.executable,
@@ -1389,10 +1389,10 @@ class TranslationEngine:
         r = subprocess.run(args, capture_output=True, text=True, timeout=180)
         if r.returncode != 0:
             raise RuntimeError(
-                f"row_patcher import failed:\n{r.stdout}\n{r.stderr}"
+                f"tiles_patcher import failed:\n{r.stdout}\n{r.stderr}"
             )
         self._log("info", f"tiles patched: {tile_rom.name}")
-        # row_patcher writes to *_tiles.gba; return it as the tile-patched base
+        # tiles_patcher writes to *_tiles.gba; return it as the tile-patched base
         # for build_rom (input ROM stays untouched).
         return tile_rom
 

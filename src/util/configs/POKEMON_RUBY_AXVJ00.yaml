@@ -1,5 +1,47 @@
 game_id: POKEMON_RUBY_AXVJ00
 game_code: AXVJ
+tiles:
+  presets:
+  - id: title_banner
+    label: 标题横幅
+    default: true
+    address: '0x0836EC6C'
+    format: 8bpp
+    compression: lz77_swap
+    palette: '0x0836D148'
+    compose:
+      type: banner
+      left:
+        width: 8
+        height: 4
+      right:
+        width: 4
+        height: 4
+  - id: title_logo
+    label: 标题 Logo
+    default: true
+    address: '0x0836D268'
+    format: 8bpp
+    compression: lz77_swap
+    palette: '0x0836D148'
+    compose:
+      type: logo
+      tilemap_address: '0x0836D030'
+      tilemap_size: 1024
+      width: 32
+      height: 32
+  - id: type_icons
+    label: 属性图标
+    default: true
+    address: '0x087EE9C8'
+    format: 4bpp
+    compression: lz77_swap
+    sprite_size: '32x16'
+    count: 23
+    palette: '0x087EF450'
+    bank_list: '0,0,1,1,0,0,2,1,0,2,0,1,2,0,1,1,2,0,0,1,1,2,0'
+    pointers:
+    - '0x0839747C'
 texts:
   modules:
   - id: 属性名

@@ -19,6 +19,7 @@
     "rom_address": "0x087EF450",
     "format": "gbapal555",
     "bank_count": 3,
+    "palette_size": 96,
     "colors_per_bank": 16
   },
   "palette_bank_per_sprite": [

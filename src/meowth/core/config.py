@@ -67,7 +67,7 @@ class TranslationConfig:
     # Font path (BDF file for font build)
     bdf_font_path: Path | None = None
 
-    # Tiles dir (row_patcher export output: *_meta.json + *.png/*.raw).
+    # Tiles dir (tiles_patcher export output: *_meta.json + *.png/*.raw).
     # When set, the pipeline runs a tiles stage AFTER build_rom and patches the
     # final ROM (must not run before: armips font incbin at 0x09000000 would
     # overwrite relocated tiles).

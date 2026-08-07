@@ -321,7 +321,7 @@ def build(rom_path, translations, output, source, target):
     "--tiles-dir",
     type=click.Path(dir_okay=True, path_type=Path),
     default=None,
-    help="Tiles dir (row_patcher export output); patches graphics after translate",
+    help="Tiles dir (tiles_patcher export output); patches graphics after translate",
 )
 @_modules_option
 @add_provider_options

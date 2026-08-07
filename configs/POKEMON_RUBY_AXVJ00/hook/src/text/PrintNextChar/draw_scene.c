@@ -110,6 +110,11 @@ void scene_mode2_apply(TextPrinter *win, int *x, int *y, int *band, int *origin)
     }
     if (op != 0)
         return;
+    /* Shop list: Y=(i<<1)+2 → even 2..16. Row7+ has Y≥14 and price X≥20
+     * which false-triggers party MENU_BAND below. Party options use odd Y
+     * (13,15,17). Keep shop origin+2 / band 0. */
+    if (*y >= 2 && *y <= 16 && (*y & 1) == 0)
+        return;
     /* Party options only: left≥20 AND y≥13. Save/continue (left≥20, y small)
      * must keep vanilla origin+2 / no BAND — else tile indices → 乱码. */
     if (left >= CHS_PARTY_MENU_LEFT && *y >= CHS_PARTY_MENU_TOP) {

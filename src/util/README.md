@@ -255,21 +255,21 @@ python src/util/texts_patcher.py scan <rom.gba> <关键字> [--module 模块名]
 
 ## 挖洞预览 / 执行 (remove-preview / remove)
 
-对坏地址：落在某模块带 `[A,B]` 内则切成 `[A,X-1]` + `[X+1,B]`（空段丢弃）。地址可为 VMA（`0x08……`）或文件偏移。
+对坏句：**整句字节区间**挖洞。起点 `X`、长度 `L`（来自 `texts.json` 的 `byte_length`，否则 ROM `read_pcs`）→ 从模块带中剔除 `[X, X+L-1]`，即 `[A,B]` 变成 `[A,X-1]` + `[X+L,B]`。只挖起点 1 字节会导致再扫时从句中冒出更多乱码。
 
 地址来源（至少一种）：
 
 | 参数 | 说明 |
 |------|------|
-| `--addrs` | 逗号分隔地址；PowerShell 请加引号 |
-| `--from-translated [PATH]` | 读 `texts_translated.json` 中 `status=404` 的 `original`，经同游戏 `texts.json` 反查 `address`；省略 PATH 则用 `configs/<game_id>/translate/texts_translated.json` |
+| `--addrs` | 逗号分隔**句起点**；PowerShell 请加引号 |
+| `--from-translated [PATH]` | 读 `texts_translated.json` 中 `status=404` 的 `original`，经同游戏 `texts.json` 反查起点；省略 PATH 则用 `configs/<game_id>/translate/texts_translated.json` |
 
-二者可并用（去重并集）。**不**改缓存格式；缓存本身无 address 字段。
+二者可并用（去重并集后再按长度扩成整句）。**不**改缓存格式。
 
 | 子命令 | 写盘 | 行为 |
 |--------|------|------|
-| `remove-preview` | 否 | 打印将改哪些模块、区间前后对比、ROM 该起点原文、`texts.json` 将删条目 |
-| `remove` | 是 | 同上算法写 yaml；同步 `texts.json` 的 modules 区间，并删除等于坏点或已出带的 entries |
+| `remove-preview` | 否 | 打印将改哪些模块、区间前后对比、ROM 整句摘要、`texts.json` 将删条目 |
+| `remove` | 是 | 同上算法写 yaml；同步 `texts.json` 的 modules 区间，并删除落在剔除整句内或已出带的 entries |
 
 **不**自动全量 `export`；需要整库重扫时再跑 `export`。
 
@@ -278,7 +278,7 @@ python src/util/texts_patcher.py scan <rom.gba> <关键字> [--module 模块名]
 python src/util/texts_patcher.py remove-preview roms/origin/POKEMON_RUBY_AXVJ00.gba \
   --addrs "0x08376A3C,0x086F0B14"
 
-# 按翻译缓存 404 反查地址后预览 / 执行
+# 按翻译缓存 404 反查起点后预览 / 执行（整句挖洞）
 python src/util/texts_patcher.py remove-preview roms/origin/POKEMON_RUBY_AXVJ00.gba \
   --from-translated
 python src/util/texts_patcher.py remove roms/origin/POKEMON_RUBY_AXVJ00.gba \
@@ -301,12 +301,12 @@ python src/util/texts_patcher.py remove-preview roms/origin/POKEMON_RUBY_AXVJ00.
 
 | 参数 | 说明 |
 |------|------|
-| `rom` | 原盘 ROM（只读解码原文用） |
-| `--addrs` | 逗号分隔；VMA 或文件偏移（可与 `--from-translated` 并用） |
-| `--from-translated` | 可选 PATH；从 404 原文反查地址 |
+| `rom` | 原盘 ROM（只读解码 / 无 texts 条目时测长度） |
+| `--addrs` | 逗号分隔句起点；VMA 或文件偏移 |
+| `--from-translated` | 可选 PATH；从 404 原文反查起点 |
 | `--config` | yaml；默认按 ROM stem / game_code 解析 |
 
 **示例命中（Ruby AXVJ）：**
 
-- `0x08376A3C` → 文件 `0x376A3C` → 模块 **UI界面**
+- `0x08376A3C` → 文件 `0x376A3C` → 模块 **UI界面**（剔除整句长度）
 - `0x086F0B14` → 文件 `0x6F0B14` → 模块 **高风险混杂**

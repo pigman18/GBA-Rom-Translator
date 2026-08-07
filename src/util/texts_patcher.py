@@ -14,6 +14,9 @@ texts_patcher.py
   python texts_patcher.py remove <rom.gba> --addrs 0x08376A3C,0x086F0B14
   python texts_patcher.py remove-preview <rom.gba> --from-translated
   python texts_patcher.py remove <rom.gba> --from-translated [texts_translated.json]
+
+挖洞按整句字节区间：起点 X、长度 L → 剔除 [X, X+L-1]，
+再扫时不会从句中字节冒出新乱码起点。
 """
 
 from __future__ import annotations
@@ -749,7 +752,7 @@ def scan_keyword(
 
 
 # ---------------------------------------------------------------------------
-# remove-preview / remove：按坏地址切开模块区间
+# remove-preview / remove：按坏句整段字节区间切开模块带
 # ---------------------------------------------------------------------------
 
 
@@ -765,19 +768,47 @@ def _fmt_file_off(n: int) -> str:
     return f"0x{n:X}"
 
 
-def split_band(lo: int, hi: int, cuts: list[int]) -> list[tuple[int, int]]:
-    """``[lo, hi]`` 挖掉 cuts 中落在带内的点 → 若干闭区间。"""
+def _fmt_span(a: int, b: int) -> str:
+    if a == b:
+        return _fmt_file_off(a)
+    return f"{_fmt_file_off(a)}–{_fmt_file_off(b)}(+{b - a + 1})"
+
+
+def merge_spans(spans: list[tuple[int, int]]) -> list[tuple[int, int]]:
+    """合并重叠或相邻闭区间。"""
+    if not spans:
+        return []
+    xs = sorted((min(a, b), max(a, b)) for a, b in spans)
+    out: list[tuple[int, int]] = [xs[0]]
+    for a, b in xs[1:]:
+        la, lb = out[-1]
+        if a <= lb + 1:
+            out[-1] = (la, max(lb, b))
+        else:
+            out.append((a, b))
+    return out
+
+
+def split_band(
+    lo: int, hi: int, spans: list[tuple[int, int]]
+) -> list[tuple[int, int]]:
+    """``[lo, hi]`` 挖掉与 spans 相交的整段 → 若干闭区间。"""
     if hi < lo:
         return []
-    xs = sorted({c for c in cuts if lo <= c <= hi})
-    if not xs:
+    clipped: list[tuple[int, int]] = []
+    for a, b in spans:
+        if b < lo or a > hi:
+            continue
+        clipped.append((max(a, lo), min(b, hi)))
+    clipped = merge_spans(clipped)
+    if not clipped:
         return [(lo, hi)]
     out: list[tuple[int, int]] = []
     cur = lo
-    for c in xs:
-        if c > cur:
-            out.append((cur, c - 1))
-        cur = c + 1
+    for a, b in clipped:
+        if a > cur:
+            out.append((cur, a - 1))
+        cur = b + 1
     if cur <= hi:
         out.append((cur, hi))
     return [(a, b) for a, b in out if b >= a]
@@ -829,13 +860,68 @@ def load_404_originals(path: Path) -> set[str]:
     return out
 
 
+def _load_texts_span_index(texts_path: Path) -> dict[int, int]:
+    """address(file_off) → byte_length（取最大，防重复）。"""
+    if not texts_path.is_file():
+        return {}
+    try:
+        doc = json.loads(texts_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return {}
+    idx: dict[int, int] = {}
+    for e in doc.get("entries") or []:
+        if not isinstance(e, dict):
+            continue
+        addr = e.get("address") or ""
+        if not addr:
+            continue
+        fo = normalize_file_off(addr)
+        try:
+            bl = int(e.get("byte_length") or 0)
+        except (TypeError, ValueError):
+            bl = 0
+        if bl < 1:
+            bl = 1
+        prev = idx.get(fo, 0)
+        if bl > prev:
+            idx[fo] = bl
+    return idx
+
+
+def span_for_start(
+    fo: int,
+    *,
+    texts_index: dict[int, int],
+    rom: bytes | None,
+) -> tuple[int, int]:
+    """起点 → 整句闭区间 ``[fo, fo+L-1]``。优先 texts.json，其次 ROM PCS。"""
+    bl = texts_index.get(fo, 0)
+    if bl >= 1:
+        return (fo, fo + bl - 1)
+    if rom is not None and 0 <= fo < len(rom):
+        from meowth.extract import read_pcs
+
+        raw = read_pcs(rom, fo, MAX_PCS)
+        if raw:
+            return (fo, fo + len(raw) - 1)
+    return (fo, fo)
+
+
+def expand_starts_to_spans(
+    starts: list[int],
+    *,
+    texts_path: Path,
+    rom: bytes | None,
+) -> list[tuple[int, int]]:
+    idx = _load_texts_span_index(texts_path)
+    spans = [span_for_start(fo, texts_index=idx, rom=rom) for fo in starts]
+    return merge_spans(spans)
+
+
 def addrs_from_translated(
     translated_path: Path, texts_path: Path
 ) -> tuple[list[int], dict[str, Any]]:
-    """404 originals → texts.json entries 反查文件偏移。
-
-    返回 ``(addrs, stats)``；stats 含 n_404 / n_addrs / n_unmatched / unmatched_sample。
-    """
+    """404 originals → texts.json 反查起点地址（整句长度在 expand 时取）。"""
     bad = load_404_originals(translated_path)
     if not texts_path.is_file():
         raise SystemExit(f"texts.json 不存在（无法反查地址）: {texts_path}")
@@ -875,23 +961,19 @@ def addrs_from_translated(
     return addrs, stats
 
 
-def resolve_remove_cuts(
+def resolve_remove_starts(
     addrs_arg: str | None,
     from_translated: str | None,
     game_id: str,
 ) -> tuple[list[int], dict[str, Any] | None]:
-    """合并 ``--addrs`` 与 ``--from-translated`` → 文件偏移列表。
-
-    ``from_translated``: ``None`` 未启用；``""`` 用默认路径；否则为显式路径。
-    返回 ``(cuts, translated_stats|None)``。
-    """
-    cuts: list[int] = []
+    """合并 ``--addrs`` 与 ``--from-translated`` → 坏句起点列表。"""
+    starts: list[int] = []
     seen: set[int] = set()
     if addrs_arg is not None and str(addrs_arg).strip():
         for fo in parse_addrs_arg(addrs_arg, allow_empty=True):
             if fo not in seen:
                 seen.add(fo)
-                cuts.append(fo)
+                starts.append(fo)
 
     translated_stats: dict[str, Any] | None = None
     if from_translated is not None:
@@ -905,20 +987,28 @@ def resolve_remove_cuts(
         for fo in extra:
             if fo not in seen:
                 seen.add(fo)
-                cuts.append(fo)
+                starts.append(fo)
 
-    return cuts, translated_stats
+    return starts, translated_stats
+
+
+def _span_overlaps(lo: int, hi: int, a: int, b: int) -> bool:
+    return not (b < lo or a > hi)
+
+
+def _fo_in_spans(spans: list[tuple[int, int]], fo: int) -> bool:
+    return any(a <= fo <= b for a, b in spans)
 
 
 def plan_module_removes(
-    modules: list[dict], cuts: list[int]
+    modules: list[dict], spans: list[tuple[int, int]]
 ) -> list[dict[str, Any]]:
-    """对每个受影响模块生成切开计划。
+    """对每个受影响模块生成切开计划（挖掉整句字节区间）。
 
     每项::
       {
         "id": str,
-        "hits": [file_off, ...],
+        "hits": [(start,end), ...],
         "band_diffs": [{"old": (lo,hi), "new": [(lo,hi), ...]}, ...],
         "new_ranges": [{"start": "0x..", "end": "0x.."}, ...],
         "new_start": "0x..",
@@ -926,6 +1016,7 @@ def plan_module_removes(
         "had_ranges": bool,
       }
     """
+    spans = merge_spans(spans)
     plans: list[dict[str, Any]] = []
     for mod in modules:
         mid = mod.get("id") or ""
@@ -935,17 +1026,18 @@ def plan_module_removes(
         had_ranges = bool(mod.get("ranges"))
         band_diffs: list[dict[str, Any]] = []
         new_bands: list[tuple[int, int]] = []
-        hits: list[int] = []
+        hits: list[tuple[int, int]] = []
         changed = False
         for lo_s, hi_s in bands:
             lo, hi = parse_addr(lo_s), parse_addr(hi_s)
-            # yaml 带一般为文件偏移；若误写成 VMA 则归一
             if lo >= BASE:
                 lo -= BASE
             if hi >= BASE:
                 hi -= BASE
-            in_band = [c for c in cuts if lo <= c <= hi]
-            pieces = split_band(lo, hi, cuts)
+            in_band = [
+                (a, b) for a, b in spans if _span_overlaps(lo, hi, a, b)
+            ]
+            pieces = split_band(lo, hi, spans)
             if in_band:
                 hits.extend(in_band)
                 changed = True
@@ -955,11 +1047,10 @@ def plan_module_removes(
                 changed = True
         if not changed:
             continue
-        # 合并后去重排序
         new_bands = sorted(set(new_bands), key=lambda t: t[0])
         if not new_bands:
             raise SystemExit(
-                f"模块 {mid!r} 剔除后无剩余区间（cuts={[_fmt_file_off(c) for c in hits]}）"
+                f"模块 {mid!r} 剔除后无剩余区间（hits={[ _fmt_span(a, b) for a, b in hits ]})"
             )
         new_ranges = [
             {"start": _fmt_file_off(a), "end": _fmt_file_off(b)}
@@ -968,7 +1059,7 @@ def plan_module_removes(
         plans.append(
             {
                 "id": mid,
-                "hits": sorted(set(hits)),
+                "hits": merge_spans(hits),
                 "band_diffs": band_diffs,
                 "new_ranges": new_ranges,
                 "new_start": _fmt_file_off(min(a for a, _ in new_bands)),
@@ -980,19 +1071,21 @@ def plan_module_removes(
 
 
 def preview_lost_rom_strings(
-    rom: bytes, cuts: list[int]
+    rom: bytes, spans: list[tuple[int, int]]
 ) -> list[dict[str, Any]]:
-    """坏地址起点的 PCS 解码（remove 后不再落在带内）。"""
+    """坏句起点的 PCS 解码（对照挖掉的整段）。"""
     from meowth.extract import read_pcs
     from meowth.jp_pcs import decode_pcs
 
     rows: list[dict[str, Any]] = []
-    for fo in cuts:
+    for fo, end in spans:
+        span_len = end - fo + 1
         if fo < 0 or fo >= len(rom):
             rows.append(
                 {
                     "address": f"0x{BASE + fo:08X}",
                     "file_off": _fmt_file_off(fo),
+                    "span": _fmt_span(fo, end),
                     "ok": False,
                     "reason": "地址超出 ROM",
                 }
@@ -1004,8 +1097,10 @@ def preview_lost_rom_strings(
                 {
                     "address": f"0x{BASE + fo:08X}",
                     "file_off": _fmt_file_off(fo),
+                    "span": _fmt_span(fo, end),
                     "ok": False,
                     "reason": "非 PCS 起点 / 解码失败",
+                    "omit_length": span_len,
                 }
             )
             continue
@@ -1014,8 +1109,10 @@ def preview_lost_rom_strings(
             {
                 "address": f"0x{BASE + fo:08X}",
                 "file_off": _fmt_file_off(fo),
+                "span": _fmt_span(fo, end),
                 "ok": True,
                 "byte_length": len(raw),
+                "omit_length": span_len,
                 "original": text,
                 "original_hex": raw.hex(" "),
             }
@@ -1024,23 +1121,22 @@ def preview_lost_rom_strings(
 
 
 def preview_texts_json_hits(
-    texts_path: Path, cuts: list[int]
+    texts_path: Path, spans: list[tuple[int, int]]
 ) -> list[dict[str, Any]]:
-    """texts.json 中 address 恰好等于剔除点的条目。"""
+    """texts.json 中起点落在剔除区间内的条目。"""
     if not texts_path.is_file():
         return []
     try:
         doc = json.loads(texts_path.read_text(encoding="utf-8"))
     except (OSError, json.JSONDecodeError):
         return []
-    cut_set = set(cuts)
     hits: list[dict[str, Any]] = []
     for e in doc.get("entries") or []:
         addr = e.get("address") or ""
         if not addr:
             continue
         fo = normalize_file_off(addr)
-        if fo not in cut_set:
+        if not _fo_in_spans(spans, fo):
             continue
         hits.append(
             {
@@ -1065,18 +1161,26 @@ def _print_remove_plan(
         for p in plans:
             hits = p["hits"]
             if len(hits) <= 12:
-                hits_s = [_fmt_file_off(h) for h in hits]
+                hits_s = [_fmt_span(a, b) for a, b in hits]
             else:
-                hits_s = [_fmt_file_off(h) for h in hits[:8]] + [
+                hits_s = [_fmt_span(a, b) for a, b in hits[:8]] + [
                     f"…(+{len(hits) - 8})"
                 ]
             print(f"\n## 模块 {p['id']}  hits={hits_s}")
             for d in p["band_diffs"]:
                 lo, hi = d["old"]
                 news = d["new"]
-                new_s = ", ".join(
-                    f"[{_fmt_file_off(a)}, {_fmt_file_off(b)}]" for a, b in news
-                ) or "(空)"
+                if len(news) <= 8:
+                    new_s = ", ".join(
+                        f"[{_fmt_file_off(a)}, {_fmt_file_off(b)}]"
+                        for a, b in news
+                    ) or "(空)"
+                else:
+                    head = ", ".join(
+                        f"[{_fmt_file_off(a)}, {_fmt_file_off(b)}]"
+                        for a, b in news[:4]
+                    )
+                    new_s = f"{head}, … (共{len(news)}段)"
                 print(
                     f"  {_fmt_file_off(lo)}–{_fmt_file_off(hi)}  →  {new_s}"
                 )
@@ -1085,17 +1189,20 @@ def _print_remove_plan(
                 f"(ranges×{len(p['new_ranges'])})"
             )
 
-    print("\n## ROM 将少掉的内容（坏地址起点）")
+    print("\n## ROM 将少掉的内容（整句区间）")
     for r in rom_lost[:50]:
         if r.get("ok"):
             orig = (r.get("original") or "").replace("\n", "\\n")
             if len(orig) > 100:
                 orig = orig[:100] + "…"
             print(
-                f"  {r['address']}  len={r.get('byte_length')}  {orig!r}"
+                f"  {r.get('span') or r['address']}  "
+                f"len={r.get('omit_length') or r.get('byte_length')}  {orig!r}"
             )
         else:
-            print(f"  {r['address']}  [{r.get('reason')}]")
+            print(
+                f"  {r.get('span') or r['address']}  [{r.get('reason')}]"
+            )
     if len(rom_lost) > 50:
         print(f"  … 另有 {len(rom_lost) - 50} 条")
 
@@ -1125,7 +1232,6 @@ def apply_removes_to_yaml(
         if plan["had_ranges"] or len(plan["new_ranges"]) > 1:
             mod["ranges"] = list(plan["new_ranges"])
         elif "ranges" in mod and len(plan["new_ranges"]) == 1:
-            # 单段：可只保留 start/end，去掉 ranges 以免冗余
             mod.pop("ranges", None)
         elif len(plan["new_ranges"]) == 1:
             mod.pop("ranges", None)
@@ -1165,9 +1271,9 @@ def _band_covers(bands: list[tuple[int, int]], fo: int) -> bool:
 def sync_texts_json(
     texts_path: Path,
     plans: list[dict[str, Any]],
-    cuts: list[int],
+    spans: list[tuple[int, int]],
 ) -> tuple[int, int]:
-    """同步 modules 区间；删除坏点 / 已出带条目。返回 (删条目数, 改模块数)。"""
+    """同步 modules 区间；删除落在剔除整句内 / 已出带的条目。"""
     if not texts_path.is_file():
         return 0, 0
     doc = json.loads(texts_path.read_text(encoding="utf-8"))
@@ -1176,9 +1282,7 @@ def sync_texts_json(
         mods_obj = {}
         doc["modules"] = mods_obj
 
-    cut_set = set(cuts)
     plan_by_id = {p["id"]: p for p in plans}
-    # 更新模块元数据，并建剩余带索引
     remain_bands: dict[str, list[tuple[int, int]]] = {}
     n_mod = 0
     for mid, plan in plan_by_id.items():
@@ -1196,7 +1300,6 @@ def sync_texts_json(
         ]
         n_mod += 1
 
-    # 未改模块：用现有 start/end/ranges 建带（供「出带」判断仅针对已改模块）
     entries = doc.get("entries") or []
     kept: list[dict] = []
     n_del = 0
@@ -1207,7 +1310,7 @@ def sync_texts_json(
             kept.append(e)
             continue
         fo = normalize_file_off(addr)
-        if fo in cut_set:
+        if _fo_in_spans(spans, fo):
             n_del += 1
             continue
         if mid in remain_bands and not _band_covers(remain_bands[mid], fo):
@@ -1223,6 +1326,18 @@ def sync_texts_json(
     return n_del, n_mod
 
 
+def _print_cuts_summary(spans: list[tuple[int, int]]) -> None:
+    if len(spans) <= 20:
+        print(f"[i] omit(spans)={[ _fmt_span(a, b) for a, b in spans ]}")
+    else:
+        sample = ", ".join(_fmt_span(a, b) for a, b in spans[:8])
+        total_bytes = sum(b - a + 1 for a, b in spans)
+        print(
+            f"[i] omit(spans)=[{sample}, …] "
+            f"spans={len(spans)} bytes={total_bytes}"
+        )
+
+
 def cmd_remove_preview(
     rom_path: Path,
     addrs: str | None,
@@ -1233,7 +1348,7 @@ def cmd_remove_preview(
     cfg_path = resolve_config(rom_path, config_path)
     cfg = load_yaml_config(cfg_path)
     game_id = str(cfg.get("game_id") or rom_path.stem)
-    cuts, tstats = resolve_remove_cuts(addrs, from_translated, game_id)
+    starts, tstats = resolve_remove_starts(addrs, from_translated, game_id)
     print(f"[i] config={cfg_path}")
     if tstats is not None:
         print(
@@ -1246,19 +1361,16 @@ def cmd_remove_preview(
             if len(preview) > 60:
                 preview = preview[:60] + "…"
             print(f"    unmatched: {preview!r}")
-    if not cuts:
+    if not starts:
         print("[i] 无剔除地址，无需修改")
         return 0
-    if len(cuts) <= 20:
-        print(f"[i] cuts(file)={[ _fmt_file_off(c) for c in cuts ]}")
-    else:
-        sample = ", ".join(_fmt_file_off(c) for c in cuts[:8])
-        print(f"[i] cuts(file)=[{sample}, …] total={len(cuts)}")
-    plans = plan_module_removes(list(cfg["texts"]["modules"] or []), cuts)
-    rom = rom_path.read_bytes()
-    rom_lost = preview_lost_rom_strings(rom, cuts)
     texts_path = default_output_path(game_id)
-    json_hits = preview_texts_json_hits(texts_path, cuts)
+    rom = rom_path.read_bytes()
+    spans = expand_starts_to_spans(starts, texts_path=texts_path, rom=rom)
+    _print_cuts_summary(spans)
+    plans = plan_module_removes(list(cfg["texts"]["modules"] or []), spans)
+    rom_lost = preview_lost_rom_strings(rom, spans)
+    json_hits = preview_texts_json_hits(texts_path, spans)
     _print_remove_plan(plans, rom_lost, json_hits)
     return 0
 
@@ -1273,7 +1385,7 @@ def cmd_remove(
     cfg_path = resolve_config(rom_path, config_path)
     cfg = load_yaml_config(cfg_path)
     game_id = str(cfg.get("game_id") or rom_path.stem)
-    cuts, tstats = resolve_remove_cuts(addrs, from_translated, game_id)
+    starts, tstats = resolve_remove_starts(addrs, from_translated, game_id)
     print(f"[i] config={cfg_path}")
     if tstats is not None:
         print(
@@ -1286,29 +1398,26 @@ def cmd_remove(
             if len(preview) > 60:
                 preview = preview[:60] + "…"
             print(f"    unmatched: {preview!r}")
-    if not cuts:
+    if not starts:
         print("[i] 无剔除地址，未写入")
         return 0
-    if len(cuts) <= 20:
-        print(f"[i] cuts(file)={[ _fmt_file_off(c) for c in cuts ]}")
-    else:
-        sample = ", ".join(_fmt_file_off(c) for c in cuts[:8])
-        print(f"[i] cuts(file)=[{sample}, …] total={len(cuts)}")
-    plans = plan_module_removes(list(cfg["texts"]["modules"] or []), cuts)
+    texts_path = default_output_path(game_id)
+    rom = rom_path.read_bytes()
+    spans = expand_starts_to_spans(starts, texts_path=texts_path, rom=rom)
+    _print_cuts_summary(spans)
+    plans = plan_module_removes(list(cfg["texts"]["modules"] or []), spans)
     if not plans:
         print("[i] 无模块区间命中，未写入")
         return 0
-    rom = rom_path.read_bytes()
-    rom_lost = preview_lost_rom_strings(rom, cuts)
-    texts_path = default_output_path(game_id)
-    json_hits = preview_texts_json_hits(texts_path, cuts)
+    rom_lost = preview_lost_rom_strings(rom, spans)
+    json_hits = preview_texts_json_hits(texts_path, spans)
     _print_remove_plan(plans, rom_lost, json_hits)
 
     apply_removes_to_yaml(cfg, plans)
     save_yaml_config(cfg_path, cfg)
     print(f"\n[ok] wrote yaml → {cfg_path}")
 
-    n_del, n_mod = sync_texts_json(texts_path, plans, cuts)
+    n_del, n_mod = sync_texts_json(texts_path, plans, spans)
     if texts_path.is_file():
         print(
             f"[ok] synced texts.json → {texts_path} "

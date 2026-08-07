@@ -24,6 +24,15 @@ function isError3(translated) {
     return translated.split(' ').length > 6;
 }
 
+function isError4(original, translated) {
+    return translated.indexOf('Ｅ') !== -1
+        || translated.indexOf('E') !== -1
+        || translated.indexOf('►') !== -1
+        || translated.indexOf('埃伊：') !== -1
+        || translated.indexOf('呃哦') !== -1
+}
+
+
 // 移除无效的译文
 let tt2 = texts_translated.filter((tt) => {
     let al = getAddressList(tt.original);
@@ -35,10 +44,12 @@ fs.writeFileSync('./texts_translated.json', JSON.stringify(texts_translated, nul
 // 查出明显异常的译文
 let addressList = [];
 for(let tt of texts_translated) {
+    let original = (tt.original || '');
     let translated = (tt.translated || '');
     let isError = isError1(translated) ||
         isError2(translated) ||
-        isError3(translated);
+        isError3(translated) ||
+        isError4(original, translated);
     if (isError) {
         // 根据原本反查地址
         let al = getAddressList(tt.original);

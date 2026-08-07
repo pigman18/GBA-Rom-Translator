@@ -36,29 +36,29 @@ function isError4(original, translated) {
 // 移除无效的译文
 let tt2 = texts_translated.filter((tt) => {
     let al = getAddressList(tt.original);
-    return al.length > 0;
+    return al.length > 0 || (tt.translated.indexOf('|||') !== -1);
 });
 texts_translated = tt2;
 fs.writeFileSync('./texts_translated.json', JSON.stringify(texts_translated, null, 2));
 
 // 查出明显异常的译文
-let addressList = [];
-for(let tt of texts_translated) {
-    let original = (tt.original || '');
-    let translated = (tt.translated || '');
-    let isError = isError1(translated) ||
-        isError2(translated) ||
-        isError3(translated) ||
-        isError4(original, translated);
-    if (isError) {
-        // 根据原本反查地址
-        let al = getAddressList(tt.original);
-        if (al.length > 0) {
-            console.log(`异常内容：${tt.translated}`);
-            addressList.push(...al);
-        }
-    }
-}
-console.log(`--addrs "${[...new Set(addressList)].join(',')}"`);
+// let addressList = [];
+// for(let tt of texts_translated) {
+//     let original = (tt.original || '');
+//     let translated = (tt.translated || '');
+//     let isError = isError1(translated) ||
+//         isError2(translated) ||
+//         isError3(translated) ||
+//         isError4(original, translated);
+//     if (isError) {
+//         // 根据原本反查地址
+//         let al = getAddressList(tt.original);
+//         if (al.length > 0) {
+//             console.log(`异常内容：${tt.translated}`);
+//             addressList.push(...al);
+//         }
+//     }
+// }
+// console.log(`--addrs "${[...new Set(addressList)].join(',')}"`);
 
 

@@ -330,6 +330,27 @@ python src/util/texts_patcher.py scan <rom.gba> <关键字> [--module 模块名]
 
 在区间内按解码后原文子串命中，打印地址与句子。
 
+## 标记无意义 404 (mark-404)
+
+对 `texts_translated.json` 中 `status=200` 且译文含「这是一段乱码 / 这是一段明显乱码」的条目：
+
+- 洗掉标记与 `|||` 后**没有可用汉字**，或原文像垃圾假名串 → 改为 `status=404`（去掉 `translated`）
+- 有可用汉字且原文正常 → **清洗译文**，保持 200
+- 无乱码标记 → 不动
+
+写回同一缓存文件；打印 `→404` / `cleaned` / `unchanged`。常在 `--from-translated` 挖洞前跑。
+
+```bash
+python src/util/texts_patcher.py mark-404
+python src/util/texts_patcher.py mark-404 --translated configs/POKEMON_RUBY_AXVJ00/translate/texts_translated.json
+python src/util/texts_patcher.py mark-404 --game-id POKEMON_RUBY_AXVJ00
+```
+
+| 参数 | 说明 |
+|------|------|
+| `--translated` | 缓存路径；省略则用 `configs/<game_id>/translate/texts_translated.json` |
+| `--game-id` | 未指定 `--translated` 时的默认游戏 ID |
+
 ## 挖洞预览 / 执行 (remove-preview / remove)
 
 对坏句：**整句字节区间**挖洞。起点 `X`、长度 `L`（来自 `texts.json` 的 `byte_length`，否则 ROM `read_pcs`）→ 从模块带中剔除 `[X, X+L-1]`，即 `[A,B]` 变成 `[A,X-1]` + `[X+L,B]`。只挖起点 1 字节会导致再扫时从句中冒出更多乱码。

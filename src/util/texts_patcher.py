@@ -14,6 +14,7 @@ texts_patcher.py
   python texts_patcher.py remove <rom.gba> --addrs 0x08376A3C,0x086F0B14
   python texts_patcher.py remove-preview <rom.gba> --from-translated
   python texts_patcher.py remove <rom.gba> --from-translated [texts_translated.json]
+  python texts_patcher.py mark-404 [--translated PATH] [--game-id ID]
 
 挖洞按整句字节区间：起点 X、长度 L → 剔除 [X, X+L-1]，
 再扫时不会从句中字节冒出新乱码起点。
@@ -24,6 +25,7 @@ from __future__ import annotations
 import argparse
 import hashlib
 import json
+import re
 import struct
 import sys
 from pathlib import Path
@@ -59,6 +61,20 @@ ENTRY_KEY_ORDER = (
 _SRC = REPO_ROOT / "src"
 if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
+
+
+def _safe_print(msg: str) -> None:
+    """Windows GBK 控制台下避免 UnicodeEncodeError。"""
+    try:
+        print(msg)
+    except UnicodeEncodeError:
+        enc = getattr(sys.stdout, "encoding", None) or "utf-8"
+        buf = getattr(sys.stdout, "buffer", None)
+        if buf is not None:
+            buf.write((msg + "\n").encode(enc, errors="replace"))
+            buf.flush()
+        else:
+            print(msg.encode(enc, errors="replace").decode(enc, errors="replace"))
 
 
 def parse_addr(v: Any) -> int:
@@ -378,7 +394,8 @@ def extract_scan(
             a = lo
             while a <= hi:
                 b = rom[a]
-                if b == 0xFF or b == 0x00 or b >= 0xF7:
+                # 0xFC = 扩展控制码前缀（战斗菜单等 FC 彩窗）；勿与 F7–FB / FE / FF 一并跳过
+                if b == 0xFF or b == 0x00 or (b >= 0xF7 and b != 0xFC):
                     a += 1
                     continue
                 raw = read_pcs(rom, a, 512)
@@ -1360,7 +1377,7 @@ def cmd_remove_preview(
             preview = s.replace("\n", "\\n")
             if len(preview) > 60:
                 preview = preview[:60] + "…"
-            print(f"    unmatched: {preview!r}")
+            _safe_print(f"    unmatched: {preview!r}")
     if not starts:
         print("[i] 无剔除地址，无需修改")
         return 0
@@ -1397,7 +1414,7 @@ def cmd_remove(
             preview = s.replace("\n", "\\n")
             if len(preview) > 60:
                 preview = preview[:60] + "…"
-            print(f"    unmatched: {preview!r}")
+            _safe_print(f"    unmatched: {preview!r}")
     if not starts:
         print("[i] 无剔除地址，未写入")
         return 0
@@ -1428,6 +1445,163 @@ def cmd_remove(
     return 0
 
 
+# ---------------------------------------------------------------------------
+# mark-404：脏译文标 404 / 清洗
+# ---------------------------------------------------------------------------
+
+_GARBLED_MARK_RE = re.compile(r"这是一段(?:明显)?乱码")
+
+
+def _translated_has_garbled_mark(tr: str) -> bool:
+    return bool(_GARBLED_MARK_RE.search(tr or ""))
+
+
+def _has_useful_zh(s: str) -> bool:
+    return bool(re.search(r"[\u4e00-\u9fff]{2,}", s or ""))
+
+
+def _looks_garbage_original(original: str) -> bool:
+    """窄启发式：假名乱串 / 拉丁杂糅（is_garbage_jp 不够时的补充）。"""
+    o = original or ""
+    try:
+        from meowth.policy import is_garbage_jp
+
+        if is_garbage_jp(o):
+            return True
+    except Exception:
+        pass
+    try:
+        from meowth.extract import axvj_entry_is_garbage
+
+        if axvj_entry_is_garbage({"original": o}):
+            return True
+    except Exception:
+        pass
+
+    latin = len(re.findall(r"[A-Za-zÄäÖöÜüß]", o))
+    jp = len(re.findall(r"[\u3040-\u30ff]", o))
+    fw_alnum = len(re.findall(r"[Ａ-Ｚａ-ｚ０-９]", o))
+    if latin >= 3 and jp >= 5:
+        return True
+    if fw_alnum >= 3 and jp >= 3:
+        return True
+    if len(re.findall(r"[ぁ-ん]{1,2}\s+[ぁ-ん]{1,2}", o)) >= 4:
+        return True
+    if jp >= 15:
+        particles = sum(o.count(p) for p in "はがをのにてもだ")
+        if particles == 0 and "ポケモン" not in o and "\\CC" not in o:
+            return True
+    return False
+
+
+def clean_garbled_translated(tr: str) -> str | None:
+    """去掉乱码标记与空 ||| 段；无可用汉字则返回 None。"""
+    parts = re.split(r"\s*\|\|\|\s*", tr or "")
+    kept: list[str] = []
+    for p in parts:
+        rest = _GARBLED_MARK_RE.sub("", p)
+        rest = re.sub(r"^[|\\\s]+|[|\\\s]+$", "", rest)
+        rest = rest.strip()
+        if not rest:
+            continue
+        if _has_useful_zh(rest):
+            kept.append(rest)
+    if not kept:
+        return None
+    if len(kept) == 1:
+        return kept[0]
+    return "\n".join(kept)
+
+
+def mark_404_in_translated(
+    translated_path: Path,
+) -> dict[str, int]:
+    """改写 texts_translated.json。返回统计。"""
+    if not translated_path.is_file():
+        raise SystemExit(f"texts_translated.json 不存在: {translated_path}")
+    try:
+        rows = json.loads(translated_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError) as e:
+        raise SystemExit(f"无法读取: {translated_path}: {e}") from e
+    if not isinstance(rows, list):
+        raise SystemExit(f"应为 status 数组: {translated_path}")
+
+    n_404 = 0
+    n_cleaned = 0
+    n_unchanged = 0
+    out: list[dict] = []
+    for item in rows:
+        if not isinstance(item, dict):
+            continue
+        try:
+            st = int(item.get("status") or 0)
+        except (TypeError, ValueError):
+            continue
+        orig = item.get("original")
+        if not isinstance(orig, str) or not orig:
+            continue
+        if st == 404:
+            out.append({"status": 404, "original": orig})
+            n_unchanged += 1
+            continue
+        if st != 200:
+            out.append(item)
+            n_unchanged += 1
+            continue
+        tr = item.get("translated") or ""
+        if not isinstance(tr, str):
+            tr = ""
+        if not _translated_has_garbled_mark(tr):
+            out.append(
+                {"status": 200, "original": orig, "translated": tr}
+            )
+            n_unchanged += 1
+            continue
+
+        cleaned = clean_garbled_translated(tr)
+        if cleaned is None or not _has_useful_zh(cleaned):
+            out.append({"status": 404, "original": orig})
+            n_404 += 1
+            continue
+        if _looks_garbage_original(orig):
+            out.append({"status": 404, "original": orig})
+            n_404 += 1
+            continue
+        out.append(
+            {"status": 200, "original": orig, "translated": cleaned}
+        )
+        n_cleaned += 1
+
+    translated_path.write_text(
+        json.dumps(out, ensure_ascii=False, indent=2) + "\n",
+        encoding="utf-8",
+    )
+    return {
+        "total": len(out),
+        "to_404": n_404,
+        "cleaned": n_cleaned,
+        "unchanged": n_unchanged,
+    }
+
+
+def cmd_mark_404(
+    *,
+    translated: Path | None = None,
+    game_id: str | None = None,
+) -> int:
+    path = translated
+    if path is None:
+        gid = (game_id or "POKEMON_RUBY_AXVJ00").strip()
+        path = default_translated_path(gid)
+    stats = mark_404_in_translated(path)
+    print(f"[ok] mark-404 → {path}")
+    print(
+        f"     →404={stats['to_404']}  cleaned={stats['cleaned']}  "
+        f"unchanged={stats['unchanged']}  total={stats['total']}"
+    )
+    return 0
+
+
 def _add_remove_args(p: argparse.ArgumentParser) -> None:
     p.add_argument(
         "--addrs",
@@ -1450,7 +1624,7 @@ def _add_remove_args(p: argparse.ArgumentParser) -> None:
 
 def main(argv: list[str] | None = None) -> int:
     ap = argparse.ArgumentParser(
-        description="texts_patcher: export / scan / remove-preview / remove"
+        description="texts_patcher: export / scan / mark-404 / remove-preview / remove"
     )
     sub = ap.add_subparsers(dest="cmd", required=True)
 
@@ -1530,6 +1704,22 @@ def main(argv: list[str] | None = None) -> int:
     p_rm.add_argument("rom", type=Path)
     _add_remove_args(p_rm)
 
+    p_m4 = sub.add_parser(
+        "mark-404",
+        help="译文含乱码标记：无意义→404，有用中文→清洗，写回 texts_translated.json",
+    )
+    p_m4.add_argument(
+        "--translated",
+        type=Path,
+        default=None,
+        help="texts_translated.json（默认 configs/<game_id>/translate/…）",
+    )
+    p_m4.add_argument(
+        "--game-id",
+        default="POKEMON_RUBY_AXVJ00",
+        help="未指定 --translated 时用此 game_id 解析默认路径",
+    )
+
     args = ap.parse_args(argv)
     if args.cmd == "export":
         export_texts(
@@ -1560,6 +1750,11 @@ def main(argv: list[str] | None = None) -> int:
             args.addrs,
             from_translated=args.from_translated,
             config_path=args.config,
+        )
+    if args.cmd == "mark-404":
+        return cmd_mark_404(
+            translated=args.translated,
+            game_id=args.game_id,
         )
     ap.error(f"unknown command {args.cmd}")
     return 2

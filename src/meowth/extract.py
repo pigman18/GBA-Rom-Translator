@@ -1047,7 +1047,8 @@ def scan_addr_bands(rom: bytes, bands: list) -> list[dict]:
         a = lo
         while a <= hi:
             b = rom[a]
-            if b == 0xFF or b == 0x00 or b >= 0xF7:
+            # 0xFC = 扩展控制码前缀（战斗菜单等）；勿与 F7–FB / FE / FF 一并跳过
+            if b == 0xFF or b == 0x00 or (b >= 0xF7 and b != 0xFC):
                 a += 1
                 continue
             raw = read_pcs(rom, a, 512)

@@ -272,9 +272,11 @@
           "type": "original_text_filter",
           "filter": false,
           "value": [
+            "ひき",
+            "こ",
             "はい",
             "の おおきさくらべ",
-            "？？？？？ポケモン",
+            "ポケモン",
             "ドラゴンポケモン",
             "がくだい",
             "おおきさ",
@@ -500,7 +502,7 @@
       "hook": true
     }
   },
-  "count": 7420,
+  "count": 7422,
   "entries": [
     {
       "id": "axvj_92f0510597a5",
@@ -36727,6 +36729,38 @@
       ]
     },
     {
+      "id": "axvj_97bea3d9f897",
+      "module": "UI界面",
+      "address": "0x081BC164",
+      "byte_length": 2,
+      "original": "こ",
+      "original_hex": "0a ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x080077A0"
+      ],
+      "pointer_addresses": [
+        "0x080077A0"
+      ]
+    },
+    {
+      "id": "axvj_a93f95fe5010",
+      "module": "UI界面",
+      "address": "0x08389DFA",
+      "byte_length": 2,
+      "original": "こ",
+      "original_hex": "0a ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x08091404"
+      ],
+      "pointer_addresses": [
+        "0x08091404"
+      ]
+    },
+    {
       "id": "axvj_32826d089dae",
       "module": "UI界面",
       "address": "0x083508EE",
@@ -36777,21 +36811,67 @@
       ]
     },
     {
-      "id": "axvj_4ff98d30e3a4",
+      "id": "axvj_53d9ec2adb56",
       "module": "UI界面",
-      "address": "0x083E9688",
-      "byte_length": 10,
-      "original": "？？？？？ポケモン",
-      "original_hex": "ac ac ac ac ac 9f 59 73 7e ff",
+      "address": "0x08350868",
+      "byte_length": 5,
+      "original": "ポケモン",
+      "original_hex": "9f 59 73 7e ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
-        "0x0808C238",
-        "0x0808D5D8"
+        "0x083508A4"
       ],
       "pointer_addresses": [
-        "0x0808C238",
-        "0x0808D5D8"
+        "0x083508A4"
+      ]
+    },
+    {
+      "id": "axvj_5f7a1d74622e",
+      "module": "UI界面",
+      "address": "0x083B4AE4",
+      "byte_length": 5,
+      "original": "ポケモン",
+      "original_hex": "9f 59 73 7e ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x083B4B50"
+      ],
+      "pointer_addresses": [
+        "0x083B4B50"
+      ]
+    },
+    {
+      "id": "axvj_d66320bc8d7f",
+      "module": "UI界面",
+      "address": "0x083E9458",
+      "byte_length": 5,
+      "original": "ポケモン",
+      "original_hex": "9f 59 73 7e ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x081214B8"
+      ],
+      "pointer_addresses": [
+        "0x081214B8"
+      ]
+    },
+    {
+      "id": "axvj_8f3c213b050e",
+      "module": "UI界面",
+      "address": "0x083E9A6D",
+      "byte_length": 5,
+      "original": "ポケモン",
+      "original_hex": "9f 59 73 7e ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x08105534"
+      ],
+      "pointer_addresses": [
+        "0x08105534"
       ]
     },
     {
@@ -37464,70 +37544,6 @@
       ],
       "pointer_addresses": [
         "0x083508B4"
-      ]
-    },
-    {
-      "id": "axvj_53d9ec2adb56",
-      "module": "UI界面",
-      "address": "0x08350868",
-      "byte_length": 5,
-      "original": "ポケモン",
-      "original_hex": "9f 59 73 7e ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083508A4"
-      ],
-      "pointer_addresses": [
-        "0x083508A4"
-      ]
-    },
-    {
-      "id": "axvj_5f7a1d74622e",
-      "module": "UI界面",
-      "address": "0x083B4AE4",
-      "byte_length": 5,
-      "original": "ポケモン",
-      "original_hex": "9f 59 73 7e ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083B4B50"
-      ],
-      "pointer_addresses": [
-        "0x083B4B50"
-      ]
-    },
-    {
-      "id": "axvj_d66320bc8d7f",
-      "module": "UI界面",
-      "address": "0x083E9458",
-      "byte_length": 5,
-      "original": "ポケモン",
-      "original_hex": "9f 59 73 7e ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081214B8"
-      ],
-      "pointer_addresses": [
-        "0x081214B8"
-      ]
-    },
-    {
-      "id": "axvj_8f3c213b050e",
-      "module": "UI界面",
-      "address": "0x083E9A6D",
-      "byte_length": 5,
-      "original": "ポケモン",
-      "original_hex": "9f 59 73 7e ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08105534"
-      ],
-      "pointer_addresses": [
-        "0x08105534"
       ]
     },
     {
@@ -100112,6 +100128,24 @@
       ],
       "pointer_addresses": [
         "0x080079B8"
+      ]
+    },
+    {
+      "id": "axvj_4ff98d30e3a4",
+      "module": "特殊文本",
+      "address": "0x083E9688",
+      "byte_length": 10,
+      "original": "？？？？？ポケモン",
+      "original_hex": "ac ac ac ac ac 9f 59 73 7e ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0808C238",
+        "0x0808D5D8"
+      ],
+      "pointer_addresses": [
+        "0x0808C238",
+        "0x0808D5D8"
       ]
     },
     {

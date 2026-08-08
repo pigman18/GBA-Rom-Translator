@@ -11005,6 +11005,11 @@
   },
   {
     "status": 200,
+    "original": "こ",
+    "translated": "个"
+  },
+  {
+    "status": 200,
     "original": "こ『フフフ‥‥\n\nきみも たいへん だな\nわざわざ おくりびやま から\\lここまで おいかけて きたのか\n\nだが もう だれにも\nわれわれを とめられない\n\nとめられると おもうなら\nミナモの アジトまで くるかね？\\lフフフ‥‥",
     "translated": "こ『呵呵呵……{\\p}你也真不容易啊{\\n}特意从送神山追到这\\p里来{\\p}但是，已经没有人能\\n阻止我们了{\\p}觉得能阻止的话，就\\n来水静市的基地吧？呵\\p呵呵……"
   },
@@ -14145,7 +14150,7 @@
   {
     "status": 200,
     "original": "しゅじんこう",
-    "translated": "主角"
+    "translated": "玩家"
   },
   {
     "status": 200,
@@ -16342,7 +16347,7 @@
   {
     "status": 200,
     "original": "せっていを かえる",
-    "translated": "设置　"
+    "translated": "设置"
   },
   {
     "status": 200,
@@ -19009,7 +19014,7 @@
   {
     "status": 200,
     "original": "つづきから はじめる",
-    "translated": "继续　"
+    "translated": "继续游戏"
   },
   {
     "status": 200,
@@ -20511,7 +20516,7 @@
   {
     "status": 200,
     "original": "とじる",
-    "translated": "关闭"
+    "translated": "退出"
   },
   {
     "status": 200,
@@ -23667,6 +23672,11 @@
   },
   {
     "status": 200,
+    "original": "ひき",
+    "translated": "只"
+  },
+  {
+    "status": 200,
     "original": "ひきかえけん",
     "translated": "兌換券"
   },
@@ -24364,7 +24374,7 @@
   {
     "status": 200,
     "original": "ふしぎな できごと",
-    "translated": "奇妙事件"
+    "translated": "神秘礼物"
   },
   {
     "status": 200,
@@ -27836,7 +27846,7 @@
   {
     "status": 200,
     "original": "もっているバッジ",
-    "translated": "持有的徽章"
+    "translated": "徽章"
   },
   {
     "status": 200,
@@ -44143,12 +44153,12 @@
   {
     "status": 200,
     "original": "プレイじかん",
-    "translated": "游戏时间"
+    "translated": "时间"
   },
   {
     "status": 200,
     "original": "プレイヤーめい",
-    "translated": "玩家名"
+    "translated": "玩家"
   },
   {
     "status": 200,
@@ -44943,7 +44953,7 @@
   {
     "status": 200,
     "original": "ポケナビ",
-    "translated": "宝可导航"
+    "translated": "领航员"
   },
   {
     "status": 200,
@@ -45233,7 +45243,7 @@
   {
     "status": 200,
     "original": "ポケモンずかん",
-    "translated": "宝可梦图鉴"
+    "translated": "图鉴"
   },
   {
     "status": 200,
@@ -50131,7 +50141,7 @@
   {
     "status": 200,
     "original": "レポート",
-    "translated": "记录"
+    "translated": "保存"
   },
   {
     "status": 200,

@@ -200,7 +200,7 @@ texts:
         desc_ptr_offset: 16
       relocate: true
       hook: true
-    - id: 谜芝果
+    - id: 道具名-谜芝果
       label: 词条·谜芝果
       group: 词条
       default: true
@@ -210,7 +210,7 @@ texts:
       type: struct
       read:
         # 行步长 entry_size（不用 stride，避免与 type=stride 混淆）；名称读到 eos（默认 FF）
-        entry_size: 40
+        entry_size: 5
         desc_ptr_offset: 16
       relocate: true
       hook: true
@@ -224,7 +224,7 @@ texts:
       end: '0x39A647'
       type: scan
       # 商店说明：约 7 字/行 × 3 行；禁 \\p；末行 spill 靠绘制复位
-      word_count: 7
+      word_count: 9
       wrap_pages: false
       max_lines: 3
       relocate: true

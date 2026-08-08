@@ -180,6 +180,21 @@
       "relocate": true,
       "hook": true
     },
+    "道具名-谜芝果": {
+      "label": "词条·谜芝果",
+      "group": "词条",
+      "default": true,
+      "description": "道具结构内名称字段",
+      "start": "0x3DC11C",
+      "end": "0x3DC120",
+      "type": "struct",
+      "read": {
+        "entry_size": 5,
+        "desc_ptr_offset": 16
+      },
+      "relocate": true,
+      "hook": true
+    },
     "道具说明": {
       "label": "说明·道具",
       "group": "说明",
@@ -188,7 +203,7 @@
       "start": "0x3984DC",
       "end": "0x39A647",
       "type": "scan",
-      "word_count": 7,
+      "word_count": 9,
       "wrap_pages": false,
       "max_lines": 3,
       "relocate": true,
@@ -485,7 +500,7 @@
       "hook": true
     }
   },
-  "count": 7406,
+  "count": 7420,
   "entries": [
     {
       "id": "axvj_92f0510597a5",
@@ -14116,6 +14131,22 @@
       ]
     },
     {
+      "id": "axvj_646f1bc14d23",
+      "module": "地点名",
+      "address": "0x083BECBE",
+      "byte_length": 6,
+      "original": "ムロタウン",
+      "original_hex": "71 7b 60 53 7e ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x083BEF80"
+      ],
+      "pointer_addresses": [
+        "0x083BEF80"
+      ]
+    },
+    {
       "id": "axvj_fe5bd7f3251a",
       "module": "地点名",
       "address": "0x083BECC4",
@@ -14289,6 +14320,22 @@
       ],
       "pointer_addresses": [
         "0x083BEFD8"
+      ]
+    },
+    {
+      "id": "axvj_802b22b3d294",
+      "module": "地点名",
+      "address": "0x083BED16",
+      "byte_length": 6,
+      "original": "ルネシティ",
+      "original_hex": "79 68 5c 63 80 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x083BEFE0"
+      ],
+      "pointer_addresses": [
+        "0x083BEFE0"
       ]
     },
     {
@@ -14852,6 +14899,34 @@
       ]
     },
     {
+      "id": "axvj_6cb8390c9df9",
+      "module": "地点名",
+      "address": "0x083BEE89",
+      "byte_length": 6,
+      "original": "すいちゅう",
+      "original_hex": "0d 02 11 35 03 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x083BF100",
+        "0x083BF108",
+        "0x083BF110",
+        "0x083BF118",
+        "0x083BF120",
+        "0x083BF198",
+        "0x083BF1E8"
+      ],
+      "pointer_addresses": [
+        "0x083BF100",
+        "0x083BF108",
+        "0x083BF110",
+        "0x083BF118",
+        "0x083BF120",
+        "0x083BF198",
+        "0x083BF1E8"
+      ]
+    },
+    {
       "id": "axvj_c5b2c77a83b6",
       "module": "地点名",
       "address": "0x083BEE8F",
@@ -15222,6 +15297,22 @@
       ]
     },
     {
+      "id": "axvj_264ebaeef6b5",
+      "module": "地点名",
+      "address": "0x083BEF4C",
+      "byte_length": 6,
+      "original": "こだいづか",
+      "original_hex": "0a 41 02 43 06 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x083BF208"
+      ],
+      "pointer_addresses": [
+        "0x083BF208"
+      ]
+    },
+    {
       "id": "axvj_ce4d64086c7b",
       "module": "地点名",
       "address": "0x083BEF52",
@@ -15251,6 +15342,22 @@
       ],
       "pointer_addresses": [
         "0x083BF218"
+      ]
+    },
+    {
+      "id": "axvj_b7fdf40512b9",
+      "module": "地点名",
+      "address": "0x083BEF61",
+      "byte_length": 6,
+      "original": "ひみつきち",
+      "original_hex": "1b 20 12 07 11 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x083BF220"
+      ],
+      "pointer_addresses": [
+        "0x083BF220"
       ]
     },
     {
@@ -19485,6 +19592,21 @@
       "pointer_addresses": []
     },
     {
+      "id": "axvj_fcec4f86c10d",
+      "module": "道具名-谜芝果",
+      "address": "0x083DC11C",
+      "byte_length": 5,
+      "original": "ナゾのみ",
+      "original_hex": "65 90 19 20 ff",
+      "translated": "",
+      "table_index": 0,
+      "table_base": "0x083DC11C",
+      "is_fixed_table": true,
+      "is_pointer_based": false,
+      "pointer_sources": [],
+      "pointer_addresses": []
+    },
+    {
       "id": "axvj_e2ce41aba8b4",
       "module": "道具说明",
       "address": "0x083984DC",
@@ -21949,6 +22071,22 @@
       ]
     },
     {
+      "id": "axvj_7f4250f416b1",
+      "module": "道具说明",
+      "address": "0x0839965F",
+      "byte_length": 35,
+      "original": "ラティオス ラティアスに\nもたせると とくこうと\nとくぼうが あがる",
+      "original_hex": "77 63 80 55 5d 00 77 63 80 51 5d 16 fe 23 10 0e 29 14 00 14 08 0a 03 14 fe 14 08 4a 03 37 00 01 37 29 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839C430"
+      ],
+      "pointer_addresses": [
+        "0x0839C430"
+      ]
+    },
+    {
       "id": "axvj_5ae78357bab0",
       "module": "道具说明",
       "address": "0x08399682",
@@ -23082,6 +23220,22 @@
       ],
       "pointer_addresses": [
         "0x0839D3D0"
+      ]
+    },
+    {
+      "id": "axvj_c75371cbd387",
+      "module": "道具说明",
+      "address": "0x08399F0E",
+      "byte_length": 33,
+      "original": "せいしんを しゅうちゅう\nさせて とくこうと\nとくぼうを あげる",
+      "original_hex": "0e 02 0c 2e 2d 00 0c 35 03 11 35 03 fe 0b 0e 13 00 14 08 0a 03 14 fe 14 08 4a 03 2d 00 01 3a 29 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839D3F8"
+      ],
+      "pointer_addresses": [
+        "0x0839D3F8"
       ]
     },
     {
@@ -43447,6 +43601,18 @@
       ]
     },
     {
+      "id": "axvj_15cb51abdf33",
+      "module": "前期剧情",
+      "address": "0x08150FF3",
+      "byte_length": 89,
+      "original": "おとくな けいじばん！！\n\nポケモンの つよさを あらわす ことばで\nとくこう とは\\lとくしゅ こうげきりょく のこと！\n\nとくぼう とは\nとくしゅ ぼうぎょりょく のこと です！",
+      "original_hex": "05 14 08 15 00 09 02 3d 46 2e ab ab fb 9f 59 73 7e 19 00 12 26 0b 2d 00 01 27 2c 0d 00 0a 14 46 44 fe 14 08 0a 03 00 14 1a fa 14 08 0c 35 00 0a 03 3a 07 28 36 08 00 19 0a 14 ab fb 14 08 4a 03 00 14 1a fe 14 08 0c 35 00 4a 03 38 36 28 36 08 00 19 0a 14 00 44 0d ab ff",
+      "translated": "",
+      "is_pointer_based": false,
+      "pointer_sources": [],
+      "pointer_addresses": []
+    },
+    {
       "id": "axvj_fffc38256de1",
       "module": "前期剧情",
       "address": "0x08151141",
@@ -52901,6 +53067,18 @@
       "byte_length": 27,
       "original": "あは フウと ランから\nマインドバッジを もらった！",
       "original_hex": "01 1a 00 6c 53 14 00 77 7e 06 27 fe 6f 52 7e 95 96 a0 8d 2d 00 23 27 50 10 ab ff",
+      "translated": "",
+      "is_pointer_based": false,
+      "pointer_sources": [],
+      "pointer_addresses": []
+    },
+    {
+      "id": "axvj_461854fb3e58",
+      "module": "中期剧情",
+      "address": "0x0816B87D",
+      "byte_length": 107,
+      "original": "フウ『マインドバッジには ポケモンの\nとくこうと とくぼうを たかめる\\lこうかが ひめられている！\n\nラン『それから ダイビング という\nひでんわざも つかえるように なるヨ！\n\nフウ『あと これも もっていきなよ！",
+      "original_hex": "6c 53 b1 6f 52 7e 95 96 a0 8d 16 1a 00 9f 59 73 7e 19 fe 14 08 0a 03 14 00 14 08 4a 03 2d 00 10 06 22 29 fa 0a 03 06 37 00 1b 22 27 2a 13 02 29 ab fb 77 7e b1 0f 2a 06 27 00 91 52 97 7e 89 00 14 02 03 fe 1b 44 2e 2c 3c 23 00 12 06 04 29 26 03 16 00 15 29 76 ab fb 6c 53 b1 01 14 00 0a 2a 23 00 23 50 13 02 07 15 26 ab ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
@@ -75169,6 +75347,18 @@
       ]
     },
     {
+      "id": "axvj_c10017a40e27",
+      "module": "中期剧情",
+      "address": "0x081942F6",
+      "byte_length": 40,
+      "original": "うふふふふ\nオレは モグリの スイマー\\lもぐりは とくいちゅうの とくいだぜ！",
+      "original_hex": "03 1c 1c 1c 1c fe 55 7a 1a 00 73 89 78 19 00 5d 52 6f ae fa 23 39 28 1a 00 14 08 02 11 35 03 19 00 14 08 02 41 3f ab ff",
+      "translated": "",
+      "is_pointer_based": false,
+      "pointer_sources": [],
+      "pointer_addresses": []
+    },
+    {
       "id": "axvj_89a183bd5476",
       "module": "中期剧情",
       "address": "0x08194330",
@@ -80785,6 +80975,22 @@
       "pointer_addresses": []
     },
     {
+      "id": "axvj_551d99cb26e8",
+      "module": "中期剧情",
+      "address": "0x081EC0FC",
+      "byte_length": 8,
+      "original": "はい \nいいえ",
+      "original_hex": "1a 02 00 fe 02 02 04 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0804DA90"
+      ],
+      "pointer_addresses": [
+        "0x0804DA90"
+      ]
+    },
+    {
       "id": "axvj_eee450bd6515",
       "module": "中期剧情",
       "address": "0x081EC116",
@@ -81186,6 +81392,22 @@
       ],
       "pointer_addresses": [
         "0x08376A70"
+      ]
+    },
+    {
+      "id": "axvj_79ee1fcb9f0d",
+      "module": "后期剧情",
+      "address": "0x08377119",
+      "byte_length": 8,
+      "original": "の こどもは\n",
+      "original_hex": "19 00 0a 45 23 1a fe ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x08080CBC"
+      ],
+      "pointer_addresses": [
+        "0x08080CBC"
       ]
     },
     {
@@ -91935,6 +92157,22 @@
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
+    },
+    {
+      "id": "axvj_3d9a6bef5423",
+      "module": "后期剧情",
+      "address": "0x083DA4E9",
+      "byte_length": 8,
+      "original": "は おおめに\n",
+      "original_hex": "1a 00 05 05 22 16 fe ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x083DC768"
+      ],
+      "pointer_addresses": [
+        "0x083DC768"
+      ]
     },
     {
       "id": "axvj_a018b5f48dfc",

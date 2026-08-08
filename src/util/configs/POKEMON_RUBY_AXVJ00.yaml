@@ -200,6 +200,21 @@ texts:
         desc_ptr_offset: 16
       relocate: true
       hook: true
+    - id: 谜芝果
+      label: 词条·谜芝果
+      group: 词条
+      default: true
+      description: 道具结构内名称字段
+      start: '0x3DC11C'
+      end: '0x3DC120'
+      type: struct
+      read:
+        # 行步长 entry_size（不用 stride，避免与 type=stride 混淆）；名称读到 eos（默认 FF）
+        entry_size: 40
+        desc_ptr_offset: 16
+      relocate: true
+      hook: true
+
     - id: 道具说明
       label: 说明·道具
       group: 说明

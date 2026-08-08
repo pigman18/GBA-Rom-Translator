@@ -377,7 +377,11 @@ texts:
         - id: ui_original_text_filter
           type: original_text_filter
           filter: false          # 包含：只留名单正文
-          value: [さいしょからはじめる, つづきからはじめる]
+          value:
+            - さいしょからはじめる
+            - つづきからはじめる
+            # 短危词必须绑地址（禁止裸写「こ」「ひき」）：
+            # - { original: "こ", address: "0x08XXXXXX" }
 ```
 
 | 属性 | 层级 | 含义 |
@@ -424,7 +428,9 @@ texts:
 | `require_pointer_filter` | bool | `value: true`：无指针则命中 |
 | `garbage_heuristic_filter` | bool | `value: true`：垃圾假名/拉丁混扫则命中（不计 `Ａボタン`） |
 | `address_filter` | 正则或 `{start,end}` | 地址命中禁止规则（正则同样用 `regex`） |
-| `original_text_filter` | 字符串列表 | 原文精确或去空白后等于列表任一条（常配 `filter: false` 做白名单） |
+| `original_text_filter` | 列表 | 原文精确/去空白命中。元素可以是字符串，或 `{original, address}` / `{original, start, end}`（绑地址后才放行）。常配 `filter: false` 做白名单 |
+
+**短危词**（单字/极短如 `こ`、`ひき`）：**禁止**在包含名单里裸写字符串——会全 ROM 命中假名表或错指针，`relocate` 易炸菜单。必须写成 `{ original: "こ", address: "0x08…" }`；若 ROM 根本没有独立 PCS 串（继续画面「只/个」常为绘制拼接），不要进白名单，改查绘制/hook。
 
 **勿**把 `character_filter` 写成 `[Ａ-Ｚａ-ｚ]`：会误杀 `Ａボタンで…`。要踢全角拉丁碎屑时用 `[Ｃ-Ｚａ-ｚ]`（可加 `üÜ►♂♀`），单独留下 `Ａ`/`Ｂ`。图鉴 `ＤＮＡ` 是 JP PCS **全角**（落在 `Ｃ-Ｚ`），用 `ＤＮＡ(*SKIP)(*FAIL)|…` 写进 `value`，不要在 `.py` 里白名单。
 

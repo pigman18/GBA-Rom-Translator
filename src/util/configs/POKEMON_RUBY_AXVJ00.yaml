@@ -1,7 +1,9 @@
 game_id: POKEMON_RUBY_AXVJ00
 game_code: AXVJ
 tiles:
-  # 标题 Logo/横幅与背景共用原板 0x0836D148；缺色写到此地址并改指针，勿踩字库 0x09000000
+  # 标题 Logo/横幅与背景共用原板 0x0836D148；缺色写到此地址并改指针。
+  # 勿踩字库 0x09000000。0x09200000 仅适合 util 对「未注入」原盘离线改 tile；
+  # meowth full 在 build 后会忽略此值，改接到 ROM 文件末尾（防踩字库/译文）。
   new_palette: '0x09200000'
   presets:
     - id: title_banner
@@ -287,8 +289,11 @@ texts:
           type: original_text_filter
           filter: false
           value:
-            - "ひき" # 只
-            - "こ" # 个
+            # 短危词「こ」「ひき」禁止裸写（会扫到假名表/错指针→菜单炸）。
+            # 若确认独立 PCS 地址后再写：
+            # - { original: "こ", address: "0x08XXXXXX" }   # → 个
+            # - { original: "ひき", address: "0x08YYYYYY" } # → 只
+            # 继续画面单位多半是绘制拼接，无独立串则不要进白名单。
             - "はい"  # 是
             - "の おおきさくらべ"  # 比大小
             - "ポケモン"  # ？？？宝可梦

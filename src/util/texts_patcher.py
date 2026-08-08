@@ -930,25 +930,94 @@ class AddressFilter(TextFilter):
             ) from e
 
 
+def _file_off_from_yaml_addr(addr: Any) -> int:
+    """YAML 地址 → 文件偏移（接受 0x08 VMA 或文件偏移）。"""
+    a = parse_addr(addr)
+    if a >= BASE:
+        a -= BASE
+    return a
+
+
+def _parse_original_text_items(
+    val: Any,
+) -> list[tuple[str, int | None, int | None]]:
+    """解析 original_text_filter.value → [(原文, lo|None, hi|None), ...]。
+
+    - 字符串：任意地址
+    - ``{original, address}``：单地址
+    - ``{original, start, end}``：闭区间带
+    """
+    if not isinstance(val, (list, tuple)):
+        return []
+    out: list[tuple[str, int | None, int | None]] = []
+    for item in val:
+        if item is None:
+            continue
+        if isinstance(item, str):
+            s = item
+            if s:
+                out.append((s, None, None))
+            continue
+        if isinstance(item, dict):
+            orig = item.get("original")
+            if orig is None:
+                orig = item.get("text")
+            s = str(orig).strip() if orig is not None else ""
+            if not s:
+                continue
+            if item.get("address") is not None:
+                fo = _file_off_from_yaml_addr(item.get("address"))
+                out.append((s, fo, fo))
+                continue
+            if item.get("start") is not None or item.get("end") is not None:
+                lo = _file_off_from_yaml_addr(item.get("start") or item.get("end"))
+                hi = _file_off_from_yaml_addr(item.get("end") or item.get("start"))
+                if hi < lo:
+                    lo, hi = hi, lo
+                out.append((s, lo, hi))
+                continue
+            out.append((s, None, None))
+            continue
+        s = str(item)
+        if s:
+            out.append((s, None, None))
+    return out
+
+
+def _original_text_matches(ctx: FilterContext, key: str) -> bool:
+    o = ctx.original or ""
+    plain = ctx.original_plain or ""
+    if o == key or plain == key:
+        return True
+    kn = _norm_original_key(key)
+    if not kn:
+        return False
+    return _norm_original_key(o) == kn or _norm_original_key(plain) == kn
+
+
+def _addr_in_item_band(
+    fo: int, lo: int | None, hi: int | None
+) -> bool:
+    if lo is None and hi is None:
+        return True
+    if lo is None:
+        return fo == hi
+    if hi is None:
+        return fo == lo
+    return lo <= fo <= hi
+
+
 class OriginalTextFilter(TextFilter):
     type_name = "original_text_filter"
 
     def hit(self, ctx: FilterContext) -> bool | None:
-        val = self.value
-        if not isinstance(val, (list, tuple)):
+        items = _parse_original_text_items(self.value)
+        if not items:
             return False
-        keys = [str(x) for x in val if x is not None and str(x)]
-        if not keys:
-            return False
-        o = ctx.original or ""
-        plain = ctx.original_plain or ""
-        o_n = _norm_original_key(o)
-        plain_n = _norm_original_key(plain)
-        for k in keys:
-            if o == k or plain == k:
-                return True
-            kn = _norm_original_key(k)
-            if kn and (o_n == kn or plain_n == kn):
+        for key, lo, hi in items:
+            if not _original_text_matches(ctx, key):
+                continue
+            if _addr_in_item_band(ctx.address, lo, hi):
                 return True
         return False
 
@@ -1059,19 +1128,17 @@ def _entry_passes_filters(
     return apply_filters(ctx, filt)
 
 
-def _original_include_needles(filters: list[dict[str, Any]]) -> list[str] | None:
-    """若存在 ``original_text_filter`` 且 ``filter: false``，返回正文白名单；否则 None。"""
+def _original_include_items(
+    filters: list[dict[str, Any]],
+) -> list[tuple[str, int | None, int | None]] | None:
+    """包含模式 original_text_filter → [(原文, lo, hi), ...]；否则 None。"""
     for spec in filters or []:
         if str(spec.get("type") or "") != "original_text_filter":
             continue
-        # 默认 filter=true；仅包含模式走关键字快扫
         if bool(spec.get("filter", True)):
             return None
-        val = spec.get("value")
-        if not isinstance(val, (list, tuple)):
-            return None
-        out = [str(x) for x in val if x is not None and str(x)]
-        return out
+        items = _parse_original_text_items(spec.get("value"))
+        return items or None
     return None
 
 
@@ -1184,65 +1251,97 @@ def extract_scan(
 
     ptrs_map = ptr_index or {}
 
-    needles = _original_include_needles(filt)
-    if needles is not None:
-        # 包含模式：按正文关键字在 band 内 find，避免整 ROM 逐字节扫
+    include_items = _original_include_items(filt)
+    if include_items is not None:
+        # 包含模式：无地址绑定时 band 内 find；有地址时只读指定点/带
         out: list[dict] = []
         seen: set[int] = set()
-        encoded: list[bytes] = []
-        for text in needles:
-            raw = _encode_jp_needle(text)
-            if raw and len(raw) >= 2:
-                encoded.append(raw)
+
+        def _try_accept(a: int, body: bytes | None) -> None:
+            if a in seen:
+                return
+            if not _in_bands(a):
+                return
+            if a < SCRIPT_BANK_MIN or TITLE_LZ_BAND[0] <= a < TITLE_LZ_BAND[1]:
+                return
+            raw = read_pcs(rom, a, 512)
+            if raw is None and body is not None:
+                raw = body
+            if raw is None:
+                return
+            if not looks_like_jp_text(raw):
+                if body is None or not (
+                    body.endswith(b"\xff") and rom[a : a + len(body)] == body
+                ):
+                    return
+                raw = body
+            text = decode_pcs(raw)
+            ptrs = list(ptrs_map.get(a, []))
+            ctx = make_filter_context(
+                fo=a,
+                raw=raw,
+                original=text,
+                ptrs=ptrs,
+                module_id=str(mid),
+                module_type=mtype,
+            )
+            if filt and not apply_filters(ctx, filt):
+                return
+            seen.add(a)
+            out.append(
+                _stamp(
+                    {
+                        "address": f"0x{BASE + a:08X}",
+                        "original": text,
+                        "original_hex": raw.hex(" "),
+                        "byte_length": len(raw),
+                        "is_pointer_based": bool(ptrs),
+                        "pointer_sources": [
+                            f"0x{BASE + q:08X}" for q in ptrs
+                        ],
+                        "pointer_addresses": [
+                            f"0x{BASE + q:08X}" for q in ptrs
+                        ],
+                    },
+                    mid=mid,
+                    game_code=game_code,
+                )
+            )
+
+        for text, lo, hi in include_items:
+            needle = _encode_jp_needle(text)
+            needles: list[bytes] = []
+            if needle and len(needle) >= 2:
+                needles.append(needle)
             compact = _norm_original_key(text)
             if compact and compact != text:
-                raw2 = _encode_jp_needle(compact)
-                if raw2 and len(raw2) >= 2 and raw2 not in encoded:
-                    encoded.append(raw2)
-        for needle in encoded:
-            start = 0
-            body = needle
-            while True:
-                a = rom.find(body, start)
-                if a < 0:
-                    break
-                start = a + 1
-                if not _in_bands(a):
-                    continue
-                if a in seen:
-                    continue
-                if a < SCRIPT_BANK_MIN or TITLE_LZ_BAND[0] <= a < TITLE_LZ_BAND[1]:
-                    continue
-                raw = read_pcs(rom, a, 512) or body
-                if not looks_like_jp_text(raw):
-                    if raw != body and not (
-                        body.endswith(b"\xff") and rom[a : a + len(body)] == body
-                    ):
-                        continue
-                    raw = body
-                text = decode_pcs(raw)
-                ptrs = list(ptrs_map.get(a, []))
-                ctx = make_filter_context(
-                    fo=a,
-                    raw=raw,
-                    original=text,
-                    ptrs=ptrs,
-                    module_id=str(mid),
-                    module_type=mtype,
-                )
-                if filt and not apply_filters(ctx, filt):
-                    continue
-                seen.add(a)
-                e = {
-                    "address": f"0x{BASE + a:08X}",
-                    "original": text,
-                    "original_hex": raw.hex(" "),
-                    "byte_length": len(raw),
-                    "is_pointer_based": bool(ptrs),
-                    "pointer_sources": [f"0x{BASE + q:08X}" for q in ptrs],
-                    "pointer_addresses": [f"0x{BASE + q:08X}" for q in ptrs],
-                }
-                out.append(_stamp(e, mid=mid, game_code=game_code))
+                n2 = _encode_jp_needle(compact)
+                if n2 and len(n2) >= 2 and n2 not in needles:
+                    needles.append(n2)
+            if not needles:
+                continue
+
+            if lo is not None and hi is not None:
+                # 指定地址/窄带：只在该范围找，禁止全 ROM find 短词
+                for body in needles:
+                    a = lo
+                    while a <= hi:
+                        if a + len(body) <= len(rom) and rom[a : a + len(body)] == body:
+                            _try_accept(a, body)
+                        elif a == lo == hi:
+                            # 单点：即使编码不完全一致也试 read_pcs + filter
+                            _try_accept(a, body)
+                        a += 1
+                continue
+
+            for body in needles:
+                start = 0
+                while True:
+                    a = rom.find(body, start)
+                    if a < 0:
+                        break
+                    start = a + 1
+                    _try_accept(a, body)
         return out
 
     out: list[dict] = []

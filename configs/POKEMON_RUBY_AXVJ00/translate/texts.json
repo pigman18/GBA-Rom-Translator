@@ -272,8 +272,6 @@
           "type": "original_text_filter",
           "filter": false,
           "value": [
-            "ひき",
-            "こ",
             "はい",
             "の おおきさくらべ",
             "ポケモン",
@@ -502,7 +500,7 @@
       "hook": true
     }
   },
-  "count": 7422,
+  "count": 7420,
   "entries": [
     {
       "id": "axvj_92f0510597a5",
@@ -36726,38 +36724,6 @@
       ],
       "pointer_addresses": [
         "0x08387190"
-      ]
-    },
-    {
-      "id": "axvj_97bea3d9f897",
-      "module": "UI界面",
-      "address": "0x081BC164",
-      "byte_length": 2,
-      "original": "こ",
-      "original_hex": "0a ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x080077A0"
-      ],
-      "pointer_addresses": [
-        "0x080077A0"
-      ]
-    },
-    {
-      "id": "axvj_a93f95fe5010",
-      "module": "UI界面",
-      "address": "0x08389DFA",
-      "byte_length": 2,
-      "original": "こ",
-      "original_hex": "0a ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08091404"
-      ],
-      "pointer_addresses": [
-        "0x08091404"
       ]
     },
     {

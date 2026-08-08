@@ -1,0 +1,127 @@
+
+Discarded input sections
+
+ .ARM.attributes
+                0x00000000       0x20 out\obj/entry.o
+ .comment       0x00000000       0x46 out\obj/print_next_char.o
+ .ARM.attributes
+                0x00000000       0x2a out\obj/print_next_char.o
+ .comment       0x00000000       0x46 out\obj/draw_glyph.o
+ .ARM.attributes
+                0x00000000       0x2a out\obj/draw_glyph.o
+ .comment       0x00000000       0x46 out\obj/draw_scene.o
+ .ARM.attributes
+                0x00000000       0x2a out\obj/draw_scene.o
+ .comment       0x00000000       0x46 out\obj/get_string_width.o
+ .ARM.attributes
+                0x00000000       0x2a out\obj/get_string_width.o
+ .ARM.attributes
+                0x00000000       0x20 out\obj/nick_entry.o
+ .comment       0x00000000       0x46 out\obj/update_nick_in_healthbox.o
+ .ARM.attributes
+                0x00000000       0x2a out\obj/update_nick_in_healthbox.o
+
+Memory Configuration
+
+Name             Origin             Length             Attributes
+ROM              0x08800000         0x00010000         xr
+*default*        0x00000000         0xffffffff
+
+Linker script and memory map
+
+LOAD out\obj/entry.o
+LOAD out\obj/print_next_char.o
+LOAD out\obj/draw_glyph.o
+LOAD out\obj/draw_scene.o
+LOAD out\obj/get_string_width.o
+LOAD out\obj/nick_entry.o
+LOAD out\obj/update_nick_in_healthbox.o
+
+.text           0x08800000     0x1058
+ *entry.o(.text*)
+ .text          0x08800000       0x5c out\obj/entry.o
+                0x08800000                PrintNextChar
+                0x08800034                FarBxR3
+                0x08800040                GetStringWidthChinese
+                0x0880004a                MapName_DisplayCellLength
+ .text          0x0880005c        0xc out\obj/nick_entry.o
+                0x0880005c                HealthboxNickCpusetCtrl_Entry
+ *entry.o(.text.*)
+ *(.text*)
+ .text          0x08800068      0x294 out\obj/print_next_char.o
+                0x088000c4                PrintNextChar_C
+ .text          0x088002fc      0xa3c out\obj/draw_glyph.o
+                0x0880071c                Chinese_PitchReset
+                0x0880072c                drawGlyph_Adv
+                0x08800bcc                drawGlyph12
+                0x08800bdc                DrawGlyph_ShouldUseLinear
+                0x08800c28                DrawGlyph_Chinese_Adv
+                0x08800d24                DrawGlyph_Chinese
+ .text          0x08800d38      0x1dc out\obj/draw_scene.o
+                0x08800d38                scene_is_party_footer
+                0x08800d80                scene_is_shop_desc
+                0x08800dd8                scene_field_wants_linear
+                0x08800e1c                scene_menu_wants_mode2
+                0x08800e5c                scene_mode2_apply
+                0x08800ee4                scene_battle_force_linear
+                0x08800ef8                scene_is_battle_interface_dest
+                0x08800f04                scene_jp_via_chs
+                0x08800f10                scene_keep_linear_16
+ .text          0x08800f14      0x130 out\obj/get_string_width.o
+                0x08800fcc                GetStringWidth_Chinese
+                0x08801004                GetStringWidthChinese_Full
+                0x08801028                MapName_DisplayCellLength_C
+ .text          0x08801044       0x14 out\obj/update_nick_in_healthbox.o
+                0x08801044                HealthboxNickCpusetCtrl
+                0x0880104c                HealthboxNickCpusetWords
+                0x08801050                HealthboxNickCpusetCtrlStock
+ *(.rodata*)
+ *(.rodata.*)
+                0x08801058                        . = ALIGN (0x4)
+
+.data           0x08801058        0x0
+ .data          0x08801058        0x0 out\obj/entry.o
+ .data          0x08801058        0x0 out\obj/print_next_char.o
+ .data          0x08801058        0x0 out\obj/draw_glyph.o
+ .data          0x08801058        0x0 out\obj/draw_scene.o
+ .data          0x08801058        0x0 out\obj/get_string_width.o
+ .data          0x08801058        0x0 out\obj/nick_entry.o
+ .data          0x08801058        0x0 out\obj/update_nick_in_healthbox.o
+
+.igot.plt       0x08801058        0x0
+ .igot.plt      0x08801058        0x0 out\obj/entry.o
+
+.glue_7         0x08801058        0x0
+ .glue_7        0x08801058        0x0 linker stubs
+
+.glue_7t        0x08801058        0x0
+ .glue_7t       0x08801058        0x0 linker stubs
+
+.vfp11_veneer   0x08801058        0x0
+ .vfp11_veneer  0x08801058        0x0 linker stubs
+
+.v4_bx          0x08801058        0x0
+ .v4_bx         0x08801058        0x0 linker stubs
+
+.iplt           0x08801058        0x0
+ .iplt          0x08801058        0x0 out\obj/entry.o
+
+.rel.dyn        0x08801058        0x0
+ .rel.iplt      0x08801058        0x0 out\obj/entry.o
+
+.bss            0x08801058        0x0
+ .bss           0x08801058        0x0 out\obj/entry.o
+ .bss           0x08801058        0x0 out\obj/print_next_char.o
+ .bss           0x08801058        0x0 out\obj/draw_glyph.o
+ .bss           0x08801058        0x0 out\obj/draw_scene.o
+ .bss           0x08801058        0x0 out\obj/get_string_width.o
+ .bss           0x08801058        0x0 out\obj/nick_entry.o
+ .bss           0x08801058        0x0 out\obj/update_nick_in_healthbox.o
+
+/DISCARD/
+ *(.comment)
+ *(.note*)
+ *(.ARM.exidx*)
+ *(.ARM.attributes*)
+OUTPUT(out/game.elf elf32-littlearm)
+LOAD linker stubs

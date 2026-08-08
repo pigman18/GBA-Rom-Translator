@@ -1,7 +1,8 @@
 """Auto line-wrapping for translated GBA Pokemon text.
 
-``word_count`` = max **汉字个数** per line. Inserts ``\\n`` (and optionally
-``\\p``) so text fits GBA text boxes.
+配置只写 ``word_count``（一行最多汉字个数）。中文折行时代码按 CHS
+12px 步进 + 16px 字模自动留行末余量（``word_count`` 按 12px 格理解窗宽，
+再换算实折字数），无需 ``wrap_width_px``。
 
 Shop / item-desc boxes only honor ``FE`` (``\\n``); ``FB`` (``\\p``) does not
 page-clear — set ``wrap_pages=False`` + ``max_lines`` for those modules.
@@ -15,6 +16,23 @@ LINES_PER_BOX = 2  # lines per text box (dialogue)
 
 # Default max Hanzi per line (module ``word_count`` may override).
 DEFAULT_WORD_COUNT = 14
+
+# Match hook CHS metrics (FONT_12PX_DRAW / CHS_GLYPH_ADVANCE_PX).
+CHS_ADVANCE_PX = 12
+CHS_CELL_PX = 16  # last glyph needs full cell; cursor only advances 12
+
+
+def chs_line_width_px(word_count: int) -> int:
+    """Pixel width needed for ``word_count`` Hanzi (12px step, 16px last cell)."""
+    n = max(1, int(word_count))
+    return (n - 1) * CHS_ADVANCE_PX + CHS_CELL_PX
+
+
+def chs_word_count_for_width_px(width_px: int) -> int:
+    """Inverse of :func:`chs_line_width_px` — max Hanzi in ``width_px``."""
+    w = max(int(width_px), CHS_CELL_PX)
+    return max(1, (w - CHS_CELL_PX) // CHS_ADVANCE_PX + 1)
+
 
 # Player/rival name vars: ~6 halfwidth slots → count as 6 units
 _VAR_UNITS = {"player": 6, "rival": 6}
@@ -73,27 +91,28 @@ def wrap_text(
 ) -> str:
     """Wrap translated text to fit GBA text boxes.
 
-    ``word_count`` is max Hanzi per line.
-    ``wrap_pages``: if True (dialogue), insert ``\\p`` every ``lines_per_box``
-    lines; if False (shop/item desc), only ``\\n``, never ``\\p``.
-    ``max_lines``: when set (typical 2 with wrap_pages=False), truncate.
-    For ``wrap_pages=False`` (shop/desc): seed ``\\n``/``\\p`` are stripped and
-    the string is reflowed by ``word_count`` — otherwise early hard breaks
-    plus ``max_lines`` truncate causes short lines and missing text.
+    ``word_count``：texts.json 里配置的一行汉字上限。中文时代码自动按
+    「窗宽 ≈ word_count×12px」再用 16px 字模反算实折字数（例：填 16 → 折 15，
+    避免行末 ``。`` 被裁半）。要视觉满 16 字可填 ``17``。
+    ``wrap_pages`` / ``max_lines``：对话翻页与说明窗截断。
     """
     if not text:
         return text
 
     if word_count is None:
         word_count = DEFAULT_WORD_COUNT
+    word_count = max(1, int(word_count))
+
+    # 配置只认 word_count；CHS 度量在代码里从 word_count 自动换算
+    if str(target_lang).startswith("zh"):
+        width_px = word_count * CHS_ADVANCE_PX
+        word_count = chs_word_count_for_width_px(width_px)
 
     text = text.replace("\r\n", "\n").replace("\r", "\n")
 
     if not wrap_pages:
-        # Shop/desc: only FE works; flatten seed layout then reflow by count.
         return _wrap_lines_only(text, word_count, max_lines or lines_per_box)
 
-    # Dialogue: paragraph breaks → \\p between boxes
     _PARA = "\x00PARA\x00"
     text = text.replace("\\.", _PARA)
     text = text.replace("\\p", _PARA)
@@ -112,13 +131,7 @@ def wrap_text(
 
 
 def _wrap_lines_only(text: str, word_count: int, max_lines: int) -> str:
-    """Shop/desc: strip seed ``\\n``/``\\p``, reflow by word_count, no ``\\p``.
-
-    Seed translations often insert ``\\n`` mid-phrase (e.g. after 「比精灵球」).
-    Preserving those as hard breaks + truncating to ``max_lines`` yields
-    under-full lines and drops the rest of the sentence.
-    """
-    # Keep \\l; drop layout breaks so word_count owns line cuts.
+    """Shop/desc: strip seed ``\\n``/``\\p``, reflow by word_count, no ``\\p``."""
     flat = (
         text.replace("\\.", "")
         .replace("\\p", "")
@@ -133,14 +146,11 @@ def _wrap_lines_only(text: str, word_count: int, max_lines: int) -> str:
 
 def _segment_and_wrap(text: str, word_count: int) -> list[str]:
     """Split on hard ``\\n`` / real newlines, wrap each segment at word_count."""
-    # Keep \\l inside segments; split only on \\n / \\n
     parts = _HARD_BREAK_RE.split(text)
     all_lines: list[str] = []
     for seg in parts:
-        # Drop empty pieces from consecutive breaks; keep \\l-only
         if not seg.strip() and "\\l" not in seg:
             continue
-        # Remove any stray \\n left inside (should not remain after split)
         seg = seg.replace("\\n", "")
         if not seg.strip() and "\\l" not in seg:
             continue
@@ -149,10 +159,7 @@ def _segment_and_wrap(text: str, word_count: int) -> list[str]:
 
 
 def _token_units(token: str) -> int:
-    """How many ``word_count`` slots a token consumes (汉字个数).
-
-    Compounds like 「精灵球」 count as 3, never 1.
-    """
+    """How many ``word_count`` slots a token consumes (汉字个数)."""
     if token.startswith("\\btn"):
         return 2
     if token.startswith("\\"):
@@ -169,7 +176,6 @@ def _token_units(token: str) -> int:
             cjk += 1
         else:
             narrow += 1
-    # Halfwidth: 2 glyphs ≈ 1 汉字 slot
     return cjk + ((narrow + 1) // 2 if narrow else 0)
 
 
@@ -196,7 +202,7 @@ def _can_break_before(tokens: list[str], idx: int) -> bool:
 
 
 def _wrap_to_lines(text: str, word_count: int) -> list[str]:
-    """Wrap by Hanzi count; ``word_count`` = max 汉字 per line."""
+    """Wrap by Hanzi count; ``word_count`` = max 汉字 per line (already CHS-adjusted)."""
     tokens = _TOKEN_RE.findall(text)
     if not tokens:
         return [text] if text else []
@@ -205,6 +211,9 @@ def _wrap_to_lines(text: str, word_count: int) -> list[str]:
     lines: list[list[str]] = [[]]
     line_units = 0
 
+    def _units_of(seq: list[str]) -> int:
+        return sum(_token_units(t) for t in seq)
+
     for i, tok in enumerate(tokens):
         w = _token_units(tok)
 
@@ -212,6 +221,12 @@ def _wrap_to_lines(text: str, word_count: int) -> list[str]:
             if _can_break_before(tokens, i):
                 lines.append([])
                 line_units = 0
+            elif lines[-1]:
+                # 「字。」不可在句号前断 → 末字+句号一起到下一行
+                prev = lines[-1].pop()
+                line_units = _units_of(lines[-1])
+                lines.append([prev])
+                line_units = _token_units(prev)
 
         lines[-1].append(tok)
         line_units += w

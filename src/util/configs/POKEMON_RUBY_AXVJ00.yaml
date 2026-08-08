@@ -3605,6 +3605,9 @@ texts:
       type: scan
       relocate: true
       hook: true
+      word_count: 16,
+      wrap_pages: false,
+      max_lines: 3
     - id: UI界面
       label: UI界面
       group: 界面

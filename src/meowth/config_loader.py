@@ -738,7 +738,10 @@ def module_write_type_code(game_id: str, module_id: str | None) -> int | None:
 
 
 def module_word_count(game_id: str, module_id: str | None) -> int:
-    """Per-module wrap Hanzi count from texts.json; default 14."""
+    """Per-module wrap Hanzi count from texts.json ``word_count``; default 14.
+
+    CHS 12px/16px spill is applied inside ``text_wrap.wrap_text``, not here.
+    """
     if not module_id:
         return DEFAULT_WORD_COUNT
     inj = load_modules_inject(game_id).get(module_id) or {}
@@ -746,7 +749,7 @@ def module_word_count(game_id: str, module_id: str | None) -> int:
     if raw is None:
         return DEFAULT_WORD_COUNT
     try:
-        return int(raw)
+        return max(1, int(raw))
     except (TypeError, ValueError):
         return DEFAULT_WORD_COUNT
 
@@ -759,7 +762,7 @@ def module_word_counts(game_id: str = "") -> dict[str, int]:
         if "word_count" not in cfg:
             continue
         try:
-            out[mid] = int(cfg["word_count"])
+            out[mid] = max(1, int(cfg["word_count"]))
         except (TypeError, ValueError):
             pass
     return out

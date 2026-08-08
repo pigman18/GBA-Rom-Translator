@@ -225,12 +225,16 @@ void drawGlyph_Adv(TextPrinter *win, const uint8_t *src128, int linear, unsigned
     uint16_t off, abs_u, abs_l, su, sl;
     uint8_t *du, *dl, *du_sp, *dl_sp;
     uint8_t map_tx;
+    int spilled;
 
     if (adv_px < 8u)
         adv_px = 8u;
     if (adv_px > 12u)
         adv_px = 12u;
     pass2_w = adv_px - 8u;
+    spilled = 0;
+    su = 0;
+    sl = 0;
 
     if (st->chs_px == 0)
         st->base_tx = win_u8(win, WIN_CURSOR_TILE_X);
@@ -252,6 +256,7 @@ void drawGlyph_Adv(TextPrinter *win, const uint8_t *src128, int linear, unsigned
             sl = linear_cursor_tile(win, 1, 1);
             du_sp = vram_tile(win, su);
             dl_sp = vram_tile(win, sl);
+            spilled = 1;
         } else {
             du_sp = 0;
             dl_sp = 0;
@@ -268,6 +273,7 @@ void drawGlyph_Adv(TextPrinter *win, const uint8_t *src128, int linear, unsigned
             compute_mode2_pair(win, (int)map_tx + 1, &su, &sl);
             du_sp = vram_tile(win, su);
             dl_sp = vram_tile(win, sl);
+            spilled = 1;
         } else {
             du_sp = 0;
             dl_sp = 0;
@@ -279,6 +285,11 @@ void drawGlyph_Adv(TextPrinter *win, const uint8_t *src128, int linear, unsigned
 
     st->chs_px = (uint16_t)(st->chs_px + 8u);
     if (pass2_w == 0u) {
+        /* Sym punct adv=8 at phase 4: right half lands in next tile via spill.
+         * Hanzi adv=12 maps that tile in pass2; here pass2 is skipped — if we
+         * omit map_at, line-final 。 is a crescent (mid-line OK: next Hanzi maps it). */
+        if (spilled)
+            map_at(win, (uint8_t)(map_tx + 1u), su, sl);
         st->last_adv = (uint8_t)adv_px;
         win_set_u8(win, WIN_CURSOR_TILE_X,
             (uint8_t)(st->base_tx + ((st->chs_px + adv_px - 1) >> 3)));

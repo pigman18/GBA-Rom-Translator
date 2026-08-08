@@ -28,6 +28,7 @@
 - **样式 left（整体偏移）**：`texts.styles` 按序交错分配 `01/81/02/82…`（勿写 `channel`）；切流时读 `StyleLeft[op]` 减一次 `WIN_CURSOR_X`。首样式「图鉴」→ `F9 01`。**禁止**改全局 `CHS_GLYPH_ADVANCE`；**禁止** CreateMonName 钩子
 - **图鉴列表 №**：原版 `CreateMonDexNum` 用 BG tile `0x3FC/0x3FD`（非文本，球为 `0x3FE/0x3FF`）。PCS 数字必须继续走 JP-via-CHS / F9 00（**禁止**交还 FontFunc）。Mode2 若算到这些 abs，重映射到 `0x3F0..` 再画，避免踩掉 №
 - **地图名弹窗**：日版 `DrawMapNamePopup`（`0x0809F654`）用 **`StringLength` 字节数** + 10 半角格左填 `0x00`，**不是** `GetStringWidth`/`MenuPrint_Centered`。F9 地点名 4B 会被当成很短 → 左边空、右边顶框。钩 `0x0809F67E` → `MapName_DisplayCellLength`（`ceil(绘制px/8)`）。旧 `GetStringWidth@0x4CC0` 为错址，已拆除。
+- **Font3 Sym 标点**（`。` 等 → `0x37`…，`DrawGlyph_Chinese_Adv(..., 8)`）：接在 12px 汉字后相位常为 4，右半 pen 进下一 tile。汉字有 pass2 会 `map_at` 该列；Sym 无 pass2 时必须补 map spill，否则**行末句号变月牙**（行中下一字会顺带 map，看起来正常）。与 `word_count` 无关。
 
 `scene_keep_linear_16` 仍硬关。
 

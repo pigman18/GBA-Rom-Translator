@@ -182,12 +182,15 @@
       "label": "说明·图鉴说明",
       "group": "说明",
       "default": true,
-      "description": "图鉴正文",
+      "description": "图鉴正文（仅 FE；word_count 由代码按 12px/16px 字模折行）",
       "start": "0x37DB9C",
       "end": "0x384703",
       "type": "scan",
       "relocate": true,
-      "hook": true
+      "hook": true,
+      "word_count": 16,
+      "wrap_pages": false,
+      "max_lines": 3
     },
     "UI界面": {
       "label": "UI界面",

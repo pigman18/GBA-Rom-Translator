@@ -1257,7 +1257,9 @@ def extract_scan(
         out: list[dict] = []
         seen: set[int] = set()
 
-        def _try_accept(a: int, body: bytes | None) -> None:
+        def _try_accept(
+            a: int, body: bytes | None, *, pinned: bool = False
+        ) -> None:
             if a in seen:
                 return
             if not _in_bands(a):
@@ -1285,7 +1287,15 @@ def extract_scan(
                 module_id=str(mid),
                 module_type=mtype,
             )
-            if filt and not apply_filters(ctx, filt):
+            # yaml 白名单绑了 address/start-end 时允许无指针（本地池/相对引用）
+            use_filt = filt
+            if pinned and filt:
+                use_filt = [
+                    f
+                    for f in filt
+                    if str(f.get("type") or "") != "require_pointer_filter"
+                ]
+            if use_filt and not apply_filters(ctx, use_filt):
                 return
             seen.add(a)
             out.append(
@@ -1327,10 +1337,10 @@ def extract_scan(
                     a = lo
                     while a <= hi:
                         if a + len(body) <= len(rom) and rom[a : a + len(body)] == body:
-                            _try_accept(a, body)
+                            _try_accept(a, body, pinned=True)
                         elif a == lo == hi:
                             # 单点：即使编码不完全一致也试 read_pcs + filter
-                            _try_accept(a, body)
+                            _try_accept(a, body, pinned=True)
                         a += 1
                 continue
 

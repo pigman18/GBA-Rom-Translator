@@ -11132,6 +11132,11 @@
   },
   {
     "status": 200,
+    "original": "こうげき",
+    "translated": "攻击"
+  },
+  {
+    "status": 200,
     "original": "こうげきが れんぞくで だせない",
     "translated": "无法连续使出攻击"
   },
@@ -16151,6 +16156,11 @@
   },
   {
     "status": 200,
+    "original": "せいかく／",
+    "translated": "性格／"
+  },
+  {
+    "status": 200,
     "original": "せいぎのこころ",
     "translated": "正义之心"
   },
@@ -16492,7 +16502,7 @@
   {
     "status": 200,
     "original": "せんとうにだす",
-    "translated": "将其派出战斗"
+    "translated": "派出战斗"
   },
   {
     "status": 200,
@@ -17439,6 +17449,11 @@
     "status": 200,
     "original": "たいりくのせきばん",
     "translated": "大陆石板"
+  },
+  {
+    "status": 200,
+    "original": "たいりょく",
+    "translated": "体力"
   },
   {
     "status": 200,
@@ -18770,6 +18785,11 @@
     "status": 200,
     "original": "つうしんケーブルを ぬかないで ください\nでんげんを きらないで ください",
     "translated": "请勿拔出通信线缆\n请勿切断电源"
+  },
+  {
+    "status": 200,
+    "original": "つかえるわざ",
+    "translated": "可用技能"
   },
   {
     "status": 200,
@@ -21730,6 +21750,11 @@
   },
   {
     "status": 200,
+    "original": "なし",
+    "translated": "无"
+  },
+  {
+    "status": 200,
     "original": "なしくずし",
     "translated": "逐步击破"
   },
@@ -21992,6 +22017,11 @@
     "status": 200,
     "original": "なやみのタネ",
     "translated": "烦恼种子"
+  },
+  {
+    "status": 200,
+    "original": "ならびかえ",
+    "translated": "排序"
   },
   {
     "status": 200,
@@ -37877,6 +37907,11 @@
     "status": 200,
     "original": "タイプを してい します\n ／つかまえたポケモンのみ",
     "translated": "设定属性{\\n}／仅显示已捕获的\\p宝可梦"
+  },
+  {
+    "status": 200,
+    "original": "タイプ／",
+    "translated": "属性／"
   },
   {
     "status": 200,

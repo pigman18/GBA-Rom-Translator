@@ -3435,19 +3435,21 @@ texts:
     - start: '0x7FF2CB'
       end: '0x7FF2DD'
   filters:
-    scan:
-      - type: character_filter
-        # 踢全角拉丁碎屑；保留 Ａ/Ｂ（Ａボタン等）。勿写 [Ａ-Ｚａ-ｚ]
-        value: '[üÜ►♂♀ÖÄß：Ｃ-Ｚａ-ｚ]'
-      - type: dialogue_shape_filter
-        value: true
-      - type: min_byte_length_filter
-        value: 8
-      - type: garbage_heuristic_filter
-        value: true
-    stride: []
-    struct: []
-    stride_ptr: []
+    # 扁平 id 列表；模块 filters 同 id 覆盖。
+    - id: global_character_filter
+      type: character_filter
+      # 踢全角拉丁碎屑；保留 Ａ/Ｂ。JP PCS「ＤＮＡ」用 lookaround 放行（非代码白名单）。
+      # 包含写法例: value: '^(?=.*ＤＮＡ)(?!.*test).*' 且 filter: false
+      value: '(?<!Ｄ)(?<!ＤＮ)[üÜ►♂♀ÖÄß：Ｃ-Ｚａ-ｚ](?!ＮＡ)(?!Ａ)'
+    - id: global_dialogue_shape_filter
+      type: dialogue_shape_filter
+      value: true
+    - id: global_min_byte_length_filter
+      type: min_byte_length_filter
+      value: 8
+    - id: global_garbage_heuristic_filter
+      type: garbage_heuristic_filter
+      value: true
   styles:
     # 按列表顺序交错分配 F9：01, 81, 02, 82…（勿写 channel）
     - id: 样式1
@@ -3537,13 +3539,17 @@ texts:
       relocate: false
       hook: true
       filters:
-        - type: dialogue_shape_filter
+        - id: global_dialogue_shape_filter
+          type: dialogue_shape_filter
           value: false
-        - type: min_byte_length_filter
+        - id: global_min_byte_length_filter
+          type: min_byte_length_filter
           value: 5
-        - type: max_byte_length_filter
+        - id: place_max_byte_length_filter
+          type: max_byte_length_filter
           value: 20
-        - type: garbage_heuristic_filter
+        - id: global_garbage_heuristic_filter
+          type: garbage_heuristic_filter
           value: false
     - id: 道具名
       label: 词条·道具
@@ -3621,9 +3627,11 @@ texts:
       relocate: true
       hook: true
       filters:
-        - type: require_pointer_filter
+        - id: ui_require_pointer_filter
+          type: require_pointer_filter
           value: true
-        - type: original_text_filter
+        - id: ui_original_text_filter
+          type: original_text_filter
           filter: false
           value:
             - "はい"  # 是
@@ -3822,9 +3830,11 @@ texts:
       relocate: true
       hook: true
       filters:
-        - type: dialogue_shape_filter
+        - id: global_dialogue_shape_filter
+          type: dialogue_shape_filter
           value: false
-        - type: min_byte_length_filter
+        - id: global_min_byte_length_filter
+          type: min_byte_length_filter
           value: 6
     - id: 高风险混杂
       label: 文本·高风险混杂

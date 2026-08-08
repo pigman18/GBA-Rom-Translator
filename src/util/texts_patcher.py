@@ -595,23 +595,50 @@ def _has_include_original_text_filter(filters: list[dict[str, Any]]) -> bool:
     return False
 
 
-def resolve_filters(cfg: dict, mod: dict) -> list[dict[str, Any]]:
-    """texts.filters.<type> + module.filters；同 type 后写覆盖整条（含 value / filter）。
+def _normalize_filters_list(raw: Any, *, where: str) -> list[dict[str, Any]]:
+    """Accept flat id-list, or legacy ``{scan: [...], stride: []}`` (caller picks key)."""
+    if raw is None:
+        return []
+    if isinstance(raw, list):
+        return [dict(x) for x in raw if isinstance(x, dict)]
+    if isinstance(raw, dict):
+        # legacy by-type bucket — only used when caller passes a list already
+        raise SystemExit(
+            f"{where}: texts.filters 须为带 id 的列表 "
+            f"(旧 scan/stride 分桶已废弃)"
+        )
+    return []
 
-    若模块声明了 ``original_text_filter`` 且 ``filter: false``（正文包含白名单），
-    **不再合并** 全局 ``texts.filters.<type>``——只使用 ``module.filters``。
-    否则全局 ``min_byte_length: 8`` / ``dialogue_shape`` 等会把短 UI（如「バッグ」）全部滤掉，
-    与 ``texts_patcher scan``（不跑模块 filter）行为不一致。
+
+def resolve_filters(cfg: dict, mod: dict) -> list[dict[str, Any]]:
+    """texts.filters（扁平 id 列表）+ module.filters；同 id 后写覆盖整条。
+
+    - ``type: scan``：基线 = 全局 ``texts.filters``。
+    - 非 scan 且模块未写 ``filters`` 键：基线为空（兼容旧 stride/struct: []）。
+    - 非 scan 且写了 ``filters``：基线 = 全局，再按 id 覆盖/追加。
+    - 若模块声明了 ``original_text_filter`` 且 ``filter: false``：不合并全局，
+      只用 ``module.filters``（避免全局 min_byte/dialogue 滤掉短 UI 白名单）。
     """
     mtype = str(mod.get("type") or "scan")
     texts = cfg.get("texts") or {}
-    by_type = texts.get("filters") or {}
-    extra = list(mod.get("filters") or [])
-    if _has_include_original_text_filter(extra):
-        base: list[Any] = []
+    global_raw = texts.get("filters")
+    # legacy: filters.scan / filters.stride
+    if isinstance(global_raw, dict):
+        base_src = global_raw.get(mtype) or []
+        if not isinstance(base_src, list):
+            base_src = []
+        base = [dict(x) for x in base_src if isinstance(x, dict)]
     else:
-        base = list(by_type.get(mtype) or [])
-    # 合并：先 base 再 extra，同 type 后写覆盖
+        base = _normalize_filters_list(global_raw, where="texts.filters")
+
+    has_mod_filters_key = "filters" in mod
+    extra = list(mod.get("filters") or []) if has_mod_filters_key else []
+
+    if _has_include_original_text_filter(extra):
+        base = []
+    elif mtype != "scan" and not has_mod_filters_key:
+        base = []
+
     merged: dict[str, dict[str, Any]] = {}
     order: list[str] = []
     for spec in base + extra:
@@ -624,10 +651,17 @@ def resolve_filters(cfg: dict, mod: dict) -> list[dict[str, Any]]:
             raise SystemExit(
                 f"filter type 必须以 _filter 结尾: {t!r} (module={mod.get('id')!r})"
             )
-        if t not in merged:
-            order.append(t)
-        merged[t] = dict(spec)
-    return [merged[t] for t in order]
+        fid = str(spec.get("id") or "").strip()
+        if not fid:
+            # legacy entries without id: fall back to type as id
+            fid = t
+        if fid not in merged:
+            order.append(fid)
+        entry = dict(spec)
+        entry["id"] = fid
+        entry["type"] = t
+        merged[fid] = entry
+    return [merged[i] for i in order]
 
 
 def _norm_original_key(s: str) -> str:
@@ -666,10 +700,19 @@ def _filter_hit(ctx: FilterContext, spec: dict[str, Any]) -> bool | None:
     val = spec.get("value")
 
     if t == "character_filter":
+        # value=正则；plain 上 re.search。复杂语法（lookahead 等）原样支持。
+        # filter:true（默认）=排除命中；filter:false=包含命中。
+        # 例包含/排除: '^(?=.*ＤＮＡ)(?!.*test).*' + filter: false
         pat = str(val or "")
         if not pat:
             return None
-        return re.search(pat, ctx.original_plain or "") is not None
+        plain = ctx.original_plain or ""
+        try:
+            return re.search(pat, plain) is not None
+        except re.error as e:
+            raise SystemExit(
+                f"character_filter 正则无效 id={spec.get('id')!r}: {e}"
+            ) from e
 
     if t == "dialogue_shape_filter":
         if not bool(val):
@@ -782,13 +825,15 @@ def _looks_garbage_original(original: str) -> bool:
     fw_letter = len(re.findall(r"[Ａ-Ｚａ-ｚ]", plain_no_btn))
     if latin >= 3 and jp >= 5:
         return True
-    if fw_letter >= 3 and jp >= 3:
+    # >=4：避免误杀图鉴「ＤＮＡ」(3) 等短全角缩写；更长全角拉丁仍当垃圾
+    if fw_letter >= 4 and jp >= 3:
         return True
     if ("♂" in o or "♀" in o) and (
         fw_letter >= 1 or "Ｂ" in plain_no_btn or "Ａ" in plain_no_btn
     ):
         return True
-    if len(plain.strip()) <= 8 and fw_letter >= 1 and jp >= 1:
+    # 短串+少量假名才像乱码；「ＤＮＡポケモン」假名足够则放过
+    if len(plain.strip()) <= 8 and fw_letter >= 1 and 1 <= jp <= 2:
         return True
     for block in set(re.findall(r"[ァ-ン]{2}", o)):
         if o.count(block) >= 3:

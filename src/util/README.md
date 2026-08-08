@@ -333,26 +333,38 @@ python gdb_patcher.py find 0xF909F6A4 --rom path\to\zh.gba \
 texts:
   omit_ranges:                 # 全局跳过（闭区间）；所有模块 export/scan 共用
     - { start: '0x100C0E', end: '0x100C22' }
-  filters:                     # 按 module.type 默认闸；类型名必须以 _filter 结尾
-    scan:
-      - { type: character_filter, value: '[üÜ►♂♀ÖÄßＣ-Ｚａ-ｚ]' }  # 留 ＡＢ，踢 ｘ/ｇ 等
-      - { type: dialogue_shape_filter, value: true }
-      - { type: min_byte_length_filter, value: 8 }
-      - { type: garbage_heuristic_filter, value: true }
-    stride: []
-    struct: []
-    stride_ptr: []
+  filters:                     # 扁平 id 列表；type 须以 _filter 结尾
+    - id: global_character_filter
+      type: character_filter
+      # 踢全角拉丁碎屑；保留 Ａ/Ｂ；lookaround 放行图鉴「ＤＮＡ」（JP PCS 全角）
+      value: '(?<!Ｄ)(?<!ＤＮ)[üÜ►♂♀ÖÄß：Ｃ-Ｚａ-ｚ](?!ＮＡ)(?!Ａ)'
+      # 包含写法: value: '^(?=.*ＤＮＡ)(?!.*test).*' 且 filter: false
+    - id: global_dialogue_shape_filter
+      type: dialogue_shape_filter
+      value: true
+    - id: global_min_byte_length_filter
+      type: min_byte_length_filter
+      value: 8
+    - id: global_garbage_heuristic_filter
+      type: garbage_heuristic_filter
+      value: true
   modules:
     - id: 前期剧情
       start: '0x100000'        # 粗带；洞写 omit，不要切碎 ranges
       end: '0x15C6AF'          # 与中期等模块勿重叠（export 按模块顺序 seen_addr 去重）
       type: scan
+    - id: 地点名
+      type: scan
+      filters:                 # 同 id 覆盖全局；新 id 追加
+        - { id: global_dialogue_shape_filter, type: dialogue_shape_filter, value: false }
+        - { id: global_min_byte_length_filter, type: min_byte_length_filter, value: 5 }
+        - { id: place_max_byte_length_filter, type: max_byte_length_filter, value: 20 }
+        - { id: global_garbage_heuristic_filter, type: garbage_heuristic_filter, value: false }
     - id: UI界面
-      filters:                 # 覆盖同 type 的 value；filter 极性默认 true
-        - { type: dialogue_shape_filter, value: false }
-        - { type: min_byte_length_filter, value: 4 }
-        - { type: require_pointer_filter, value: true }
-        - type: original_text_filter
+      filters:
+        - { id: ui_require_pointer_filter, type: require_pointer_filter, value: true }
+        - id: ui_original_text_filter
+          type: original_text_filter
           filter: false          # 包含：只留名单正文
           value: [さいしょからはじめる, つづきからはじめる]
 ```
@@ -360,16 +372,18 @@ texts:
 | 属性 | 层级 | 含义 |
 |------|------|------|
 | `texts.omit_ranges` | 全局 | 跳过地址带；`export`/`scan` = 模块带 − omit |
-| `texts.filters.<type>` | 全局 | 该 `module.type` 的默认 `*_filter` 列表 |
+| `texts.filters` | 全局 | 带 `id` 的 `*_filter` 列表（层层过滤） |
 | `modules[].ranges` / `start`+`end` | 模块 | 粗扫描母带（相邻模块勿互相覆盖） |
-| `modules[].filters` | 模块 | 覆盖全局同 `type` 的 `value` |
+| `modules[].filters` | 模块 | 同 `id` 覆盖全局整条；新 `id` 追加 |
 | `require_pointer` / `min_byte_length` | 模块 | 旧字段；无同名 `*_filter` 时仍生效 |
 
 ### `texts.filters` / `FilterContext`
 
-合并顺序：`texts.filters.<module.type>` → `module.filters`；同一 `type` **后写覆盖**整条（`value` / `filter`）。`type` 必须以 `_filter` 结尾。
+合并：全局列表为基线 → 模块 `filters` 按 **`id`** 覆盖/追加（保序）。`type` 必须以 `_filter` 结尾；缺 `id` 时回退用 `type` 当 id。
 
-**例外：** 若 `module.filters` 含 `original_text_filter` 且 `filter: false`（正文包含白名单），**不合并**全局默认闸，只跑该模块自己的 `filters`。否则全局 `min_byte_length: 8` 会把「バッグ」等短 UI 全部滤掉（`scan` 命令不跑模块 filter，故能搜到而 export 为 0）。
+- `type: scan`：始终吃全局基线。
+- 非 `scan` 且模块**未写** `filters` 键：基线为空（表类模块不被对白闸误杀）。
+- **例外：** 模块含 `original_text_filter` 且 `filter: false` → **不合并全局**，只跑模块自己的 `filters`。
 
 每条候选构造 `FilterContext`（`NamedTuple`）后再跑闸：
 
@@ -390,15 +404,15 @@ texts:
 
 | filter `type` | `value` | 命中条件（再经 `filter` 极性） |
 |---------------|---------|--------------------------------|
-| `character_filter` | 正则 | **plain** 匹配该模式；scan 默认踢 `ü`/`►`/`Ｃ-Ｚａ-ｚ`（**保留** `ＡＢ`） |
+| `character_filter` | 正则 | **plain** 上 `re.search`（lookahead/lookbehind 等原样支持）。`filter:true` 排除命中，`false` 包含命中 |
 | `dialogue_shape_filter` | bool | `value: true`：不像对白则命中；`value: false`：整闸跳过 |
 | `min_byte_length_filter` / `max_byte_length_filter` | int | 字节长度越界 |
 | `require_pointer_filter` | bool | `value: true`：无指针则命中 |
-| `garbage_heuristic_filter` | bool | `value: true`：垃圾假名/拉丁混扫则命中（**不**把 `Ａボタン` 当垃圾） |
+| `garbage_heuristic_filter` | bool | `value: true`：垃圾假名/拉丁混扫则命中（不计 `Ａボタン`） |
 | `address_filter` | 正则或 `{start,end}` | 地址命中禁止规则 |
 | `original_text_filter` | 字符串列表 | 原文精确或去空白后等于列表任一条（常配 `filter: false` 做白名单） |
 
-**勿**把 `character_filter` 写成 `[Ａ-Ｚａ-ｚ]`：会误杀 `Ａボタンで…`。要踢全角拉丁碎屑时用 `[Ｃ-Ｚａ-ｚ]`（或加上 `üÜ►♂♀` 等），单独留下 `Ａ`/`Ｂ`。
+**勿**把 `character_filter` 写成 `[Ａ-Ｚａ-ｚ]`：会误杀 `Ａボタンで…`。要踢全角拉丁碎屑时用 `[Ｃ-Ｚａ-ｚ]`（可加 `üÜ►♂♀`），单独留下 `Ａ`/`Ｂ`。图鉴 `ＤＮＡ` 是 JP PCS **全角**（落在 `Ｃ-Ｚ`），用 lookaround 写进 `value`，不要在 `.py` 里白名单。
 
 ## 导出 (export)
 

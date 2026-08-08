@@ -28,7 +28,13 @@
  *   → 切 WIN_TEXT_PTR 到流，复用 F9 00 / 原版控制符路径
  * layout: .org 0x08810000 → offsets （u32[code_max], sentinel = total_size）
  *         .org 0x08820000 → streams （PCS bytes ending in FF）
+ *
+ * 样式表（styles_data.asm，与 phrase_data.asm 对仗，均来自 translate.build.json）：
+ *   StyleLeft[256] @ 0x0880F000 — F9 第二字节 → left(px)
+ * PrintNextChar：非 0x80 的短语 op sticky 后按 StyleLeft[op] 整体左移一次。
+ * 改 styles/phrases 只重生 asm + armips，不必重编 game.bin。
  */
+#define ADDR_STYLE_LEFT            0x0880F000u
 #define ADDR_PHRASE_OFFSETS        0x08810000u
 #define ADDR_PHRASE_TABLE          0x08820000u
 #define ADDR_FONT_CHS_NORMAL       0x09000000u
@@ -111,6 +117,12 @@ struct ChineseTileState {
 #define CHS_WRITE_FOOTER  2
 #define CHS_WRITE_LINEAR  3
 #define CHS_WRITE_SLOT    4
+
+/* Dex list "No"/ball — fixed BG tiles (CreateMonDexNum / CreateCaughtBall).
+ * Chinese Mode2 must not blit into these abs indices. */
+#define CHS_DEX_UI_TILE_LO      0x3FCu
+#define CHS_DEX_UI_TILE_HI      0x3FFu
+#define CHS_DEX_UI_TILE_ALT     0x3F0u  /* scratch remap target (4 tiles) */
 
 #define CHS_TILE_GRID_W         30
 #define CHS_TILE_POOL_END            0x180
@@ -209,8 +221,9 @@ int  DrawGlyph_ShouldUseLinear(TextPrinter *win, uint8_t write_op);
 void drawGlyph12(TextPrinter *win, const uint8_t *src18, int linear);
 void drawGlyph_Adv(TextPrinter *win, const uint8_t *src128, int linear, unsigned adv_px);
 int  GetStringWidth_Chinese(TextPrinter *win, const uint8_t *s,
-                            uint16_t *index, uint8_t *width);
+                           uint16_t *index, uint8_t *width);
 uint8_t GetStringWidthChinese_Full(TextPrinter *win, const uint8_t *s);
+uint8_t MapName_DisplayCellLength_C(const uint8_t *s);
 
 int  scene_field_wants_linear(TextPrinter *win);
 int  scene_menu_wants_mode2(TextPrinter *win);

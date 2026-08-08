@@ -32,14 +32,17 @@ StringAppend                           equ 0x08004308
 StringLength                           equ 0x0800436C
 StringExpandPlaceholders               equ 0x08004530
 
-; --- Width functions ---
-GetGlyphWidth                          equ 0x08004B1C
-GetStringWidth                         equ 0x08004CC0
+; --- Width / map-name popup ---
+; GetGlyphWidth/GetStringWidth @ 0x4B1C/0x4CC0 曾为 proximity 错猜（无调用方）；勿再整函数替换。
+; 日版 DrawMapNamePopup：StringLength 居中（10 半角格），BL 位点如下。
+DrawMapNamePopup                       equ 0x0809F654
+DrawMapNamePopup_StringLength          equ 0x0809F67E
 
 ; --- 扩展区 / game.bin 装入点 ---
-GameBinAddresses                       equ 0x08800000  ; main.asm .incbin game.bin
+GameBinAddresses                       equ 0x08800000  ; main.asm .incbin game.bin（≤0xF000）
 HackFunctionAddresses                  equ GameBinAddresses  ; 旧名兼容
-; PhraseOffsets / PhraseTable：短语表标签（.org 固定址），勿 equ 同名
+; StyleLeft：styles_data.asm（.org 0x0880F000）
+; PhraseOffsets / PhraseTable：phrase_data.asm（.org 0x08810000 / 0x08820000）
 FontChsNormal                          equ 0x09000000
 FontChsSmall                           equ 0x09100000
 PokeRSFontChsNormal                    equ FontChsNormal

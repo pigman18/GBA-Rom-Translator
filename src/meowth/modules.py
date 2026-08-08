@@ -5,8 +5,8 @@ GUI checkboxes → translate/build only process checked modules.
 
 Authoritative file: ``configs/<game_id>/translate/texts.json``.
 Wrap: module ``word_count`` on texts.json = max Hanzi/line (default 14).
-Write behavior: ``write.type=op`` + ``write.op`` (0x01..0x7E) → phrase ``F9 <op> hi lo``;
-default phrase channel is ``F9 80`` (see ``module_write_op``).
+Phrase channel: module ``style`` → ``texts.styles`` auto-alloc F9 second byte
+(``01…`` / ``81…``); default phrase is ``F9 80``. Deprecated: ``write.type=op``.
 """
 
 from __future__ import annotations

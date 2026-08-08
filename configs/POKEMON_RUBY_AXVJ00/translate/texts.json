@@ -2,6 +2,11 @@
   "game": "POKEMON_RUBY_AXVJ00",
   "game_id": "POKEMON_RUBY_AXVJ00",
   "source_lang": "ja",
+  "styles": {
+    "样式1": {
+      "left": 1
+    }
+  },
   "modules": {
     "属性名": {
       "label": "词条·属性",
@@ -57,7 +62,8 @@
         "stride": 6
       },
       "relocate": true,
-      "hook": true
+      "hook": true,
+      "style": "样式1"
     },
     "招式名": {
       "label": "词条·招式",

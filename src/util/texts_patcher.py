@@ -296,6 +296,56 @@ def _modules_as_dict(modules_list: list[dict]) -> dict[str, dict]:
     return out
 
 
+def _styles_as_dict(styles_list: list[dict]) -> dict[str, dict]:
+    """yaml ``texts.styles`` list → ``{id: meta}``（与 modules 同形）。
+
+    ``channel`` 已废弃（Meowth 按顺序交错 01/81/02/82…），写出时丢弃。
+    """
+    out: dict[str, dict] = {}
+    for s in styles_list:
+        if not isinstance(s, dict):
+            continue
+        sid = str(s.get("id") or "").strip()
+        if not sid:
+            continue
+        meta = {k: v for k, v in s.items() if k not in ("id", "channel")}
+        out[sid] = meta
+    return out
+
+
+def _yaml_styles_dict(cfg: dict) -> dict[str, dict]:
+    raw = (cfg.get("texts") or {}).get("styles")
+    if raw is None:
+        return {}
+    if isinstance(raw, list):
+        return _styles_as_dict(raw)
+    if isinstance(raw, dict):
+        out: dict[str, dict] = {}
+        nested_keys = {str(k).strip().lower().replace("0x", "") for k in raw}
+        if nested_keys and nested_keys <= {"00", "80", "0", "128"}:
+            for fam in ("00", "80", "0", "128"):
+                group = None
+                for k, v in raw.items():
+                    if str(k).strip().lower().replace("0x", "") == fam:
+                        group = v
+                        break
+                if not isinstance(group, dict):
+                    continue
+                for sid, meta in group.items():
+                    name = str(sid).strip()
+                    if not name or not isinstance(meta, dict):
+                        continue
+                    out[name] = {k: v for k, v in meta.items() if k != "channel"}
+            return out
+        for sid, meta in raw.items():
+            name = str(sid).strip()
+            if not name or not isinstance(meta, dict):
+                continue
+            out[name] = {k: v for k, v in meta.items() if k != "channel"}
+        return out
+    return {}
+
+
 def extract_stride(rom: bytes, mod: dict, game_code: str) -> list[dict]:
     mid = mod["id"]
     start = parse_addr(mod.get("start"))
@@ -469,12 +519,15 @@ def omit_ranges_to_yaml(
 def set_texts_omit_ranges(cfg: dict, spans: list[tuple[int, int]]) -> None:
     texts = cfg.setdefault("texts", {})
     omit_yaml = omit_ranges_to_yaml(spans)
+    styles = texts.pop("styles", None)
     modules = texts.pop("modules", None)
-    # omit_ranges 紧挨 texts:，在 modules 之前
+    # omit_ranges 紧挨 texts:，styles 在 modules 之前
     rest = {k: v for k, v in texts.items() if k != "omit_ranges"}
     texts.clear()
     texts["omit_ranges"] = omit_yaml
     texts.update(rest)
+    if styles is not None:
+        texts["styles"] = styles
     if modules is not None:
         texts["modules"] = modules
 
@@ -1180,11 +1233,13 @@ def export_texts(
     out_path = refuse_pipeline_write(
         output or default_output_path(game_id, module=module)
     )
-    # modules 只来自 yaml（不与旧 texts.json 合并，避免改 label/id 后残留）
+    # modules / styles 只来自 yaml（不与旧 texts.json 合并，避免改 label/id 后残留）
+    styles_dict = _yaml_styles_dict(cfg)
     doc = {
         "game": game_id,
         "game_id": game_id,
         "source_lang": "ja",
+        "styles": styles_dict,
         "modules": modules_dict,
         "count": len(entries),
         "entries": entries,
@@ -1869,6 +1924,10 @@ def sync_texts_json_omit(
     doc = json.loads(texts_path.read_text(encoding="utf-8"))
     doc["omit_ranges"] = omit_ranges_to_yaml(omit_all)
 
+    styles_dict = _yaml_styles_dict(cfg)
+    if styles_dict:
+        doc["styles"] = styles_dict
+
     mods_obj = doc.get("modules")
     if not isinstance(mods_obj, dict):
         mods_obj = {}
@@ -1888,9 +1947,22 @@ def sync_texts_json_omit(
             meta["ranges"] = list(mod["ranges"])
         else:
             meta.pop("ranges", None)
-        for k in ("label", "group", "default", "description", "type"):
+        for k in (
+            "label",
+            "group",
+            "default",
+            "description",
+            "type",
+            "style",
+            "relocate",
+            "hook",
+        ):
             if k in mod:
                 meta[k] = mod[k]
+        if "style" in mod:
+            meta.pop("left", None)
+        elif "left" in mod:
+            meta["left"] = mod["left"]
         mods_obj[mid] = meta
         n_mod += 1
 
@@ -2009,11 +2081,14 @@ def migrate_fragmented_ranges(
 
 
 def sync_texts_json_modules_meta(texts_path: Path, cfg: dict) -> int:
-    """只同步 modules 元数据 / omit_ranges 快照，不删条目。"""
+    """只同步 modules / styles 元数据 / omit_ranges 快照，不删条目。"""
     if not texts_path.is_file():
         return 0
     doc = json.loads(texts_path.read_text(encoding="utf-8"))
     doc["omit_ranges"] = omit_ranges_to_yaml(get_texts_omit_ranges(cfg))
+    styles_dict = _yaml_styles_dict(cfg)
+    if styles_dict:
+        doc["styles"] = styles_dict
     mods_obj = doc.get("modules")
     if not isinstance(mods_obj, dict):
         mods_obj = {}
@@ -2032,9 +2107,25 @@ def sync_texts_json_modules_meta(texts_path: Path, cfg: dict) -> int:
             meta["ranges"] = list(mod["ranges"])
         else:
             meta.pop("ranges", None)
-        for k in ("label", "group", "default", "description", "type"):
+        for k in (
+            "label",
+            "group",
+            "default",
+            "description",
+            "type",
+            "style",
+            "relocate",
+            "hook",
+        ):
             if k in mod:
                 meta[k] = mod[k]
+        # style 取代模块顶栏 left
+        if "style" in mod:
+            meta.pop("left", None)
+        elif "left" in mod:
+            meta["left"] = mod["left"]
+        else:
+            meta.pop("left", None)
         mods_obj[mid] = meta
         n_mod += 1
     refuse_pipeline_write(texts_path)

@@ -999,6 +999,14 @@ class TranslationEngine:
             phrases_by_code[code] = s
 
         from ..translate_plan import module_write_build_meta
+        from ..config_loader import (
+            alloc_style_channels,
+            collect_module_left_px,
+            load_styles,
+            module_left_px,
+            module_phrase_channel,
+            module_style_id,
+        )
 
         game_id = self.config.game or ""
         entry_rows = []
@@ -1031,14 +1039,25 @@ class TranslationEngine:
             wmeta = module_write_build_meta(game_id, mid)
             if wmeta is not None:
                 row["write"] = wmeta
+            sid = module_style_id(game_id, mid)
+            if sid:
+                row["style"] = sid
+                row["f9"] = module_phrase_channel(game_id, mid)
+            left_px = module_left_px(game_id, mid)
+            if left_px:
+                row["left"] = left_px
             entry_rows.append(row)
 
+        style_alloc = alloc_style_channels(game_id)
         payload = {
             "game_id": self.config.game,
             "modules": list(self.config.modules or []) if self.config.modules else active_list,
             "active_modules": active_list,
             "count": len(flat),
             "phrases": phrases_by_code,
+            "styles": load_styles(game_id),
+            "style_alloc": {k: f"0x{v:02X}" for k, v in style_alloc.items()},
+            "module_left": collect_module_left_px(game_id),
             "entries": entry_rows,
         }
         build_dir = Path(self.config.work_dir) / self.config.game
@@ -1602,16 +1621,13 @@ class TranslationEngine:
             else:
                 self._log("info", f"Default fonts synced: {copied} files -> {fonts_dir}")
 
-        # PhraseTable: expanded PCS streams (F9 00×N + FE/FB/… + FF).
-        # PrintNextChar redirects to the stream and reuses F9 00 / vanilla controls.
+        # PhraseTable early write; pack 阶段以 translate.build.json 为准重生
         if not self._custom_translations:
             return
-        # Must not use F9 80 phrase wrap (installed in _build_rom).
         sideload_encode = getattr(self.charmap, "_sideload_encode", None)
         if sideload_encode is None:
             sideload_encode = self.charmap.encode
 
-        # Unified phrase set: lexicon + auto-switch (contiguous codes = table index).
         pc = getattr(self.charmap, "_phrase_codes", None)
         if pc:
             entries = sorted(pc.items(), key=lambda kv: kv[1])
@@ -1624,46 +1640,11 @@ class TranslationEngine:
         if not phrases:
             return
 
-        MAX_PHRASE_STREAM = 512
-        offsets: list[int] = []
-        table_lines: list[str] = ['.align 4', 'PhraseTable:']
-        byte_cursor = 0
-        truncated = 0
-        for text in phrases:
-            offsets.append(byte_cursor)
-            stream = bytearray(sideload_encode(text))
-            if not stream or stream[-1] != 0xFF:
-                stream.append(0xFF)
-            if len(stream) > MAX_PHRASE_STREAM:
-                stream = stream[: MAX_PHRASE_STREAM - 1]
-                stream.append(0xFF)
-                truncated += 1
-            for i in range(0, len(stream), 16):
-                chunk = stream[i : i + 16]
-                hex_bytes = ", ".join(f"0x{b:02X}" for b in chunk)
-                suffix = f"  ; {len(stream)}B" if i == 0 else ""
-                table_lines.append(f"  .byte {hex_bytes}{suffix}")
-            byte_cursor += len(stream)
-        offsets.append(byte_cursor)  # sentinel = total size
-
-        # Fixed VMA for C (game.h ADDR_PHRASE_*); must match game_addrs.asm
-        # Stream table can exceed 64KB → offsets must be u32 (.word), hook uint32_t*.
-        asm_lines = ['.org 0x08810000', '.align 4', 'PhraseOffsets:']
-        for off in offsets:
-            asm_lines.append(f'  .word {off}')
-        asm_lines.append('')
-        asm_lines.append('.org 0x08820000')
-        asm_lines.extend(table_lines)
+        from ..build_rom_data import write_phrase_data_asm
 
         phrase_asm = fonts_dir / "phrase_data.asm"
-        phrase_asm.write_text('\n'.join(asm_lines), encoding="utf-8")
-        msg = (
-            f"[短语] PhraseTable {len(phrases)} 条流, {byte_cursor}B data + "
-            f"{len(offsets) * 4}B offsets(u32) -> {phrase_asm.name}"
-        )
-        if truncated:
-            msg += f" ({truncated} 条截断至 {MAX_PHRASE_STREAM}B)"
-        self._log("info", msg)
+        _, n_ph, nbytes = write_phrase_data_asm(phrases, sideload_encode, phrase_asm)
+        self._log("info", f"[短语] PhraseTable {n_ph} 条流, {nbytes}B -> {phrase_asm.name}")
 
     def _build_font_from_bdf(self, work_dir: Path | None = None):
         """Generate font .bin from config's BDF path or auto-detect."""

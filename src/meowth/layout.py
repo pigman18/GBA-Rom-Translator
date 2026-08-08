@@ -174,7 +174,7 @@ def layout_texts(
     from .extract import trusted_lz_spans
     from .policy import filter_pointer_sources
     from .config_loader import (
-        F9_PHRASE_DEFAULT, F9_EOS, module_write_op, load_game_config,
+        F9_PHRASE_DEFAULT, F9_EOS, apply_module_phrase_channel, load_game_config,
         parse_int_addr,
     )
     from .text_wrap import wrap_text
@@ -233,12 +233,7 @@ def layout_texts(
             # Build table binary
             def encode_tbl(text: str) -> bytes:
                 raw = charmap.encode(text)
-                if len(raw) < 4 or raw[0] != 0xF9 or raw[1] != F9_PHRASE_DEFAULT:
-                    return raw
-                code = module_write_op(game, module) if game else None
-                if code is not None:
-                    return bytes([0xF9, code & 0xFF]) + raw[2:]
-                return raw
+                return apply_module_phrase_channel(raw, game, module)
 
             # Simple path: write table data to expansion area
             chs_stride = patch.get("chs_stride", 0)
@@ -324,16 +319,10 @@ def layout_texts(
         else:
             encoded = charmap.encode(translated)
 
-        # F9 phrase channel op rewrite (module-specific write.type=op)
+        # F9 phrase channel rewrite (module.style / legacy write.op)
         if is_armips and target_lang.startswith("zh") and len(encoded) >= 4:
             mid = entry.get("_axvj_module") or entry.get("module")
-            code = module_write_op(game, mid)
-            if (
-                code is not None
-                and encoded[0] == 0xF9
-                and encoded[1] == F9_PHRASE_DEFAULT
-            ):
-                encoded = bytes([0xF9, code & 0xFF]) + encoded[2:]
+            encoded = apply_module_phrase_channel(encoded, game, mid)
 
         # ---- decide: relocate or in-place ----
         if is_armips:

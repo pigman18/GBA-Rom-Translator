@@ -550,22 +550,15 @@ def inject_name_tables(
     if not patches:
         return write_offset, {}
 
-    from .config_loader import F9_PHRASE_DEFAULT, get_active_game_id, module_write_op
+    from .config_loader import apply_module_phrase_channel, get_active_game_id
     from .translate_plan import module_allows_table_widen
 
     game_id = get_active_game_id() or ""
 
     def encode(text: str) -> bytes:
         raw = charmap.encode(text)
-        if len(raw) < 4 or raw[0] != 0xF9 or raw[1] != F9_PHRASE_DEFAULT:
-            return raw
-        gid = get_active_game_id() or ""
         mid = getattr(encode, "_module", None)
-        code = module_write_op(gid, mid) if gid else None
-        if code is None:
-            return raw
-        # F9 <op> hi lo … — op replaces default phrase channel (80)
-        return bytes([0xF9, code & 0xFF]) + raw[2:]
+        return apply_module_phrase_channel(raw, get_active_game_id() or "", mid)
 
     while write_offset % 4:
         write_offset += 1

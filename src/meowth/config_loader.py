@@ -32,6 +32,8 @@ _cache: dict[str, dict[str, Any]] = {}
 _profile_cache: dict[str, dict[str, Any]] = {}
 _modules_cache: dict[str, dict[str, Any]] = {}
 _modules_inject_cache: dict[str, dict[str, Any]] = {}
+_styles_cache: dict[str, dict[str, Any]] = {}
+_style_alloc_cache: dict[str, dict[str, int]] = {}
 _policy_cache: dict[str, dict[str, Any]] = {}
 _codec_cache: dict[str, dict[str, Any]] = {}
 _config_dirs: dict[str, Path] = {}
@@ -51,15 +53,22 @@ STAGE_MODULES = "modules"
 DEFAULT_WORD_COUNT = 14
 
 # F9 channel protocol (AXVJ Chinese):
-#   F9 00 01  — 旁载单字 (auto)
-#   F9 80 hi/lo — 短语表 (default; keep=0 / geometry; 表内为 F9 00+PCS 流)
-#   F9 01..7E hi lo — phrase + write.op sticky (02=footer 03=linear 04=slot)
-#   bare FA..FF       — PCS controls / EOS (NOT F9 channels)
+#   F9 00 …     — 旁载单字 (reserved)
+#   F9 80 hi/lo — 默认短语（无 style；表内为 F9 00+PCS 流）
+#   texts.styles 按列表顺序交错分配：01, 81, 02, 82, …（无需写 channel）
+#   bare FA..FF — PCS controls / EOS (NOT F9 channels)
+# Deprecated: write.type=op / styles.channel（改用 module.style → 自动交错）
 F9_SIDE_GLYPH = 0x00
 F9_PHRASE_DEFAULT = 0x80
 F9_OP_MIN = 0x01
 F9_OP_MAX = 0x7E
+F9_STYLE_00_MIN = 0x01
+F9_STYLE_00_MAX = 0x7F
+F9_STYLE_80_MIN = 0x81
+F9_STYLE_80_MAX = 0xF9  # before PCS FA–FF
 F9_EOS = 0xFF
+STYLE_CHANNEL_00 = 0x00  # legacy nested key only
+STYLE_CHANNEL_80 = 0x80
 
 
 def parse_int_addr(val: Any, default: int | None = None) -> int:
@@ -117,11 +126,9 @@ def _parse_write_op_value(raw: Any) -> int | None:
 
 
 def module_write_op(game_id: str, module_id: str | None) -> int | None:
-    """Return F9 phrase-channel byte, or None if module has no ``write.type=op``.
+    """Deprecated: ``write.type=op``. Prefer ``module.style`` → ``alloc_style_channels``.
 
-    When set, phrase encoding becomes ``F9 <op> hi lo``.
-    ``F9 00`` / default ``F9 80`` keep auto write unless patched.
-    Op must be in ``0x01..0x7E``.
+    Return F9 phrase-channel byte, or None if module has no ``write.type=op``.
     """
     if not module_id:
         return None
@@ -135,6 +142,200 @@ def module_write_op(game_id: str, module_id: str | None) -> int | None:
         return None
     return _parse_write_op_value(write.get(typ))
 
+
+def _parse_style_channel(raw: Any) -> int:
+    """Style family: ``00`` or ``80`` (default ``80``)."""
+    if raw is None or raw == "":
+        return STYLE_CHANNEL_80
+    if isinstance(raw, bool):
+        return STYLE_CHANNEL_80
+    if isinstance(raw, int):
+        val = int(raw) & 0xFF
+    else:
+        s = str(raw).strip().lower().replace("0x", "")
+        try:
+            val = int(s, 16) & 0xFF
+        except ValueError:
+            try:
+                val = int(s, 0) & 0xFF
+            except ValueError:
+                return STYLE_CHANNEL_80
+    if val == STYLE_CHANNEL_00:
+        return STYLE_CHANNEL_00
+    return STYLE_CHANNEL_80
+
+
+def _style_meta_clean(meta: dict[str, Any]) -> dict[str, Any]:
+    """Drop deprecated ``channel``; keep left / other fields."""
+    return {k: v for k, v in meta.items() if k != "channel"}
+
+
+def _normalize_styles_obj(raw: Any) -> dict[str, dict[str, Any]]:
+    """texts.json / yaml styles → ``{style_id: meta}`` (meta has no ``id``).
+
+    Accepts:
+    - list ``[{id, left, …}, …]`` (preferred, same shape as modules)
+    - flat dict ``{id: {left, …}}``
+    - legacy nested ``{"00": {name: …}, "80": {name: …}}`` (order: 00 then 80)
+    ``channel`` is ignored if present (alloc is interleaved, not per-family).
+    """
+    out: dict[str, dict[str, Any]] = {}
+    if raw is None:
+        return out
+    if isinstance(raw, list):
+        for item in raw:
+            if not isinstance(item, dict):
+                continue
+            sid = str(item.get("id") or "").strip()
+            if not sid:
+                continue
+            meta = _style_meta_clean({k: v for k, v in item.items() if k != "id"})
+            out[sid] = meta
+        return out
+    if not isinstance(raw, dict):
+        return out
+    # Nested channel groups? Flatten in 00→80 key order (channel ignored for alloc).
+    nested_keys = {str(k).strip().lower().replace("0x", "") for k in raw}
+    if nested_keys and nested_keys <= {"00", "80", "0", "128"}:
+        for fam in ("00", "80", "0", "128"):
+            group = None
+            for k, v in raw.items():
+                if str(k).strip().lower().replace("0x", "") == fam:
+                    group = v
+                    break
+            if not isinstance(group, dict):
+                continue
+            for sid, meta in group.items():
+                name = str(sid).strip()
+                if not name or not isinstance(meta, dict):
+                    continue
+                if name in out:
+                    raise ValueError(f"duplicate style id {name!r} across channel groups")
+                out[name] = _style_meta_clean(dict(meta))
+        return out
+    for sid, meta in raw.items():
+        name = str(sid).strip()
+        if not name or not isinstance(meta, dict):
+            continue
+        out[name] = _style_meta_clean(dict(meta))
+    return out
+
+
+def load_styles(game_id: str = "") -> dict[str, dict[str, Any]]:
+    """Load ``texts.json`` → ``styles`` as ``{style_id: meta}``."""
+    gid = game_id or _active_game_id or ""
+    if not gid:
+        return {}
+    if gid in _styles_cache:
+        return _styles_cache[gid]
+    try:
+        raw = load_texts_doc(gid)
+    except FileNotFoundError:
+        raw = {}
+    styles = _normalize_styles_obj(raw.get("styles") if isinstance(raw, dict) else None)
+    _styles_cache[gid] = styles
+    return styles
+
+
+def alloc_style_channels(game_id: str = "") -> dict[str, int]:
+    """Auto-assign F9 second byte per style id (stable insertion order).
+
+    Interleave low/high: 1st→``0x01``, 2nd→``0x81``, 3rd→``0x02``, 4th→``0x82``, …
+    No ``channel`` field required.
+    """
+    gid = game_id or _active_game_id or ""
+    if not gid:
+        return {}
+    if gid in _style_alloc_cache:
+        return _style_alloc_cache[gid]
+    styles = load_styles(gid)
+    next_00 = F9_STYLE_00_MIN
+    next_80 = F9_STYLE_80_MIN
+    alloc: dict[str, int] = {}
+    for i, sid in enumerate(styles):
+        if (i & 1) == 0:
+            if next_00 > F9_STYLE_00_MAX:
+                raise ValueError(f"style 00-family exhausted (style {sid!r})")
+            # Never emit reserved phrase/side bytes
+            if next_00 == F9_SIDE_GLYPH or next_00 == F9_PHRASE_DEFAULT:
+                next_00 += 1
+            alloc[sid] = next_00
+            next_00 += 1
+        else:
+            if next_80 > F9_STYLE_80_MAX:
+                raise ValueError(f"style 80-family exhausted (style {sid!r})")
+            alloc[sid] = next_80
+            next_80 += 1
+    _style_alloc_cache[gid] = alloc
+    return alloc
+
+
+def module_style_id(game_id: str, module_id: str | None) -> str | None:
+    """Module ``style`` name, or None."""
+    if not module_id:
+        return None
+    try:
+        meta = load_modules(game_id).get(module_id) or {}
+    except FileNotFoundError:
+        return None
+    sid = str(meta.get("style") or "").strip()
+    return sid or None
+
+
+def style_left_px(game_id: str, style_id: str | None) -> int:
+    """``left`` px on a named style; missing → 0."""
+    if not style_id:
+        return 0
+    meta = load_styles(game_id).get(style_id) or {}
+    raw = meta.get("left")
+    if raw is None:
+        return 0
+    try:
+        return max(0, int(raw))
+    except (TypeError, ValueError):
+        return 0
+
+
+def module_phrase_channel(game_id: str, module_id: str | None) -> int:
+    """F9 second byte for phrase refs of this module.
+
+    Prefer allocated style channel; else deprecated ``write.type=op``;
+    else default ``0x80``.
+    """
+    sid = module_style_id(game_id, module_id)
+    if sid:
+        alloc = alloc_style_channels(game_id)
+        if sid not in alloc:
+            raise ValueError(
+                f"module {module_id!r} style {sid!r} not in texts.styles"
+            )
+        return int(alloc[sid])
+    op = module_write_op(game_id, module_id)
+    if op is not None:
+        return int(op)
+    return F9_PHRASE_DEFAULT
+
+
+def apply_module_phrase_channel(
+    encoded: bytes, game_id: str, module_id: str | None
+) -> bytes:
+    """Rewrite phrase refs ``F9 80 …`` → ``F9 <module.style alloc> …``.
+
+    Hook: ``op == 0`` → 00 glyph; else → PhraseTable (``0x80`` clears sticky;
+    other ops sticky + ``StyleLeft[op]`` one-shot X nudge).
+    """
+    if (
+        not encoded
+        or len(encoded) < 2
+        or encoded[0] != 0xF9
+        or encoded[1] != F9_PHRASE_DEFAULT
+    ):
+        return encoded
+    ch = module_phrase_channel(game_id, module_id) & 0xFF
+    if ch == F9_PHRASE_DEFAULT:
+        return encoded
+    return bytes([0xF9, ch]) + encoded[2:]
+
 # Fields that may live on a module entry in ``translate/texts.json`` modules
 # and feed inject-style readers.
 _INJECT_MODULE_KEYS = (
@@ -145,6 +346,8 @@ _INJECT_MODULE_KEYS = (
     "wrap_pages",
     "max_lines",
     "line_width",  # read-only migrate → word_count in load_modules_inject
+    "style",  # → texts.styles; phrase F9 second byte via alloc_style_channels
+    "left",  # deprecated: prefer styles[].left via module.style
     "chs_stride",
     "patch_type",
     "widen_fn",
@@ -524,8 +727,14 @@ def tables_from_modules_inject(game_id: str = "") -> dict[str, Any]:
 
 
 def module_write_type_code(game_id: str, module_id: str | None) -> int | None:
-    """Alias of ``module_write_op`` (None = phrase keeps default F9 80)."""
-    return module_write_op(game_id, module_id)
+    """Phrase channel if non-default, else None (keeps F9 80).
+
+    Prefer style alloc; legacy ``write.type=op`` still honored.
+    """
+    ch = module_phrase_channel(game_id, module_id)
+    if ch == F9_PHRASE_DEFAULT:
+        return None
+    return ch
 
 
 def module_word_count(game_id: str, module_id: str | None) -> int:
@@ -553,6 +762,59 @@ def module_word_counts(game_id: str = "") -> dict[str, int]:
             out[mid] = int(cfg["word_count"])
         except (TypeError, ValueError):
             pass
+    return out
+
+
+def module_left_px(game_id: str, module_id: str | None) -> int:
+    """Horizontal print nudge in px (dex species name etc.).
+
+    Prefer ``styles[<module.style>].left``; fall back to deprecated module ``left``.
+    Missing / invalid → 0.
+    """
+    if not module_id:
+        return 0
+    sid = module_style_id(game_id, module_id)
+    if sid:
+        return style_left_px(game_id, sid)
+    inj = load_modules_inject(game_id).get(module_id) or {}
+    raw = inj.get("left")
+    if raw is None:
+        try:
+            meta = load_modules(game_id).get(module_id) or {}
+            raw = meta.get("left")
+        except FileNotFoundError:
+            raw = None
+    if raw is None:
+        return 0
+    try:
+        return max(0, int(raw))
+    except (TypeError, ValueError):
+        return 0
+
+
+def collect_module_left_px(game_id: str) -> dict[str, int]:
+    """All modules with non-zero ``left`` (via style or legacy) → ``{module_id: px}``."""
+    out: dict[str, int] = {}
+    try:
+        mods = load_modules(game_id)
+    except FileNotFoundError:
+        return out
+    for mid in mods:
+        px = module_left_px(game_id, mid)
+        if px:
+            out[mid] = px
+    return out
+
+
+def collect_style_left_by_f9(game_id: str) -> dict[int, int]:
+    """Allocated F9 second byte → style ``left`` px (nonzero only)."""
+    out: dict[int, int] = {}
+    styles = load_styles(game_id)
+    alloc = alloc_style_channels(game_id)
+    for sid, code in alloc.items():
+        px = style_left_px(game_id, sid)
+        if px:
+            out[int(code)] = px
     return out
 
 

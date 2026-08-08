@@ -171,7 +171,7 @@ int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
         return 1;
 
     if (cur_char != CHS_ESCAPE) {
-        /* Printable → JP-via-CHS. Controls → original. */
+        /* Printable → JP-via-CHS (digits included; F9 00 / 表内流同路). */
         return draw_jp_via_chs(win, cur_char);
     }
 
@@ -207,10 +207,18 @@ int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
         {
             volatile struct ChineseTileState *st = chinese_tile_state();
             uint16_t code;
-            if (op == CHS_PHRASE_DEFAULT)
+            if (op == CHS_PHRASE_DEFAULT) {
                 st->write_op = 0;
-            else
+            } else {
+                uint8_t L;
+                uint8_t cx;
                 st->write_op = op;
+                /* StyleLeft[op]: one-shot X nudge for this phrase run. */
+                L = *(const uint8_t *)(uintptr_t)(ADDR_STYLE_LEFT + op);
+                cx = win_u8(win, WIN_CURSOR_X);
+                if (L && cx >= L)
+                    win_set_u8(win, WIN_CURSOR_X, (uint8_t)(cx - L));
+            }
             code = (uint16_t)((p[1] << 8) | p[2]);
             /* Abandon slot ref; next ProcessCurrentChar reads the stream. */
             redirect_phrase_stream(win, code);

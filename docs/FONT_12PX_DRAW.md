@@ -23,7 +23,11 @@
 - 落点：[`draw_glyph.c`](../configs/POKEMON_RUBY_AXVJ00/hook/src/text/PrintNextChar/draw_glyph.c)
 - **Linear 地板**：野外/说明 `0x100`，商店说明 `0x228`（见 `CHS_TILE_LAYOUT.md`）；无 `next_abs` sticky
 - **调色**：`CopyGlyph(C,E,D)` → `15→C` / `14→E` / `0→D`；右缘填 D，不碰左缘
-- **Mode2**：vanilla `origin+2`；`MENU_BAND` 仅 left≥20 **且** y≥13（存档屏禁止误进）
+- **Mode2**：vanilla `origin+2`；`MENU_BAND` 仅 left≥20 **且** y≥13（存档屏禁止误进）；**偶 tile Y（0..20）** 排除商店/图鉴 tile 打印机；sticky `write_op != 0`（如 `F9 01`）跳过 MENU_BAND
+- **F9 路由**：仅第二字节 `00` → 旁载单字；其余（含 `F9 80`）→ PhraseTable 切流再复用 00（`80` 清 sticky；样式 op sticky）。**禁止**把 `<0x80` 一律当旁载
+- **样式 left（整体偏移）**：`texts.styles` 按序交错分配 `01/81/02/82…`（勿写 `channel`）；切流时读 `StyleLeft[op]` 减一次 `WIN_CURSOR_X`。首样式「图鉴」→ `F9 01`。**禁止**改全局 `CHS_GLYPH_ADVANCE`；**禁止** CreateMonName 钩子
+- **图鉴列表 №**：原版 `CreateMonDexNum` 用 BG tile `0x3FC/0x3FD`（非文本，球为 `0x3FE/0x3FF`）。PCS 数字必须继续走 JP-via-CHS / F9 00（**禁止**交还 FontFunc）。Mode2 若算到这些 abs，重映射到 `0x3F0..` 再画，避免踩掉 №
+- **地图名弹窗**：日版 `DrawMapNamePopup`（`0x0809F654`）用 **`StringLength` 字节数** + 10 半角格左填 `0x00`，**不是** `GetStringWidth`/`MenuPrint_Centered`。F9 地点名 4B 会被当成很短 → 左边空、右边顶框。钩 `0x0809F67E` → `MapName_DisplayCellLength`（`ceil(绘制px/8)`）。旧 `GetStringWidth@0x4CC0` 为错址，已拆除。
 
 `scene_keep_linear_16` 仍硬关。
 

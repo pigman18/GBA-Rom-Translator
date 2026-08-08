@@ -3446,6 +3446,10 @@ texts:
     stride: []
     struct: []
     stride_ptr: []
+  styles:
+    # 按列表顺序交错分配 F9：01, 81, 02, 82…（勿写 channel）
+    - id: 样式1
+      left: 1
   modules:
     - id: 属性名
       label: 词条·属性
@@ -3495,6 +3499,7 @@ texts:
         stride: 6
       relocate: true
       hook: true
+      style: 样式1
     - id: 招式名
       label: 词条·招式
       group: 词条

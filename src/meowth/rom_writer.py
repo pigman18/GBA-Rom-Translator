@@ -610,9 +610,21 @@ class RomWriter:
         code = plan.get("phrase_code")
         if code is None:
             return False
-        from .config_loader import F9_EOS, F9_PHRASE_DEFAULT
+        from .config_loader import (
+            F9_EOS,
+            F9_PHRASE_DEFAULT,
+            apply_module_phrase_channel,
+        )
 
-        target = bytes([0xF9, F9_PHRASE_DEFAULT, (int(code) >> 8) & 0xFF, int(code) & 0xFF, F9_EOS])
+        target = bytes([
+            0xF9,
+            F9_PHRASE_DEFAULT,
+            (int(code) >> 8) & 0xFF,
+            int(code) & 0xFF,
+            F9_EOS,
+        ])
+        mid = plan.get("module") or category
+        target = apply_module_phrase_channel(target, self.game, mid)
         if byte_length < len(target):
             return False
         clobber = self._body_covers_pointer_slot(
@@ -621,14 +633,14 @@ class RomWriter:
         if clobber:
             print(
                 f"  KEEP {entry_id} @ 0x{address:X} (cat={category}): "
-                f"保留原文（F9-80 回退会覆盖指针槽）"
+                f"保留原文（F9 短语回退会覆盖指针槽）"
             )
             stats["skipped_ptr_clobber"] = stats.get("skipped_ptr_clobber", 0) + 1
             return False
         self._write_in_place_v2(rom, address, target, byte_length)
         stats["in_place"] = stats.get("in_place", 0) + 1
         print(
-            f"  回退 F9-80 @ 0x{address:X} (cat={category}): {entry_id} "
+            f"  回退 F9 短语 @ 0x{address:X} (cat={category}): {entry_id} "
             f"(relocate 失败/无指针，短语 {len(target)}B 原地)"
         )
         return True
@@ -667,19 +679,12 @@ class RomWriter:
         except Exception as e:
             raise ValueError(f"Entry {entry_id}: encoding failed for '{translated}': {e}") from e
 
-        # write.type=op → phrase channel byte is the op (F9 <op> hi lo).
-        # Only rewrite default phrase channel (F9 80); F9 00 side glyph stays.
+        # module.style / legacy write.op → rewrite F9 80 → F9 <channel>
         if self._is_armips and self.target_lang.startswith("zh") and len(encoded) >= 4:
-            from .config_loader import F9_PHRASE_DEFAULT, module_write_op
+            from .config_loader import apply_module_phrase_channel
 
             mid = entry.get("_axvj_module") or entry.get("module")
-            code = module_write_op(self.game, mid)
-            if (
-                code is not None
-                and encoded[0] == 0xF9
-                and encoded[1] == F9_PHRASE_DEFAULT
-            ):
-                encoded = bytes([0xF9, code & 0xFF]) + encoded[2:]
+            encoded = apply_module_phrase_channel(encoded, self.game, mid)
 
         is_pointer_based = entry.get("is_pointer_based", bool(pointer_sources))
         original_length = entry.get("byte_length", 0)

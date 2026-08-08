@@ -91,15 +91,8 @@ void scene_mode2_apply(TextPrinter *win, int *x, int *y, int *band, int *origin)
     *band = 0;
     *origin = CHS_MODE2_ORIGIN_SHOP;
 
-    if (op == CHS_WRITE_FOOTER) {
-        *origin = CHS_MODE2_ORIGIN_MENU;
-        if (*y >= 16) {
-            *y -= 16;
-            *band = CHS_MODE2_FOOTER_BAND;
-            (*x)++;
-        }
-        return;
-    }
+    /* CHS_WRITE_FOOTER (op==2) retired: styles may use F9 02 for StyleLeft.
+     * Party footer uses scene_is_party_footer only. */
     if (scene_is_party_footer(win)) {
         *origin = CHS_MODE2_ORIGIN_SHOP;
         if (*y >= 16) {
@@ -110,10 +103,10 @@ void scene_mode2_apply(TextPrinter *win, int *x, int *y, int *band, int *origin)
     }
     if (op != 0)
         return;
-    /* Shop list: Y=(i<<1)+2 → even 2..16. Row7+ has Y≥14 and price X≥20
-     * which false-triggers party MENU_BAND below. Party options use odd Y
-     * (13,15,17). Keep shop origin+2 / band 0. */
-    if (*y >= 2 && *y <= 16 && (*y & 1) == 0)
+    /* Shop / dex tile printers: even tile Y 0..20 → no MENU_BAND.
+     * Party options use odd tile Y 13/15/17. Style phrase ops (e.g. F9 81)
+     * already returned above via op != 0. */
+    if (*y <= 20 && (*y & 1) == 0)
         return;
     /* Party options only: left≥20 AND y≥13. Save/continue (left≥20, y small)
      * must keep vanilla origin+2 / no BAND — else tile indices → 乱码. */

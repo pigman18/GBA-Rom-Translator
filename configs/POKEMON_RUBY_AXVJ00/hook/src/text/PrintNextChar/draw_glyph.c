@@ -73,6 +73,14 @@ static uint16_t linear_cursor_tile(TextPrinter *win, unsigned x_off, unsigned y_
     return (uint16_t)(tile_base + off + 2u * x_off + y_off);
 }
 
+/* Remap abs tile out of dex №/ball slot so CHS blit cannot wipe 0x3FC..0x3FF. */
+static uint16_t avoid_dex_ui_tile(uint16_t tile)
+{
+    if (tile >= CHS_DEX_UI_TILE_LO && tile <= CHS_DEX_UI_TILE_HI)
+        return (uint16_t)(CHS_DEX_UI_TILE_ALT + (tile - CHS_DEX_UI_TILE_LO));
+    return tile;
+}
+
 static void compute_mode2_pair(
     TextPrinter *win, int tile_x, uint16_t *upper, uint16_t *lower)
 {
@@ -89,8 +97,8 @@ static void compute_mode2_pair(
         uint32_t idx = (uint32_t)(y * CHS_TILE_GRID_W + x + band);
         idx += win_u16(win, WIN_TILE_BASE);
         idx += (uint32_t)origin;
-        *upper = (uint16_t)idx;
-        *lower = (uint16_t)(idx + CHS_TILE_GRID_W);
+        *upper = avoid_dex_ui_tile((uint16_t)idx);
+        *lower = avoid_dex_ui_tile((uint16_t)(idx + CHS_TILE_GRID_W));
     }
 }
 
@@ -334,10 +342,9 @@ int DrawGlyph_ShouldUseLinear(TextPrinter *win, uint8_t write_op)
      * shop_desc keeps Linear (scene_menu_wants_mode2 == 0). */
     if (scene_menu_wants_mode2(win))
         return 0;
-    if (write_op == CHS_WRITE_LINEAR || write_op == CHS_WRITE_SLOT)
-        return 1;
-    if (write_op == CHS_WRITE_GRID || write_op == CHS_WRITE_FOOTER)
-        return 0;
+    /* CHS_WRITE_* 1..4 retired as sticky geometry — styles interleave
+     * F9 01/81/02/82… for StyleLeft only; Linear vs Mode2 = scene gates. */
+    (void)write_op;
     tpl = win_template(win);
     /* Non-menu charBase (field/battle templates): linear bump. */
     if (!tpl || tpl[1] != 2)

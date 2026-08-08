@@ -145,9 +145,9 @@ def module_write_build_meta(game_id: str, module_id: str | None) -> dict | None:
     return dict(write)
 
 
-def _encode_phrase_ref(code: int) -> bytes:
-    """F9 80 (code>>8) (code&0xFF) FF — 短语引用（5 字节）。"""
-    return bytes([0xF9, F9_PHRASE_DEFAULT, (code >> 8) & 0xFF, code & 0xFF, F9_EOS])
+def _encode_phrase_ref(code: int, channel: int = F9_PHRASE_DEFAULT) -> bytes:
+    """F9 <channel> (code>>8) (code&0xFF) FF — 短语引用（5 字节）。"""
+    return bytes([0xF9, channel & 0xFF, (code >> 8) & 0xFF, code & 0xFF, F9_EOS])
 
 
 def pad_inplace_to_slot(encoded: bytes, byte_length: int) -> bytes:
@@ -280,6 +280,11 @@ def plan_entry(
             "reason": "译文编码失败",
         }
 
+    from .config_loader import apply_module_phrase_channel, module_phrase_channel
+
+    encoded = apply_module_phrase_channel(encoded, game_id, module_id)
+    channel = module_phrase_channel(game_id, module_id)
+
     # type 1: F900 编码 ≤ 原始槽位 → 原地（最高优先）；FF 补齐到 byte_length
     if len(encoded) <= byte_length:
         return {
@@ -295,14 +300,14 @@ def plan_entry(
             "pointer_sources": ptrs,
         }
 
-    # type 3: 超槽位且 relocate 不可用但允许短语 → F9 80 短语引用仍原地写入
+    # type 3: 超槽位且 relocate 不可用但允许短语 → F9 短语引用仍原地写入
     if allow_phrase and byte_length >= 5:
         code = phrase_codes.get(s)
         if code is not None:
             return {
                 "type": "in_place",
                 "target_hex": pad_inplace_to_slot(
-                    _encode_phrase_ref(code), byte_length
+                    _encode_phrase_ref(code, channel), byte_length
                 ).hex(" "),
                 "phrase_code": code,
             }

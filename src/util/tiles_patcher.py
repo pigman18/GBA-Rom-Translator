@@ -450,6 +450,89 @@ def encode_palette_gba555(banks: list[list[tuple]]) -> bytes:
     return bytes(result)
 
 
+def rgb_to_gba555_tuple(rgb: tuple[int, int, int]) -> tuple[int, int, int]:
+    """Quantize 8-bit RGB to GBA555 display values (low 3 bits cleared)."""
+    r, g, b = rgb
+    return ((r >> 3) << 3, (g >> 3) << 3, (b >> 3) << 3)
+
+
+def collect_opaque_colors(img: Image.Image) -> set[tuple[int, int, int]]:
+    """Opaque non-black RGB set, quantized to GBA555."""
+    out: set[tuple[int, int, int]] = set()
+    img = img.convert("RGBA")
+    for y in range(img.height):
+        for x in range(img.width):
+            r, g, b, a = img.getpixel((x, y))
+            if a > 0 and (r | g | b) != 0:
+                out.add(rgb_to_gba555_tuple((r, g, b)))
+    return out
+
+
+def extend_palette_bytes(
+    pal_data: bytes,
+    missing_colors: list[tuple[int, int, int]],
+    *,
+    bank_count: int,
+    colors_per_bank: int = 16,
+    used_color_indices: set[int] | None = None,
+) -> tuple[bytes, int]:
+    """
+    把缺色写入原调色板副本的空闲槽（不改原址）。
+    空闲 = 未被 used_color_indices 引用的槽（默认保留 0）；不够则报错。
+    返回 (新调色板字节, 新增色数)。
+    """
+    flat = list(palette_to_rgb_list(pal_data, bank_count=bank_count,
+                                    colors_per_bank=colors_per_bank))
+    n = len(flat)
+    if n == 0:
+        raise ValueError("调色板为空，无法扩展")
+    used = set(used_color_indices or [])
+    used.add(0)
+    free_slots = [i for i in range(1, n) if i not in used]
+    # 已有色（555）→ 槽
+    have = {rgb_to_gba555_tuple(c): i for i, c in enumerate(flat)}
+    added = 0
+    for col in missing_colors:
+        key = rgb_to_gba555_tuple(col)
+        if key in have:
+            continue
+        if not free_slots:
+            raise ValueError(
+                f"缺色 {len(missing_colors)} 超过空闲槽 {added + len(free_slots)}，"
+                "无法写入新调色板"
+            )
+        slot = free_slots.pop(0)
+        flat[slot] = key
+        have[key] = slot
+        added += 1
+    banks: list[list[tuple]] = []
+    for b in range(bank_count):
+        lo = b * colors_per_bank
+        banks.append(flat[lo:lo + colors_per_bank])
+    # 保持原字节长度（末尾不足用 0）
+    encoded = encode_palette_gba555(banks)
+    if len(encoded) < len(pal_data):
+        encoded = encoded + b"\x00" * (len(pal_data) - len(encoded))
+    elif len(encoded) > len(pal_data):
+        encoded = encoded[: len(pal_data)]
+    return encoded, added
+
+
+def patch_pointers_to_target(
+    rom: bytearray, old_gba: int, new_gba: int, *, label: str = ""
+) -> int:
+    """把 ROM 中所有指向 old_gba 的 4B 小端指针改为 new_gba。返回改写次数。"""
+    old_b = struct.pack("<I", old_gba & 0xFFFFFFFF)
+    new_b = struct.pack("<I", new_gba & 0xFFFFFFFF)
+    n = 0
+    for i in range(0, len(rom) - 3, 4):
+        if rom[i:i + 4] == old_b:
+            rom[i:i + 4] = new_b
+            n += 1
+            print(f"  指针{label}: 0x{offset_to_gba_address(i):08X} → 0x{new_gba:08X}")
+    return n
+
+
 def palette_to_rgb_list(data: bytes, bank_count: int = 3,
                         colors_per_bank: int = 16) -> list[tuple]:
     """将 GBA555 调色板展平为单一 RGB 列表。"""
@@ -494,9 +577,20 @@ def offset_to_gba_address(off: int) -> int:
     return off + 0x08000000
 
 
-def _normalize_gba_addr(addr_str: str) -> int:
+def _normalize_gba_addr(addr_str) -> int:
     """将用户输入的地址统一为 GBA 地址。文件偏移自动加 0x08000000。"""
-    val = int(addr_str, 16)
+    if isinstance(addr_str, int):
+        val = addr_str
+    else:
+        s = str(addr_str).strip()
+        if s.lower().startswith("0x"):
+            val = int(s, 16)
+        else:
+            # 纯数字：按十进制（PowerShell 常把 0x0836D268 先算成十进制再传入）
+            try:
+                val = int(s, 10)
+            except ValueError:
+                val = int(s, 16)
     if val < 0x08000000:
         val += 0x08000000
     return val
@@ -520,27 +614,39 @@ def detect_lz77(rom: bytes, offset: int) -> str:
     return "none"
 
 
+def _align_up(n: int, align: int) -> int:
+    if align <= 1:
+        return n
+    return (n + (align - 1)) // align * align
+
+
 def find_free_space(rom: bytearray, needed: int, start: int = 0x09200000,
-                    fill: int = 0xFF) -> int:
+                    fill: int = 0xFF, align: int = 4) -> int:
     """
     在 ROM 中查找空闲空间。默认从字库 Sym 之后的扩展区开始（VMA 0x09200000）。
     如果 start 超出 ROM 范围，返回文件末尾对应 GBA 地址（调用者负责扩展 ROM）。
-    返回 GBA 地址，找不到返回 -1。
+    返回 GBA 地址（默认 4 字节对齐；未对齐重定位会导致标题横幅等解压花屏）。
+    找不到返回 -1。
     """
+    align = max(1, int(align))
     start_off = gba_address_to_offset(start) if start >= 0x08000000 else start
     if start_off >= len(rom):
         # start 已在文件之外: 直接追加到文件末尾 (调用者负责扩展 ROM)。
         # 不要返回 start 本身 —— 如 0x09000000 处于 16MB 边界，超出原卡带容量时
         # 游戏/模拟器读不到，会导致图标花屏/崩溃。
-        return offset_to_gba_address(len(rom))
+        return offset_to_gba_address(_align_up(len(rom), align))
 
     run_start = -1
     for i in range(start_off, len(rom)):
         if rom[i] == fill:
             if run_start == -1:
                 run_start = i
-            if i - run_start + 1 >= needed:
-                return offset_to_gba_address(run_start)
+            aligned = _align_up(run_start, align)
+            # 对齐可能跳进非 fill；要求 [aligned, aligned+needed) 仍在本段 fill 内
+            if aligned >= run_start and i - aligned + 1 >= needed:
+                # 确认 aligned..i 全是 fill（run 连续即可）
+                if aligned + needed - 1 <= i:
+                    return offset_to_gba_address(aligned)
         else:
             run_start = -1
 
@@ -549,7 +655,34 @@ def find_free_space(rom: bytearray, needed: int, start: int = 0x09200000,
     # NOTE: never return `start` here — on a post-build ROM that region may
     # already hold data (e.g. font incbin at 0x09000000) and returning it
     # would silently corrupt that data.
-    return offset_to_gba_address(len(rom))
+    return offset_to_gba_address(_align_up(len(rom), align))
+
+
+def _normalize_import_addresses(raw_addrs) -> set[int] | None:
+    """Parse repeated --address values into a set of GBA addrs; None = no filter."""
+    if not raw_addrs:
+        return None
+    out: set[int] = set()
+    for item in raw_addrs:
+        for part in str(item).replace(",", " ").split():
+            if not part:
+                continue
+            out.add(_normalize_gba_addr(part) if isinstance(part, str) else int(part))
+    return out
+
+
+def _inplace_slot_bytes(addr: int, lz_size: int, neighbor_addrs: list[int]) -> int:
+    """
+    原地写入上限：不超过 LZ 原长，也不越过下一已知图块地址。
+    标题 Logo(0x0836D268) 与横幅(0x0836EC6C) 原盘仅隔 2B，超槽必须重定位。
+    """
+    slot = max(0, int(lz_size))
+    next_addrs = [a for a in neighbor_addrs if a > addr]
+    if next_addrs:
+        gap = min(next_addrs) - addr
+        if gap > 0:
+            slot = min(slot, gap)
+    return slot
 
 
 def scan_pointer_sources(rom: bytes, target_offset: int,
@@ -1486,12 +1619,129 @@ def cmd_import(args):
         print(f"错误: {meta_search_dir} 下未找到 *_meta.json")
         sys.exit(1)
 
-    print(f"找到 {len(meta_files)} 个元数据文件")
-
+    addr_filter = _normalize_import_addresses(getattr(args, "only", None))
+    loaded: list[tuple[Path, dict, int]] = []
     for meta_path in meta_files:
-        meta = json.loads(meta_path.read_text())
+        meta = json.loads(meta_path.read_text(encoding="utf-8"))
+        addr = _normalize_gba_addr(meta["rom_address"])
+        if addr_filter is not None and addr not in addr_filter:
+            continue
+        loaded.append((meta_path, meta, addr))
+    if addr_filter is not None:
+        missing = sorted(addr_filter - {a for _p, _m, a in loaded})
+        if missing:
+            print(
+                "错误: --only 未匹配到 meta: "
+                + ", ".join(f"0x{a:08X}" for a in missing)
+            )
+            sys.exit(1)
+        print(
+            f"按 --only 导入 {len(loaded)} 项: "
+            + ", ".join(f"0x{a:08X}" for _p, _m, a in loaded)
+        )
+    else:
+        print(f"找到 {len(meta_files)} 个元数据文件")
+
+    # 邻接地址：同目录全部 meta（含未导入的），用于原地写入防越界
+    neighbor_addrs = sorted(
+        {
+            _normalize_gba_addr(json.loads(p.read_text(encoding="utf-8"))["rom_address"])
+            for p in meta_files
+        }
+    )
+    reloc_base = getattr(args, "reloc_base", None)
+    if reloc_base is not None:
+        reloc_base = _normalize_gba_addr(reloc_base)
+
+    # ── 可选：缺色写入「新调色板」到指定地址（不改原共享板，防标题背景乱码）──
+    new_pal_addr = getattr(args, "new_palette", None)
+    palette_override: dict[int, list[tuple]] = {}  # old_pal_gba → flat RGB
+    if new_pal_addr:
+        new_pal_addr = _normalize_gba_addr(new_pal_addr)
+        # 按原 palette 地址分组收集 PNG 色
+        by_pal: dict[int, dict] = {}
+        for _mp, meta, _addr in loaded:
+            pal_info = meta.get("palette") or {}
+            if not pal_info.get("rom_address"):
+                continue
+            old_pal = _normalize_gba_addr(pal_info["rom_address"])
+            ent = by_pal.setdefault(old_pal, {
+                "meta": meta,
+                "colors": set(),
+                "used_idx": set(),
+            })
+            sprite_file = meta.get("sprites", [{}])[0].get(
+                "file", f"{meta['rom_address']}_compose.png")
+            png_path = tiles_dir / sprite_file
+            if png_path.is_file():
+                ent["colors"] |= collect_opaque_colors(Image.open(png_path))
+            # 原 tile 用过的色号 → 扩展时不占用这些槽
+            data_off = gba_address_to_offset(_normalize_gba_addr(meta["rom_address"]))
+            kind = detect_lz77(rom, data_off)
+            if kind in ("lz77", "lz77_swap"):
+                raw_tiles = lz77_decompress(
+                    bytes(rom[data_off:]), swap=(kind == "lz77_swap"))
+                ent["used_idx"] |= set(raw_tiles)
+        for old_pal, ent in by_pal.items():
+            meta = ent["meta"]
+            pal_info = meta["palette"]
+            pal_bank_count = pal_info.get("bank_count", 3)
+            pal_size = pal_info.get("palette_size", 96)
+            pal_off = gba_address_to_offset(old_pal)
+            pal_comp = detect_lz77(rom, pal_off)
+            if pal_comp in ("lz77", "lz77_swap"):
+                print("错误: 压缩调色板暂不支持 --new-palette 扩展，请先导出为 raw")
+                sys.exit(1)
+            if "palette_size" not in pal_info:
+                pal_size = _auto_palette_size(bytes(rom[pal_off:pal_off + 512]))
+            pal_data = bytes(rom[pal_off:pal_off + pal_size])
+            flat = palette_to_rgb_list(pal_data, bank_count=pal_bank_count)
+            have = {rgb_to_gba555_tuple(c) for c in flat}
+            missing = sorted(ent["colors"] - have)
+            try:
+                new_bytes, n_added = extend_palette_bytes(
+                    pal_data,
+                    missing,
+                    bank_count=pal_bank_count,
+                    used_color_indices=ent["used_idx"],
+                )
+            except ValueError as e:
+                print(f"错误: --new-palette 扩展失败: {e}")
+                sys.exit(1)
+            dst_off = gba_address_to_offset(new_pal_addr)
+            if dst_off % 4:
+                dst_off = _align_up(dst_off, 4)
+                new_pal_addr = offset_to_gba_address(dst_off)
+            need_end = dst_off + len(new_bytes)
+            if need_end > len(rom):
+                rom.extend(b"\x00" * (need_end - len(rom)))
+            # 拒绝踩到本批图块原址
+            for _p, _m, a in loaded:
+                a0 = gba_address_to_offset(a)
+                if a0 < need_end and a0 + 4 > dst_off:
+                    print(
+                        f"错误: 新调色板 0x{new_pal_addr:08X} 与图块 "
+                        f"0x{a:08X} 重叠"
+                    )
+                    sys.exit(1)
+            rom[dst_off:dst_off + len(new_bytes)] = new_bytes
+            n_ptr = patch_pointers_to_target(
+                rom, old_pal, new_pal_addr, label="(palette)")
+            print(
+                f"新调色板: 0x{old_pal:08X} → 0x{new_pal_addr:08X} "
+                f"({len(new_bytes)} B, +{n_added} 色, {n_ptr} 指针)"
+            )
+            if n_ptr == 0:
+                print("警告: 未找到指向原调色板的指针，游戏可能仍读旧板")
+            palette_override[old_pal] = palette_to_rgb_list(
+                new_bytes, bank_count=pal_bank_count)
+            # 多板共用同一 --new-palette 地址时只写一次
+            break
+        # 有新板时禁止吸附到旧色（缺色已进新板）
+        args.snap_palette = False
+
+    for meta_path, meta, addr in loaded:
         prefix = meta["rom_address"]
-        addr = int(meta["rom_address"], 16)
         offset = gba_address_to_offset(addr)
         bpp = int(meta["format"].replace("bpp", "")) if "bpp" in meta["format"] else 0
         sprite_w, sprite_h = meta["sprite_size_px"]
@@ -1504,23 +1754,27 @@ def cmd_import(args):
         palette_flat = None
         palette_banks = None
         if meta.get("palette") and meta["palette"].get("rom_address"):
-            pal_addr = int(meta["palette"]["rom_address"], 16)
-            pal_offset = gba_address_to_offset(pal_addr)
-            pal_comp = detect_lz77(rom, pal_offset)
-            pal_bank_count = meta["palette"].get("bank_count", 3)
-            pal_size = meta["palette"].get("palette_size", 96)
-            if pal_comp in ("lz77", "lz77_swap"):
-                pal_swap = pal_comp == "lz77_swap"
-                pal_data = lz77_decompress(bytes(rom[pal_offset:]), swap=pal_swap)
+            pal_addr = _normalize_gba_addr(meta["palette"]["rom_address"])
+            if pal_addr in palette_override:
+                palette_flat = palette_override[pal_addr]
+                print(f"  使用新调色板 ({len(palette_flat)} 色)")
             else:
-                chunk = bytes(rom[pal_offset:pal_offset + 512])
-                pal_sz = _auto_palette_size(chunk)
-                if "palette_size" not in meta["palette"]:
-                    pal_size = pal_sz
-                    print(f"  调色板自动检测: {pal_size} bytes")
-                pal_data = bytes(rom[pal_offset:pal_offset + pal_size])
-            palette_flat = palette_to_rgb_list(pal_data, bank_count=pal_bank_count)
-            palette_banks = decode_palette_gba555(pal_data, bank_count=pal_bank_count)
+                pal_offset = gba_address_to_offset(pal_addr)
+                pal_comp = detect_lz77(rom, pal_offset)
+                pal_bank_count = meta["palette"].get("bank_count", 3)
+                pal_size = meta["palette"].get("palette_size", 96)
+                if pal_comp in ("lz77", "lz77_swap"):
+                    pal_swap = pal_comp == "lz77_swap"
+                    pal_data = lz77_decompress(bytes(rom[pal_offset:]), swap=pal_swap)
+                else:
+                    chunk = bytes(rom[pal_offset:pal_offset + 512])
+                    pal_sz = _auto_palette_size(chunk)
+                    if "palette_size" not in meta["palette"]:
+                        pal_size = pal_sz
+                        print(f"  调色板自动检测: {pal_size} bytes")
+                    pal_data = bytes(rom[pal_offset:pal_offset + pal_size])
+                palette_flat = palette_to_rgb_list(pal_data, bank_count=pal_bank_count)
+                palette_banks = decode_palette_gba555(pal_data, bank_count=pal_bank_count)
 
         # ── 读取所有 sprite ──
         all_raw = bytearray()
@@ -1553,6 +1807,7 @@ def cmd_import(args):
                 all_raw.extend(encode_tiles_8bpp_from_raw(
                     [right_img], r["width"], r["height"], palette_flat))
             elif comp_type == "logo":
+                # 原算法：按 tilemap 逐格 scatter 写 tile 表，不改 map
                 tm_addr = compose_meta["tilemap_address"]
                 tm_off = gba_address_to_offset(
                     _normalize_gba_addr(tm_addr) if isinstance(tm_addr, str) else tm_addr)
@@ -1635,13 +1890,18 @@ def cmd_import(args):
             print(f"错误: 未知压缩格式 '{compression}'")
             sys.exit(1)
 
-        # ── 检查原数据大小 ──
-        original_compressed_size = meta["raw_size"]
+        # ── 检查原数据大小（并钳到下一图块地址，防踩标题横幅等）──
         if rom[offset] == 0x10:
-            # 从 LZ77 header 读取原始压缩大小
             original_compressed_size = find_lz77_size(rom, offset)
         else:
             original_compressed_size = meta["raw_size"]
+        slot_cap = _inplace_slot_bytes(addr, original_compressed_size, neighbor_addrs)
+        if slot_cap < original_compressed_size:
+            print(
+                f"  原地槽钳制: LZ={original_compressed_size} → {slot_cap} "
+                f"(下一地址防重叠)"
+            )
+            original_compressed_size = slot_cap
 
         # ── 写入新数据 ──
         if len(compressed) <= original_compressed_size:
@@ -1666,19 +1926,26 @@ def cmd_import(args):
                     patch_pointer(rom, ptr_off, orig_val)
                     print(f"  指针恢复: 0x{ptr_addr:08X} → 0x{orig_val:08X}")
         else:
-            # 新数据更大，需要找空闲区
-            free_addr = find_free_space(rom, len(compressed))
+            # 新数据更大，需要找空闲区（4 字节对齐；未对齐会花屏）
+            free_start = reloc_base if reloc_base is not None else 0x09200000
+            free_addr = find_free_space(rom, len(compressed), start=free_start, align=4)
             if free_addr < 0:
                 print("错误: 未找到足够空闲空间")
                 sys.exit(1)
             free_offset = gba_address_to_offset(free_addr)
+            if free_offset % 4 != 0:
+                free_offset = _align_up(free_offset, 4)
+                free_addr = offset_to_gba_address(free_offset)
             # 扩展 ROM 以容纳新数据
             needed_end = free_offset + len(compressed)
             if needed_end > len(rom):
                 rom.extend(b"\x00" * (needed_end - len(rom)))
             rom[free_offset:free_offset + len(compressed)] = compressed
             write_offset = free_offset
-            print(f"新数据写入空闲区: 0x{free_addr:08X} ({len(compressed)} bytes)")
+            print(
+                f"新数据写入空闲区: 0x{free_addr:08X} "
+                f"({len(compressed)} bytes, align4)"
+            )
 
             # ── 更新所有指针 ──
             for ptr_info in meta.get("pointer_sources", []):
@@ -1699,26 +1966,6 @@ def cmd_import(args):
             except Exception as e:
                 print(f"错误: 0x{prefix} 写入后自校验失败: {e}")
                 sys.exit(1)
-
-    # ── 写入新调色板 (--new-palette) ──
-    if getattr(args, "new_palette", None):
-        # 用第一个 meta 的 palette 地址作为源
-        src_meta = json.loads(meta_files[0].read_text())
-        pal_src = src_meta.get("palette", {}).get("rom_address")
-        if pal_src:
-            pal_off = gba_address_to_offset(_normalize_gba_addr(pal_src))
-            pal_comp = detect_lz77(rom, pal_off)
-            if pal_comp in ("lz77", "lz77_swap"):
-                pal_raw = lz77_decompress(bytes(rom[pal_off:]), swap=(pal_comp == "lz77_swap"))
-            else:
-                pal_raw = bytes(rom[pal_off:pal_off + _auto_palette_size(bytes(rom[pal_off:pal_off + 512]))])
-            dst_addr = _normalize_gba_addr(args.new_palette) if isinstance(args.new_palette, str) else args.new_palette
-            dst_off = gba_address_to_offset(dst_addr)
-            need = len(pal_raw)
-            if dst_off + need > len(rom):
-                rom.extend(b"\x00" * (dst_off + need - len(rom)))
-            rom[dst_off:dst_off + need] = pal_raw
-            print(f"调色板写入: 0x{dst_addr:08X} ({need} bytes)")
 
     # ── 保存 ──
     output_path.write_bytes(rom)
@@ -2021,12 +2268,23 @@ def main():
     p_import.add_argument("rom", help="ROM 文件路径")
     p_import.add_argument("tiles_dir", help="tiles 目录路径")
     p_import.add_argument("-o", "--output", help="输出 ROM 路径 (默认: xxx_patched.gba)")
+    p_import.add_argument(
+        "--only", action="append", default=None,
+        help="只导入指定图块数据地址（可重复/逗号分隔），如 0x0836D268",
+    )
+    p_import.add_argument(
+        "--reloc-base", default=None,
+        help="超槽重定位搜索起点 GBA 地址（默认 0x09200000，结果 4 字节对齐）",
+    )
     p_import.add_argument("--no-snap-palette", action="store_true",
                           help="导入时不对 PNG 颜色做调色板相似度吸附 (默认开启)")
     p_import.add_argument("--palette-threshold", type=int, default=None,
                           help="相似度阈值 (平方 RGB 距离)，超过则保留原色不吸附 (默认无限制)")
-    p_import.add_argument("--new-palette",
-                          help="导入后将新调色板写入指定 GBA 地址 (如 0x09000000)")
+    p_import.add_argument(
+        "-a", "--new-palette", metavar="ADDR",
+        help="缺色写入「新调色板」到指定 GBA 地址并改指针（不改原共享板，防冲突；"
+             "如 0x09200000）。指定后关闭颜色吸附",
+    )
 
     # ── fix-palette ──
     p_fix = sub.add_parser("fix-palette",

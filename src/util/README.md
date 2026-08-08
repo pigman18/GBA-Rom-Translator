@@ -92,7 +92,7 @@ Meowth 流水线 tile 阶段从 `configs/<game_id>/tiles/`（PNG + `meta/*_meta.
 ### 导入 (import)
 
 ```bash
-python tiles_patcher.py import <ROM> <tiles目录> [-o 输出ROM]
+python tiles_patcher.py import <ROM> <tiles目录> [-o 输出ROM] [-a 新调色板地址]
 ```
 
 读取 `*_meta.json` 和对应的 `.png` 文件，编码后写入 ROM。优先从 `tiles/meta/` 查找 meta 文件，回退到 `tiles/` 根目录。
@@ -104,6 +104,10 @@ python tiles_patcher.py import <ROM> <tiles目录> [-o 输出ROM]
 | `ROM` | 原始 ROM 路径 |
 | `tiles目录` | 包含 `*_meta.json` 和 `.png` 的目录 |
 | `-o` | 输出 ROM 路径 (默认: `xxx_patched.gba`) |
+| `-a` / `--new-palette` | **新调色板**写入地址。PNG 缺色写入该副本并改指针；**不改**原共享板（如 `0x0836D148`），防止标题背景乱码。指定后关闭颜色吸附 |
+| `--only` | 只导入指定图块数据地址（可重复/逗号分隔） |
+| `--reloc-base` | 超槽重定位搜索起点（默认 `0x09200000`；写入地址 **4 字节对齐**） |
+| `--no-snap-palette` | 关闭「吸附到旧板」 |
 
 **示例:**
 
@@ -111,12 +115,21 @@ python tiles_patcher.py import <ROM> <tiles目录> [-o 输出ROM]
 # 导入修改后的 sprites
 python tiles_patcher.py import ROMS/POKEMON_RUBY_AXVJ00.gba \
   works/POKEMON_RUBY_AXVJ00/tiles/ -o ROMS/POKEMON_RUBY_patched.gba
+
+# 标题图：缺色进新调色板（指定空闲地址，勿与字库/图块冲突）
+python tiles_patcher.py import roms/origin/POKEMON_RUBY_AXVJ00.gba \
+  configs/POKEMON_RUBY_AXVJ00/tiles \
+  --only 0x0836D268,0x0836EC6C \
+  -a 0x09200000 \
+  -o roms/work/title_tiles_check.gba
 ```
 
 **行为:**
 
-- 如果新压缩数据 ≤ 原始大小 → 原地写入
-- 如果新压缩数据 > 原始大小 → 写入空闲区 (0x09000000+)，自动更新指针
+- 如果新压缩数据 ≤ 原地槽 → 原地写入（槽长 = min(原 LZ 长, 距下一 meta 地址)，防 Logo/横幅仅隔 2B 时互相踩踏）
+- 如果新压缩数据 > 原地槽 → 写入空闲区（默认自 `0x09200000`，**4 字节对齐**），自动更新指针
+- Logo：仍按原 tilemap 逐格 scatter 写 tile（**不改 map / 不重映射**）
+- `--new-palette`：原板只读复制 → 空闲色槽填缺色 → 写到指定地址 → 扫描并改写指向原板的指针（绘制算法不变，只补板）
 
 ### 探测 (probe)
 

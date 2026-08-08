@@ -1411,6 +1411,28 @@ class TranslationEngine:
             / rom_path.stem / "tiles"
         )
 
+    def _tiles_new_palette_addr(self, rom_path: Path) -> str | None:
+        """Optional ``tiles.new_palette`` from util yaml (e.g. 0x09200000)."""
+        try:
+            import yaml
+        except ImportError:
+            return None
+        game_id = self.config.game or rom_path.stem
+        yaml_path = (
+            Path(__file__).resolve().parent.parent.parent
+            / "util"
+            / "configs"
+            / f"{game_id}.yaml"
+        )
+        if not yaml_path.is_file():
+            return None
+        try:
+            data = yaml.safe_load(yaml_path.read_text(encoding="utf-8")) or {}
+            addr = (data.get("tiles") or {}).get("new_palette")
+            return str(addr) if addr else None
+        except Exception:
+            return None
+
     def _run_tiles(self, rom_path: Path, work_dir: Path) -> Path:
         """Tiles stage: import PNG edits into an already-built ROM.
 
@@ -1442,9 +1464,14 @@ class TranslationEngine:
             "-o",
             str(tmp_out),
         ]
+        # 缺色 → 新调色板地址（util yaml tiles.new_palette），避免改共享原板花屏
+        new_pal = self._tiles_new_palette_addr(rom_path)
+        if new_pal:
+            args.extend(["--new-palette", new_pal])
         self._log(
             "info",
-            f"tiles: {len(meta_files)} meta(s) from {tiles_dir} -> {tmp_out.name}",
+            f"tiles: {len(meta_files)} meta(s) from {tiles_dir} -> {tmp_out.name}"
+            + (f", new_palette={new_pal}" if new_pal else ""),
         )
         r = subprocess.run(args, capture_output=True, text=True, timeout=180)
         if r.returncode != 0:

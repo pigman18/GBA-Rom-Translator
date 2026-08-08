@@ -1,6 +1,8 @@
 game_id: POKEMON_RUBY_AXVJ00
 game_code: AXVJ
 tiles:
+  # 标题 Logo/横幅与背景共用原板 0x0836D148；缺色写到此地址并改指针，勿踩字库 0x09000000
+  new_palette: '0x09200000'
   presets:
     - id: title_banner
       label: 标题横幅

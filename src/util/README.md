@@ -5,7 +5,7 @@ GBA ROM 图形导出导入工具。将 ROM 中的 tile 数据导出为 PNG 图�
 ## 依赖
 
 ```
-pip install Pillow PyYAML
+pip install Pillow PyYAML regex
 ```
 
 ## 用法
@@ -327,6 +327,12 @@ python gdb_patcher.py find 0xF909F6A4 --rom path\to\zh.gba \
 
 在仓库根目录运行（或把 `src/util` 加入 `PYTHONPATH`）。
 
+**依赖：**
+
+```
+pip install PyYAML regex
+```
+
 ## `texts:` 配置要点
 
 ```yaml
@@ -336,8 +342,8 @@ texts:
   filters:                     # 扁平 id 列表；type 须以 _filter 结尾
     - id: global_character_filter
       type: character_filter
-      # 踢全角拉丁碎屑；保留 Ａ/Ｂ；lookaround 放行图鉴「ＤＮＡ」（JP PCS 全角）
-      value: '(?<!Ｄ)(?<!ＤＮ)[üÜ►♂♀ÖÄß：Ｃ-Ｚａ-ｚ](?!ＮＡ)(?!Ａ)'
+      # 踢全角拉丁碎屑；保留 Ａ/Ｂ；ＤＮＡ 用 regex (*SKIP)(*FAIL) 放行
+      value: 'ＤＮＡ(*SKIP)(*FAIL)|[üÜ►♂♀ÖÄß：Ｃ-Ｚａ-ｚ]'
       # 包含写法: value: '^(?=.*ＤＮＡ)(?!.*test).*' 且 filter: false
     - id: global_dialogue_shape_filter
       type: dialogue_shape_filter
@@ -353,6 +359,11 @@ texts:
       start: '0x100000'        # 粗带；洞写 omit，不要切碎 ranges
       end: '0x15C6AF'          # 与中期等模块勿重叠（export 按模块顺序 seen_addr 去重）
       type: scan
+    - id: 宝可梦名
+      type: stride             # filters 对 scan/stride/struct/stride_ptr 一律生效
+      read: { stride: 6 }
+      filters:
+        - { id: pm_character_filter, type: character_filter, value: '？？？？？', filter: true }
     - id: 地点名
       type: scan
       filters:                 # 同 id 覆盖全局；新 id 追加
@@ -379,10 +390,13 @@ texts:
 
 ### `texts.filters` / `FilterContext`
 
-合并：全局列表为基线 → 模块 `filters` 按 **`id`** 覆盖/追加（保序）。`type` 必须以 `_filter` 结尾；缺 `id` 时回退用 `type` 当 id。
+**无 module.type 限制**：`scan` / `stride` / `struct` / `stride_ptr` 读出正文后都走同一套 `apply_filters`。
+
+合并策略（与「能否过滤」无关）：全局列表为基线 → 模块 `filters` 按 **`id`** 覆盖/追加（保序）。`type` 必须以 `_filter` 结尾；缺 `id` 时回退用 `type` 当 id。
 
 - `type: scan`：始终吃全局基线。
-- 非 `scan` 且模块**未写** `filters` 键：基线为空（表类模块不被对白闸误杀）。
+- 非 `scan` 且模块**未写** `filters` 键：基线为空（避免全局对白/长度闸误杀短表名）。
+- 非 `scan` 且写了 `filters`：基线 = 全局，再按 id 覆盖/追加。
 - **例外：** 模块含 `original_text_filter` 且 `filter: false` → **不合并全局**，只跑模块自己的 `filters`。
 
 每条候选构造 `FilterContext`（`NamedTuple`）后再跑闸：
@@ -404,15 +418,15 @@ texts:
 
 | filter `type` | `value` | 命中条件（再经 `filter` 极性） |
 |---------------|---------|--------------------------------|
-| `character_filter` | 正则 | **plain** 上 `re.search`（lookahead/lookbehind 等原样支持）。`filter:true` 排除命中，`false` 包含命中 |
+| `character_filter` | 正则 | **plain** 上第三方 [`regex`](https://pypi.org/project/regex/) `search`（`(*SKIP)(*FAIL)` / lookahead 等）。缺包：`pip install regex` |
 | `dialogue_shape_filter` | bool | `value: true`：不像对白则命中；`value: false`：整闸跳过 |
 | `min_byte_length_filter` / `max_byte_length_filter` | int | 字节长度越界 |
 | `require_pointer_filter` | bool | `value: true`：无指针则命中 |
 | `garbage_heuristic_filter` | bool | `value: true`：垃圾假名/拉丁混扫则命中（不计 `Ａボタン`） |
-| `address_filter` | 正则或 `{start,end}` | 地址命中禁止规则 |
+| `address_filter` | 正则或 `{start,end}` | 地址命中禁止规则（正则同样用 `regex`） |
 | `original_text_filter` | 字符串列表 | 原文精确或去空白后等于列表任一条（常配 `filter: false` 做白名单） |
 
-**勿**把 `character_filter` 写成 `[Ａ-Ｚａ-ｚ]`：会误杀 `Ａボタンで…`。要踢全角拉丁碎屑时用 `[Ｃ-Ｚａ-ｚ]`（可加 `üÜ►♂♀`），单独留下 `Ａ`/`Ｂ`。图鉴 `ＤＮＡ` 是 JP PCS **全角**（落在 `Ｃ-Ｚ`），用 lookaround 写进 `value`，不要在 `.py` 里白名单。
+**勿**把 `character_filter` 写成 `[Ａ-Ｚａ-ｚ]`：会误杀 `Ａボタンで…`。要踢全角拉丁碎屑时用 `[Ｃ-Ｚａ-ｚ]`（可加 `üÜ►♂♀`），单独留下 `Ａ`/`Ｂ`。图鉴 `ＤＮＡ` 是 JP PCS **全角**（落在 `Ｃ-Ｚ`），用 `ＤＮＡ(*SKIP)(*FAIL)|…` 写进 `value`，不要在 `.py` 里白名单。
 
 ## 导出 (export)
 

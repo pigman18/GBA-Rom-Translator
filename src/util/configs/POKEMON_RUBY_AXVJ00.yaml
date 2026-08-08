@@ -3438,9 +3438,9 @@ texts:
     # 扁平 id 列表；模块 filters 同 id 覆盖。
     - id: global_character_filter
       type: character_filter
-      # 踢全角拉丁碎屑；保留 Ａ/Ｂ。JP PCS「ＤＮＡ」用 lookaround 放行（非代码白名单）。
+      # 踢全角拉丁碎屑；保留 Ａ/Ｂ。ＤＮＡ 用 regex (*SKIP)(*FAIL) 放行（需 pip install regex）。
       # 包含写法例: value: '^(?=.*ＤＮＡ)(?!.*test).*' 且 filter: false
-      value: '(?<!Ｄ)(?<!ＤＮ)[üÜ►♂♀ÖÄß：Ｃ-Ｚａ-ｚ](?!ＮＡ)(?!Ａ)'
+      value: 'ＤＮＡ(*SKIP)(*FAIL)|[üÜ►♂♀ÖÄß：Ｃ-Ｚａ-ｚ]'
     - id: global_dialogue_shape_filter
       type: dialogue_shape_filter
       value: true
@@ -3504,6 +3504,21 @@ texts:
       relocate: true
       hook: true
       style: 样式1
+      filters:
+        # 写了 filters 会合并全局基线；关掉对白/长度/垃圾闸，避免误杀短名
+        - id: global_dialogue_shape_filter
+          type: dialogue_shape_filter
+          value: false
+        - id: global_min_byte_length_filter
+          type: min_byte_length_filter
+          value: 1
+        - id: global_garbage_heuristic_filter
+          type: garbage_heuristic_filter
+          value: false
+        - id: pm_character_filter
+          type: character_filter
+          value: '？？？？？'
+          filter: true
     - id: 招式名
       label: 词条·招式
       group: 词条

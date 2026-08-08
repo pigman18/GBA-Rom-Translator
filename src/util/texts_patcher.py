@@ -71,6 +71,18 @@ if str(_SRC) not in sys.path:
     sys.path.insert(0, str(_SRC))
 
 
+def _regex_mod():
+    """第三方 ``regex``（character_filter / address_filter）；缺包时给出安装提示。"""
+    try:
+        import regex as _rx  # type: ignore
+    except ImportError as e:
+        raise SystemExit(
+            "character_filter/address_filter 需要第三方包 regex："
+            " pip install regex"
+        ) from e
+    return _rx
+
+
 def _safe_print(msg: str) -> None:
     """Windows GBK 控制台下避免 UnicodeEncodeError。"""
     try:
@@ -346,7 +358,13 @@ def _yaml_styles_dict(cfg: dict) -> dict[str, dict]:
     return {}
 
 
-def extract_stride(rom: bytes, mod: dict, game_code: str) -> list[dict]:
+def extract_stride(
+    rom: bytes,
+    mod: dict,
+    game_code: str,
+    *,
+    filters: list[dict[str, Any]] | None = None,
+) -> list[dict]:
     mid = mod["id"]
     start = parse_addr(mod.get("start"))
     end = parse_addr(mod.get("end"))
@@ -362,6 +380,16 @@ def extract_stride(rom: bytes, mod: dict, game_code: str) -> list[dict]:
         off = start + i * stride
         text, raw = _slot_text(rom, off, stride)
         if not text:
+            continue
+        if not _entry_passes_filters(
+            fo=off,
+            raw=raw,
+            original=text,
+            ptrs=[],
+            mod=mod,
+            filters=filters,
+            byte_length=stride,
+        ):
             continue
         e = {
             "address": f"0x{BASE + off:08X}",
@@ -380,7 +408,13 @@ def extract_stride(rom: bytes, mod: dict, game_code: str) -> list[dict]:
     return out
 
 
-def extract_struct(rom: bytes, mod: dict, game_code: str) -> list[dict]:
+def extract_struct(
+    rom: bytes,
+    mod: dict,
+    game_code: str,
+    *,
+    filters: list[dict[str, Any]] | None = None,
+) -> list[dict]:
     """结构体行表：按行 entry_size 步进，名称读到 eos（默认 FF）；byte_length=原文实际长。"""
     mid = mod["id"]
     start = parse_addr(mod.get("start"))
@@ -399,6 +433,16 @@ def extract_struct(rom: bytes, mod: dict, game_code: str) -> list[dict]:
         text, raw = _slot_text(rom, off, name_window, eos=eos)
         if not text or set(text) <= {"？", "ー", "-", " "}:
             continue
+        if not _entry_passes_filters(
+            fo=off,
+            raw=raw,
+            original=text,
+            ptrs=[],
+            mod=mod,
+            filters=filters,
+            byte_length=len(raw),
+        ):
+            continue
         e = {
             "address": f"0x{BASE + off:08X}",
             "table_index": i,
@@ -416,7 +460,13 @@ def extract_struct(rom: bytes, mod: dict, game_code: str) -> list[dict]:
     return out
 
 
-def extract_stride_ptr(rom: bytes, mod: dict, game_code: str) -> list[dict]:
+def extract_stride_ptr(
+    rom: bytes,
+    mod: dict,
+    game_code: str,
+    *,
+    filters: list[dict[str, Any]] | None = None,
+) -> list[dict]:
     mid = mod["id"]
     start = parse_addr(mod.get("start"))
     end = parse_addr(mod.get("end"))
@@ -437,6 +487,18 @@ def extract_stride_ptr(rom: bytes, mod: dict, game_code: str) -> list[dict]:
                 raw = rom[so : eos + 1]
                 text = decode_pcs(raw)
                 if text:
+                    if not _entry_passes_filters(
+                        fo=so,
+                        raw=raw,
+                        original=text,
+                        ptrs=[lit],
+                        mod=mod,
+                        filters=filters,
+                        byte_length=len(raw),
+                    ):
+                        lit += ptr_stride
+                        i += 1
+                        continue
                     e = {
                         "address": f"0x{BASE + so:08X}",
                         "table_index": i,
@@ -700,16 +762,17 @@ def _filter_hit(ctx: FilterContext, spec: dict[str, Any]) -> bool | None:
     val = spec.get("value")
 
     if t == "character_filter":
-        # value=正则；plain 上 re.search。复杂语法（lookahead 等）原样支持。
+        # value=正则（第三方 regex）；plain 上 search。
         # filter:true（默认）=排除命中；filter:false=包含命中。
-        # 例包含/排除: '^(?=.*ＤＮＡ)(?!.*test).*' + filter: false
+        # 例: 'ＤＮＡ(*SKIP)(*FAIL)|[Ｃ-Ｚ]'；包含: '^(?=.*ＤＮＡ)(?!.*test).*' + filter:false
         pat = str(val or "")
         if not pat:
             return None
         plain = ctx.original_plain or ""
+        rx = _regex_mod()
         try:
-            return re.search(pat, plain) is not None
-        except re.error as e:
+            return rx.search(pat, plain) is not None
+        except rx.error as e:
             raise SystemExit(
                 f"character_filter 正则无效 id={spec.get('id')!r}: {e}"
             ) from e
@@ -753,12 +816,18 @@ def _filter_hit(ctx: FilterContext, spec: dict[str, Any]) -> bool | None:
         pat = str(val or "")
         if not pat:
             return None
+        rx = _regex_mod()
         hex_s = f"0x{ctx.address:X}"
         vma_s = f"0x{ctx.address_vma:08X}"
-        return (
-            re.search(pat, hex_s) is not None
-            or re.search(pat, vma_s) is not None
-        )
+        try:
+            return (
+                rx.search(pat, hex_s) is not None
+                or rx.search(pat, vma_s) is not None
+            )
+        except rx.error as e:
+            raise SystemExit(
+                f"address_filter 正则无效 id={spec.get('id')!r}: {e}"
+            ) from e
 
     if t == "original_text_filter":
         return _original_text_hit(ctx, val)
@@ -883,12 +952,13 @@ def make_filter_context(
     ptrs: list[int],
     module_id: str,
     module_type: str,
+    byte_length: int | None = None,
 ) -> FilterContext:
     return FilterContext(
         address=fo,
         address_vma=BASE + fo,
         raw=raw,
-        byte_length=len(raw),
+        byte_length=len(raw) if byte_length is None else int(byte_length),
         original=original,
         original_plain=plain_original(original),
         is_pointer_based=bool(ptrs),
@@ -896,6 +966,56 @@ def make_filter_context(
         module_id=module_id,
         module_type=module_type,
     )
+
+
+def _merge_legacy_length_filters(
+    mod: dict, filters: list[dict[str, Any]] | None
+) -> list[dict[str, Any]]:
+    """旧模块字段 min/max_byte_length → filter；不覆盖已有同 type。"""
+    filt = list(filters or [])
+    if mod.get("min_byte_length") is not None and not any(
+        str(f.get("type")) == "min_byte_length_filter" for f in filt
+    ):
+        filt.append(
+            {"type": "min_byte_length_filter", "value": int(mod["min_byte_length"])}
+        )
+    if mod.get("max_byte_length") is not None and not any(
+        str(f.get("type")) == "max_byte_length_filter" for f in filt
+    ):
+        filt.append(
+            {"type": "max_byte_length_filter", "value": int(mod["max_byte_length"])}
+        )
+    if mod.get("require_pointer") and not any(
+        str(f.get("type")) == "require_pointer_filter" for f in filt
+    ):
+        filt.append({"type": "require_pointer_filter", "value": True})
+    return filt
+
+
+def _entry_passes_filters(
+    *,
+    fo: int,
+    raw: bytes,
+    original: str,
+    ptrs: list[int],
+    mod: dict,
+    filters: list[dict[str, Any]] | None,
+    byte_length: int | None = None,
+) -> bool:
+    """任意 extract 类型共用：无 filter 则保留；否则构造上下文后层层过滤。"""
+    filt = _merge_legacy_length_filters(mod, filters)
+    if not filt:
+        return True
+    ctx = make_filter_context(
+        fo=fo,
+        raw=raw,
+        original=original,
+        ptrs=ptrs,
+        module_id=str(mod.get("id") or ""),
+        module_type=str(mod.get("type") or "scan"),
+        byte_length=byte_length,
+    )
+    return apply_filters(ctx, filt)
 
 
 def _original_include_needles(filters: list[dict[str, Any]]) -> list[str] | None:
@@ -998,24 +1118,7 @@ def extract_scan(
     bands = effective_module_bands(mod, omit_ranges or [])
     if not bands:
         return []
-    filt = list(filters or [])
-    # 兼容旧字段：并入 filter 语义（不覆盖已有同 type）
-    if mod.get("min_byte_length") is not None and not any(
-        str(f.get("type")) == "min_byte_length_filter" for f in filt
-    ):
-        filt.append(
-            {"type": "min_byte_length_filter", "value": int(mod["min_byte_length"])}
-        )
-    if mod.get("max_byte_length") is not None and not any(
-        str(f.get("type")) == "max_byte_length_filter" for f in filt
-    ):
-        filt.append(
-            {"type": "max_byte_length_filter", "value": int(mod["max_byte_length"])}
-        )
-    if mod.get("require_pointer") and not any(
-        str(f.get("type")) == "require_pointer_filter" for f in filt
-    ):
-        filt.append({"type": "require_pointer_filter", "value": True})
+    filt = _merge_legacy_length_filters(mod, filters)
 
     def _parse(v: object) -> int:
         if isinstance(v, int):
@@ -1164,11 +1267,11 @@ def extract_module(
 ) -> list[dict]:
     rtype = str(mod.get("type") or "scan")
     if rtype == "stride":
-        return extract_stride(rom, mod, game_code)
+        return extract_stride(rom, mod, game_code, filters=filters)
     if rtype == "struct":
-        return extract_struct(rom, mod, game_code)
+        return extract_struct(rom, mod, game_code, filters=filters)
     if rtype in ("stride_ptr", "ptr_stride"):
-        return extract_stride_ptr(rom, mod, game_code)
+        return extract_stride_ptr(rom, mod, game_code, filters=filters)
     if rtype in ("scan", "addr_bands"):
         return extract_scan(
             rom,

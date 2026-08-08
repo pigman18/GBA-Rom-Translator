@@ -17,8 +17,12 @@
     .global GetStringWidthChinese
     .thumb_func
     .type GetStringWidthChinese, %function
+    .global MapName_DisplayCellLength
+    .thumb_func
+    .type MapName_DisplayCellLength, %function
     .extern PrintNextChar_C
     .extern GetStringWidthChinese_Full
+    .extern MapName_DisplayCellLength_C
 
 PrintNextChar:
     adds r0, r4, #0
@@ -54,10 +58,21 @@ FarBxR3:
     .size PrintNextChar, .-PrintNextChar
 
 @ pokeruby GetStringWidth ABI: r0=win, r1=str → r0=width
-@ Thin-shell from main.asm jumps here (avoids BL range into 0x08xxxxxx).
 GetStringWidthChinese:
     push {lr}
     bl GetStringWidthChinese_Full
     pop {r1}
     bx r1
     .size GetStringWidthChinese, .-GetStringWidthChinese
+
+@ DrawMapNamePopup: replace BL StringLength. r0=str → r0=cell_len, then
+@ resume at movs r1,#10 (overwritten by the 8-byte far bx hook + pool).
+MapName_DisplayCellLength:
+    push {lr}
+    bl MapName_DisplayCellLength_C
+    pop {r3}
+    movs r1, #10
+    ldr r3, =0x0809F689
+    bx r3
+    .pool
+    .size MapName_DisplayCellLength, .-MapName_DisplayCellLength

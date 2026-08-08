@@ -17,10 +17,11 @@
     bx r0
 .pool
 
-; GetStringWidth：薄壳跳进 game.bin（避开旧 BL 超范围）
-; 整函数入口替换；F9 按 CHS_GLYPH_ADVANCE_PX 计宽
-.org GetStringWidth
-    ldr r3, =(GetStringWidthChinese | 1)
+; 地图名弹窗：日版用 StringLength（字节数）按 10 格居中，不是 GetStringWidth。
+; F9 地点名槽仅 4B，会左侧空格顶满、右侧溢出 → 改为按绘制像素折算格数。
+; 旧 GetStringWidth@0x4CC0 为错址（无 BL，且破坏指针表指向的真函数），已拆除。
+.org DrawMapNamePopup_StringLength
+    ldr r3, =(MapName_DisplayCellLength | 1)
     bx r3
 .pool
 

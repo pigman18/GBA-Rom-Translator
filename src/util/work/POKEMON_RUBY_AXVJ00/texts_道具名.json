@@ -2,6 +2,11 @@
   "game": "POKEMON_RUBY_AXVJ00",
   "game_id": "POKEMON_RUBY_AXVJ00",
   "source_lang": "ja",
+  "styles": {
+    "样式1": {
+      "left": 1
+    }
+  },
   "modules": {
     "道具名": {
       "label": "词条·道具",

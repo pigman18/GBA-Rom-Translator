@@ -164,3 +164,4 @@ docs/development/IMPLEMENTATION_*.md
 .coverage
 htmlcov/
 tools
+/src/util/work/

@@ -24,6 +24,12 @@
       "style": "样式1",
       "filters": [
         {
+          "id": "global_character_filter",
+          "type": "character_filter",
+          "value": "？？？？？",
+          "filter": true
+        },
+        {
           "id": "global_dialogue_shape_filter",
           "type": "dialogue_shape_filter",
           "value": false
@@ -37,17 +43,11 @@
           "id": "global_garbage_heuristic_filter",
           "type": "garbage_heuristic_filter",
           "value": false
-        },
-        {
-          "id": "pm_character_filter",
-          "type": "character_filter",
-          "value": "？？？？？",
-          "filter": true
         }
       ]
     }
   },
-  "count": 409,
+  "count": 411,
   "entries": [
     {
       "id": "axvj_915a682ced44",
@@ -470,6 +470,21 @@
       "pointer_addresses": []
     },
     {
+      "id": "axvj_951c022916e7",
+      "module": "宝可梦名",
+      "address": "0x081CA402",
+      "byte_length": 6,
+      "original": "ニドラン♀",
+      "original_hex": "66 95 77 7e b6 ff",
+      "translated": "",
+      "table_index": 29,
+      "table_base": "0x081CA354",
+      "is_fixed_table": true,
+      "is_pointer_based": false,
+      "pointer_sources": [],
+      "pointer_addresses": []
+    },
+    {
       "id": "axvj_49182fbeba23",
       "module": "宝可梦名",
       "address": "0x081CA408",
@@ -493,6 +508,21 @@
       "original_hex": "66 95 58 52 7e ff",
       "translated": "",
       "table_index": 31,
+      "table_base": "0x081CA354",
+      "is_fixed_table": true,
+      "is_pointer_based": false,
+      "pointer_sources": [],
+      "pointer_addresses": []
+    },
+    {
+      "id": "axvj_35b08a77caff",
+      "module": "宝可梦名",
+      "address": "0x081CA414",
+      "byte_length": 6,
+      "original": "ニドラン♂",
+      "original_hex": "66 95 77 7e b5 ff",
+      "translated": "",
+      "table_index": 32,
       "table_base": "0x081CA354",
       "is_fixed_table": true,
       "is_pointer_based": false,

@@ -1392,8 +1392,21 @@ class TranslationEngine:
                 # Ensure final deliverable path is the tile-patched ROM
                 if built.resolve() != output_rom.resolve():
                     output_rom.parent.mkdir(parents=True, exist_ok=True)
-                    shutil.copy2(built, output_rom)
-                    built = output_rom
+                    try:
+                        shutil.copy2(built, output_rom)
+                        built = output_rom
+                    except OSError as exc:
+                        alt = output_rom.with_name(
+                            f"{output_rom.stem}_new{output_rom.suffix}"
+                        )
+                        if built.resolve() != alt.resolve():
+                            shutil.copy2(built, alt)
+                            built = alt
+                        self._log(
+                            "warn",
+                            f"output {output_rom.name} locked ({exc}); "
+                            f"deliverable is {built.name} — close mGBA and rename",
+                        )
                 self.callbacks.on_stage_change("tile", "completed")
             return built
         except Exception as e:
@@ -1442,12 +1455,21 @@ class TranslationEngine:
         except Exception:
             return None
 
+    def _tiles_safe_alloc_base(self, rom_path: Path) -> str:
+        """GBA addr for tiles palette/LZ after text+font inject.
+
+        Util yaml often sets ``new_palette=0x09200000``, but post-build that
+        range is font/text expand (sparse 0x00 looks "free" and is unsafe).
+        Always append past the current ROM end for the pipeline tiles stage.
+        """
+        end_off = (rom_path.stat().st_size + 3) & ~3
+        return f"0x{end_off + 0x08000000:08X}"
+
     def _run_tiles(self, rom_path: Path, work_dir: Path) -> Path:
         """Tiles stage: import PNG edits into an already-built ROM.
 
-        Must run **after** ``build_rom``: fonts occupy ``0x09000000+``, and
-        tiles_patcher relocates oversized LZ to free space starting at
-        ``0x09200000``. Running before font patch would clobber or be clobbered.
+        Must run **after** ``build_rom``. Palette/LZ go past ROM end — never
+        reuse util yaml ``0x09200000`` (shared with font/text expand).
         """
         tiles_dir = self.config.tiles_dir or self._default_tiles_dir(rom_path)
         if not tiles_dir.is_dir():
@@ -1473,23 +1495,39 @@ class TranslationEngine:
             "-o",
             str(tmp_out),
         ]
-        # 缺色 → 新调色板地址（util yaml tiles.new_palette），避免改共享原板花屏
-        new_pal = self._tiles_new_palette_addr(rom_path)
-        if new_pal:
-            args.extend(["--new-palette", new_pal])
+        alloc = self._tiles_safe_alloc_base(rom_path)
+        yaml_pal = self._tiles_new_palette_addr(rom_path)
+        args.extend(["--new-palette", alloc, "--reloc-base", alloc])
         self._log(
             "info",
             f"tiles: {len(meta_files)} meta(s) from {tiles_dir} -> {tmp_out.name}"
-            + (f", new_palette={new_pal}" if new_pal else ""),
+            f", new_palette={alloc}"
+            + (f" (ignore yaml {yaml_pal})" if yaml_pal else ""),
         )
-        r = subprocess.run(args, capture_output=True, text=True, timeout=180)
+        r = subprocess.run(
+            args,
+            capture_output=True,
+            text=True,
+            encoding="utf-8",
+            errors="replace",
+            timeout=180,
+        )
         if r.returncode != 0:
             raise RuntimeError(
                 f"tiles_patcher import failed:\n{r.stdout}\n{r.stderr}"
             )
         self._log("info", f"tiles patched from {tiles_dir}")
-        shutil.copy2(tmp_out, rom_path)
-        return Path(rom_path)
+        try:
+            shutil.copy2(tmp_out, rom_path)
+            return Path(rom_path)
+        except OSError as exc:
+            # mGBA 等占用目标文件时保留 *_tiles 产物，避免整次 full 失败
+            self._log(
+                "warn",
+                f"tiles: cannot overwrite {rom_path.name} ({exc}); "
+                f"left {tmp_out.name}",
+            )
+            return Path(tmp_out)
 
     def extract_texts(
         self,

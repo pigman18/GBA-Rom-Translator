@@ -247,8 +247,8 @@
       "type": "scan",
       "relocate": true,
       "hook": true,
-      "word_count": "16,",
-      "wrap_pages": "false,",
+      "word_count": 16,
+      "wrap_pages": false,
       "max_lines": 3
     },
     "UI界面": {

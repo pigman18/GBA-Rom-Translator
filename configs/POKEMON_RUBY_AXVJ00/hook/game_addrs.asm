@@ -92,6 +92,17 @@ GetWindowAttribute                     equ 0x0800414C
 GetWindowAttribute_Continue            equ 0x08004154 | 1
 WINDOW_WIDTH                           equ 1
 
+; --- Continue menu → FixedString (C) / badge unit skip ---
+ContinuePokedexUnit_Append             equ 0x08090FAA  ; → ContinuePokedexUnit_Hook
+; 主菜单继续画面徽章单位（真路径）
+ContinueMenuBadgeUnit_Print            equ 0x08007792  ; bl Menu_PrintText(こ) → nop
+ContinueMenuBadgeUnit_String           equ 0x081BC164  ; こ 正文；ptr @ 0x080077A0
+; 另一路 PrintBadgeCount（0x08091394，非本屏）
+ContinueBadgeUnit_CopyLen              equ 0x080913B8
+ContinueBadgeUnit_Print                equ 0x080913EE
+ContinueBadgeUnit_String               equ 0x08389DFA
+ContinueBadgeUnit_Ptr                  equ 0x08091404
+
 ; --- Font constants ---
 FONT_NORMAL_UNSHADOWED                 equ 0
 FONT_SMALL_UNSHADOWED                  equ 1

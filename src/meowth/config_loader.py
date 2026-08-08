@@ -4,14 +4,15 @@
 
     configs/<game_id>/
       game.json
+      charmap.txt              # shared PCS map (encode + armips loadtable)
       extract/config.json
       translate/
         config.json            # protect / skip / allows / rejects
         texts.json             # entries + modules（含 write/read/word_count）
         texts_translated.json  # 翻译缓存（status 200/404 数组）
         lexicon/
-      font/config.json + charmap.txt
-      patch/                   # ARMIPS
+        font.config.json       # font slots / BDF
+      hook/                    # ARMIPS + game.bin
       inject/config.json       # pointer deny / brand_compact_skip
 
 模块定义与语料均在 ``translate/texts.json``；inject 的 ``read``/``write``/
@@ -948,11 +949,18 @@ def get_game_patch_dir(game_id: str) -> Path:
 
 
 def get_charmap_path(game_id: str) -> Path:
+    """Shared charmap: prefer ``configs/<game>/charmap.txt`` (beside game.json).
+
+    Falls back to legacy ``translate/charmap.txt`` if the root file is missing.
+    """
     root = game_config_dir(game_id)
-    staged = root / STAGE_FONT / "charmap.txt"
-    if staged.is_file():
-        return staged
-    return root / "charmap.txt"
+    shared = root / "charmap.txt"
+    if shared.is_file():
+        return shared
+    legacy = root / STAGE_FONT / "charmap.txt"
+    if legacy.is_file():
+        return legacy
+    return shared
 
 
 def load_font_config(game_id: str = "") -> dict[str, Any]:

@@ -63,7 +63,9 @@ def default_paths() -> tuple[Path, Path, Path]:
         / "fonts"
         / "PokeRSFontChsNormal(0xE0000).bin"
     )
-    charmap = ROOT / "configs" / game / "translate" / "charmap.txt"
+    charmap = ROOT / "configs" / game / "charmap.txt"
+    if not charmap.is_file():
+        charmap = ROOT / "configs" / game / "translate" / "charmap.txt"
     out_dir = ROOT / "work" / "font_sim"
     return bin_path, charmap, out_dir
 

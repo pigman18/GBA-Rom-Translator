@@ -289,11 +289,7 @@ texts:
           type: original_text_filter
           filter: false
           value:
-            # 短危词「こ」「ひき」禁止裸写（会扫到假名表/错指针→菜单炸）。
-            # 若确认独立 PCS 地址后再写：
-            # - { original: "こ", address: "0x08XXXXXX" }   # → 个
-            # - { original: "ひき", address: "0x08YYYYYY" } # → 只
-            # 继续画面单位多半是绘制拼接，无独立串则不要进白名单。
+            # 继续画面「ひき」「こ」由 hook ui/fixed_string 置空，勿进白名单。
             - "はい"  # 是
             - "の おおきさくらべ"  # 比大小
             - "ポケモン"  # ？？？宝可梦

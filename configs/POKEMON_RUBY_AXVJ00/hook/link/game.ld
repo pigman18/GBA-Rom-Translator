@@ -10,6 +10,7 @@ SECTIONS
     {
         KEEP(*entry.o(.text*))
         KEEP(*entry.o(.text.*))
+        KEEP(*fixed_string_entry.o(.text*))
         *(.text*)
         *(.rodata*)
         *(.rodata.*)

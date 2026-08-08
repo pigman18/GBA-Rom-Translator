@@ -28,6 +28,9 @@
 ; 战斗 HP 条昵称：遮罩 tile CpuSet 32B→24B（只开 nick，不开 Safari / PSS）
 .include "./src/battle/UpdateNickInHealthbox/hook_origin.s"
 
+; 继续画面单位：ひき/こ → C FixedString（固定译表，非 texts.json）
+.include "./src/ui/fixed_string/hook_origin.s"
+
 .org GameBinAddresses
 PrintNextChar:
 .incbin "out/game.bin"

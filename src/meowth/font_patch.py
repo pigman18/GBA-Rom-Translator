@@ -205,7 +205,8 @@ def apply_font_patch(
         shutil.rmtree(build_dir)
     shutil.copytree(src_dir, build_dir)
 
-    # font stage owns charmap.txt; patch/main.asm loads ./charmap.txt from build cwd.
+    # Shared charmap: configs/<game>/charmap.txt (beside game.json).
+    # Stage a copy next to main.asm — work/build cwd is flat (loadtable ./).
     charmap_src = get_charmap_path(game_id)
     if charmap_src.is_file():
         shutil.copy2(charmap_src, build_dir / "charmap.txt")

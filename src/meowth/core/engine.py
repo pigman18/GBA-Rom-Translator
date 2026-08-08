@@ -478,7 +478,7 @@ class TranslationEngine:
         self._fonts_from_bdf = False
 
     def _resolve_charmap_cfg_path(self, charmap_cfg: dict, game_id: str) -> dict:
-        """Resolve ``font/charmap.txt`` (font stage; used later by patch encode)."""
+        """Resolve shared ``charmap.txt`` (beside game.json; used by patch encode)."""
         path = get_charmap_path(game_id)
         charmap_cfg["charmap_path"] = str(path)
         self._log("info", f"[配置] charmap: {path}")

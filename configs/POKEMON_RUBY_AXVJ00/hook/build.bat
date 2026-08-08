@@ -10,11 +10,12 @@ set OBJCOPY=%PREFIX%objcopy
 set SRC_ROOT=src
 set PNC=%SRC_ROOT%\text\PrintNextChar
 set NICK=%SRC_ROOT%\battle\UpdateNickInHealthbox
+set FSTR=%SRC_ROOT%\ui\fixed_string
 set OUT=out
 set BUILD=%OUT%\obj
 set LINK_DIR=link
 
-set CFLAGS=-mthumb -mcpu=arm7tdmi -ffreestanding -O2 -fno-builtin -Wall -I%SRC_ROOT% -nostdlib -c
+set CFLAGS=-mthumb -mcpu=arm7tdmi -ffreestanding -O2 -fno-builtin -Wall -I%SRC_ROOT% -I%FSTR% -nostdlib -c
 set ASFLAGS=-mthumb -mcpu=arm7tdmi -ffreestanding -x assembler-with-cpp -c
 set LDFLAGS=-mthumb -mcpu=arm7tdmi -nostdlib -T %LINK_DIR%/game.ld -Wl,-Map=%OUT%/game.map
 
@@ -48,6 +49,14 @@ echo === Compiling update_nick_in_healthbox.c ===
 %CC% %CFLAGS% %NICK%\update_nick_in_healthbox.c -o %BUILD%\update_nick_in_healthbox.o
 if errorlevel 1 exit /b 1
 
+echo === Assembling fixed_string entry.s ===
+%CC% %ASFLAGS% %FSTR%\entry.s -o %BUILD%\fixed_string_entry.o
+if errorlevel 1 exit /b 1
+
+echo === Compiling fixed_string.c ===
+%CC% %CFLAGS% %FSTR%\fixed_string.c -o %BUILD%\fixed_string.o
+if errorlevel 1 exit /b 1
+
 echo === Linking game.elf ===
 %CC% %LDFLAGS% -o %OUT%/game.elf ^
   %BUILD%/entry.o ^
@@ -56,7 +65,9 @@ echo === Linking game.elf ===
   %BUILD%/draw_scene.o ^
   %BUILD%/get_string_width.o ^
   %BUILD%/nick_entry.o ^
-  %BUILD%/update_nick_in_healthbox.o
+  %BUILD%/update_nick_in_healthbox.o ^
+  %BUILD%/fixed_string_entry.o ^
+  %BUILD%/fixed_string.o
 if errorlevel 1 exit /b 1
 
 echo === Generating game.bin ===
@@ -66,12 +77,15 @@ if errorlevel 1 exit /b 1
 echo === Generating game_syms.asm ===
 set GSW_ADDR=0x08800000
 set MAPLEN_ADDR=0x08800000
+set FSTR_POKEDEX_HOOK=0x08800000
 for /f "tokens=1" %%a in ('findstr /R "GetStringWidthChinese$" %OUT%\game.map') do set GSW_ADDR=%%a
 for /f "tokens=1" %%a in ('findstr /R "MapName_DisplayCellLength$" %OUT%\game.map') do set MAPLEN_ADDR=%%a
+for /f "tokens=1" %%a in ('findstr /R "ContinuePokedexUnit_Hook$" %OUT%\game.map') do set FSTR_POKEDEX_HOOK=%%a
 > %OUT%\game_syms.asm (
     echo ; Auto-generated from out/game.map - do not edit
     echo GetStringWidthChinese                   equ %GSW_ADDR%
     echo MapName_DisplayCellLength               equ %MAPLEN_ADDR%
+    echo ContinuePokedexUnit_Hook                equ %FSTR_POKEDEX_HOOK%
 )
 
 echo Build OK: %OUT%\game.bin

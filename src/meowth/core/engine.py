@@ -357,7 +357,10 @@ def _save_translation_cache(path: Path, cache: dict[str, dict], usable=None) -> 
 def _merge_lexicon_into_cache(
     cache: dict[str, dict], lexicon: dict[str, str], usable=None
 ) -> int:
-    """Merge lexicon as status=200; lexicon wins. Skips non-usable values."""
+    """Merge lexicon as status=200; lexicon wins. Skips non-usable / 未变更。
+
+    Returns number of rows newly written or whose ``translated`` changed.
+    """
     n = 0
     for orig, tr in (lexicon or {}).items():
         if not isinstance(orig, str) or not isinstance(tr, str) or not tr:
@@ -677,8 +680,8 @@ class TranslationEngine:
         """Translate texts.json against texts_translated.json cache.
 
         Pipeline:
-          1. Load texts_translated.json (status array)
-          2. Merge lexicon into cache and write back
+          1. Load texts_translated.json
+          2. **翻译开始前**合并 lexicon → 覆盖缓存（仅译文变更时写盘）
           3. Diff texts.json vs cache → pending (skipped when seed_only)
           4. LLM; on success append 200/404 into cache (skipped when seed_only)
           5. Join texts.json + cache → translate.build.json
@@ -708,18 +711,24 @@ class TranslationEngine:
             f"[翻译缓存] 加载 {output_path}: {len(cache)} 条",
         )
 
-        # --- 2. Append lexicon → write cache ---
+        # --- 2. 翻译开始前：lexicon 覆盖 texts_translated（仅变更写盘）---
         self._custom_translations = load_custom_translations(self.config.game)
         n_lex = _merge_lexicon_into_cache(
             cache, self._custom_translations or {}, self._usable_zh
         )
-        _save_translation_cache(output_path, cache, self._usable_zh)
-        self._log(
-            "info",
-            f"[翻译缓存] lexicon 追加/覆盖 {n_lex} 条 → {output_path}",
-        )
+        if n_lex > 0:
+            _save_translation_cache(output_path, cache, self._usable_zh)
+            self._log(
+                "info",
+                f"[翻译缓存] 翻译前 lexicon 变更 {n_lex} 条 → {output_path}",
+            )
+        else:
+            self._log(
+                "info",
+                "[翻译缓存] 翻译前 lexicon 无变更，跳过写入 texts_translated.json",
+            )
 
-        # Load corpus (needed for 3–5 / seed_only 5)
+        # Load corpus（此后才 seed/LLM；缓存已含 lexicon）
         data = json.loads(texts_path.read_text(encoding="utf-8"))
 
         # rejects / allows
@@ -1842,11 +1851,15 @@ class TranslationEngine:
         except (FileNotFoundError, KeyError) as e:
             self._log("warning", f"[配置] 加载失败: {e}")
 
-        # Load custom translations from folder (reload in case game ID changed since __init__)
+        # lexicon 仅作短语表；texts_translated 合并在 translate 开始前完成
         from ..config_loader import load_custom_translations, load_codec
+
         self._custom_translations = load_custom_translations(self.config.game)
         if self._custom_translations:
-            self._log("info", f"[配置] 自定义翻译缓存已加载: {len(self._custom_translations)} 条")
+            self._log(
+                "info",
+                f"[配置] lexicon 已加载: {len(self._custom_translations)} 条",
+            )
 
         # Refresh encoder from config (charmap with escape bytes, punct map, etc.)
         _charmap_cfg = dict(cfg.get("charmap") or {})

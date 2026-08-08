@@ -119,10 +119,11 @@ struct ChineseTileState {
 #define CHS_WRITE_SLOT    4
 
 /* Dex list "No"/ball — fixed BG tiles (CreateMonDexNum / CreateCaughtBall).
- * Chinese Mode2 must not blit into these abs indices. */
-#define CHS_DEX_UI_TILE_LO      0x3FCu
-#define CHS_DEX_UI_TILE_HI      0x3FFu
-#define CHS_DEX_UI_TILE_ALT     0x3F0u  /* scratch remap target (4 tiles) */
+ * AXVJ (JP): No=0x1FC/0x1FD, ball=0x1FE/0x1FF (US pret uses 0x3FC.. — wrong here).
+ * Chinese Mode2/Linear must not blit into these abs indices. */
+#define CHS_DEX_UI_TILE_LO      0x1FCu
+#define CHS_DEX_UI_TILE_HI      0x1FFu
+#define CHS_DEX_UI_TILE_ALT     0x1F0u  /* scratch remap target (4 tiles) */
 
 #define CHS_TILE_GRID_W         30
 #define CHS_TILE_POOL_END            0x180

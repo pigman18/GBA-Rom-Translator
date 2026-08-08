@@ -43,6 +43,15 @@ static uint8_t *vram_tile(TextPrinter *win, uint16_t tile)
     return tile_data + ((uint32_t)tile << 5);
 }
 
+/* Remap abs tile out of dex №/ball slot so CHS blit cannot wipe 0x1FC..0x1FF (AXVJ).
+ * Used by Mode2 and Linear (species names / dex digits). */
+static uint16_t avoid_dex_ui_tile(uint16_t tile)
+{
+    if (tile >= CHS_DEX_UI_TILE_LO && tile <= CHS_DEX_UI_TILE_HI)
+        return (uint16_t)(CHS_DEX_UI_TILE_ALT + (tile - CHS_DEX_UI_TILE_LO));
+    return tile;
+}
+
 /* Field Linear @ 0x100 / shop_desc @ 0x228 — see configs/docs/CHS_TILE_LAYOUT.md */
 static void ensure_linear_dest_floor(TextPrinter *win)
 {
@@ -70,15 +79,8 @@ static uint16_t linear_cursor_tile(TextPrinter *win, unsigned x_off, unsigned y_
 {
     uint16_t tile_base = win_u16(win, WIN_TILE_BASE);
     uint16_t off = win_u16(win, WIN_TILE_OFFSET);
-    return (uint16_t)(tile_base + off + 2u * x_off + y_off);
-}
-
-/* Remap abs tile out of dex №/ball slot so CHS blit cannot wipe 0x3FC..0x3FF. */
-static uint16_t avoid_dex_ui_tile(uint16_t tile)
-{
-    if (tile >= CHS_DEX_UI_TILE_LO && tile <= CHS_DEX_UI_TILE_HI)
-        return (uint16_t)(CHS_DEX_UI_TILE_ALT + (tile - CHS_DEX_UI_TILE_LO));
-    return tile;
+    return avoid_dex_ui_tile(
+        (uint16_t)(tile_base + off + 2u * x_off + y_off));
 }
 
 static void compute_mode2_pair(

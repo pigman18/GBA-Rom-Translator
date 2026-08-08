@@ -31,6 +31,7 @@ import json
 import re
 import struct
 import sys
+from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, NamedTuple
 
@@ -731,41 +732,34 @@ def _norm_original_key(s: str) -> str:
     return re.sub(r"\s+", "", s or "")
 
 
-def _original_text_hit(ctx: FilterContext, val: Any) -> bool:
-    """original_text_filter：原文精确或去空白后命中 value 列表。"""
-    if not isinstance(val, (list, tuple)):
-        return False
-    keys = [str(x) for x in val if x is not None and str(x)]
-    if not keys:
-        return False
-    o = ctx.original or ""
-    plain = ctx.original_plain or ""
-    o_n = _norm_original_key(o)
-    plain_n = _norm_original_key(plain)
-    for k in keys:
-        if o == k or plain == k:
+class TextFilter(ABC):
+    """单条 filter：``hit(ctx)`` 得条件命中，``keep(ctx)`` 得是否放行。"""
+
+    type_name: str = ""
+
+    def __init__(self, spec: dict[str, Any]) -> None:
+        self.spec = spec
+        self.id = str(spec.get("id") or self.type_name or "")
+        self.value = spec.get("value")
+        # 未写 filter 默认 true=排除命中；false=包含命中
+        self.exclude = True if "filter" not in spec else bool(spec.get("filter"))
+
+    @abstractmethod
+    def hit(self, ctx: FilterContext) -> bool | None:
+        """None=本闸禁用；True=命中条件侧。"""
+
+    def keep(self, ctx: FilterContext) -> bool:
+        h = self.hit(ctx)
+        if h is None:
             return True
-        kn = _norm_original_key(k)
-        if kn and (o_n == kn or plain_n == kn):
-            return True
-    return False
+        return (not h) if self.exclude else bool(h)
 
 
-def _filter_hit(ctx: FilterContext, spec: dict[str, Any]) -> bool | None:
-    """计算是否命中过滤条件。
+class CharacterFilter(TextFilter):
+    type_name = "character_filter"
 
-    返回 ``None`` 表示本闸禁用（恒保留）。
-    ``hit=True`` 表示命中「过滤模式」应丢弃的一侧；
-    ``filter: true``（默认）保留 ⟺ not hit；``filter: false``（包含）保留 ⟺ hit。
-    """
-    t = str(spec.get("type") or "")
-    val = spec.get("value")
-
-    if t == "character_filter":
-        # value=正则（第三方 regex）；plain 上 search。
-        # filter:true（默认）=排除命中；filter:false=包含命中。
-        # 例: 'ＤＮＡ(*SKIP)(*FAIL)|[Ｃ-Ｚ]'；包含: '^(?=.*ＤＮＡ)(?!.*test).*' + filter:false
-        pat = str(val or "")
+    def hit(self, ctx: FilterContext) -> bool | None:
+        pat = str(self.value or "")
         if not pat:
             return None
         plain = ctx.original_plain or ""
@@ -774,39 +768,145 @@ def _filter_hit(ctx: FilterContext, spec: dict[str, Any]) -> bool | None:
             return rx.search(pat, plain) is not None
         except rx.error as e:
             raise SystemExit(
-                f"character_filter 正则无效 id={spec.get('id')!r}: {e}"
+                f"character_filter 正则无效 id={self.id!r}: {e}"
             ) from e
 
-    if t == "dialogue_shape_filter":
-        if not bool(val):
-            return None
-        return not _dialogue_shape_ok(ctx)
 
-    if t == "min_byte_length_filter":
+class DialogueShapeFilter(TextFilter):
+    type_name = "dialogue_shape_filter"
+
+    @staticmethod
+    def shape_ok(ctx: FilterContext) -> bool:
+        """对白形态：指针短标可留；否则须像真脚本句（\\n 单独不够）。"""
+        o = ctx.original or ""
+        plain = ctx.original_plain or ""
+        if ctx.is_pointer_based:
+            return True
+        jp = len(re.findall(r"[\u3040-\u30ff]", o))
+        if jp < 8:
+            return False
+        if "ポケモン" in o:
+            return True
+        plain_no_btn = re.sub(r"[Ａ-Ｚａ-ｚ]ボタン", "", plain)
+        fw = len(re.findall(r"[Ａ-Ｚａ-ｚ]", plain_no_btn))
+        hw = len(re.findall(r"[A-Za-z]", plain_no_btn))
+        if fw + hw >= 1:
+            return False
+        has_particle = bool(re.search(r"[はがをに]", o))
+        if (
+            ("！" in o or "？" in o or "！" in plain or "？" in plain)
+            and has_particle
+            and jp >= 8
+        ):
+            return True
+        if ("\\l" in o or "\\p" in o) and has_particle and jp >= 10:
+            return True
+        if (
+            ("。" in o or "。" in plain or "‥" in o)
+            and re.search(r"[はがを]", o)
+            and jp >= 12
+        ):
+            return True
+        return False
+
+    def hit(self, ctx: FilterContext) -> bool | None:
+        if not bool(self.value):
+            return None
+        return not self.shape_ok(ctx)
+
+
+class MinByteLengthFilter(TextFilter):
+    type_name = "min_byte_length_filter"
+
+    def hit(self, ctx: FilterContext) -> bool | None:
         try:
-            n = int(val)
+            n = int(self.value)
         except (TypeError, ValueError):
             return None
         return ctx.byte_length < n
 
-    if t == "max_byte_length_filter":
+
+class MaxByteLengthFilter(TextFilter):
+    type_name = "max_byte_length_filter"
+
+    def hit(self, ctx: FilterContext) -> bool | None:
         try:
-            n = int(val)
+            n = int(self.value)
         except (TypeError, ValueError):
             return None
         return ctx.byte_length > n
 
-    if t == "require_pointer_filter":
-        if not bool(val):
+
+class RequirePointerFilter(TextFilter):
+    type_name = "require_pointer_filter"
+
+    def hit(self, ctx: FilterContext) -> bool | None:
+        if not bool(self.value):
             return None
         return not bool(ctx.is_pointer_based)
 
-    if t == "garbage_heuristic_filter":
-        if not bool(val):
-            return None
-        return _looks_garbage_original(ctx.original)
 
-    if t == "address_filter":
+class GarbageHeuristicFilter(TextFilter):
+    type_name = "garbage_heuristic_filter"
+
+    @staticmethod
+    def looks_garbage(original: str) -> bool:
+        """窄启发式（garbage_heuristic_filter / mark-404）。
+
+        不做无 address 的 ``axvj_entry_is_garbage``。
+        全角 Ａボタン / Ｂボタン 不算垃圾。
+        """
+        o = original or ""
+        try:
+            from meowth.policy import is_garbage_jp
+
+            if is_garbage_jp(o):
+                return True
+        except Exception:
+            pass
+
+        plain = plain_original(o)
+        plain_no_btn = re.sub(r"[Ａ-Ｚａ-ｚ]ボタン", "", plain)
+
+        latin = len(re.findall(r"[A-Za-zÄäÖöÜüß]", plain))
+        jp = len(re.findall(r"[\u3040-\u30ff]", o))
+        fw_letter = len(re.findall(r"[Ａ-Ｚａ-ｚ]", plain_no_btn))
+        if latin >= 3 and jp >= 5:
+            return True
+        if fw_letter >= 4 and jp >= 3:
+            return True
+        if ("♂" in o or "♀" in o) and (
+            fw_letter >= 1 or "Ｂ" in plain_no_btn or "Ａ" in plain_no_btn
+        ):
+            return True
+        if len(plain.strip()) <= 8 and fw_letter >= 1 and 1 <= jp <= 2:
+            return True
+        for block in set(re.findall(r"[ァ-ン]{2}", o)):
+            if o.count(block) >= 3:
+                return True
+        if (
+            jp >= 12
+            and not re.search(r"[はがをのにてもだ]", o)
+            and not re.search(r"[\u4e00-\u9fff]", o)
+            and "ポケモン" not in o
+            and "\\CC" not in o
+        ):
+            for block in set(re.findall(r"[ァ-ン]{2}", o)):
+                if o.count(block) >= 2:
+                    return True
+        return False
+
+    def hit(self, ctx: FilterContext) -> bool | None:
+        if not bool(self.value):
+            return None
+        return self.looks_garbage(ctx.original)
+
+
+class AddressFilter(TextFilter):
+    type_name = "address_filter"
+
+    def hit(self, ctx: FilterContext) -> bool | None:
+        val = self.value
         if isinstance(val, dict):
             lo = normalize_file_off(val.get("start") or 0)
             hi = normalize_file_off(val.get("end") or 0)
@@ -826,115 +926,56 @@ def _filter_hit(ctx: FilterContext, spec: dict[str, Any]) -> bool | None:
             )
         except rx.error as e:
             raise SystemExit(
-                f"address_filter 正则无效 id={spec.get('id')!r}: {e}"
+                f"address_filter 正则无效 id={self.id!r}: {e}"
             ) from e
 
-    if t == "original_text_filter":
-        return _original_text_hit(ctx, val)
 
-    raise SystemExit(f"未知 filter type: {t!r}")
+class OriginalTextFilter(TextFilter):
+    type_name = "original_text_filter"
 
-
-def _dialogue_shape_ok(ctx: FilterContext) -> bool:
-    """对白形态：指针短标可留；否则须像真脚本句（\\n 单独不够）。"""
-    o = ctx.original or ""
-    plain = ctx.original_plain or ""
-    if ctx.is_pointer_based:
-        return True
-    jp = len(re.findall(r"[\u3040-\u30ff]", o))
-    if jp < 8:
-        return False
-    if "ポケモン" in o:
-        return True
-    plain_no_btn = re.sub(r"[Ａ-Ｚａ-ｚ]ボタン", "", plain)
-    fw = len(re.findall(r"[Ａ-Ｚａ-ｚ]", plain_no_btn))
-    hw = len(re.findall(r"[A-Za-z]", plain_no_btn))
-    if fw + hw >= 1:
-        return False
-    has_particle = bool(re.search(r"[はがをに]", o))
-    # ！？ / \\l\\p 须带格助词，避免乱码里碰巧出现？或 \\l
-    if (
-        ("！" in o or "？" in o or "！" in plain or "？" in plain)
-        and has_particle
-        and jp >= 8
-    ):
-        return True
-    if ("\\l" in o or "\\p" in o) and has_particle and jp >= 10:
-        return True
-    if (
-        ("。" in o or "。" in plain or "‥" in o)
-        and re.search(r"[はがを]", o)
-        and jp >= 12
-    ):
-        return True
-    return False
-
-
-def _looks_garbage_original(original: str) -> bool:
-    """窄启发式（garbage_heuristic_filter / mark-404）。
-
-    不做无 address 的 ``axvj_entry_is_garbage``。
-    全角 Ａボタン / Ｂボタン 不算垃圾。
-    """
-    o = original or ""
-    try:
-        from meowth.policy import is_garbage_jp
-
-        if is_garbage_jp(o):
-            return True
-    except Exception:
-        pass
-
-    plain = plain_original(o)
-    # 去掉按钮标签后再计全角拉丁，避免误杀「Ａボタンで…」
-    plain_no_btn = re.sub(r"[Ａ-Ｚａ-ｚ]ボタン", "", plain)
-
-    latin = len(re.findall(r"[A-Za-zÄäÖöÜüß]", plain))
-    jp = len(re.findall(r"[\u3040-\u30ff]", o))
-    fw_letter = len(re.findall(r"[Ａ-Ｚａ-ｚ]", plain_no_btn))
-    if latin >= 3 and jp >= 5:
-        return True
-    # >=4：避免误杀图鉴「ＤＮＡ」(3) 等短全角缩写；更长全角拉丁仍当垃圾
-    if fw_letter >= 4 and jp >= 3:
-        return True
-    if ("♂" in o or "♀" in o) and (
-        fw_letter >= 1 or "Ｂ" in plain_no_btn or "Ａ" in plain_no_btn
-    ):
-        return True
-    # 短串+少量假名才像乱码；「ＤＮＡポケモン」假名足够则放过
-    if len(plain.strip()) <= 8 and fw_letter >= 1 and 1 <= jp <= 2:
-        return True
-    for block in set(re.findall(r"[ァ-ン]{2}", o)):
-        if o.count(block) >= 3:
-            return True
-    if (
-        jp >= 12
-        and not re.search(r"[はがをのにてもだ]", o)
-        and not re.search(r"[\u4e00-\u9fff]", o)
-        and "ポケモン" not in o
-        and "\\CC" not in o
-    ):
-        for block in set(re.findall(r"[ァ-ン]{2}", o)):
-            if o.count(block) >= 2:
+    def hit(self, ctx: FilterContext) -> bool | None:
+        val = self.value
+        if not isinstance(val, (list, tuple)):
+            return False
+        keys = [str(x) for x in val if x is not None and str(x)]
+        if not keys:
+            return False
+        o = ctx.original or ""
+        plain = ctx.original_plain or ""
+        o_n = _norm_original_key(o)
+        plain_n = _norm_original_key(plain)
+        for k in keys:
+            if o == k or plain == k:
                 return True
-    return False
+            kn = _norm_original_key(k)
+            if kn and (o_n == kn or plain_n == kn):
+                return True
+        return False
+
+
+FILTER_TYPES: dict[str, type[TextFilter]] = {
+    CharacterFilter.type_name: CharacterFilter,
+    DialogueShapeFilter.type_name: DialogueShapeFilter,
+    MinByteLengthFilter.type_name: MinByteLengthFilter,
+    MaxByteLengthFilter.type_name: MaxByteLengthFilter,
+    RequirePointerFilter.type_name: RequirePointerFilter,
+    GarbageHeuristicFilter.type_name: GarbageHeuristicFilter,
+    AddressFilter.type_name: AddressFilter,
+    OriginalTextFilter.type_name: OriginalTextFilter,
+}
+
+
+def build_filter(spec: dict[str, Any]) -> TextFilter:
+    t = str(spec.get("type") or "").strip()
+    cls = FILTER_TYPES.get(t)
+    if cls is None:
+        raise SystemExit(f"未知 filter type: {t!r}")
+    return cls(spec)
 
 
 def apply_one_filter(ctx: FilterContext, spec: dict[str, Any]) -> bool:
-    """True=保留，False=拒绝。
-
-    ``filter`` 极性（默认 ``true``=过滤）：
-    - ``true``：命中则丢（保留 ⟺ not hit）
-    - ``false``：命中则留（包含模式；保留 ⟺ hit）
-    """
-    hit = _filter_hit(ctx, spec)
-    if hit is None:
-        return True
-    # 未写 filter 字段时默认 true（过滤），与旧行为一致
-    exclude = True if "filter" not in spec else bool(spec.get("filter"))
-    if exclude:
-        return not hit
-    return bool(hit)
+    """True=保留，False=拒绝。"""
+    return build_filter(spec).keep(ctx)
 
 
 def apply_filters(ctx: FilterContext, filters: list[dict[str, Any]]) -> bool:
@@ -1111,7 +1152,6 @@ def extract_scan(
     # 只用 jp_pcs + 本地 read_pcs / SCRIPT_BANK_MIN；禁止 import meowth.extract
     #（extract 会 load_game_config → 读流水线 texts.json，与 util 导出死锁）。
     from meowth.jp_pcs import decode_pcs, looks_like_jp_text
-    from meowth.policy import looks_like_translatable
 
     mid = mod["id"]
     mtype = str(mod.get("type") or "scan")
@@ -1222,36 +1262,35 @@ def extract_scan(
             end = a + len(raw) - 1
             if looks_like_jp_text(raw):
                 text = decode_pcs(raw)
-                if looks_like_translatable(text, len(raw)):
-                    if a < SCRIPT_BANK_MIN or TITLE_LZ_BAND[0] <= a < TITLE_LZ_BAND[1]:
-                        a = end + 1
-                        continue
-                    if a in seen:
-                        a = end + 1
-                        continue
-                    ptrs = list(ptrs_map.get(a, []))
-                    ctx = make_filter_context(
-                        fo=a,
-                        raw=raw,
-                        original=text,
-                        ptrs=ptrs,
-                        module_id=str(mid),
-                        module_type=mtype,
-                    )
-                    if filt and not apply_filters(ctx, filt):
-                        a = end + 1
-                        continue
-                    seen.add(a)
-                    e = {
-                        "address": f"0x{BASE + a:08X}",
-                        "original": text,
-                        "original_hex": raw.hex(" "),
-                        "byte_length": len(raw),
-                        "is_pointer_based": bool(ptrs),
-                        "pointer_sources": [f"0x{BASE + q:08X}" for q in ptrs],
-                        "pointer_addresses": [f"0x{BASE + q:08X}" for q in ptrs],
-                    }
-                    out.append(_stamp(e, mid=mid, game_code=game_code))
+                if a < SCRIPT_BANK_MIN or TITLE_LZ_BAND[0] <= a < TITLE_LZ_BAND[1]:
+                    a = end + 1
+                    continue
+                if a in seen:
+                    a = end + 1
+                    continue
+                ptrs = list(ptrs_map.get(a, []))
+                ctx = make_filter_context(
+                    fo=a,
+                    raw=raw,
+                    original=text,
+                    ptrs=ptrs,
+                    module_id=str(mid),
+                    module_type=mtype,
+                )
+                if filt and not apply_filters(ctx, filt):
+                    a = end + 1
+                    continue
+                seen.add(a)
+                e = {
+                    "address": f"0x{BASE + a:08X}",
+                    "original": text,
+                    "original_hex": raw.hex(" "),
+                    "byte_length": len(raw),
+                    "is_pointer_based": bool(ptrs),
+                    "pointer_sources": [f"0x{BASE + q:08X}" for q in ptrs],
+                    "pointer_addresses": [f"0x{BASE + q:08X}" for q in ptrs],
+                }
+                out.append(_stamp(e, mid=mid, game_code=game_code))
             a = end + 1
     return out
 
@@ -2506,7 +2545,7 @@ def mark_404_in_translated(
         if not isinstance(tr, str):
             tr = ""
         if not _translated_has_garbled_mark(tr):
-            if _looks_garbage_original(orig):
+            if GarbageHeuristicFilter.looks_garbage(orig):
                 out.append({"status": 404, "original": orig})
                 n_404 += 1
                 continue
@@ -2521,7 +2560,7 @@ def mark_404_in_translated(
             out.append({"status": 404, "original": orig})
             n_404 += 1
             continue
-        if _looks_garbage_original(orig):
+        if GarbageHeuristicFilter.looks_garbage(orig):
             out.append({"status": 404, "original": orig})
             n_404 += 1
             continue

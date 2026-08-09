@@ -103,6 +103,18 @@ ContinueBadgeUnit_Print                equ 0x080913EE
 ContinueBadgeUnit_String               equ 0x08389DFA
 ContinueBadgeUnit_Ptr                  equ 0x08091404
 
+; 存档信息框标签：原 memcpy 7/8 + sp#8，中文 F900×2+FF(9B) 截断丢 FF → 扫栈花屏
+; B01：memcpy 16B + sp#16（见 docs/AXVJ_UI_BUGS.md）
+PrintSavePlayerName_SubSp              equ 0x08091312
+PrintSavePlayerName_CopyLen            equ 0x08091324
+PrintSavePlayerName_AddSp              equ 0x0809134E
+PrintSavePokedexCount_SubSp            equ 0x0809140A
+PrintSavePokedexCount_CopyLen          equ 0x0809141C
+PrintSavePokedexCount_AddSp            equ 0x08091446
+PrintSavePlayTime_SubSp                equ 0x08091456
+PrintSavePlayTime_CopyLen              equ 0x08091468
+PrintSavePlayTime_AddSp                equ 0x08091492
+
 ; --- Font constants ---
 FONT_NORMAL_UNSHADOWED                 equ 0
 FONT_SMALL_UNSHADOWED                  equ 1

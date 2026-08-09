@@ -24,11 +24,16 @@ static void copy_tile32(void *dst_vram, const void *src_iwram)
     d[7] = s[7];
 }
 
+static uint8_t pitch_capture_base_tx(TextPrinter *win)
+{
+    return win_u8(win, WIN_CURSOR_TILE_X);
+}
+
 static void pitch_reset(TextPrinter *win)
 {
     volatile struct ChineseTileState *st = chinese_tile_state();
     st->chs_px = 0;
-    st->base_tx = win_u8(win, WIN_CURSOR_TILE_X);
+    st->base_tx = pitch_capture_base_tx(win);
 }
 
 void Chinese_PitchReset(TextPrinter *win)
@@ -76,10 +81,13 @@ static uint8_t *vram_tile(TextPrinter *win, uint16_t tile)
     return tile_data + ((uint32_t)tile << 5);
 }
 
-/* Remap abs tile out of shared UI icon band 0x1F0..0x1FF → 0x3F0.. (AXVJ).
- * Covers dex №/ball and summary A/B prompt icons. Mode2 + Linear. */
+/* Remap abs tile out of reserved UI bands. Mode2 + Linear. */
 static uint16_t avoid_dex_ui_tile(uint16_t tile)
 {
+    /* ▶ pair only — wrap into Linear pool (never 0x1D0; that broke summary). */
+    if (tile >= CHS_MENU_CURSOR_TILE && tile <= CHS_MENU_CURSOR_TILE_HI)
+        return (uint16_t)(CHS_MENU_CURSOR_TILE_ALT
+                          + (tile - CHS_MENU_CURSOR_TILE));
     if (tile >= CHS_UI_ICON_TILE_LO && tile <= CHS_UI_ICON_TILE_HI)
         return (uint16_t)(CHS_UI_ICON_TILE_ALT + (tile - CHS_UI_ICON_TILE_LO));
     return tile;
@@ -99,6 +107,8 @@ static void ensure_linear_dest_floor(TextPrinter *win)
     tpl = win_template(win);
     if (scene_is_party_footer(win))
         floor = CHS_PARTY_FOOTER_LINEAR_FLOOR;
+    else if (scene_is_shop_bag_list(win))
+        floor = CHS_SHOP_LIST_LINEAR_FLOOR;
     else if (scene_is_shop_desc(win))
         floor = CHS_SHOP_DESC_LINEAR_FLOOR;
     else if (tpl && tpl[1] == 2)
@@ -274,7 +284,7 @@ void drawGlyph_Adv(TextPrinter *win, const uint8_t *src128, int linear, unsigned
     sl = 0;
 
     if (st->chs_px == 0)
-        st->base_tx = win_u8(win, WIN_CURSOR_TILE_X);
+        st->base_tx = pitch_capture_base_tx(win);
 
     startPixel = (unsigned)(st->chs_px & 7u);
     map_tx = (uint8_t)(st->base_tx + (st->chs_px >> 3));
@@ -388,22 +398,59 @@ int DrawGlyph_ShouldUseLinear(TextPrinter *win, uint8_t write_op)
     if (scene_battle_force_linear(win))
         return 1;
     /* charBase2 menu pool: Mode2 must win over inject LINEAR (F9 03).
-     * Field start-menu labels lived under 战斗菜单 → F9 03; Linear + Print
-     * rewind shares one floor so every row shows the last string (often 关闭).
-     * shop_desc keeps Linear (scene_menu_wants_mode2 == 0). */
+     * shop_desc / shop-bag list keep Linear; ▶ is DrawMenuCursorEF. */
     if (scene_menu_wants_mode2(win))
         return 0;
-    /* CHS_WRITE_* 1..4 retired as sticky geometry — styles interleave
-     * F9 01/81/02/82… for StyleLeft only; Linear vs Mode2 = scene gates. */
     (void)write_op;
     tpl = win_template(win);
-    /* Non-menu charBase (field/battle templates): linear bump. */
     if (!tpl || tpl[1] != 2)
         return 1;
-    /* Remaining charBase2 (shop_desc only after Mode2 gate above). */
-    if (scene_is_shop_desc(win))
+    if (scene_is_shop_desc(win) || scene_is_shop_bag_list(win))
         return 1;
     return 0;
+}
+
+/* InitMenu ▶: blit JP glyph into CHS_MENU_CURSOR_TILE; map cursor cell only. */
+int DrawMenuCursorEF(TextPrinter *win)
+{
+    uint8_t *upper = 0;
+    uint8_t *lower = 0;
+    uint8_t src[128];
+    uint8_t font;
+    uint8_t *du;
+    uint8_t *dl;
+    unsigned i;
+    uint16_t abs_u = CHS_MENU_CURSOR_TILE;
+    uint16_t abs_l = CHS_MENU_CURSOR_TILE_HI;
+
+    if (!win)
+        return 0;
+
+    font = win_u8(win, WIN_FONTNUM_REAL);
+    if (font > 6u)
+        font = FONT_NORMAL_SHADOWED;
+    if (!chs_font_is_shadowed(font))
+        return 0;
+
+    chs_get_glyph_tile_pointers(font, 0xEFu, &upper, &lower);
+    if (!upper || !lower)
+        return 0;
+
+    for (i = 0; i < 128u; i++)
+        src[i] = 0;
+    for (i = 0; i < 32u; i++) {
+        src[0x00 + i] = upper[i];
+        src[0x20 + i] = lower[i];
+    }
+
+    du = vram_tile(win, abs_u);
+    dl = vram_tile(win, abs_l);
+    draw_glyph_tile_12(win, du, 0, src + 0x00, 0, 8);
+    draw_glyph_tile_12(win, dl, 0, src + 0x20, 0, 8);
+    chs_update_tilemap(win, abs_u, abs_l);
+    win_set_u8(win, WIN_CURSOR_TILE_X,
+               (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
+    return 1;
 }
 
 void DrawGlyph_Chinese(TextPrinter *win, const uint8_t *glyph_src)
@@ -446,7 +493,7 @@ void DrawGlyph_Chinese_Adv(TextPrinter *win, const uint8_t *glyph_src, unsigned 
             }
         }
     } else {
-        st->base_tx = cur_tx;
+        st->base_tx = pitch_capture_base_tx(win);
     }
 
     linear = DrawGlyph_ShouldUseLinear(win, st->write_op);

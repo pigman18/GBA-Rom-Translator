@@ -31,7 +31,13 @@
 
 ## B03 — 商店 / 背包光标（进行中）
 
-商店与背包菜单光标异常（位置/消失/串台待确认）。
+商店/背包列表光标都是 `InitMenu` → `Menu_PrintText(0xEF)`（上下两块 BG tile）。  
+根因：中文与 FontFunc **共用 tile 池** → ▶ 被盖成碎块。  
+- `0x3E4` 固定槽：越界踩 screenblock（窗框被盖）  
+- avoid→`0x1D0`：摘要「文字替换」  
+- 钩 `Menu_PrintText` 再 `RedrawMenuCursor`：易踩坏 ▶ 绘制，光标又碎  
+
+现修法：`DrawMenuCursorEF` → 块内 `0x1E0/0x1E1`；中文仅这对避让到池内 `0x168`（**不**进 `0x1D0`）；列表 Linear；拆掉 `Menu_PrintText` 钩。
 
 ## 约定
 

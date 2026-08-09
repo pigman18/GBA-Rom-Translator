@@ -42,7 +42,7 @@ int scene_field_wants_linear(TextPrinter *win)
     return 0;
 }
 
-/** charBase2 + font3 menu pool → Mode2 (shop_desc excluded). */
+/** charBase2 + font3 menu pool → Mode2 (shop_desc / shop-bag list excluded). */
 int scene_menu_wants_mode2(TextPrinter *win)
 {
     uint8_t *tpl = win_template(win);
@@ -51,6 +51,8 @@ int scene_menu_wants_mode2(TextPrinter *win)
     if (win_u8(win, WIN_FONTNUM_REAL) != 3)
         return 0;
     if (scene_is_shop_desc(win))
+        return 0;
+    if (scene_is_shop_bag_list(win))
         return 0;
     return 1;
 }
@@ -75,12 +77,51 @@ int scene_is_shop_desc(TextPrinter *win)
 }
 
 /**
+ * Shop buy / bag item rows — Mode2 grid can stomp window-frame tiles.
+ * Keep Linear (cursor ▶ uses CHS_MENU_CURSOR_TILE, not the shared pool).
+ *
+ * Narrow gates (continue-screen left=2 must NOT match):
+ * - Bag names/qty: high TILE_BASE from bag printers (0x8A… / 0x66…)
+ * - Shop+bag while InitMenu(1,1,n≥7) active: names left=2, price/qty left=7
+ */
+int scene_is_shop_bag_list(TextPrinter *win)
+{
+    uint8_t *tpl = win_template(win);
+    const uint8_t *gmenu;
+    uint8_t left;
+    uint16_t tile_base;
+
+    if (!tpl || tpl[1] != 2)
+        return 0;
+    if (win_u8(win, WIN_FONTNUM_REAL) != 3)
+        return 0;
+    if (scene_is_shop_desc(win) || scene_is_party_footer(win))
+        return 0;
+
+    left = win_u8(win, WIN_CURSOR_X);
+    tile_base = win_u16(win, WIN_TILE_BASE);
+
+    /* Bag item-name printer: TILE_BASE = 0x8A + 14*row */
+    if (left == 2u && tile_base >= 0x80u && tile_base < 0x120u)
+        return 1;
+    /* Bag quantity printer: TILE_BASE = 0x66 / 0x6c / … */
+    if (left == 7u && tile_base >= 0x60u && tile_base < 0x90u)
+        return 1;
+
+    gmenu = (const uint8_t *)ADDR_GMENU;
+    if (gmenu[GMENU_LEFT] == 1u && gmenu[GMENU_TOP] == 1u
+        && gmenu[GMENU_MAX_MINUS_1] >= 6u) {
+        if (left == 2u || left == 7u)
+            return 1;
+    }
+    return 0;
+}
+
+/**
  * Mode2 layout (write.op upper config unchanged):
- * - op 0x02 footer: MENU origin + FOOTER_BAND + y'=y-16 + x++
- * - party DoWhat geometry: shop origin(+2) + PARTY_FOOTER_BAND + y'=y-16, no x++
+ * - party DoWhat geometry: shop origin(+2) + PARTY_FOOTER_BAND + y'=y-16
  * - left≥20 AND y≥13: MENU_BAND + y'=y-13 + origin 0x20 + x++（仅队伍选项）
  * - save/续关等 left≥20 但 y 小：vanilla origin+2，无 BAND
- * - shop list: origin=+2, no BAND
  */
 void scene_mode2_apply(TextPrinter *win, int *x, int *y, int *band, int *origin)
 {
@@ -91,12 +132,8 @@ void scene_mode2_apply(TextPrinter *win, int *x, int *y, int *band, int *origin)
     *band = 0;
     *origin = CHS_MODE2_ORIGIN_SHOP;
 
-    /* CHS_WRITE_FOOTER (op==2) retired: styles may use F9 02 for StyleLeft.
-     * Party footer uses scene_is_party_footer only. */
     if (scene_is_party_footer(win)) {
         *origin = CHS_MODE2_ORIGIN_SHOP;
-        /* CURSOR_Y may be tile 17 or pixel 136 — normalize before band math.
-         * Pixel Y left as 136 → y'=120 → tile indices collide with 查看能力. */
         if (*y >= CHS_PARTY_FOOTER_TOP_PX)
             *y /= 8;
         if (*y >= 16) {
@@ -107,13 +144,8 @@ void scene_mode2_apply(TextPrinter *win, int *x, int *y, int *band, int *origin)
     }
     if (op != 0)
         return;
-    /* Shop / dex tile printers: even tile Y 0..20 → no MENU_BAND.
-     * Party options use odd tile Y 13/15/17. Style phrase ops (e.g. F9 81)
-     * already returned above via op != 0. */
     if (*y <= 20 && (*y & 1) == 0)
         return;
-    /* Party options only: left≥20 AND y≥13. Save/continue (left≥20, y small)
-     * must keep vanilla origin+2 / no BAND — else tile indices → 乱码. */
     if (left >= CHS_PARTY_MENU_LEFT && *y >= CHS_PARTY_MENU_TOP) {
         (*x)++;
         *y -= CHS_PARTY_MENU_TOP;
@@ -127,20 +159,11 @@ int scene_battle_force_linear(TextPrinter *win)
     return win_u16(win, WIN_TILE_BASE) >= CHS_BATTLE_FIXED_BASE;
 }
 
-/**
- * AXVJ RenderTextHandleBold (0x08002CC0) forces textMode=2; FontFunc[2]
- * blits via win+0x20 into eBattleInterfaceGfxBuffer (healthbox nick/HP).
- * Dest-range gate alone did not fire in-product; textMode==2 is the signal.
- * Summary/dialogue use other modes → JP-via-CHS.
- */
 int scene_is_battle_interface_dest(TextPrinter *win)
 {
     return win_u8(win, WIN_TEXTMODE) == 2u;
 }
 
-/**
- * JP/digit PCS share the CHS tile allocator except FontFunc[2] bold path.
- */
 int scene_jp_via_chs(TextPrinter *win)
 {
     return !scene_is_battle_interface_dest(win);
@@ -148,10 +171,6 @@ int scene_jp_via_chs(TextPrinter *win)
 
 int scene_keep_linear_16(TextPrinter *win)
 {
-    /* TEMPORARILY off: shop_desc used top==13 / 0x68 and caught the title
-     * menu ? DrawGlyph_Linear16 (CURSOR +=2) so spacing looked like classic 16.
-     * Battle fixed-base still needs care via tile pool, but must NOT force
-     * advance-16. Product path is fontpatch12 only. */
     (void)win;
     return 0;
 }

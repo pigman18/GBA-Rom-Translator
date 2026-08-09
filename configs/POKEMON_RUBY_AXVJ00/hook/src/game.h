@@ -132,11 +132,21 @@ struct ChineseTileState {
 #define CHS_DEX_UI_TILE_LO      CHS_UI_ICON_TILE_LO
 #define CHS_DEX_UI_TILE_HI      CHS_UI_ICON_TILE_HI
 #define CHS_DEX_UI_TILE_ALT     CHS_UI_ICON_TILE_ALT
+/*
+ * Menu ▶ (0xEF): fixed pair in-charblock (<0x200), below UI icons 0x1E8.
+ * Do NOT use 0x3E4 (screenblock stomp) or remap CHS → 0x1D0 (summary 串字).
+ * CHS hitting this pair wraps into menu Linear pool 0x168.. (not 0x1D0).
+ */
+#define CHS_MENU_CURSOR_TILE        0x1E0u
+#define CHS_MENU_CURSOR_TILE_HI     0x1E1u
+#define CHS_MENU_CURSOR_TILE_ALT    0x168u
 
 #define CHS_TILE_GRID_W         30
 #define CHS_TILE_POOL_END            0x180
 #define CHS_LINEAR_STICKY_END        0x60
 #define CHS_MENU_LINEAR_FLOOR        0x100
+/* Shop/bag item rows: Linear (not Mode2). ▶ via DrawMenuCursorEF. */
+#define CHS_SHOP_LIST_LINEAR_FLOOR   0x100
 #define CHS_SHOP_DESC_LINEAR_FLOOR   0x228
 #define CHS_SHOP_DESC_POOL_END       0x2D0
 #define CHS_MODE2_FOOTER_BAND        0x100
@@ -147,6 +157,11 @@ struct ChineseTileState {
 #define CHS_MODE2_ORIGIN_SHOP        2
 #define CHS_MODE2_ORIGIN_MENU        0x20
 #define CHS_SHOP_LIST_LEFT           14
+/* AXVJ gMenu @ IWRAM — InitMenu(left, top, n); Redraw prints ▶ */
+#define ADDR_GMENU                   0x03000618u
+#define GMENU_LEFT                   0u
+#define GMENU_TOP                    1u
+#define GMENU_MAX_MINUS_1            4u
 #define CHS_SHOP_DESC_TOP_PX         0x68
 #define CHS_SHOP_DESC_TOP_TILE       13
 #define CHS_PARTY_MENU_LEFT          20
@@ -246,7 +261,10 @@ uint8_t MapName_DisplayCellLength_C(const uint8_t *s);
 int  scene_field_wants_linear(TextPrinter *win);
 int  scene_menu_wants_mode2(TextPrinter *win);
 int  scene_is_shop_desc(TextPrinter *win);
+int  scene_is_shop_bag_list(TextPrinter *win);
 int  scene_is_party_footer(TextPrinter *win);
+/* PCS 0xEF ► → CHS_MENU_CURSOR_TILE pair. 1=drawn, 0=FontFunc. */
+int  DrawMenuCursorEF(TextPrinter *win);
 int  scene_jp_via_chs(TextPrinter *win);
 int  scene_is_battle_interface_dest(TextPrinter *win);
 void scene_mode2_apply(TextPrinter *win, int *x, int *y, int *band, int *origin);

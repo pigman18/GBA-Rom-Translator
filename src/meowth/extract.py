@@ -993,8 +993,9 @@ def _strip_text_prefix(raw: bytes) -> bytes:
     """Strip leading line/colour-control bytes to reach the text body.
 
     ``0x00`` is a line prefix, ``\\CC`` = ``0xFC`` + 2 colour bytes, and
-    ``0xF7..0xFF`` are colour control codes. A string whose first byte is
-    such a control byte is real text, not padding.
+    ``0xF7..0xFB`` / ``0xFE`` are wait/colour/newline controls. ``0xFD`` is
+    StringExpand (``\\XX``) and must stay — stripping it breaks battle
+    templates and drops pointer alignment (B02i).
     """
     i = 0
     n = len(raw)
@@ -1004,7 +1005,7 @@ def _strip_text_prefix(raw: bytes) -> bytes:
             i += 1
         elif b == 0xFC and i + 3 < n:
             i += 3
-        elif 0xF7 <= b <= 0xFE:
+        elif 0xF7 <= b <= 0xFE and b != 0xFD:
             i += 1
         else:
             break
@@ -1047,8 +1048,11 @@ def scan_addr_bands(rom: bytes, bands: list) -> list[dict]:
         a = lo
         while a <= hi:
             b = rom[a]
-            # 0xFC = 扩展控制码前缀（战斗菜单等）；勿与 F7–FB / FE / FF 一并跳过
-            if b == 0xFF or b == 0x00 or (b >= 0xF7 and b != 0xFC):
+            # 0xFC = 扩展控制码前缀；0xFD = StringExpand（\\XX 战斗模板）。
+            # 二者均可作串首，勿与 F7–FB / FE / FF 一并跳过（B02i）。
+            if b == 0xFF or b == 0x00 or (
+                b >= 0xF7 and b not in (0xFC, 0xFD)
+            ):
                 a += 1
                 continue
             raw = read_pcs(rom, a, 512)

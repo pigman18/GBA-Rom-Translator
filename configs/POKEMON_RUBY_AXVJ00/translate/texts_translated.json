@@ -71,6 +71,21 @@
   },
   {
     "status": 200,
+    "original": "\\0Cは こうげきの\nはんどうを うけた！",
+    "translated": "\\0C受到了攻击的\n反作用力！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは たおれた！\n\n",
+    "translated": "\\0C倒下了！\n\n"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは たおれた！\n\n",
+    "translated": "\\0D倒下了！\n\n"
+  },
+  {
+    "status": 200,
     "original": "\\0Fは どうする？",
     "translated": "\\0F怎么办？"
   },
@@ -11178,7 +11193,7 @@
   {
     "status": 200,
     "original": "こうげきの はんどうで\n\\0Cは うごけない！",
-    "translated": "因攻击的反作用力，{\\n}{\\p}无法动弹！"
+    "translated": "由于攻击的反作用力\n\\0C无法行动！"
   },
   {
     "status": 200,
@@ -28217,6 +28232,11 @@
     "status": 200,
     "original": "やせい ポケモンを\nつかまえるための どうぐ",
     "translated": "用于捉住\\n野生宝可梦的道具。"
+  },
+  {
+    "status": 200,
+    "original": "やせいの ",
+    "translated": "野生的"
   },
   {
     "status": 200,

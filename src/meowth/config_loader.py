@@ -846,6 +846,38 @@ def module_wrap_kwargs(game_id: str, module_id: str | None) -> dict[str, Any]:
     return kwargs
 
 
+def module_translate_rules(game_id: str, module_id: str | None) -> list[str]:
+    """LLM-only extra rules from texts.json ``modules.<id>.translate_rules``.
+
+    Not used for inject. Invalid shapes are ignored (empty list).
+    """
+    if not module_id or not game_id:
+        return []
+    try:
+        meta = load_modules(game_id).get(module_id) or {}
+    except FileNotFoundError:
+        return []
+    raw = meta.get("translate_rules")
+    if raw is None:
+        return []
+    if not isinstance(raw, list):
+        print(
+            f"[配置] 模块 {module_id!r} translate_rules 须为字符串数组，已忽略",
+            flush=True,
+        )
+        return []
+    out: list[str] = []
+    for item in raw:
+        if isinstance(item, str) and item.strip():
+            out.append(item.strip())
+        else:
+            print(
+                f"[配置] 模块 {module_id!r} translate_rules 含非字符串项，已跳过",
+                flush=True,
+            )
+    return out
+
+
 def load_game_config(game_id: str) -> dict[str, Any]:
     """Merged profile for legacy callers (``.get("tables")``, ``font_patch``, …)."""
     if game_id in _profile_cache:

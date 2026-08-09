@@ -6,6 +6,7 @@ import shutil
 import subprocess
 import sys
 import threading
+from collections import defaultdict
 from concurrent.futures import ThreadPoolExecutor, as_completed
 from pathlib import Path
 
@@ -15,6 +16,8 @@ from ..config_loader import (
     load_game_config,
     get_game_patch_dir,
     get_charmap_path,
+    load_modules,
+    module_translate_rules,
     module_wrap_kwargs,
     set_active_game_id,
 )
@@ -828,9 +831,6 @@ class TranslationEngine:
                     skipped_resolved += 1
 
             pending = [e for e in free_texts if _needs_llm(e)]
-            pending.sort(
-                key=lambda e: (e.get("address") or "", e.get("original") or "")
-            )
             extra = []
             if skipped_placeholder:
                 extra.append(f"占位 {skipped_placeholder}")
@@ -842,13 +842,51 @@ class TranslationEngine:
                 + (f"（跳过 {'、'.join(extra)}）" if extra else ""),
             )
 
-            # --- 4. LLM; success → append cache ---
+            # --- 4. LLM by module, then batch_size within each module ---
             cache_lock = threading.Lock()
-            batches = [
-                pending[i : i + self.config.batch_size]
-                for i in range(0, len(pending), self.config.batch_size)
-            ]
-            total = len(batches)
+            by_mod: dict[str, list[dict]] = defaultdict(list)
+            for e in pending:
+                mid = (
+                    stamp_entry_module(e, game_id=self.config.game)
+                    or e.get("module")
+                    or "_none"
+                )
+                by_mod[str(mid)].append(e)
+
+            mod_order: list[str] = []
+            if self.config.game:
+                try:
+                    mod_order = list(load_modules(self.config.game).keys())
+                except FileNotFoundError:
+                    mod_order = []
+            ordered_mids = [m for m in mod_order if m in by_mod]
+            for m in sorted(by_mod.keys()):
+                if m not in ordered_mids:
+                    ordered_mids.append(m)
+
+            # jobs: (global_idx, module_id, batch, extra_rules)
+            jobs: list[tuple[int, str, list[dict], list[str]]] = []
+            gi = 0
+            bs = max(1, int(self.config.batch_size))
+            for mid in ordered_mids:
+                entries = by_mod[mid]
+                entries.sort(
+                    key=lambda e: (e.get("address") or "", e.get("original") or "")
+                )
+                rules = module_translate_rules(self.config.game or "", mid)
+                mod_batches = [
+                    entries[i : i + bs] for i in range(0, len(entries), bs)
+                ]
+                self._log(
+                    "info",
+                    f"[翻译] 模块={mid} pending={len(entries)} "
+                    f"batches={len(mod_batches)} rules={len(rules)}",
+                )
+                for b in mod_batches:
+                    jobs.append((gi, mid, b, rules))
+                    gi += 1
+
+            total = len(jobs)
             if total:
                 self._ensure_translator()
                 self._log(
@@ -859,9 +897,9 @@ class TranslationEngine:
                 )
                 done_count = 0
 
-                def process_batch(idx_batch):
-                    idx, batch = idx_batch
-                    self._translate_free_batch(batch)
+                def process_batch(job):
+                    idx, _mid, batch, rules = job
+                    self._translate_free_batch(batch, extra_rules=rules)
                     appended = self._append_batch_to_cache(
                         cache, output_path, batch, cache_lock
                     )
@@ -869,8 +907,8 @@ class TranslationEngine:
 
                 with ThreadPoolExecutor(max_workers=self.config.max_workers) as executor:
                     futures = {
-                        executor.submit(process_batch, (i, b)): i
-                        for i, b in enumerate(batches)
+                        executor.submit(process_batch, job): job[0]
+                        for job in jobs
                     }
                     for future in as_completed(futures):
                         done_count += 1
@@ -1209,7 +1247,9 @@ class TranslationEngine:
                 else:
                     entry["translated"] = translated
 
-    def _translate_free_batch(self, batch: list[dict]):
+    def _translate_free_batch(
+        self, batch: list[dict], extra_rules: list[str] | None = None
+    ):
         """Translate a batch of free text entries via LLM."""
         # Apply hardcoded overrides
         remaining = []
@@ -1247,7 +1287,9 @@ class TranslationEngine:
 
         # Translate
         try:
-            results = self.translator.translate_batch(protected_list, glossary_ctx)
+            results = self.translator.translate_batch(
+                protected_list, glossary_ctx, extra_rules=extra_rules
+            )
         except Exception as e:
             print(f"[Batch failed after retries: {e}, keeping previous translations]")
             # Do not overwrite with JP original — empty stays empty for retry
@@ -1298,9 +1340,11 @@ class TranslationEngine:
                 and e.get("_cache_status") != CACHE_STATUS_GARBLED
             ]
             if retry and len(retry) < len(remaining):
-                self._translate_free_batch_once(retry)
+                self._translate_free_batch_once(retry, extra_rules=extra_rules)
 
-    def _translate_free_batch_once(self, remaining: list[dict]):
+    def _translate_free_batch_once(
+        self, remaining: list[dict], extra_rules: list[str] | None = None
+    ):
         """Single-shot LLM batch without nested retry (used after failed ja→zh)."""
         if not remaining:
             return
@@ -1314,7 +1358,9 @@ class TranslationEngine:
         all_text = " ".join(originals)
         glossary_ctx = self._format_glossary(all_text)
         try:
-            results = self.translator.translate_batch(protected_list, glossary_ctx)
+            results = self.translator.translate_batch(
+                protected_list, glossary_ctx, extra_rules=extra_rules
+            )
         except Exception as e:
             print(f"[Retry batch failed: {e}]")
             return

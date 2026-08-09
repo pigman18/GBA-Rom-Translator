@@ -123,6 +123,33 @@ Do not add numbering or extra explanations, only return the translated text.
 }
 
 
+def _inject_extra_rules(
+    system: str,
+    extra_rules: list[str] | None,
+    *,
+    start_num: int,
+    heading: str,
+) -> str:
+    """Append numbered module rules before the glossary section."""
+    if not extra_rules:
+        return system
+    lines = [heading]
+    n = start_num
+    for rule in extra_rules:
+        text = (rule or "").strip()
+        if not text:
+            continue
+        lines.append(f"{n}. {text}")
+        n += 1
+    if len(lines) == 1:
+        return system
+    block = "\n".join(lines) + "\n\n"
+    for marker in ("术语表：", "Terminology glossary:"):
+        if marker in system:
+            return system.replace(marker, block + marker, 1)
+    return system.rstrip() + "\n\n" + block
+
+
 class Translator:
     def __init__(
         self,
@@ -174,6 +201,13 @@ class Translator:
                 "{source_lang}", source_name_local
             ).replace("{target_lang}", target_name_local),
         }
+        # Static numbered rules in PROMPT_TEMPLATES (zh-Hans 1–11, generic 1–10).
+        self._base_rule_count = 11 if template_key == "zh-Hans" else 10
+        self._extra_rules_heading = (
+            "本批模块附加规则："
+            if template_key == "zh-Hans"
+            else "Additional rules for this module batch:"
+        )
 
     def _cache_key(self, request_data: dict) -> str:
         content = json.dumps(request_data, sort_keys=True, ensure_ascii=False)
@@ -200,16 +234,28 @@ class Translator:
             )
 
     def translate_batch(
-        self, texts: list[str], glossary_context: str = ""
+        self,
+        texts: list[str],
+        glossary_context: str = "",
+        extra_rules: list[str] | None = None,
     ) -> list[str]:
         """Translate a batch of texts. Uses cache when available.
 
         Sends all texts joined by ||| in one API call.  If the LLM response
         splits into the wrong number of segments, falls back to translating
         each text individually to avoid misalignment.
+
+        ``extra_rules`` (module ``translate_rules``) are appended after the
+        static numbered rules (zh-Hans → 12…; generic → 11…).
         """
         joined = " ||| ".join(texts)
         system = self.prompts["system"].replace("{glossary}", glossary_context or "（无）")
+        system = _inject_extra_rules(
+            system,
+            extra_rules,
+            start_num=self._base_rule_count + 1,
+            heading=self._extra_rules_heading,
+        )
         user = self.prompts["user"].replace("{texts}", joined)
 
         request_data = {
@@ -249,7 +295,9 @@ class Translator:
         # Misaligned — fall back to one-by-one translation
         from .i18n import Messages
         print(Messages.BATCH_SPLIT_MISMATCH.format(parts=len(parts), texts=len(texts)))
-        return self._translate_individually(texts, glossary_context)
+        return self._translate_individually(
+            texts, glossary_context, extra_rules=extra_rules
+        )
 
     def _call_api(self, system: str, user: str, max_retries: int = 3) -> str:
         """Send a single chat completion request and return the content."""
@@ -304,10 +352,19 @@ class Translator:
                     raise
 
     def _translate_individually(
-        self, texts: list[str], glossary_context: str = ""
+        self,
+        texts: list[str],
+        glossary_context: str = "",
+        extra_rules: list[str] | None = None,
     ) -> list[str]:
         """Translate texts one by one as fallback when batch splitting fails."""
         system = self.prompts["system"].replace("{glossary}", glossary_context or "（无）")
+        system = _inject_extra_rules(
+            system,
+            extra_rules,
+            start_num=self._base_rule_count + 1,
+            heading=self._extra_rules_heading,
+        )
         results = []
         for text in texts:
             user = self.prompts["user"].replace("{texts}", text)

@@ -235,7 +235,14 @@
         "stride": 19
       },
       "relocate": true,
-      "hook": true
+      "hook": true,
+      "word_count": 12,
+      "wrap_pages": false,
+      "max_lines": 1,
+      "translate_rules": [
+        "单行输出：禁止任何换行（不得出现实际换行或 \\n）；句末不得使用「。」",
+        "全文不超过 12 个汉字（控制码占位符 {Cn} 不计入字数）；超长必须压缩语义，禁止用换行续写"
+      ]
     },
     "图鉴说明": {
       "label": "说明·图鉴说明",

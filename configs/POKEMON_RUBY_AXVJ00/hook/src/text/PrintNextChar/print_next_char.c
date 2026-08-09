@@ -122,6 +122,11 @@ static int draw_jp_via_chs(TextPrinter *win, uint32_t cur_char)
     if (cur_char == 0 || cur_char >= 0xF7)
         return 0;
 
+    /* Icon / gender glyphs: JP FontFunc owns the art. JP-via-CHS turns ► into
+     * garbage that reads as Latin "M" on party footer prompts. */
+    if (cur_char == 0xEFu /* ► */ || cur_char == 0xB5u /* ♂ */ || cur_char == 0xB6u /* ♀ */)
+        return 0;
+
     /* textMode 2 = FontFunc[2] bold/healthbox; CHS would write wrong VRAM. */
 //    if (scene_is_battle_interface_dest(win))
 //        return 0;

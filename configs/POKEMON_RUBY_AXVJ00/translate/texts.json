@@ -500,7 +500,7 @@
       "hook": true
     }
   },
-  "count": 7433,
+  "count": 7434,
   "entries": [
     {
       "id": "axvj_92f0510597a5",
@@ -1374,7 +1374,58 @@
       "is_fixed_table": false,
       "is_pointer_based": true,
       "pointer_sources": [
-        "0x08397348"
+        "0x080AF290",
+        "0x08104AAC",
+        "0x08135954",
+        "0x08135CDC",
+        "0x0837B33C",
+        "0x0837B36C",
+        "0x0838B388",
+        "0x08397348",
+        "0x08397B04",
+        "0x08397B1C",
+        "0x083A151C",
+        "0x083A1534",
+        "0x083A1554",
+        "0x083A1584",
+        "0x083A15A4",
+        "0x083A15BC",
+        "0x083A15DC",
+        "0x083A161C",
+        "0x083A162C",
+        "0x083A1674",
+        "0x083A16BC",
+        "0x083A16D4",
+        "0x083A185C",
+        "0x083A187C",
+        "0x083A189C",
+        "0x083A18C4",
+        "0x083A1904",
+        "0x083A1924",
+        "0x083A1954",
+        "0x083A196C",
+        "0x083A1994",
+        "0x083A19AC",
+        "0x083A19D4",
+        "0x083A1A0C",
+        "0x083A1A1C",
+        "0x083A1A34",
+        "0x083A1A44",
+        "0x083A1A5C",
+        "0x083A1A74",
+        "0x083A1A94",
+        "0x083A1AA4",
+        "0x083A1ABC",
+        "0x083A1AD4",
+        "0x083A1AF4",
+        "0x083A1B0C",
+        "0x083A1B2C",
+        "0x083A1B4C",
+        "0x083A1B74",
+        "0x083A1B7C",
+        "0x083D3A3C",
+        "0x083D3F14",
+        "0x083E179C"
       ],
       "pointer_addresses": [
         "0x08397348"
@@ -81746,7 +81797,7 @@
     },
     {
       "id": "axvj_61388437260e",
-      "module": "后期剧情",
+      "module": "UI界面",
       "address": "0x08397259",
       "byte_length": 15,
       "original": "\\CC050E\\02\\CC050Fで であった",
@@ -81762,7 +81813,7 @@
     },
     {
       "id": "axvj_cd801c0ae0bf",
-      "module": "后期剧情",
+      "module": "UI界面",
       "address": "0x08397268",
       "byte_length": 15,
       "original": "\\CC050E\\02\\CC050Fで かえった",
@@ -81778,7 +81829,7 @@
     },
     {
       "id": "axvj_c0e6322d76d7",
-      "module": "后期剧情",
+      "module": "UI界面",
       "address": "0x08397277",
       "byte_length": 19,
       "original": "ケーブルこうかんに よって であった",
@@ -81794,7 +81845,7 @@
     },
     {
       "id": "axvj_8ef686a33769",
-      "module": "后期剧情",
+      "module": "UI界面",
       "address": "0x0839728A",
       "byte_length": 16,
       "original": "うんめいてきな であいを した",
@@ -81810,7 +81861,7 @@
     },
     {
       "id": "axvj_e3990b257f21",
-      "module": "后期剧情",
+      "module": "UI界面",
       "address": "0x0839729A",
       "byte_length": 17,
       "original": "\\CC050E\\02\\CC050Fで あったようだ",
@@ -81826,7 +81877,7 @@
     },
     {
       "id": "axvj_f3fcb3c4ff76",
-      "module": "后期剧情",
+      "module": "UI界面",
       "address": "0x083972AB",
       "byte_length": 31,
       "original": "そだてや ふうふ から もらった\nふしぎな ポケモンのタマゴ",
@@ -81842,7 +81893,7 @@
     },
     {
       "id": "axvj_975ef5ad6f87",
-      "module": "后期剧情",
+      "module": "UI界面",
       "address": "0x083972CA",
       "byte_length": 35,
       "original": "ステキな ばしょで てにいれた\nふしぎな ふしぎな ポケモンのタマゴ",
@@ -81858,7 +81909,7 @@
     },
     {
       "id": "axvj_51d4f7537b2d",
-      "module": "后期剧情",
+      "module": "UI界面",
       "address": "0x083972ED",
       "byte_length": 30,
       "original": "ケーブルこうかんで てにいれた\nふしぎな ポケモンのタマゴ",
@@ -81876,7 +81927,7 @@
     },
     {
       "id": "axvj_10b1361d8cc6",
-      "module": "后期剧情",
+      "module": "UI界面",
       "address": "0x0839730B",
       "byte_length": 31,
       "original": "おんせんばあさん から もらった\nふしぎな ポケモンのタマゴ",
@@ -108050,6 +108101,60 @@
       ],
       "pointer_addresses": [
         "0x0806D024"
+      ]
+    },
+    {
+      "id": "axvj_e2a636a89963",
+      "module": "UI界面",
+      "address": "0x0839724E",
+      "byte_length": 7,
+      "original": "せいかく  ",
+      "original_hex": "0e 02 06 08 00 00 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0809D15C"
+      ],
+      "pointer_addresses": [
+        "0x0809D15C"
+      ]
+    },
+    {
+      "id": "axvj_3f9b0b07a9c4",
+      "module": "UI界面",
+      "address": "0x0839724C",
+      "byte_length": 2,
+      "original": "な",
+      "original_hex": "15 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0809D158"
+      ],
+      "pointer_addresses": [
+        "0x0809D158"
+      ]
+    },
+    {
+      "id": "axvj_4add8bb93548",
+      "module": "UI界面",
+      "address": "0x08397255",
+      "byte_length": 4,
+      "original": "のとき",
+      "original_hex": "19 14 07 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0809D004",
+        "0x0809D01C",
+        "0x0809D038",
+        "0x0809D164"
+      ],
+      "pointer_addresses": [
+        "0x0809D004",
+        "0x0809D01C",
+        "0x0809D038",
+        "0x0809D164"
       ]
     }
   ]

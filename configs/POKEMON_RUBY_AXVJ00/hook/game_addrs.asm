@@ -37,7 +37,7 @@ StringExpandPlaceholders               equ 0x08004530
 ; 日版 DrawMapNamePopup：StringLength 居中（10 半角格），BL 位点如下。
 DrawMapNamePopup                       equ 0x0809F654
 DrawMapNamePopup_StringLength          equ 0x0809F67E
-
+; PokemonSummaryScreen_PrintTrainerMemo nature follow-X (byte len → tiles)
 ; --- 扩展区 / game.bin 装入点 ---
 GameBinAddresses                       equ 0x08800000  ; main.asm .incbin game.bin（≤0xF000）
 HackFunctionAddresses                  equ GameBinAddresses  ; 旧名兼容

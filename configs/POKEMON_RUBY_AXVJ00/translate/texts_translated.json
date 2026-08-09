@@ -62,7 +62,7 @@
   {
     "status": 200,
     "original": "\\02を どうする？",
-    "translated": "\\02怎么办？"
+    "translated": "要做什么？"
   },
   {
     "status": 200,
@@ -421,17 +421,17 @@
   {
     "status": 200,
     "original": "\\CC050E\\02\\CC050Fで あったようだ",
-    "translated": "\\CC050E\\02\\CC050F似乎是"
+    "translated": "在\\CC050E\\02\\CC050F遇见的样子"
   },
   {
     "status": 200,
     "original": "\\CC050E\\02\\CC050Fで かえった",
-    "translated": "\\CC050E\\02\\CC050F回来了"
+    "translated": "在\\CC050E\\02\\CC050F得到"
   },
   {
     "status": 200,
     "original": "\\CC050E\\02\\CC050Fで であった",
-    "translated": "\\CC050E\\02\\CC050F是"
+    "translated": "在\\CC050E\\02\\CC050F遇见"
   },
   {
     "status": 200,
@@ -5699,7 +5699,7 @@
   {
     "status": 200,
     "original": "うんめいてきな であいを した",
-    "translated": "经历了命运般的相遇"
+    "translated": "命中注定的相遇"
   },
   {
     "status": 200,
@@ -7810,7 +7810,7 @@
   {
     "status": 200,
     "original": "おんせんばあさん から もらった\nふしぎな ポケモンのタマゴ",
-    "translated": "从温泉婆婆那里收到的\\n奇怪的宝可梦的蛋"
+    "translated": "从温泉婆婆那里得到的\n神奇的宝可梦蛋"
   },
   {
     "status": 200,
@@ -16156,6 +16156,11 @@
   },
   {
     "status": 200,
+    "original": "せいかく  ",
+    "translated": "性格  "
+  },
+  {
+    "status": 200,
     "original": "せいかく／",
     "translated": "性格／"
   },
@@ -16871,7 +16876,7 @@
   {
     "status": 200,
     "original": "そだてや ふうふ から もらった\nふしぎな ポケモンのタマゴ",
-    "translated": "从夫妇那里收到的{\\n}神奇的宝可梦蛋"
+    "translated": "从培育屋夫妇那里得到的\n神奇的宝可梦蛋"
   },
   {
     "status": 200,
@@ -21066,7 +21071,7 @@
   {
     "status": 200,
     "original": "どく まひ やけどを あいてにうつす",
-    "translated": "将中毒、麻痹或灼伤状\\n态传染给对手"
+    "translated": "将中毒、麻痹或灼伤状态传"
   },
   {
     "status": 200,
@@ -21547,6 +21552,11 @@
     "status": 200,
     "original": "どんなに みずを あげても えいようが",
     "translated": "无论给多少水，营养都"
+  },
+  {
+    "status": 200,
+    "original": "な",
+    "translated": " "
   },
   {
     "status": 200,
@@ -22764,6 +22774,11 @@
     "status": 200,
     "original": "のしかかり",
     "translated": "泰山压顶"
+  },
+  {
+    "status": 200,
+    "original": "のとき",
+    "translated": "时"
   },
   {
     "status": 200,
@@ -34883,12 +34898,12 @@
   {
     "status": 200,
     "original": "ケーブルこうかんで てにいれた\nふしぎな ポケモンのタマゴ",
-    "translated": "在电缆交换中得到的{\\n}神奇宝可梦的蛋"
+    "translated": "通过连接交换得到的\n神奇的宝可梦蛋"
   },
   {
     "status": 200,
     "original": "ケーブルこうかんに よって であった",
-    "translated": "通过电缆交换而存在"
+    "translated": "通过连接交换遇见"
   },
   {
     "status": 200,
@@ -37197,7 +37212,7 @@
   {
     "status": 200,
     "original": "ステキな ばしょで てにいれた\nふしぎな ふしぎな ポケモンのタマゴ",
-    "translated": "在很棒的地方得到了{\\n}神奇的神奇的宝可梦\\p的蛋"
+    "translated": "在美妙的地方得到的\n非常神奇的宝可梦蛋"
   },
   {
     "status": 200,

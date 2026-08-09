@@ -95,6 +95,10 @@ void scene_mode2_apply(TextPrinter *win, int *x, int *y, int *band, int *origin)
      * Party footer uses scene_is_party_footer only. */
     if (scene_is_party_footer(win)) {
         *origin = CHS_MODE2_ORIGIN_SHOP;
+        /* CURSOR_Y may be tile 17 or pixel 136 — normalize before band math.
+         * Pixel Y left as 136 → y'=120 → tile indices collide with 查看能力. */
+        if (*y >= CHS_PARTY_FOOTER_TOP_PX)
+            *y /= 8;
         if (*y >= 16) {
             *y -= 16;
             *band = CHS_MODE2_PARTY_FOOTER_BAND;

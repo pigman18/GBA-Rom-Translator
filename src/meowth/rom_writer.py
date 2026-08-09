@@ -544,15 +544,22 @@ class RomWriter:
             )
             if ptrs:
                 try:
-                    # 不传 expected_target：走宽松改指针（快）。共字串全量扩展只在
-                    # type=hook → pointer_redirect（条目极少）里做。
+                    # 默认不传 expected_target（快）。短共字串（やめる 等）才
+                    # expand + 校验目标，避免菜单表只改到 1 个指针。
+                    from .policy import should_expand_shared_literal
+
+                    expand = should_expand_shared_literal(
+                        original, category, ptrs
+                    )
                     self._write_relocated(
                         rom,
                         target,
                         ptrs,
+                        expected_target=address if expand else None,
                         category=category,
                         original=original,
                         lz_spans=getattr(self, "_axvj_lz_spans", None),
+                        expand_ptrs=expand,
                     )
                     stats["relocated"] += 1
                     return
@@ -703,12 +710,18 @@ class RomWriter:
                 )
             if is_pointer_based and pointer_sources:
                 try:
+                    from .policy import should_expand_shared_literal
+
+                    expand = should_expand_shared_literal(
+                        original, category, pointer_sources
+                    )
                     self._write_relocated(
                         rom, encoded, pointer_sources,
                         expected_target=address,
                         category=category,
                         original=original,
                         lz_spans=getattr(self, "_axvj_lz_spans", None),
+                        expand_ptrs=expand,
                     )
                     stats["relocated"] += 1
                     return

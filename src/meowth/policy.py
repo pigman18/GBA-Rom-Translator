@@ -940,6 +940,41 @@ def entry_has_registry_ptr(entry: dict) -> bool:
     return False
 
 
+def should_expand_shared_literal(
+    original: str = "",
+    category: str = "",
+    pointer_sources: Iterable | None = None,
+) -> bool:
+    """Short shared UI literals: extract often lists 1 site; discover the rest.
+
+    Class rule (not address allowlists): compact length ≤ 12, no newlines, and
+    few registered pointer_sources. Used so ``やめる`` updates every menu table.
+    """
+    raw = original or ""
+    if "\n" in raw:
+        return False
+    compact = raw.replace(" ", "").replace("\u3000", "")
+    # Keep control/template strings (FD/FC) on listed sites only.
+    if "\\" in raw or len(compact) == 0 or len(compact) > 12:
+        return False
+    n = len(list(pointer_sources or []))
+    if n == 0 or n > 4:
+        return False
+    cat = (category or "").strip()
+    # UI / short label modules; empty cat still OK for seed UI rows.
+    if cat and cat not in (
+        "UI界面",
+        "界面",
+        "ui",
+        "UI",
+        "性格名",
+        "属性名",
+        "特性名",
+    ):
+        return False
+    return True
+
+
 def discover_pointer_sources(
     rom: bytes | bytearray,
     text_address: int,

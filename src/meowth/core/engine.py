@@ -363,9 +363,10 @@ def _merge_lexicon_into_cache(
     """
     n = 0
     for orig, tr in (lexicon or {}).items():
-        if not isinstance(orig, str) or not isinstance(tr, str) or not tr:
+        if not isinstance(orig, str) or not isinstance(tr, str):
             continue
-        if usable is not None and not usable(orig, tr) and not usable(
+        # Empty tr = intentional blank (rare); still merge so inject can EOS-only.
+        if usable is not None and tr and not usable(orig, tr) and not usable(
             format_original(orig), tr
         ):
             continue
@@ -515,7 +516,12 @@ class TranslationEngine:
 
         from ..seed_translate import looks_like_failed_zh_translation
 
-        if not translated or translated == original:
+        if translated == original:
+            return False
+        # Intentional blank / spacer (memo particle な → " ")
+        if translated == "" or translated == " ":
+            return True
+        if not translated:
             return False
         if looks_like_failed_zh_translation(original, translated):
             return False
@@ -2105,15 +2111,16 @@ class TranslationEngine:
                         continue
                     orig = orig_raw.strip('"')
                     trans = entry.get("translated", "") or ""
-                    ct_zh = self._custom_translations.get(orig)
-                    if ct_zh:
-                        entry["translated"] = ct_zh
+                    if orig in self._custom_translations:
+                        entry["translated"] = self._custom_translations[orig]
                         n_exact += 1
                         continue
                     if not trans:
                         continue
                     changed = False
                     for jp, zh in self._custom_translations.items():
+                        if not zh or len(jp) < 2:
+                            continue
                         if jp in orig and jp in trans:
                             trans = trans.replace(jp, zh)
                             changed = True
@@ -2133,12 +2140,19 @@ class TranslationEngine:
                     print(msg)
 
             before_filter = len(all_entries)
-            all_entries = [
-                e
-                for e in all_entries
-                if (e.get("translated") or "").strip()
-                and (e.get("translated") or "").strip() != (e.get("original") or "")
-            ]
+
+            def _injectable_translation(e: dict) -> bool:
+                tr = e.get("translated")
+                orig = e.get("original") or ""
+                if tr is None or tr == orig:
+                    return False
+                # Intentional blank/spacer (memo particle な → " ") must not
+                # die on .strip(); otherwise in_place FF never lands.
+                if tr in ("", " ", "\u3000"):
+                    return True
+                return bool(str(tr).strip())
+
+            all_entries = [e for e in all_entries if _injectable_translation(e)]
             after_mod = len(all_entries)
             filtered_out = before_filter - after_mod
             if filtered_out:
@@ -2182,15 +2196,16 @@ class TranslationEngine:
                     continue
                 orig = orig_raw.strip('"')
                 trans = entry.get("translated", "") or ""
-                ct_zh = self._custom_translations.get(orig)
-                if ct_zh:
-                    entry["translated"] = ct_zh
+                if orig in self._custom_translations:
+                    entry["translated"] = self._custom_translations[orig]
                     n_exact += 1
                     continue
                 if not trans:
                     continue
                 changed = False
                 for jp, zh in self._custom_translations.items():
+                    if not zh or len(jp) < 2:
+                        continue
                     if jp in orig and jp in trans:
                         trans = trans.replace(jp, zh)
                         changed = True

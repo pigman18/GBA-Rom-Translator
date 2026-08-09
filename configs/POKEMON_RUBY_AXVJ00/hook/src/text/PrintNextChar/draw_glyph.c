@@ -43,12 +43,12 @@ static uint8_t *vram_tile(TextPrinter *win, uint16_t tile)
     return tile_data + ((uint32_t)tile << 5);
 }
 
-/* Remap abs tile out of dex №/ball slot so CHS blit cannot wipe 0x1FC..0x1FF (AXVJ).
- * Used by Mode2 and Linear (species names / dex digits). */
+/* Remap abs tile out of shared UI icon band 0x1F0..0x1FF → 0x3F0.. (AXVJ).
+ * Covers dex №/ball and summary A/B prompt icons. Mode2 + Linear. */
 static uint16_t avoid_dex_ui_tile(uint16_t tile)
 {
-    if (tile >= CHS_DEX_UI_TILE_LO && tile <= CHS_DEX_UI_TILE_HI)
-        return (uint16_t)(CHS_DEX_UI_TILE_ALT + (tile - CHS_DEX_UI_TILE_LO));
+    if (tile >= CHS_UI_ICON_TILE_LO && tile <= CHS_UI_ICON_TILE_HI)
+        return (uint16_t)(CHS_UI_ICON_TILE_ALT + (tile - CHS_UI_ICON_TILE_LO));
     return tile;
 }
 
@@ -64,7 +64,9 @@ static void ensure_linear_dest_floor(TextPrinter *win)
         return;
 
     tpl = win_template(win);
-    if (scene_is_shop_desc(win))
+    if (scene_is_party_footer(win))
+        floor = CHS_PARTY_FOOTER_LINEAR_FLOOR;
+    else if (scene_is_shop_desc(win))
         floor = CHS_SHOP_DESC_LINEAR_FLOOR;
     else if (tpl && tpl[1] == 2)
         floor = CHS_MENU_LINEAR_FLOOR;

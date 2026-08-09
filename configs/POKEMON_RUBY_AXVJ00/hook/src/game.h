@@ -118,12 +118,18 @@ struct ChineseTileState {
 #define CHS_WRITE_LINEAR  3
 #define CHS_WRITE_SLOT    4
 
-/* Dex list "No"/ball — fixed BG tiles (CreateMonDexNum / CreateCaughtBall).
- * AXVJ (JP): No=0x1FC/0x1FD, ball=0x1FE/0x1FF (US pret uses 0x3FC.. — wrong here).
- * Chinese Mode2/Linear must not blit into these abs indices. */
-#define CHS_DEX_UI_TILE_LO      0x1FCu
-#define CHS_DEX_UI_TILE_HI      0x1FFu
-#define CHS_DEX_UI_TILE_ALT     0x1F0u  /* scratch remap target (4 tiles) */
+/* Shared low UI icon tiles (AXVJ JP) — Chinese Mode2/Linear must not blit here.
+ * - Dex list No/ball: 0x1FC..0x1FF (CreateMonDexNum / CreateCaughtBall)
+ * - Summary A/B prompt icons: 0x1E8..0x1FB (cancel/切换 still stomped at 0x1E8..1EF)
+ * Remap into US dex range 0x3E8.. — unused on JP for these screens.
+ * (Old ALT=0x1F0 was inside the protect band → cancelled the icons.) */
+#define CHS_UI_ICON_TILE_LO     0x1E8u
+#define CHS_UI_ICON_TILE_HI     0x1FFu
+#define CHS_UI_ICON_TILE_ALT    0x3E8u
+/* Aliases kept for call sites / docs */
+#define CHS_DEX_UI_TILE_LO      CHS_UI_ICON_TILE_LO
+#define CHS_DEX_UI_TILE_HI      CHS_UI_ICON_TILE_HI
+#define CHS_DEX_UI_TILE_ALT     CHS_UI_ICON_TILE_ALT
 
 #define CHS_TILE_GRID_W         30
 #define CHS_TILE_POOL_END            0x180
@@ -132,8 +138,10 @@ struct ChineseTileState {
 #define CHS_SHOP_DESC_LINEAR_FLOOR   0x228
 #define CHS_SHOP_DESC_POOL_END       0x2D0
 #define CHS_MODE2_FOOTER_BAND        0x100
-#define CHS_MODE2_PARTY_FOOTER_BAND  0x140
+/* Far from MENU_BAND 0x17A and UI icons 0x1E8 — party DoWhat vs 查看能力 串台 */
+#define CHS_MODE2_PARTY_FOOTER_BAND  0x2A0
 #define CHS_MODE2_MENU_BAND          0x17A
+#define CHS_PARTY_FOOTER_LINEAR_FLOOR 0x2C0
 #define CHS_MODE2_ORIGIN_SHOP        2
 #define CHS_MODE2_ORIGIN_MENU        0x20
 #define CHS_SHOP_LIST_LEFT           14
@@ -206,10 +214,14 @@ static inline void chs_copy_glyph_1bpp_to_4bpp(
 
 static inline uint16_t chs_pitch_key(TextPrinter *win)
 {
-    /* Window identity only — do NOT fold CURSOR_X (JP advances it each glyph). */
+    /* Window identity only — do NOT fold CURSOR_X (JP advances it each glyph).
+     * XOR template ptr so party footer (y=17) ≠ action menu item (also y=17). */
+    uint8_t *tpl = win_template(win);
+    uint16_t w = tpl ? (uint16_t)(((uintptr_t)tpl >> 2) & 0xFFFFu) : 0;
     return (uint16_t)(win_u16(win, WIN_TILE_BASE)
                       ^ ((uint16_t)win_u8(win, WIN_CURSOR_Y) << 8)
-                      ^ (uint16_t)win_u8(win, WIN_CURSOR_TILE_Y));
+                      ^ (uint16_t)win_u8(win, WIN_CURSOR_TILE_Y)
+                      ^ w);
 }
 
 int PrintNextChar_C(TextPrinter *win, uint32_t cur_char);

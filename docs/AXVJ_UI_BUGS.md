@@ -1,71 +1,70 @@
 # AXVJ UI / 文本 BUG 台账（逐项修）
 
-基线：`git` 工作区已于 2026-08-09 **整棵回滚到 HEAD**（含本轮 PhraseResume / 内联短语 / 商店 `base_tx` / PrintSave 16B 等未提交改动）。  
-原则：**一次只修一类**；出 ROM → 你测 → 过了再开下一项；禁止顺手叠几何/lexicon。
+原则：**一次只修一类**；出 ROM → 你测 → 说「正常」后本地 commit → 再开下一项。  
+禁止顺手叠几何/lexicon；地名已确认在 B01 基线上正常，动战斗时不得再踩。
 
-## 修复顺序（推荐）
+## 修复顺序
 
 | 序 | ID | 现象 | 疑似根因（域） | 允许动的文件 | 勿碰 |
 |----|-----|------|----------------|--------------|------|
 | 0 | BASE | 回滚后基线确认 | — | 仅打包 | 一切源码 |
-| 1 | B01 | 存档信息框假名/乱纹 | `PrintSave*` 栈拷 7–8B，中文 `F9 00×2+FF` 丢 `FF` | `hook_origin.s` + `game_addrs.asm`（PrintSave*） | `print_next_char` / draw_* |
-| 2 | B02 | 遇敌/逃敌/出招残首字；放技能狂打至死机 | `redirect_phrase_stream` 弃父串，Phrase `FF`=整句 EOS；resume **必须 IWRAM**（禁 game.bin `.bss`） | **仅** `print_next_char.c` + `game.h` 地址常量 | draw_* / MapName / 存档 |
-| 3 | B03 | 地名弹窗白边突出 / 残留 | `DrawMapNamePopup` 格宽 vs 12px；或窗口清图 | `get_string_width.c`（MapName_*）及 MapName armips；必要时独立清窗 | 短语 resume / 商店 |
-| 4 | B04 | 商店/背包光标脏 | 列表 `left==14` 与 12px 墨水盖光标 OBJ | **仅** `draw_scene.c` / `draw_glyph.c` 几何 | 短语 / 存档 / MapName |
-| 5 | B05 | 血条昵称乱码 | `textMode==2`→FontFunc；与 CpuSet 24B 补丁正交 | healthbox 专用路径（另开） | 对话 Phrase |
+| 1 | B01 | 存档信息框假名/乱纹 | `PrintSave*` 栈拷 7–8B，中文丢 `FF` | `hook_origin.s` + `game_addrs.asm`（PrintSave*） | `print_next_char` / draw_* |
+| 2 | B02 | 遇敌/逃敌/出招残首字；放技能狂打死机 | 见下；**切流+resume 路已证伪** | 待定（新方案） | MapName / 存档 / 商店 |
+| 3 | B03 | 地名弹窗白边（仅当基线坏） | MapName 格宽/清窗 | MapName 专用 | 短语 |
+| 4 | B04 | 商店/背包光标脏 | 列表几何 vs 12px | 仅 `draw_scene` / `draw_glyph` | 短语 / 存档 |
+| 5 | B05 | 血条昵称乱码 | `textMode==2` | healthbox 专用 | 对话 Phrase |
 
 ## 分类详表
 
-### B01 — 存档信息框
+### B01 — 存档信息框 — **已验收**
 
-- **复现**：继续游戏界面左上信息（地名/徽章/图鉴/时间）花屏；底栏提示可能仍正常。
-- **机制**：固定 `memcpy` 长度 < 中文槽 `F9 00 ×2 + FF`（9B）→ 无终止符 → 打印扫栈。
-- **状态**：曾用扩栈+`mov r2,16` 修过；**已随回滚丢掉**，需按序重做。
-- **验收**：信息四行中文清晰，无假名拖尾。
+- **修法**：`PrintSavePlayerName/PokedexCount/PlayTime`：`sub/add sp,16` + `mov r2,16`。
+- **验收**：2026-08-09 存档信息框正常；commit 含 `0438b9d` 台账。
 
-### B02 — 战斗短语切流（高危）
+### B02 — 战斗短语 — **切流 resume 已放弃**
 
-- **复现**：遇敌/逃敌/出招后角上留对方名首字（如「溶」）；放技能后无限打字至花屏死机。
-- **机制**：战斗串嵌入 `F9 <op> hi lo` → 切到 PhraseTable；流末 `FF` 被原版当整窗 EOS；`GetStringWidth` 已 `index+4` 续父串，打印未对齐。
-- **失败教训**：
-  1. `static` PhraseResume 进 `game.bin` `.bss`（ROM）→ 写入无效，等于没修。
-  2. 纯字形「一次画完整句」→ 打乱地名一字一帧，白边/顶出加重。
-- **预定修法**：IWRAM `PhraseResume`（如 `0x0203FFF0`）+ 仍逐字切流 + 流末 `FF` 前 pop；**禁止**整句内联。
-- **验收**：遇敌/逃敌/出招整句完整；放技能不狂打；地名（B03）不得回退。
+- **复现**：遇敌/逃敌/出招角上多首字；放技能后无限打字死机。
+- **曾判机制**：`redirect_phrase_stream` 弃父串，Phrase `FF`=整句 EOS（宽度路径有 resume）。
+- **已证伪的修法（勿再走）**：
+  1. `game.bin` `.bss` PhraseResume → ROM 不可写。
+  2. 纯字形整句内联 → 地名顶框/白边残留。
+  3. **IWRAM `0x0203FFF0` PhraseResume + 逐字切流 + peek FF pop**（2026-08-09）→ 地名再次顶框；战斗残字/狂打**仍在**。说明「只补 resume」或该 IWRAM 槽不可用/根因另有其物。
+- **代码状态**：B02 相关已撤；工作区回到 **B01 基线**（仅 PrintSave 补丁）。
+- **下一候选（未做，需你点头再开）B02b**：
+  - **仅当父串在 F9 引用之后还有正文**（`parent[index+3] != 0xFF`，即战斗 StringAppend 嵌入）时，在父串上同步展开 Phrase（不换 `WIN_TEXT_PTR`）。
+  - 父串下一字节已是 `FF`（地名/单独槽名）→ **保持原版切流、不 resume、不内联**。
+  - 不写 IWRAM；不动 MapName / draw_*。
+- **验收（将来）**：战斗台词完整且不狂打；地名与存档不回归。
 
 ### B03 — 地图名弹窗
 
-- **复现**：进入地图时「××市/道路」白底相对外框错位；严重时白条突出且弹窗消失后残留。
-- **机制**：日版用 `StringLength`（字节）居中；中文已有 `MapName_DisplayCellLength`（按 px/8）。回滚后应先确认是否仍坏；若基线正常则 **B02 不得再动 MapName**。
-- **验收**：弹出时框与字对齐；消失后无白块残留。
+- **基线/B01**：正常。B02 失败时再次顶框 → 已随 B02 撤回应恢复。
+- 仅当 B01 基线 ROM 上仍坏时才单开。
 
 ### B04 — 商店 / 背包光标
 
-- **复现**：选商品/道具时光标处图块脏、叠字或盖住箭头。
-- **机制**：列表列与 12px 墨水/Mode2 池几何冲突（与 B02 短语 EOS **不同根因**）。
-- **验收**：光标清晰；列表字不盖箭头；图鉴 No/球标不回归。
+- 与 B02 不同根因；战斗方案稳定后再动。
 
 ### B05 — 血条昵称
 
-- **复现**：战斗血条上昵称乱码。
-- **机制**：`textMode==2` 不走 CHS；`UpdateNickInHealthbox` CpuSet 长度另案。
-- **验收**：昵称可读；不影响对话窗。
+- `textMode==2`；另案。
 
-## 已回滚的失败尝试（勿直接重复合并）
+## 已放弃尝试（禁止直接重复合并）
 
-- game.bin `.bss` PhraseResume  
-- `draw_phrase_inline` 整句绘制  
-- 商店 `scene_is_shop_bag_list` + `base_tx=1`（未经验收）  
-- 扩大 Mode2 / ink-only / 图鉴 icon 带宽试验（历史会话）
+| 尝试 | 结果 |
+|------|------|
+| ROM `.bss` PhraseResume | 无效 |
+| 全量整句内联 | 地名炸 |
+| IWRAM resume + 切流 peek FF | 地名炸 + 战斗未修 |
+| 商店 `base_tx=1` 等几何 | 未验收，勿混进 B02 |
 
 ## 当前进度
 
 | ID | 状态 |
 |----|------|
-| BASE | 已确认：地名弹窗正常（2026-08-09） |
-| B01 | **已验收**：存档信息框正常（2026-08-09）；PrintSave 扩栈+拷 16B |
-| B02 | 进行中：战斗短语 IWRAM resume（禁整句内联 / ROM `.bss`） |
+| BASE | 地名曾确认正常 |
+| B01 | **已验收** + 已 commit |
+| B02 | **失败已撤回** → 回 B01 基线 ROM；等你确认地名恢复后，再决定是否试 B02b |
 | B03–B05 | 未修 |
 
-约定：你说「正常」后本地 `git commit` 该项，再开下一项。  
-下一动：B02 出 ROM → 你测遇敌/逃敌/出招/放技能。
+下一动：打 B01 基线 ROM → 你确认地名恢复 → 回复是否试 **B02b（条件内联，不切流）**。

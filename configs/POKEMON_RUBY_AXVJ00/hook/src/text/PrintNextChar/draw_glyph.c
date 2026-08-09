@@ -52,21 +52,34 @@ void WaitArrow_Prepare_C(TextPrinter *win)
     volatile struct ChineseTileState *st = chinese_tile_state();
     uint16_t cols;
     uint16_t off;
-    uint8_t cx;
     uint8_t want;
+    uint8_t cur_tx;
 
     if (!win || !st->chs_px)
         return;
 
     cols = (uint16_t)((st->chs_px + 7u) >> 3);
     want = (uint8_t)(st->base_tx + cols);
-    cx = win_u8(win, WIN_CURSOR_X);
-    if (want >= cx)
-        win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(want - cx));
-    else
-        win_set_u8(win, WIN_CURSOR_TILE_X, want);
+    cur_tx = win_u8(win, WIN_CURSOR_TILE_X);
 
-    /* When chs_px&7 != 0, TILE_OFFSET trails ceil(chs/8) by one column. */
+    /*
+     * \\n{\\p}: FE already moved to the next line (TILE_X==0). Keep that
+     * cursor — do NOT stamp at previous-line end (双▼: static at 梦 + animated
+     * corner). Only refresh TILE_OFFSET so arrow ink misses glyph VRAM.
+     *
+     * Same-line \\p (shop): TILE_X still at ink end → sync to want.
+     */
+    if (cur_tx == 0u && want > 0u) {
+        off = win_u16(win, WIN_TILE_OFFSET);
+        if (st->chs_px & 7u)
+            win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
+        pitch_reset(win);
+        return;
+    }
+
+    /* want is TILE_X space — never subtract CURSOR_X (shop mid-line ♥). */
+    win_set_u8(win, WIN_CURSOR_TILE_X, want);
+
     off = win_u16(win, WIN_TILE_OFFSET);
     if (st->chs_px & 7u)
         win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));

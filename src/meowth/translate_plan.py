@@ -9,14 +9,22 @@ type:
 优先级链：F900 原地 → relocate → F9 80 原地 → hook → keep。
 （旧 build 里的 upgrade/f980 视为 in_place 别名。）
 
+含 ``FD`` / ``\\XX`` 占位的模板禁止整串 F9 80：PhraseTable 内的裸 FD
+会被 ProcessCurrentChar 当成控制码（非 StringExpand），出招等会狂打卡死。
+此类串只许 F900 原地（仍含 FD）、relocate/hook（扩展区仍含 FD）、或 keep。
+
 translate 阶段只做决策与编码（不注入 ROM），产出 translate.build.json，
 build 阶段按 type 注入（hook 交 armips）。
 """
 from __future__ import annotations
 
+import re
 from typing import Any
 
 from .config_loader import F9_EOS, F9_PHRASE_DEFAULT
+
+# Meowth decode of FD xx → \20 / \13 / …；勿匹配 \\CC 色码。
+_RE_EXPAND_PLACEHOLDER = re.compile(r"\\(?!CC)(?:v|[0-9A-Fa-f]{2})")
 
 # 定长槽类型强制不可指针改写（不受 modules.json relocate 覆盖为 true）
 NO_RELOCATE_TYPES = frozenset({"stride", "struct", "ptr_stride", "stride_ptr"})
@@ -178,6 +186,32 @@ def _ptr_sources(entry: dict) -> list:
     return entry.get("pointer_sources") or entry.get("pointer_addresses") or []
 
 
+def entry_has_expand_placeholder(entry: dict) -> bool:
+    """True if the JP slot is a StringExpand template (FD xx / \\XX).
+
+    Whole-string F9 80 must not wrap these: expand runs on the ROM/buffer
+    pointer before print; a phrase redirect leaves raw FD for the printer.
+    """
+    hx = (entry.get("original_hex") or "").replace(" ", "").lower()
+    i = 0
+    while i < len(hx) - 3:
+        if hx[i : i + 2] == "fd":
+            # FD FF is not a buffer id; still treat as expand-ish control.
+            return True
+        if hx[i : i + 2] == "f9":
+            i += 8  # skip F9 op hi lo
+            continue
+        if hx[i : i + 2] in ("fc",):
+            # FC extended controls — length varies; skip 1 byte + try next
+            i += 2
+            continue
+        i += 2
+    o = _original_of(entry)
+    if _RE_EXPAND_PLACEHOLDER.search(o):
+        return True
+    return False
+
+
 def preallocate_upgrade_phrases(
     entries: list[dict],
     charmap: Any,
@@ -208,6 +242,8 @@ def preallocate_upgrade_phrases(
         module_id = e.get("module") or e.get("_axvj_module") or e.get("category")
         if _ptr_sources(e) and module_allows_relocate(game_id, module_id):
             continue  # 可 relocate → 走 relocate，不预占 F9 80 码
+        if entry_has_expand_placeholder(e):
+            continue  # FD/\\XX 模板禁止整串 F9 80（B02h）
         if not module_allows_phrase(game_id, module_id):
             continue  # ui 特殊界面不短语引用 → keep
         try:
@@ -301,7 +337,8 @@ def plan_entry(
         }
 
     # type 3: 超槽位且 relocate 不可用但允许短语 → F9 短语引用仍原地写入
-    if allow_phrase and byte_length >= 5:
+    # 禁止：原文含 FD/\\XX（须先 StringExpand；PhraseTable 内裸 FD 会当控制码狂打）
+    if allow_phrase and byte_length >= 5 and not entry_has_expand_placeholder(entry):
         code = phrase_codes.get(s)
         if code is not None:
             return {
@@ -322,7 +359,9 @@ def plan_entry(
         }
 
     # type 5: 保留原文，记录具体原因（勿把「有 hook 但无指针」说成「无 hook」）
-    if not allow_reloc and not allow_hook and not allow_phrase:
+    if entry_has_expand_placeholder(entry) and allow_phrase:
+        reason = "含FD/\\XX占位：禁止整串F980；无指针可relocate/hook则keep"
+    elif not allow_reloc and not allow_hook and not allow_phrase:
         reason = "模块禁止 relocate/hook/短语，且超槽位"
     elif not allow_reloc and not allow_hook:
         reason = "模块禁止 relocate/hook，且槽位<5无法升槽"

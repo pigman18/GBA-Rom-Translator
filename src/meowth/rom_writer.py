@@ -510,6 +510,31 @@ class RomWriter:
             return
 
         if ptype == "in_place":
+            # Never stamp F9 op≠00 over StringExpand templates:
+            # 1) entry original_hex / \\XX still has FD
+            # 2) extract skipped leading FD (addr points at buffer id; ROM[addr-1]==FD)
+            from .translate_plan import entry_has_expand_placeholder
+
+            phrase_ref = (
+                len(target) >= 2
+                and target[0] == 0xF9
+                and target[1] != 0x00
+            )
+            fd_prefix = address > 0 and address <= len(rom) and rom[address - 1] == 0xFD
+            if phrase_ref and (
+                entry_has_expand_placeholder(entry) or fd_prefix
+            ):
+                why = (
+                    "串首FD被extract裁掉（ROM[addr-1]==FD）"
+                    if fd_prefix and not entry_has_expand_placeholder(entry)
+                    else "含FD/\\XX"
+                )
+                print(
+                    f"  KEEP {entry_id} @ 0x{address:X} (cat={category}): "
+                    f"保留原文（{why}，禁止整串F9短语）"
+                )
+                stats["kept"] = stats.get("kept", 0) + 1
+                return
             write_len = min(len(target), byte_length) if target else 0
             clobber = self._body_covers_pointer_slot(
                 address, write_len, entry_id=str(entry_id)
@@ -585,7 +610,8 @@ class RomWriter:
                 )
             # 回退：relocate 失败/无指针 → F9 80 短语原地插入（需 phrase_code）
             if self._try_phrase_fallback(
-                rom, address, byte_length, plan, stats, entry_id, category
+                rom, address, byte_length, plan, stats, entry_id, category,
+                entry=entry,
             ):
                 return
             stats["kept"] = stats.get("kept", 0) + 1
@@ -608,14 +634,27 @@ class RomWriter:
         stats: dict,
         entry_id: str,
         category: str,
+        entry: dict | None = None,
     ) -> bool:
         """relocate 失败回退：F9 80 短语引用（5 字节）写入原槽位。
 
         优先级链：F900 原地 → relocate → F9 80 原地 → keep。
         仅当 plan 已预分配 phrase_code 且槽位 ≥ 5 字节才成功。
+        含 FD/\\XX 的模板禁止回退 F980（B02h：PhraseTable 裸 FD 当控制码狂打）。
         """
+        from .translate_plan import entry_has_expand_placeholder
+
         code = plan.get("phrase_code")
         if code is None:
+            return False
+        src = entry or {}
+        probe = {
+            "original": src.get("original") or plan.get("original"),
+            "original_hex": src.get("original_hex") or plan.get("original_hex"),
+        }
+        if entry_has_expand_placeholder(probe):
+            return False
+        if address > 0 and address <= len(rom) and rom[address - 1] == 0xFD:
             return False
         from .config_loader import (
             F9_EOS,

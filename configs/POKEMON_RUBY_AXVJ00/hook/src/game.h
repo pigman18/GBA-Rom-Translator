@@ -42,7 +42,8 @@
 #define ADDR_FONT_CHS_NORMAL       0x09000000u
 /* Sym punct bank (9×64B), after Small @ 0x09100000+0xE0000.
  * Font3 layout: upper+lower 8×8 @4bpp-index (0/E/F), NOT 16×16 2bpp.
- * Drawn via PrintNextChar_C → DrawGlyph_Chinese_Adv(..., 8). */
+ * Inject hex = JP PCS (00 space, 37。 3A、 3B， 3C！ 3D？ 3E： …);
+ * PrintNextChar draw_chs_pcs: Sym/blank/F900/JP-via-CHS → same DrawGlyph. */
 #define ADDR_FONT_CHS_SYM          0x091E0000u
 #define SYM_GLYPH_BASE             0x36u
 #define SYM_GLYPH_COUNT            9u

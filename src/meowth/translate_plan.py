@@ -21,6 +21,7 @@ from __future__ import annotations
 import re
 from typing import Any
 
+from .charmap import normalize_zh_punct
 from .config_loader import F9_EOS, F9_PHRASE_DEFAULT
 
 # Meowth decode of FD xx → \20 / \13 / …；勿匹配 \\CC 色码。
@@ -233,7 +234,7 @@ def preallocate_upgrade_phrases(
             continue
         if "|||" in t:
             continue
-        s = charmap._sanitize(t)
+        s = normalize_zh_punct(charmap._sanitize(normalize_zh_punct(t)))
         if s in phrase_codes:
             continue
         byte_length = e.get("byte_length", 0) or 0
@@ -247,7 +248,7 @@ def preallocate_upgrade_phrases(
         if not module_allows_phrase(game_id, module_id):
             continue  # ui 特殊界面不短语引用 → keep
         try:
-            raw_len = len(charmap.encode(t))
+            raw_len = len(charmap.encode(s))
         except Exception:
             continue
         if raw_len > byte_length:
@@ -293,7 +294,10 @@ def plan_entry(
             "reason": "译文含 LLM 分隔符 |||",
         }
 
-    s = charmap._sanitize(translated)
+    # Halfwidth/ASCII punct → fullwidth (JP PCS); sanitize; re-normalize if
+    # sanitize emitted ASCII punct (digits/letters halfwidth only).
+    translated = normalize_zh_punct(translated)
+    s = normalize_zh_punct(charmap._sanitize(translated))
     allow_reloc = module_allows_relocate(game_id, module_id)
     allow_phrase = module_allows_phrase(game_id, module_id)
     allow_hook = module_allows_hook(game_id, module_id)
@@ -301,7 +305,7 @@ def plan_entry(
 
     # 按模块 word_count / wrap_pages 再折行后再编码。
     to_encode = wrap_text(
-        translated,
+        s,
         target_lang="zh-Hans",
         **module_wrap_kwargs(game_id, module_id),
     )

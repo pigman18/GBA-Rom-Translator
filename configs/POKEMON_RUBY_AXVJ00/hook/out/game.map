@@ -44,7 +44,7 @@ LOAD out\obj/update_nick_in_healthbox.o
 LOAD out\obj/fixed_string_entry.o
 LOAD out\obj/fixed_string.o
 
-.text           0x08800000     0x16c8
+.text           0x08800000     0x1708
  *entry.o(.text*)
  .text          0x08800000       0x70 out\obj/entry.o
                 0x08800000                PrintNextChar
@@ -59,89 +59,89 @@ LOAD out\obj/fixed_string.o
  *entry.o(.text.*)
  *fixed_string_entry.o(.text*)
  *(.text*)
- .text          0x08800090      0x3ac out\obj/print_next_char.o
-                0x0880018c                PrintNextChar_C
- .text          0x0880043c      0xe84 out\obj/draw_glyph.o
-                0x0880088c                Chinese_PitchReset
-                0x0880089c                WaitArrow_Prepare_C
-                0x088008f0                drawGlyph_Adv
-                0x08801070                drawGlyph12
-                0x08801080                DrawGlyph_ShouldUseLinear
-                0x088010d4                DrawMenuCursorEF
-                0x088011b4                DrawGlyph_Chinese_Adv
-                0x088012ac                DrawGlyph_Chinese
- .text          0x088012c0      0x2a0 out\obj/draw_scene.o
-                0x088012c0                scene_is_party_footer
-                0x08801308                scene_is_shop_desc
-                0x08801360                scene_field_wants_linear
-                0x088013a4                scene_is_shop_bag_list
-                0x08801458                scene_menu_wants_mode2
-                0x088014a0                scene_mode2_apply
-                0x08801530                scene_battle_force_linear
-                0x08801544                scene_is_battle_interface_dest
-                0x08801550                scene_jp_via_chs
-                0x0880155c                scene_keep_linear_16
- .text          0x08801560      0x114 out\obj/get_string_width.o
-                0x088015cc                GetStringWidth_Chinese
-                0x08801604                GetStringWidthChinese_Full
-                0x08801670                MapName_DisplayCellLength_C
- .text          0x08801674       0x14 out\obj/update_nick_in_healthbox.o
-                0x08801674                HealthboxNickCpusetCtrl
-                0x0880167c                HealthboxNickCpusetWords
-                0x08801680                HealthboxNickCpusetCtrlStock
- .text          0x08801688       0x38 out\obj/fixed_string.o
-                0x08801688                FixedString_Get
-                0x0880169c                FixedString_Write
+ .text          0x08800090      0x3d8 out\obj/print_next_char.o
+                0x088001ec                PrintNextChar_C
+ .text          0x08800468      0xe98 out\obj/draw_glyph.o
+                0x088008b8                Chinese_PitchReset
+                0x088008c8                WaitArrow_Prepare_C
+                0x08800930                drawGlyph_Adv
+                0x088010b0                drawGlyph12
+                0x088010c0                DrawGlyph_ShouldUseLinear
+                0x08801114                DrawMenuCursorEF
+                0x088011f4                DrawGlyph_Chinese_Adv
+                0x088012ec                DrawGlyph_Chinese
+ .text          0x08801300      0x2a0 out\obj/draw_scene.o
+                0x08801300                scene_is_party_footer
+                0x08801348                scene_is_shop_desc
+                0x088013a0                scene_field_wants_linear
+                0x088013e4                scene_is_shop_bag_list
+                0x08801498                scene_menu_wants_mode2
+                0x088014e0                scene_mode2_apply
+                0x08801570                scene_battle_force_linear
+                0x08801584                scene_is_battle_interface_dest
+                0x08801590                scene_jp_via_chs
+                0x0880159c                scene_keep_linear_16
+ .text          0x088015a0      0x114 out\obj/get_string_width.o
+                0x0880160c                GetStringWidth_Chinese
+                0x08801644                GetStringWidthChinese_Full
+                0x088016b0                MapName_DisplayCellLength_C
+ .text          0x088016b4       0x14 out\obj/update_nick_in_healthbox.o
+                0x088016b4                HealthboxNickCpusetCtrl
+                0x088016bc                HealthboxNickCpusetWords
+                0x088016c0                HealthboxNickCpusetCtrlStock
+ .text          0x088016c8       0x38 out\obj/fixed_string.o
+                0x088016c8                FixedString_Get
+                0x088016dc                FixedString_Write
  *(.rodata*)
- .rodata        0x088016c0        0x5 out\obj/fixed_string.o
-                0x088016c0                FixedString_ContinueBadgeUnit_PCS
-                0x088016c4                FixedString_Empty_PCS
+ .rodata        0x08801700        0x5 out\obj/fixed_string.o
+                0x08801700                FixedString_ContinueBadgeUnit_PCS
+                0x08801704                FixedString_Empty_PCS
  *(.rodata.*)
-                0x088016c8                        . = ALIGN (0x4)
- *fill*         0x088016c5        0x3 
+                0x08801708                        . = ALIGN (0x4)
+ *fill*         0x08801705        0x3 
 
-.data           0x088016c8        0x0
- .data          0x088016c8        0x0 out\obj/entry.o
- .data          0x088016c8        0x0 out\obj/print_next_char.o
- .data          0x088016c8        0x0 out\obj/draw_glyph.o
- .data          0x088016c8        0x0 out\obj/draw_scene.o
- .data          0x088016c8        0x0 out\obj/get_string_width.o
- .data          0x088016c8        0x0 out\obj/nick_entry.o
- .data          0x088016c8        0x0 out\obj/update_nick_in_healthbox.o
- .data          0x088016c8        0x0 out\obj/fixed_string_entry.o
- .data          0x088016c8        0x0 out\obj/fixed_string.o
+.data           0x08801708        0x0
+ .data          0x08801708        0x0 out\obj/entry.o
+ .data          0x08801708        0x0 out\obj/print_next_char.o
+ .data          0x08801708        0x0 out\obj/draw_glyph.o
+ .data          0x08801708        0x0 out\obj/draw_scene.o
+ .data          0x08801708        0x0 out\obj/get_string_width.o
+ .data          0x08801708        0x0 out\obj/nick_entry.o
+ .data          0x08801708        0x0 out\obj/update_nick_in_healthbox.o
+ .data          0x08801708        0x0 out\obj/fixed_string_entry.o
+ .data          0x08801708        0x0 out\obj/fixed_string.o
 
-.igot.plt       0x088016c8        0x0
- .igot.plt      0x088016c8        0x0 out\obj/entry.o
+.igot.plt       0x08801708        0x0
+ .igot.plt      0x08801708        0x0 out\obj/entry.o
 
-.glue_7         0x088016c8        0x0
- .glue_7        0x088016c8        0x0 linker stubs
+.glue_7         0x08801708        0x0
+ .glue_7        0x08801708        0x0 linker stubs
 
-.glue_7t        0x088016c8        0x0
- .glue_7t       0x088016c8        0x0 linker stubs
+.glue_7t        0x08801708        0x0
+ .glue_7t       0x08801708        0x0 linker stubs
 
-.vfp11_veneer   0x088016c8        0x0
- .vfp11_veneer  0x088016c8        0x0 linker stubs
+.vfp11_veneer   0x08801708        0x0
+ .vfp11_veneer  0x08801708        0x0 linker stubs
 
-.v4_bx          0x088016c8        0x0
- .v4_bx         0x088016c8        0x0 linker stubs
+.v4_bx          0x08801708        0x0
+ .v4_bx         0x08801708        0x0 linker stubs
 
-.iplt           0x088016c8        0x0
- .iplt          0x088016c8        0x0 out\obj/entry.o
+.iplt           0x08801708        0x0
+ .iplt          0x08801708        0x0 out\obj/entry.o
 
-.rel.dyn        0x088016c8        0x0
- .rel.iplt      0x088016c8        0x0 out\obj/entry.o
+.rel.dyn        0x08801708        0x0
+ .rel.iplt      0x08801708        0x0 out\obj/entry.o
 
-.bss            0x088016c8        0x0
- .bss           0x088016c8        0x0 out\obj/entry.o
- .bss           0x088016c8        0x0 out\obj/print_next_char.o
- .bss           0x088016c8        0x0 out\obj/draw_glyph.o
- .bss           0x088016c8        0x0 out\obj/draw_scene.o
- .bss           0x088016c8        0x0 out\obj/get_string_width.o
- .bss           0x088016c8        0x0 out\obj/nick_entry.o
- .bss           0x088016c8        0x0 out\obj/update_nick_in_healthbox.o
- .bss           0x088016c8        0x0 out\obj/fixed_string_entry.o
- .bss           0x088016c8        0x0 out\obj/fixed_string.o
+.bss            0x08801708        0x0
+ .bss           0x08801708        0x0 out\obj/entry.o
+ .bss           0x08801708        0x0 out\obj/print_next_char.o
+ .bss           0x08801708        0x0 out\obj/draw_glyph.o
+ .bss           0x08801708        0x0 out\obj/draw_scene.o
+ .bss           0x08801708        0x0 out\obj/get_string_width.o
+ .bss           0x08801708        0x0 out\obj/nick_entry.o
+ .bss           0x08801708        0x0 out\obj/update_nick_in_healthbox.o
+ .bss           0x08801708        0x0 out\obj/fixed_string_entry.o
+ .bss           0x08801708        0x0 out\obj/fixed_string.o
 
 /DISCARD/
  *(.comment)

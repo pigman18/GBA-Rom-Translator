@@ -6958,19 +6958,13 @@ FF={结束}
 1E5C=鼾
 1E5D=齄
 
-1E5E=，
-1E5F=。
-1E60=！
-1E61=？
-1E62=：
-1E63=、
+@ Sentence punct / space / … use JP PCS single-bytes (00,37,3A-3D,3E,B0,AE…)
+@ — do NOT map ，。！？、：… here as 1E5x (that became F9 00 + Normal blur).
 1E64=～
 1E65=「
 1E66=」
 1E67=『
 1E68=』
-1E69=‥
-1E6A=…
 1E6B=ー
 1E6C=（
 1E6D=）

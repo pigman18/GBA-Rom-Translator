@@ -45,29 +45,45 @@ static const uint8_t *glyph_ptr(uint16_t index)
     return (const uint8_t *)(ADDR_FONT_CHS_NORMAL + ((uint32_t)index << 7));
 }
 
+/* forward — JP digits/etc share the same DrawGlyph pool */
+static int draw_jp_via_chs(TextPrinter *win, uint32_t cur_char);
+
 /*
- * Sym bank (9×64B @ ADDR_FONT_CHS_SYM): Font3-layout 8×16 —
- * upper 32B + lower 32B of 4bpp-index tiles (nibble 0/E/F).
- * NOT 16×16 packed 2bpp — that mis-decode vertically stretches 。？.
+ * Unified CHS printable PCS lookup (inject hex = JP PCS):
+ *   00        → blank advance (no JP glyph0 / TILE_OFFSET steal)
+ *   0x36..3E  → Sym bank ink → DrawGlyph_Chinese_Adv(..., 8)
+ *   other     → JP-via-CHS (digits etc.) → same DrawGlyph pool
+ * Sym is a glyph source only — not a separate “punct philosophy” path.
  */
-static int draw_sym_punct(TextPrinter *win, uint32_t cur_char)
+static int draw_chs_pcs(TextPrinter *win, uint32_t cur_char)
 {
     const uint8_t *src;
     uint8_t tmp[128];
     unsigned i;
 
-    if (cur_char < SYM_GLYPH_BASE || cur_char >= SYM_GLYPH_BASE + SYM_GLYPH_COUNT)
-        return 0;
-    src = (const uint8_t *)(ADDR_FONT_CHS_SYM
-                            + (cur_char - SYM_GLYPH_BASE) * 64u);
-    for (i = 0; i < 128u; i++)
-        tmp[i] = 0;
-    for (i = 0; i < 32u; i++) {
-        tmp[0x00 + i] = src[i];
-        tmp[0x20 + i] = src[32u + i];
+    if (cur_char == 0) {
+        for (i = 0; i < 128u; i++)
+            tmp[i] = 0;
+        DrawGlyph_Chinese_Adv(win, tmp, 8u);
+        return 1;
     }
-    DrawGlyph_Chinese_Adv(win, tmp, 8u);
-    return 1;
+
+    if (cur_char >= SYM_GLYPH_BASE
+        && cur_char < SYM_GLYPH_BASE + SYM_GLYPH_COUNT) {
+        /* Sym bank: Font3-layout 8×16 (U/L 32B), not 16×16 2bpp. */
+        src = (const uint8_t *)(ADDR_FONT_CHS_SYM
+                                + (cur_char - SYM_GLYPH_BASE) * 64u);
+        for (i = 0; i < 128u; i++)
+            tmp[i] = 0;
+        for (i = 0; i < 32u; i++) {
+            tmp[0x00 + i] = src[i];
+            tmp[0x20 + i] = src[32u + i];
+        }
+        DrawGlyph_Chinese_Adv(win, tmp, 8u);
+        return 1;
+    }
+
+    return draw_jp_via_chs(win, cur_char);
 }
 
 /*
@@ -115,9 +131,6 @@ static int phrase_parent_continues(const uint8_t *text, uint16_t index)
     return text[index + 3] != 0xFF;
 }
 
-/* forward — defined below with JP-via-CHS path */
-static int draw_jp_via_chs(TextPrinter *win, uint32_t cur_char);
-
 /*
  * Draw phrase onto current window; keep WIN_TEXT_PTR on parent; INDEX += 3.
  * Used when parent continues (species-in-battle). Whole-string map names
@@ -144,8 +157,8 @@ static int inline_phrase_no_controls(TextPrinter *win, uint16_t index, uint16_t 
                 DrawGlyph_Chinese(win, glyph_ptr(gidx));
             i += 4;
         } else {
-            /* JP digit/punct inside place-like streams — only for parent_cont. */
-            if (!draw_jp_via_chs(win, stream[i]))
+            /* Digits / Sym punct / blank — same draw_chs_pcs pool. */
+            if (!draw_chs_pcs(win, stream[i]))
                 return 0;
             i++;
         }
@@ -257,12 +270,9 @@ int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
      * RegularGlyph hook. Wait-arrow sync is WaitArrow_Prepare_C @ 0x3F4C.
      * Pitch reset after FE happens on next glyph via pitch_key / cur_tx. */
 
-    if (draw_sym_punct(win, cur_char))
-        return 1;
-
     if (cur_char != CHS_ESCAPE) {
-        /* Printable → JP-via-CHS (digits included; F9 00 / 表内流同路). */
-        return draw_jp_via_chs(win, cur_char);
+        /* Printable PCS → unified CHS lookup (blank / Sym / JP-via-CHS). */
+        return draw_chs_pcs(win, cur_char);
     }
 
     {

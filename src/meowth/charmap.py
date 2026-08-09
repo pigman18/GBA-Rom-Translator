@@ -1,5 +1,6 @@
 """Parse Pokemon_GBA_Font_Patch charmap and provide encoding/decoding."""
 
+import re
 from pathlib import Path
 from typing import Any
 
@@ -23,25 +24,52 @@ def _build_chinese_leads(ranges: list[list[int]]) -> frozenset:
 _DEFAULT_CHS_LEADS = [[1, 5], [7, 26], [28, 30]]
 _DEFAULT_ESCAPE_BYTES = bytes([0xF9, 0x00])
 _DEFAULT_IDEOSPACE = bytes([0x01, 0xF7])
-# Sym punct bank (glyph 0x36.. @ ADDR_FONT_CHS_SYM): fullwidth sentence
-# punct stay single-byte (NOT F9→1Exx into Normal CJK). AXVJ draws these
-# via PrintNextChar_C (JP Font3 is type3 — cannot Latin-overlay Sym there).
+# Sentence punct = JP PCS single-bytes (same hex as AXVJ original).
+# Drawn from CHS Sym @ 0x091E0000 (glyph 0x36..), NEVER F9 00 1E5x Normal.
+# Legal inject hex: 00 space, 37 。, 3A 、, 3B ，, 3C ！, 3D ？, 3E ：, B0 …, AE -, AF ·
 _FONT3_SYM_PUNCT: dict[str, int] = {
     "。": 0x37,
     "、": 0x3A,
     "，": 0x3B,
     "！": 0x3C,
     "？": 0x3D,
+    "：": 0x3E,
 }
 _DEFAULT_PUNCT_MAP: dict[str, int] = {
-    # Dash / middot still Font3 single-byte (narrow). Quotes use Normal via
-    # charmap 1E65–1E68 (F9) — JP Font3 has no Latin 『』 glyphs.
+    # Dash / middot / ellipsis: Font3 single-byte (narrow).
+    # Quotes 「」 use Normal via charmap 1E65–1E68 (F9) — no JP single-byte.
     "‥": 176,
     "…": 176,
     "ー": 174,
     "・": 175,
     **_FONT3_SYM_PUNCT,
 }
+
+
+def normalize_zh_punct(text: str) -> str:
+    """Map halfwidth / ASCII punct to charmap fullwidth (JP PCS inject codes)."""
+    if not text:
+        return text
+    # Ellipsis before single-dot rule
+    out = text.replace("...", "…")
+    repl = {
+        ",": "，",
+        "!": "！",
+        "?": "？",
+        "(": "（",
+        ")": "）",
+        "[": "【",
+        "]": "】",
+        ":": "：",
+        "~": "ー",
+        "～": "ー",
+    }
+    for a, b in repl.items():
+        if a in out:
+            out = out.replace(a, b)
+    # Standalone ASCII '.' → 。 (not digit.digit)
+    out = re.sub(r"(?<!\d)\.(?!\d)", "。", out)
+    return out
 
 
 class Charmap:
@@ -91,11 +119,14 @@ class Charmap:
             self._parse(Path(path))
         for ch, b in self._punct_map.items():
             self.char_to_bytes[ch] = bytes([b])
-        # Force Sym-band sentence punct to Font3 single bytes even if charmap.txt
-        # later listed 1E5E=， / 1E61=？ (those would F9 into Normal and blur).
+        # Force Sym-band sentence punct to JP PCS single bytes (never F9 1E5x).
         for ch, b in _FONT3_SYM_PUNCT.items():
             self.char_to_bytes[ch] = bytes([b])
             self._punct_map[ch] = b
+            self.bytes_to_char[b] = ch
+        # ASCII / ideographic space → PCS 0x00 (JP space); 　 keeps ideospace opt.
+        self.char_to_bytes[" "] = bytes([0x00])
+        self.bytes_to_char[0x00] = " "
         self.char_to_bytes["　"] = self._ideospace_bytes
 
     def _parse(self, path: Path):
@@ -138,9 +169,11 @@ class Charmap:
     def encode_char(self, ch: str) -> bytes | None:
         """Encode a single character to Font Patch bytes.
 
-        Sym-band punct (，。！？、) and other ``punct_map`` entries are always
-        single-byte Font3 codes — never F9 Chinese leads.
+        Sym-band punct (，。！？、：) / space / ``punct_map`` are always
+        JP PCS single-bytes — never wrapped as F9 00 lead trail.
         """
+        if ch == " ":
+            return bytes([0x00])
         if ch in self._punct_map:
             return bytes([self._punct_map[ch]])
         return self.char_to_bytes.get(ch)
@@ -178,16 +211,16 @@ class Charmap:
                 length += 1  # assume 1 byte for unknown
         return length
 
-    # Fullwidth → halfwidth mapping for characters the LLM likes to produce
+    # Fullwidth → halfwidth for digits/letters only.
+    # Do NOT map （）～ here — normalize_zh_punct keeps （） as F900 Normal
+    # and ～/～ → ー (PCS AE); undoing would break inject codes.
     _FULLWIDTH_MAP = str.maketrans(
         "０１２３４５６７８９"
         "ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳＴＵＶＷＸＹＺ"
-        "ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ"
-        "（）～",
+        "ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓｔｕｖｗｘｙｚ",
         "0123456789"
         "ABCDEFGHIJKLMNOPQRSTUVWXYZ"
-        "abcdefghijklmnopqrstuvwxyz"
-        "()~",
+        "abcdefghijklmnopqrstuvwxyz",
     )
 
     # Characters to replace with charmap-safe alternatives
@@ -201,8 +234,8 @@ class Charmap:
         "\u300A": "\"",   # 《 → "
         "\u300B": "\"",   # 》 → "
         # Keep 、 as Sym 0x3A — do not collapse to ASCII ',' (0xB8).
-        "\uFF5E": "~",    # ～ fullwidth tilde
-        "\u00B7": ".",    # middle dot
+        "\uFF5E": "ー",   # ～ → chōon (PCS AE), not ASCII ~
+        "\u00B7": "・",   # middle dot → Font3 AF
         "$": "",          # dollar sign (not in charmap, strip)
     }
 

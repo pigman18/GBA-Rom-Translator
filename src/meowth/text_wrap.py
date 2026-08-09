@@ -110,6 +110,13 @@ def wrap_text(
 
     text = text.replace("\r\n", "\n").replace("\r", "\n")
 
+    # ZH: do not keep a blank line before paragraph-wait (\\n then \\p → FE+FB).
+    # That parks the wait arrow on an empty line; put \\p on the same line as
+    # the last glyph (``text{\\p}more`` / ``text\\pmore``).
+    if str(target_lang).startswith("zh"):
+        text = re.sub(r"(?:\\n|\n)+(\{\\p\})", r"\1", text)
+        text = re.sub(r"(?:\\n|\n)+(\\p)(?![a-zA-Z])", r"\1", text)
+
     if not wrap_pages:
         return _wrap_lines_only(text, word_count, max_lines or lines_per_box)
 

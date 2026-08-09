@@ -3370,22 +3370,22 @@
   {
     "status": 200,
     "original": "あ！ やせいの\n\\03が あらわれた！\n\n",
-    "translated": "啊！野生的\n\\03出现了！\n\n"
+    "translated": "啊！野生的\\03出现了！\n\n"
   },
   {
     "status": 200,
     "original": "あ！ やせいの\n\\03が とびだしてきた！\n\n",
-    "translated": "啊！野生的\n\\03跳出来了！\n\n"
+    "translated": "啊！野生的\\03跳出来了！\n\n"
   },
   {
     "status": 200,
     "original": "あ！ やせいの\n\\03が とびだしてきた！\\CC087F",
-    "translated": "啊！野生的\n\\03跳出来了！\\CC087F"
+    "translated": "啊！野生的\\03跳出来了！\\CC087F"
   },
   {
     "status": 200,
     "original": "あ！ やせいの\n\\03と \\05が とびだしてきた！\n\n",
-    "translated": "啊！野生的\n\\03和\\05跳出来了！\n\n"
+    "translated": "啊！野生的\\03和\\05跳出来了！\n\n"
   },
   {
     "status": 404,

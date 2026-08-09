@@ -25,6 +25,9 @@ GetCursorTilemapPointer                equ 0x08003708
 GetWindowPaletteBits                   equ 0x08003728
 GetBlankTileNum                        equ 0x080041BC
 Text_ClearWindow                       equ 0x08003BA8
+; FA/FB → DrawInitialDownArrow：画等 A 的 ▼（再进 state 8/9）
+DrawInitialDownArrow                   equ 0x08003F4C
+DrawDownArrow                          equ 0x08003DAC
 
 ; --- String util ---
 StringCopy                             equ 0x080042E8
@@ -34,9 +37,11 @@ StringExpandPlaceholders               equ 0x08004530
 
 ; --- Width / map-name popup ---
 ; GetGlyphWidth/GetStringWidth @ 0x4B1C/0x4CC0 曾为 proximity 错猜（无调用方）；勿再整函数替换。
-; 日版 DrawMapNamePopup：StringLength 居中（10 半角格），BL 位点如下。
+; 日版 DrawMapNamePopup：StringLength 后仍 GetMapName(fill=10) 填 0x00；
+; 钩 StringLength 位点并跳过 pad+二次 GetMapName → MenuPrint（0x0809F6CA）。
 DrawMapNamePopup                       equ 0x0809F654
 DrawMapNamePopup_StringLength          equ 0x0809F67E
+DrawMapNamePopup_MenuPrint             equ 0x0809F6CA
 ; PokemonSummaryScreen_PrintTrainerMemo nature follow-X (byte len → tiles)
 ; --- 扩展区 / game.bin 装入点 ---
 GameBinAddresses                       equ 0x08800000  ; main.asm .incbin game.bin（≤0xF000）
@@ -51,7 +56,7 @@ PokeRSFontChsSmall                     equ FontChsSmall
 gFont3JapaneseGlyphs                   equ 0x081B6D2C
 ; Sym punct: free ROM after Small; Font3 8x16 4bpp U+L (not 16x16 2bpp)
 PokeRSFontChsSymAddress                equ 0x091E0000
-; IWRAM ChineseTileState @ 0x0203FFF8 (8B):
+; EWRAM ChineseTileState @ 0x0203FFF8 (8B):
 ; +0 char_base +1 write_op +2 base_tx +3 last_adv +4 pitch_key(u16) +6 chs_px(u16)
 ChineseTileState                       equ 0x0203FFF8
 ChineseTileCursor                      equ 0x0203FFFC

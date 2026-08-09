@@ -25,13 +25,15 @@
  * 查找路径：F9 80/op →
  *   PhraseOffsets[code]（u32 数组 @ 0x08810000）
  *   → PhraseTable + offset（字节流 @ 0x08820000）
- *   → 切 WIN_TEXT_PTR 到流，复用 F9 00 / 原版控制符路径
+ *   → 父串未结束 + 无 FE/FB/FA：内联绘制，INDEX+3 续父串（对齐 GetStringWidth）
+ *   → 父串即短语引用+FF：切流，短语 FF = 整句 EOS（地名等）
  * layout: .org 0x08810000 → offsets （u32[code_max], sentinel = total_size）
  *         .org 0x08820000 → streams （PCS bytes ending in FF）
  *
  * 样式表（styles_data.asm，与 phrase_data.asm 对仗，均来自 translate.build.json）：
  *   StyleLeft[256] @ 0x0880F000 — F9 第二字节 → left(px)
  * PrintNextChar：非 0x80 的短语 op sticky 后按 StyleLeft[op] 整体左移一次。
+ * 勿在 0x0203FFF0/F7F8 放 PhraseResume（崩/踩图）。
  * 改 styles/phrases 只重生 asm + armips，不必重编 game.bin。
  */
 #define ADDR_STYLE_LEFT            0x0880F000u
@@ -73,7 +75,7 @@
 #define ADDR_BATTLE_IF_GFX  0x02020004u
 #define BATTLE_IF_GFX_SIZE  0x1000u
 
-/* 8 bytes at IWRAM end (0x0203FFF8..FFFF). */
+/* 8 bytes at EWRAM high (0x0203FFF8..FFFF). */
 struct ChineseTileState {
     uint8_t  char_base;  /* +0 template charBaseBlock */
     uint8_t  write_op;   /* +1 */
@@ -230,12 +232,15 @@ void DrawGlyph_Chinese(TextPrinter *win, const uint8_t *glyph_src);
 void DrawGlyph_Chinese_Adv(TextPrinter *win, const uint8_t *glyph_src, unsigned adv_px);
 /* Clear ChineseTileState pitch after FE/FB/FA (optional asm hook). */
 void Chinese_PitchReset(TextPrinter *win);
+/* FA/FB DrawInitialDownArrow：同步 TILE_OFFSET / CURSOR，避免双▼。 */
+void WaitArrow_Prepare_C(TextPrinter *win);
 int  DrawGlyph_ShouldUseLinear(TextPrinter *win, uint8_t write_op);
 void drawGlyph12(TextPrinter *win, const uint8_t *src18, int linear);
 void drawGlyph_Adv(TextPrinter *win, const uint8_t *src128, int linear, unsigned adv_px);
 int  GetStringWidth_Chinese(TextPrinter *win, const uint8_t *s,
                            uint16_t *index, uint8_t *width);
 uint8_t GetStringWidthChinese_Full(TextPrinter *win, const uint8_t *s);
+/* Kept for link compat; map popup trampoline no longer calls this. */
 uint8_t MapName_DisplayCellLength_C(const uint8_t *s);
 
 int  scene_field_wants_linear(TextPrinter *win);

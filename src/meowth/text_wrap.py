@@ -119,6 +119,13 @@ def wrap_text(
     text = text.replace("\n\n", _PARA)
 
     paragraphs = text.split(_PARA)
+    # Trailing \n\n / \p is a wait (AXVJ 0xFB), not an empty page to drop.
+    # Example: wild encounter 「…！\n\n」 → JP ab FB FF; skipping it auto-advances battle.
+    trailing_wait = (
+        len(paragraphs) > 1
+        and not (paragraphs[-1].strip() or "\\l" in paragraphs[-1])
+    )
+
     wrapped_paras: list[str] = []
     for para in paragraphs:
         if not para.strip() and "\\l" not in para:
@@ -127,7 +134,10 @@ def wrap_text(
         if all_lines:
             wrapped_paras.append(_distribute_lines(all_lines, lines_per_box, wrap_pages=True))
 
-    return "\\p".join(wrapped_paras)
+    out = "\\p".join(wrapped_paras)
+    if trailing_wait:
+        out = f"{out}\\p" if out else "\\p"
+    return out
 
 
 def _wrap_lines_only(text: str, word_count: int, max_lines: int) -> str:

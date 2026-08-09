@@ -77,14 +77,17 @@ if errorlevel 1 exit /b 1
 echo === Generating game_syms.asm ===
 set GSW_ADDR=0x08800000
 set MAPLEN_ADDR=0x08800000
+set WAITARROW_ADDR=0x08800000
 set FSTR_POKEDEX_HOOK=0x08800000
 for /f "tokens=1" %%a in ('findstr /R "GetStringWidthChinese$" %OUT%\game.map') do set GSW_ADDR=%%a
 for /f "tokens=1" %%a in ('findstr /R "MapName_DisplayCellLength$" %OUT%\game.map') do set MAPLEN_ADDR=%%a
+for /f "tokens=1" %%a in ('findstr /R "WaitArrow_Prepare$" %OUT%\game.map') do set WAITARROW_ADDR=%%a
 for /f "tokens=1" %%a in ('findstr /R "ContinuePokedexUnit_Hook$" %OUT%\game.map') do set FSTR_POKEDEX_HOOK=%%a
 > %OUT%\game_syms.asm (
     echo ; Auto-generated from out/game.map - do not edit
     echo GetStringWidthChinese                   equ %GSW_ADDR%
     echo MapName_DisplayCellLength               equ %MAPLEN_ADDR%
+    echo WaitArrow_Prepare                       equ %WAITARROW_ADDR%
     echo ContinuePokedexUnit_Hook                equ %FSTR_POKEDEX_HOOK%
 )
 

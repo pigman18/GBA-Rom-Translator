@@ -102,14 +102,13 @@ uint8_t GetStringWidthChinese_Full(TextPrinter *win, const uint8_t *s)
 }
 
 /*
- * AXVJ DrawMapNamePopup centers with StringLength (byte count) and a 10-cell
- * budget, then left-fills 0x00 spaces. F9 place-name refs are 4 bytes but draw
- * ~60px → huge left pad + right clip. Return ceil(px/8) cell count instead.
+ * Retired: DrawMapNamePopup still called GetMapName(fill=10) after strlen,
+ * so returning 10 only skipped the leading-space loop — trailing 0x00 pad
+ * remained. entry.s MapName_DisplayCellLength now jumps to MenuPrint and
+ * skips pad + 2nd GetMapName entirely.
  */
 uint8_t MapName_DisplayCellLength_C(const uint8_t *s)
 {
-    int px = string_width_px(s, CHS_GLYPH_ADVANCE_PX);
-    if (px <= 0)
-        return 0;
-    return (uint8_t)((px + 7) / 8);
+    (void)s;
+    return 10;
 }

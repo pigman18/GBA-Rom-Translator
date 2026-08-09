@@ -71,16 +71,97 @@ static int draw_sym_punct(TextPrinter *win, uint32_t cur_char)
 }
 
 /*
- * F9 80 / F9 <op>：切到 PhraseTable 字节流，复用 F9 00 与原版控制符。
- * 流格式：F9 00 lead trail × N + FE/FB/… + FF（由 engine 生成）。
+ * Mid-string F9 phrase must not EOS the parent (JP placeholder semantics).
+ * GetStringWidth skips the 4B ref and keeps walking; print matches via inline.
+ * No PhraseResume EWRAM (F7F8/FFF0 both unsafe — map corrupt / boot crash).
  */
-static void redirect_phrase_stream(TextPrinter *win, uint16_t code)
+static const uint8_t *phrase_stream_lookup(uint16_t code)
 {
     const uint32_t *offsets = (const uint32_t *)ADDR_PHRASE_OFFSETS;
     const uint8_t *table = (const uint8_t *)ADDR_PHRASE_TABLE;
     uint32_t off = offsets[code];
-    const uint8_t *stream = table + off;
 
+    if (off >= 0x01000000u)
+        return 0;
+    return table + off;
+}
+
+/* No FE/FB/FA — safe to inline (species F9 00×N, or place JP digits+F9 00). */
+static int phrase_stream_no_wait_controls(const uint8_t *stream)
+{
+    unsigned i = 0;
+
+    if (!stream)
+        return 0;
+    while (stream[i] != 0xFF) {
+        if (stream[i] == CHS_ESCAPE) {
+            if (stream[i + 1] != 0)
+                return 0; /* nested phrase ref */
+            i += 4;
+            if (i > 256u)
+                return 0;
+            continue;
+        }
+        if (stream[i] >= 0xFAu)
+            return 0;
+        i++;
+    }
+    return 1;
+}
+
+/* Parent continues after F9 op hi lo (battle expand); else whole-string phrase. */
+static int phrase_parent_continues(const uint8_t *text, uint16_t index)
+{
+    return text[index + 3] != 0xFF;
+}
+
+/* forward — defined below with JP-via-CHS path */
+static int draw_jp_via_chs(TextPrinter *win, uint32_t cur_char);
+
+/*
+ * Draw phrase onto current window; keep WIN_TEXT_PTR on parent; INDEX += 3.
+ * Used when parent continues (species-in-battle). Whole-string map names
+ * still redirect (one glyph/frame) — no EWRAM walk state.
+ */
+static int inline_phrase_no_controls(TextPrinter *win, uint16_t index, uint16_t code)
+{
+    const uint8_t *stream = phrase_stream_lookup(code);
+    unsigned i = 0;
+    unsigned n = 0;
+
+    if (!stream || !phrase_stream_no_wait_controls(stream))
+        return 0;
+
+    while (stream[i] != 0xFF) {
+        if (stream[i] == CHS_ESCAPE && stream[i + 1] == 0) {
+            uint8_t lead = stream[i + 2];
+            uint8_t trail = stream[i + 3];
+            uint16_t gidx;
+            if (!lead_trail_ok(lead, trail))
+                return 0;
+            gidx = pack_glyph_index(lead, trail);
+            if (gidx < CHS_FONT_GLYPH_MAX)
+                DrawGlyph_Chinese(win, glyph_ptr(gidx));
+            i += 4;
+        } else {
+            /* JP digit/punct inside place-like streams — only for parent_cont. */
+            if (!draw_jp_via_chs(win, stream[i]))
+                return 0;
+            i++;
+        }
+        if (++n > 32u)
+            break;
+    }
+    win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(index + 3));
+    return 1;
+}
+
+static void redirect_phrase_stream(TextPrinter *win, uint16_t code)
+{
+    const uint8_t *stream = phrase_stream_lookup(code);
+
+    if (!stream)
+        return;
     win_set_u32(win, WIN_TEXT_PTR, (uint32_t)(uintptr_t)stream);
     win_set_u16(win, WIN_TEXT_INDEX, 0);
 }
@@ -165,12 +246,9 @@ int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
     if (scene_is_battle_interface_dest(win))
         return 0;
 
-    /* FE/FB/FA: clear Chinese pitch before vanilla newline/scroll/clear.
-     * Otherwise next F9 00 keeps chs_px mid-run → 左缘切半. */
-    if (cur_char == 0xFEu || cur_char == 0xFBu || cur_char == 0xFAu) {
-        Chinese_PitchReset(win);
-        return 0;
-    }
+    /* FE/FB/FA are handled in PCC control jumptable — they never reach this
+     * RegularGlyph hook. Wait-arrow sync is WaitArrow_Prepare_C @ 0x3F4C.
+     * Pitch reset after FE happens on next glyph via pitch_key / cur_tx. */
 
     if (draw_sym_punct(win, cur_char))
         return 1;
@@ -212,20 +290,33 @@ int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
         {
             volatile struct ChineseTileState *st = chinese_tile_state();
             uint16_t code;
+            int parent_cont;
+
+            code = (uint16_t)((p[1] << 8) | p[2]);
+            parent_cont = phrase_parent_continues(text, index);
+
             if (op == CHS_PHRASE_DEFAULT) {
+                st->write_op = 0;
+            } else if (parent_cont) {
+                /* Mid-string species/etc: StyleLeft is for whole-field labels
+                 * (dex). Nudging here backs up into 野生的 → glitch tile. */
                 st->write_op = 0;
             } else {
                 uint8_t L;
                 uint8_t cx;
                 st->write_op = op;
-                /* StyleLeft[op]: one-shot X nudge for this phrase run. */
+                /* StyleLeft[op]: one-shot X nudge for whole-string phrase. */
                 L = *(const uint8_t *)(uintptr_t)(ADDR_STYLE_LEFT + op);
                 cx = win_u8(win, WIN_CURSOR_X);
                 if (L && cx >= L)
                     win_set_u8(win, WIN_CURSOR_X, (uint8_t)(cx - L));
             }
-            code = (uint16_t)((p[1] << 8) | p[2]);
-            /* Abandon slot ref; next ProcessCurrentChar reads the stream. */
+
+            /* Mid-string (battle \03): inline so phrase FF does not EOS parent. */
+            if (parent_cont && inline_phrase_no_controls(win, index, code))
+                return 1;
+
+            /* Whole-string phrase (map name) or controls inside phrase. */
             redirect_phrase_stream(win, code);
             return 1;
         }

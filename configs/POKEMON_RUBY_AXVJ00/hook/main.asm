@@ -17,11 +17,17 @@
     bx r0
 .pool
 
-; 地图名弹窗：日版用 StringLength（字节数）按 10 格居中，不是 GetStringWidth。
-; F9 地点名槽仅 4B，会左侧空格顶满、右侧溢出 → 改为按绘制像素折算格数。
-; 旧 GetStringWidth@0x4CC0 为错址（无 BL，且破坏指针表指向的真函数），已拆除。
+; 地图名弹窗：日版 StringLength 后仍 GetMapName(fill=10) 填 0x00。
+; F9 槽 4B → 左/尾空格 + Mode2 双计 → 白边顶框。钩掉后直跳 MenuPrint。
+; 旧 GetStringWidth@0x4CC0 为错址，已拆除。
 .org DrawMapNamePopup_StringLength
     ldr r3, =(MapName_DisplayCellLength | 1)
+    bx r3
+.pool
+
+; 等 A 箭头：FA/FB 不经 PrintNextChar；TILE_OFFSET 与 CURSOR 错位 → 双▼。
+.org DrawInitialDownArrow
+    ldr r3, =(WaitArrow_Prepare | 1)
     bx r3
 .pool
 

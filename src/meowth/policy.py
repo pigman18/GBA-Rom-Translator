@@ -429,14 +429,6 @@ def TRUSTED_LZ_BANDS() -> tuple:
 BIRCH_PTR_ALLOW = birch_ptr_allowlist()
 TRAINER_UI_PTR_ALLOW = trainer_ui_ptr_allowlist()
 
-_RE_KANA_ROW = re.compile(r"^[ぁ-んァ-ン]{5}$")
-
-
-def _gojuon_extra(game_id: str = "") -> frozenset[str]:
-    raw = _policy(game_id).get("gojuon_extra", {}).get("values", [])
-    return frozenset(str(x) for x in raw)
-
-
 class Geo(Enum):
     SCRIPT = auto()
     UI_BANK = auto()
@@ -857,13 +849,6 @@ def text_target_ok(
     return True
 
 
-def is_ime_gojuon_row(text: str) -> bool:
-    compact = text.replace(" ", "").replace("\n", "")
-    if bool(_RE_KANA_ROW.match(compact)):
-        return True
-    return compact in _gojuon_extra()
-
-
 def is_garbage_jp(text: str) -> bool:
     if "がのく" in text or "なくけ" in text or "にくけ" in text:
         return True
@@ -878,8 +863,6 @@ def is_garbage_jp(text: str) -> bool:
 
 def looks_like_translatable(text: str, body_len: int) -> bool:
     if body_len < 2 or body_len > 512:
-        return False
-    if is_ime_gojuon_row(text):
         return False
     if is_garbage_jp(text):
         return False

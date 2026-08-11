@@ -66,6 +66,21 @@ texts:
     - id: global_anim_cmd_filter
       type: anim_cmd_filter
       value: true
+    - id: global_ime_keyboard_filter
+      type: ime_keyboard_filter
+      value: true
+    # 姓名输入 SoftKeyboard：提示语 + 码表页（勿汉化 / 勿 in_place）
+    - id: global_naming_screen_filter
+      type: address_filter
+      value:
+        start: '0x083A32D0'
+        end: '0x083A34FF'
+    # 标题 logo LZ 带：禁止当正文扫入；指针索引亦跳过此带假指针槽
+    - id: global_title_lz_filter
+      type: address_filter
+      value:
+        start: '0x0836D000'
+        end: '0x0836FFFF'
   styles:
     # 按列表顺序交错分配 F9：01, 81, 02, 82…（勿写 channel）
     - id: 样式1
@@ -439,14 +454,11 @@ texts:
             - "ポケモンを あずける"  # 寄存宝可梦
             - "ミツルは どうする？"  # 小智要怎么做？
             - "\\CC050Fいれかえ"  # \CC050F替换
-            - "あなた の なまえは？"  # 你的名字是？
             - "さいしょから はじめる"  # 新游戏
             - "ボックスを せいりする"  # 整理盒子
             - "ポケモンを あずける "  # 寄存宝可梦
             - "ポケモンを つれていく"  # 取出宝可梦
             - "このポケモンにしますか？"  # 决定选这只宝可梦吗？
-            - "ボックス の なまえは？"  # 盒子的名字是？
-            - "\\02 の ニックネームは？"  # \02 的昵称是？
             - "レポートを かきこみました！"  # 记录已写入！
             - "ポケモンを えらんで ください"  # 请选择
             - "\\CC0509せっていを かえる"  # \CC0509改变设置

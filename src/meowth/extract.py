@@ -26,7 +26,6 @@ from .policy import (
     UI_RANGE as _UI_RANGE_fn,
     in_ranges as _in_ranges,
     is_garbage_jp as _is_garbage_jp,
-    is_ime_gojuon_row as _is_ime_gojuon_row,
     is_loadword_text_ptr as _is_loadword_text_ptr,
     is_struct_like_pcs as _is_struct_like_pcs,
     looks_like_translatable as _looks_like_translatable,
@@ -354,8 +353,6 @@ def extract_script_pointers(
         if not use:
             continue
         text = decode_pcs(s)
-        if _is_ime_gojuon_row(text):
-            continue
         body_len = len(s) - 1
         allow_so = any(p in _EARLY_SCRIPT_PTR_ALLOWLIST for p in use)
         if not allow_so and not _looks_like_translatable(text, body_len):
@@ -403,7 +400,7 @@ def extract_fc_prefixed_ui(rom: bytes) -> list[dict]:
             a += 1
             continue
         text = decode_pcs(raw)
-        if _is_ime_gojuon_row(text) or _is_garbage_jp(text):
+        if _is_garbage_jp(text):
             a = eos + 1
             continue
         if not re.search(r"[\u3040-\u30ff]", text):
@@ -747,7 +744,7 @@ def extract_s1_registry_strings(rom: bytes) -> list[dict]:
         if _is_struct_like_pcs(s):
             continue
         text = decode_pcs(s)
-        if _is_ime_gojuon_row(text) or _is_garbage_jp(text):
+        if _is_garbage_jp(text):
             continue
         if so in seen:
             continue

@@ -79,11 +79,5 @@
       ],
       "description": "训练师卡/确认/返回等中ROM UI指针站点，S1 allowlist（GFX拒绝区例外放行）"
     }
-  },
-  "gojuon_extra": {
-    "values": [
-      "やゆよわをん"
-    ],
-    "description": "IME五十音行额外匹配串，is_ime_gojuon_row判定"
   }
 }

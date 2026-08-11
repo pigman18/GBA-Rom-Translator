@@ -356,6 +356,14 @@ texts:
     - id: global_anim_cmd_filter
       type: anim_cmd_filter
       value: true
+    - id: global_ime_keyboard_filter
+      type: ime_keyboard_filter
+      value: true
+    - id: global_naming_screen_filter
+      type: address_filter
+      value:
+        start: '0x083A32D0'
+        end: '0x083A34FF'
   modules:
     - id: 前期剧情
       start: '0x100000'        # 粗带；洞写 omit，不要切碎 ranges
@@ -430,6 +438,7 @@ texts:
 | `require_pointer_filter` | bool | `value: true`：无指针则命中 |
 | `garbage_heuristic_filter` | bool | `value: true`：垃圾假名/拉丁混扫则命中（不计 `Ａボタン`） |
 | `anim_cmd_filter` | bool | `value: true`：`raw` 像 Gen3 精灵 anim（连续 ≥2 个 `0x08/09` ROM 指针，或连续 ≥2 个帧字 `xx 0{0,1} 10 00`，或帧字 + `FFFF` / 后随指针）则命中 |
+| `ime_keyboard_filter` | bool | `value: true`：`raw` 像 Gen3 姓名五十音键盘表（RS/FRLG 日版共有页头/`5` 递增假名行；勿 `in_place`）则命中 |
 | `address_filter` | 正则或 `{start,end}` | 地址命中禁止规则（正则同样用 `regex`） |
 | `original_text_filter` | 列表 | 原文精确/去空白命中。元素可以是字符串，或 `{original, address}` / `{original, start, end}`（绑地址后才放行）。常配 `filter: false` 做白名单 |
 

@@ -849,6 +849,9 @@ class RequirePointerFilter(TextFilter):
 class GarbageHeuristicFilter(TextFilter):
     type_name = "garbage_heuristic_filter"
 
+    # 「ポケモン」片假名 digraph；对白里反复出现不算垃圾
+    _POKEMON_DIGRAPHS = frozenset({"ポケ", "ケモ", "モン"})
+
     @staticmethod
     def looks_garbage(original: str) -> bool:
         """窄启发式（garbage_heuristic_filter / mark-404）。
@@ -881,9 +884,17 @@ class GarbageHeuristicFilter(TextFilter):
             return True
         if len(plain.strip()) <= 8 and fw_letter >= 1 and 1 <= jp <= 2:
             return True
-        for block in set(re.findall(r"[ァ-ン]{2}", o)):
-            if o.count(block) >= 3:
-                return True
+
+        # digraph≥3：排除 ポケモン 片；对白信号 + ポケモン 时整段跳过
+        skip_digraph = "ポケモン" in o and (
+            bool(re.search(r"[はがをに]", o)) or "\\l" in o or "\\p" in o
+        )
+        if not skip_digraph:
+            for block in set(re.findall(r"[ァ-ン]{2}", o)):
+                if block in GarbageHeuristicFilter._POKEMON_DIGRAPHS:
+                    continue
+                if o.count(block) >= 3:
+                    return True
         if (
             jp >= 12
             and not re.search(r"[はがをのにてもだ]", o)
@@ -892,6 +903,8 @@ class GarbageHeuristicFilter(TextFilter):
             and "\\CC" not in o
         ):
             for block in set(re.findall(r"[ァ-ン]{2}", o)):
+                if block in GarbageHeuristicFilter._POKEMON_DIGRAPHS:
+                    continue
                 if o.count(block) >= 2:
                     return True
         return False
@@ -982,6 +995,87 @@ class AnimCmdFilter(TextFilter):
         if not bool(self.value):
             return None
         return self.looks_anim_cmd(ctx.raw or b"")
+
+
+class ImeKeyboardFilter(TextFilter):
+    """踢误扫的 Gen3 姓名输入五十音键盘码表（跨 AXVJ/AXPJ/BPRJ/BPGJ raw 形态）。"""
+
+    type_name = "ime_keyboard_filter"
+
+    # あ行 + な行页头（RS/FRLG 日版共有）
+    _PAGE_SIG = bytes(
+        [0x01, 0x02, 0x03, 0x04, 0x05, 0x00, 0x15, 0x16, 0x17, 0x18, 0x19, 0x00]
+    )
+    _ROW_MARKERS = (
+        "あいうえお",
+        "かきくけこ",
+        "さしすせそ",
+        "たちつてと",
+        "なにぬねの",
+        "はひふへほ",
+        "まみむめも",
+        "やゆよ",
+        "らりるれろ",
+        "わをん",
+    )
+
+    @staticmethod
+    def _strip_eos(raw: bytes) -> bytes:
+        body = raw or b""
+        while body and body[-1] == 0xFF:
+            body = body[:-1]
+        return body
+
+    @staticmethod
+    def _is_kana_code(b: int) -> bool:
+        return 0x01 <= b <= 0xA0
+
+    @staticmethod
+    def _count_gojuon_rows(body: bytes) -> int:
+        """连续 5 个递增假名码且后接 0x00 / 行尾 → 一行。"""
+        rows = 0
+        i = 0
+        n = len(body)
+        while i + 5 <= n:
+            chunk = body[i : i + 5]
+            if (
+                all(ImeKeyboardFilter._is_kana_code(b) for b in chunk)
+                and all(chunk[j] + 1 == chunk[j + 1] for j in range(4))
+            ):
+                after = i + 5
+                if after >= n or body[after] == 0x00:
+                    rows += 1
+                    i = after + (1 if after < n and body[after] == 0x00 else 0)
+                    continue
+            i += 1
+        return rows
+
+    @staticmethod
+    def looks_ime_keyboard(raw: bytes, original: str = "") -> bool:
+        body = ImeKeyboardFilter._strip_eos(raw)
+        if len(body) >= len(ImeKeyboardFilter._PAGE_SIG) and (
+            ImeKeyboardFilter._PAGE_SIG in body
+            or body.startswith(ImeKeyboardFilter._PAGE_SIG)
+        ):
+            return True
+        if len(body) >= 10 and ImeKeyboardFilter._count_gojuon_rows(body) >= 2:
+            return True
+
+        o = original or ""
+        if not o:
+            return False
+        if re.search(r"[はがをに]", o) or "\\l" in o or "\\p" in o:
+            return False
+        compact = re.sub(r"\s+", "", o)
+        if "あいうえお" not in compact:
+            return False
+        others = sum(1 for m in ImeKeyboardFilter._ROW_MARKERS[1:] if m in compact)
+        return others >= 1
+
+    def hit(self, ctx: FilterContext) -> bool | None:
+        if not bool(self.value):
+            return None
+        return self.looks_ime_keyboard(ctx.raw or b"", ctx.original or "")
 
 
 class AddressFilter(TextFilter):
@@ -1112,6 +1206,7 @@ FILTER_TYPES: dict[str, type[TextFilter]] = {
     RequirePointerFilter.type_name: RequirePointerFilter,
     GarbageHeuristicFilter.type_name: GarbageHeuristicFilter,
     AnimCmdFilter.type_name: AnimCmdFilter,
+    ImeKeyboardFilter.type_name: ImeKeyboardFilter,
     AddressFilter.type_name: AddressFilter,
     OriginalTextFilter.type_name: OriginalTextFilter,
 }
@@ -1437,6 +1532,77 @@ def extract_scan(
                     _try_accept(a, body)
         return out
 
+    def _start_rank(text: str, ptrs: list[int]) -> tuple[int, int]:
+        """同 EOS 多起点时择优：(分, 长度)；分高优先，同分取更长（更早对齐）。"""
+        score = 0
+        if ptrs:
+            score += 100
+        t = (text or "").lstrip("\n")
+        if t.startswith(("ママ『", "パパ『", "『", "「")) or t.startswith("\\"):
+            score += 50
+        elif t and (
+            "\u3040" <= t[0] <= "\u30ff" or "\u4e00" <= t[0] <= "\u9fff"
+        ):
+            score += 20
+        head = t[:12]
+        if head.startswith("とく") or "とくけ" in head:
+            score -= 40
+        return (score, len(text or ""))
+
+    def _scan_candidate(
+        a: int, raw: bytes
+    ) -> tuple[int, bytes, str, list[int]] | None:
+        """a 处候选；同 EOS 内按对白起点质量择优（去掉垃圾前缀 / 句中误切）。"""
+        if a < SCRIPT_BANK_MIN or TITLE_LZ_BAND[0] <= a < TITLE_LZ_BAND[1]:
+            return None
+        if a in seen:
+            return None
+        if not looks_like_jp_text(raw):
+            return None
+        text = decode_pcs(raw)
+        ptrs = list(ptrs_map.get(a, []))
+        ctx = make_filter_context(
+            fo=a,
+            raw=raw,
+            original=text,
+            ptrs=ptrs,
+            module_id=str(mid),
+            module_type=mtype,
+        )
+        if filt and not apply_filters(ctx, filt):
+            return None
+        end = a + len(raw) - 1
+        best_a, best_raw, best_text, best_ptrs = a, raw, text, ptrs
+        best_rank = _start_rank(text, ptrs)
+        for a2 in range(a + 1, min(end, a + 96) + 1):
+            b2 = rom[a2]
+            if b2 == 0xFF or b2 == 0x00 or (b2 >= 0xF7 and b2 != 0xFC):
+                continue
+            raw2 = read_pcs(rom, a2, 512)
+            if raw2 is None or a2 + len(raw2) - 1 != end:
+                continue
+            if a2 in seen or not looks_like_jp_text(raw2):
+                continue
+            if a2 < SCRIPT_BANK_MIN or TITLE_LZ_BAND[0] <= a2 < TITLE_LZ_BAND[1]:
+                continue
+            text2 = decode_pcs(raw2)
+            ptrs2 = list(ptrs_map.get(a2, []))
+            ctx2 = make_filter_context(
+                fo=a2,
+                raw=raw2,
+                original=text2,
+                ptrs=ptrs2,
+                module_id=str(mid),
+                module_type=mtype,
+            )
+            if filt and not apply_filters(ctx2, filt):
+                continue
+            rank2 = _start_rank(text2, ptrs2)
+            if rank2 > best_rank:
+                best_a, best_raw, best_text, best_ptrs = a2, raw2, text2, ptrs2
+                best_rank = rank2
+        return best_a, best_raw, best_text, best_ptrs
+
     out: list[dict] = []
     seen: set[int] = set()
     for lo, hi in band_pairs:
@@ -1452,37 +1618,35 @@ def extract_scan(
                 a += 1
                 continue
             end = a + len(raw) - 1
-            if looks_like_jp_text(raw):
-                text = decode_pcs(raw)
-                if a < SCRIPT_BANK_MIN or TITLE_LZ_BAND[0] <= a < TITLE_LZ_BAND[1]:
+            cand = _scan_candidate(a, raw)
+            if cand is None:
+                # 勿 end+1：长垃圾窗会吞掉窗内真正剧情起点（如妈妈开场 0x0814B9A1）
+                if looks_like_jp_text(raw):
+                    a += 1
+                else:
                     a = end + 1
-                    continue
-                if a in seen:
-                    a = end + 1
-                    continue
-                ptrs = list(ptrs_map.get(a, []))
-                ctx = make_filter_context(
-                    fo=a,
-                    raw=raw,
-                    original=text,
-                    ptrs=ptrs,
-                    module_id=str(mid),
-                    module_type=mtype,
+                continue
+            best_a, best_raw, best_text, best_ptrs = cand
+            seen.add(best_a)
+            out.append(
+                _stamp(
+                    {
+                        "address": f"0x{BASE + best_a:08X}",
+                        "original": best_text,
+                        "original_hex": best_raw.hex(" "),
+                        "byte_length": len(best_raw),
+                        "is_pointer_based": bool(best_ptrs),
+                        "pointer_sources": [
+                            f"0x{BASE + q:08X}" for q in best_ptrs
+                        ],
+                        "pointer_addresses": [
+                            f"0x{BASE + q:08X}" for q in best_ptrs
+                        ],
+                    },
+                    mid=mid,
+                    game_code=game_code,
                 )
-                if filt and not apply_filters(ctx, filt):
-                    a = end + 1
-                    continue
-                seen.add(a)
-                e = {
-                    "address": f"0x{BASE + a:08X}",
-                    "original": text,
-                    "original_hex": raw.hex(" "),
-                    "byte_length": len(raw),
-                    "is_pointer_based": bool(ptrs),
-                    "pointer_sources": [f"0x{BASE + q:08X}" for q in ptrs],
-                    "pointer_addresses": [f"0x{BASE + q:08X}" for q in ptrs],
-                }
-                out.append(_stamp(e, mid=mid, game_code=game_code))
+            )
             a = end + 1
     return out
 
@@ -1517,10 +1681,16 @@ def extract_module(
 
 
 def _build_ptr_index(rom: bytes) -> dict[int, list[int]]:
+    """ROM 内 LE 指针 → 目标正文偏移。跳过标题 LZ 带内的假指针槽。"""
     ptr_index: dict[int, list[int]] = {}
     n = len(rom)
+    tlz_lo, tlz_hi = TITLE_LZ_BAND
     o = 0
     while o + 4 <= n:
+        # 压缩图形区内的巧合 0x08xxxxxx 不是文本指针
+        if tlz_lo <= o < tlz_hi:
+            o += 4
+            continue
         v = struct.unpack_from("<I", rom, o)[0]
         if BASE <= v < BASE + n:
             so = v - BASE

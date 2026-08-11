@@ -63,6 +63,9 @@ texts:
     - id: global_garbage_heuristic_filter
       type: garbage_heuristic_filter
       value: true
+    - id: global_anim_cmd_filter
+      type: anim_cmd_filter
+      value: true
   styles:
     # 按列表顺序交错分配 F9：01, 81, 02, 82…（勿写 channel）
     - id: 样式1
@@ -524,6 +527,50 @@ texts:
             - "このボックスを どうしますか？"  # 这个盒子要怎么处理？
             - "ボックスを しゅうりょうしますか？ "  # 要结束盒子吗？
 
+            # --- 选项菜单 / 职员表 / 调试（自后期剧情迁入）---
+            - "\\CC0509はなしの はやさ"  # 对话速度
+            - "\\CC0509せんとうエフェクト"  # 战斗动画
+            - "\\CC0509しあいの ルール"  # 对战规则
+            - "\\CC0509サウンド"  # 声音
+            - "\\CC0509ウインドウ"  # 窗口
+            - "\\CC0509ボタンの モード"  # 按键模式
+            - "\\CC050Fかちぬき"  # 连胜
+            - "\\CC050Fモノラル"  # 单声道
+            - "\\CC050Fステレオ"  # 立体声
+            - "\\CC050Fノーマル"  # 普通
+            - "\\CC0509ポケットモンスター ルビー"  # 宝可梦 红宝石
+            - "\\CC0509スタッフリスト"  # 职员表
+            - "\\CC0509エグゼクティブ ディレクター"  # 执行总监
+            - "\\CC0509ディレクター"  # 总监
+            - "\\CC0509アート ディレクター"  # 美术总监
+            - "\\CC0509バトル ディレクター"  # 战斗总监
+            - "\\CC0509メイン プログラム"  # 主程序
+            - "\\CC0509バトル システム プログラム"  # 战斗系统程序
+            - "\\CC0509フィールド システム プログラム"  # 野外系统程序
+            - "\\CC0509プログラム"  # 程序
+            - "\\CC0509メイン グラフィック デザイン"  # 主图形设计
+            - "\\CC0509ポケモン \\CC0CFB グラフィック デザイン"  # 宝可梦图形设计
+            - "\\CC0509ポケモン デザイン"  # 宝可梦设计
+            - "\\CC0509おんがく"  # 音乐
+            - "\\CC0509サウンド エフェクト \\CC0CFB ポケモン ボイス"  # 音效 / 宝可梦叫声
+            - "\\CC0509ゲーム デザイン"  # 游戏设计
+            - "\\CC0509シナリオプロット"  # 剧情大纲
+            - "\\CC0509シナリオ"  # 剧本
+            - "\\CC0509スクリプト せってい"  # 脚本设定
+            - "\\CC0509マップ デザイン"  # 地图设计
+            - "\\CC0509マップデータ せってい"  # 地图数据设定
+            - "\\CC0509パラメーター せってい"  # 参数设定
+            - "\\CC0509ずかん テキスト"  # 图鉴文本
+            - "\\CC0509かんきょう \\CC0CFB ツール プログラム"  # 环境 / 工具程序
+            - "\\CC0509デバッグプレイ"  # 调试游玩
+            - "\\CC0509スペシャルサンクス"  # 特别鸣谢
+            - "\\CC0509コーディネーター"  # 协调
+            - "\\CC0509プロデューサー"  # 制作人
+            - "\\CC0509エグゼクティブ プロデューサー"  # 执行制作人
+            - "\\CC0509じょうほう かんり"  # 信息管理
+            - "\\CC0509ファンクション マネージャー"  # 功能经理
+            - "\\CC0509てんじ かんしゅう"  # 展示监修
+
     - id: 前期剧情
       label: 文本·前期剧情
       group: 文本
@@ -534,6 +581,13 @@ texts:
       type: scan
       relocate: true
       hook: true
+      filters:
+        - id: story_omit_credits_debug
+          type: address_filter
+          value: { start: '0x083E760C', end: '0x083E77E0' }
+        - id: story_omit_options_menu
+          type: address_filter
+          value: { start: '0x0837B510', end: '0x0837B5C0' }
     - id: 中期剧情
       label: 文本·中期剧情
       group: 文本
@@ -544,6 +598,13 @@ texts:
       type: scan
       relocate: true
       hook: true
+      filters:
+        - id: story_omit_credits_debug
+          type: address_filter
+          value: { start: '0x083E760C', end: '0x083E77E0' }
+        - id: story_omit_options_menu
+          type: address_filter
+          value: { start: '0x0837B510', end: '0x0837B5C0' }
     - id: 后期剧情
       label: 文本·后期剧情
       group: 文本
@@ -554,6 +615,13 @@ texts:
       type: scan
       relocate: true
       hook: true
+      filters:
+        - id: story_omit_credits_debug
+          type: address_filter
+          value: { start: '0x083E760C', end: '0x083E77E0' }
+        - id: story_omit_options_menu
+          type: address_filter
+          value: { start: '0x0837B510', end: '0x0837B5C0' }
     - id: 特殊文本
       label: 文本·特殊文本
       group: 文本

@@ -902,6 +902,88 @@ class GarbageHeuristicFilter(TextFilter):
         return self.looks_garbage(ctx.original)
 
 
+class AnimCmdFilter(TextFilter):
+    """踢误扫的 Gen3 精灵 anim 命令流 / 指针表（raw 形态，不看日文字形）。"""
+
+    type_name = "anim_cmd_filter"
+
+    @staticmethod
+    def _is_rom_ptr(w: int) -> bool:
+        return ((w >> 24) & 0xFF) in (0x08, 0x09)
+
+    @staticmethod
+    def _max_consecutive_rom_ptrs(raw: bytes) -> int:
+        """4 字节对齐下最长连续 ROM 指针个数。"""
+        best = 0
+        run = 0
+        for i in range(0, len(raw) - 3, 4):
+            w = struct.unpack_from("<I", raw, i)[0]
+            if AnimCmdFilter._is_rom_ptr(w):
+                run += 1
+                if run > best:
+                    best = run
+            else:
+                run = 0
+        return best
+
+    @staticmethod
+    def _has_frame_word(raw: bytes, lo: int, hi: int) -> bool:
+        """窗内是否有 anim 帧字：``xx 01 10 00`` / ``xx 00 10 00``。"""
+        lo = max(0, lo)
+        hi = min(len(raw), hi)
+        for i in range(lo, hi - 3):
+            if raw[i + 2] == 0x10 and raw[i + 3] == 0x00 and raw[i + 1] in (0x00, 0x01):
+                return True
+        return False
+
+    @staticmethod
+    def _max_consecutive_frame_words(raw: bytes) -> int:
+        """4 字节对齐下最长连续 anim 帧字个数（``xx 0{0,1} 10 00``）。"""
+        best = 0
+        run = 0
+        for i in range(0, len(raw) - 3, 4):
+            if (
+                raw[i + 2] == 0x10
+                and raw[i + 3] == 0x00
+                and raw[i + 1] in (0x00, 0x01)
+            ):
+                run += 1
+                if run > best:
+                    best = run
+            else:
+                run = 0
+        return best
+
+    @staticmethod
+    def looks_anim_cmd(raw: bytes) -> bool:
+        if not raw or len(raw) < 8:
+            return False
+        if AnimCmdFilter._max_consecutive_rom_ptrs(raw) >= 2:
+            return True
+        # PCS 扫到单字节 FF 截断时：连续帧字 ≥2（如 80 01 10 00 ×3 + FF）
+        if AnimCmdFilter._max_consecutive_frame_words(raw) >= 2:
+            return True
+        # Anim 帧 + 0xFFFF 结束，其后常跟指针表
+        for i in range(0, len(raw) - 1, 2):
+            if raw[i] != 0xFF or raw[i + 1] != 0xFF:
+                continue
+            if AnimCmdFilter._has_frame_word(raw, i - 12, i):
+                return True
+            # FFFF 后对齐处有 ≥1 个 ROM 指针
+            for j in range(i + 2, min(len(raw) - 3, i + 18), 2):
+                if j & 3:
+                    continue
+                w = struct.unpack_from("<I", raw, j)[0]
+                if AnimCmdFilter._is_rom_ptr(w):
+                    return True
+        return False
+
+    def hit(self, ctx: FilterContext) -> bool | None:
+        if not bool(self.value):
+            return None
+        return self.looks_anim_cmd(ctx.raw or b"")
+
+
 class AddressFilter(TextFilter):
     type_name = "address_filter"
 
@@ -1029,6 +1111,7 @@ FILTER_TYPES: dict[str, type[TextFilter]] = {
     MaxByteLengthFilter.type_name: MaxByteLengthFilter,
     RequirePointerFilter.type_name: RequirePointerFilter,
     GarbageHeuristicFilter.type_name: GarbageHeuristicFilter,
+    AnimCmdFilter.type_name: AnimCmdFilter,
     AddressFilter.type_name: AddressFilter,
     OriginalTextFilter.type_name: OriginalTextFilter,
 }

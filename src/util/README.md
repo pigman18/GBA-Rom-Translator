@@ -289,35 +289,34 @@ work/
 
 # gdb_patcher.py
 
-汉化崩溃排查：输入坏指针值，扫出 ROM 里存放该 4 字节的槽地址；可选连 mGBA GDB 对槽下写断点，回报写入方 PC。
+连 mGBA GDB stub，或对成品 ROM 做静态反查，定位「坏地址」从哪来。
 
 **依赖：** 仅 Python 标准库（不改 ROM、不代开模拟器）。
 
 ## 用法
 
+### A. 崩后还能停在坏 PC
+
 ```bash
-# 崩后已 Pause：读现场（识别 Thumb 近邻）
-python gdb_patcher.py listen 0xF909F6A4 --gdb 127.0.0.1:2345 --now
-
-# 强制 PC 跳到坏地址再炸一次（一般不推荐；已在异常向量时会拒绝）
-python gdb_patcher.py goto 0xF909F6A4 --gdb 127.0.0.1:2345
-
-# 坏值 -> 槽地址（可对照原盘）
-python gdb_patcher.py find 0xF909F6A4 --rom path\to\zh.gba \
-  --origin path\to\origin.gba
+python src/util/gdb_patcher.py 0xD8004286
 ```
 
-| 子命令 | 输入 | 输出 |
-|--------|------|------|
-| `listen --now` | 坏值 | 当前停机现场；识别 `F909F6A5` 等 Thumb 近邻 |
-| `listen` | 坏值 | 对坏地址下访问断点后复现，再反查 |
-| `goto` | 坏地址 | 写 PC 再 continue（只验证会炸） |
-| `find` | 坏值 | ROM 中存放该 LE 字的槽 |
-| `watch` | 槽地址 | 写断点命中时的 PC |
-| `regs` | — | 寄存器 |
-| `find-live` | 坏值 | RAM 命中 |
+### B. SoftReset / 进 BIOS → 优先 `romscan`（不必开 GDB）
 
-**重要：** 若 `PC≈0x00000004` 且 `r1/LR≈F909F6A5/A6`，说明已经崩过，再 `goto` 没有排查价值。
+动画完重启、CallVia trap 一直「非目标」时：坏值往往是 **ROM 里指针表被 in_place 盖成 F9 流**，不经 `CallViaR*`。
+
+```bash
+python src/util/gdb_patcher.py romscan 0x5F0A00F9
+```
+
+对照原盘字 → 成品字，并反查 `translate.build.json` 的误扫条目，再写入 `rejects`。
+
+### C. `trap`（CallVia + SoftReset 运行时拦）
+
+```bash
+python src/util/gdb_patcher.py trap 0x5F0A00F9
+python src/util/gdb_patcher.py trap 0x5F0A00F9 --any-f9
+```
 
 ---
 
@@ -353,6 +352,9 @@ texts:
       value: 8
     - id: global_garbage_heuristic_filter
       type: garbage_heuristic_filter
+      value: true
+    - id: global_anim_cmd_filter
+      type: anim_cmd_filter
       value: true
   modules:
     - id: 前期剧情
@@ -427,6 +429,7 @@ texts:
 | `min_byte_length_filter` / `max_byte_length_filter` | int | 字节长度越界 |
 | `require_pointer_filter` | bool | `value: true`：无指针则命中 |
 | `garbage_heuristic_filter` | bool | `value: true`：垃圾假名/拉丁混扫则命中（不计 `Ａボタン`） |
+| `anim_cmd_filter` | bool | `value: true`：`raw` 像 Gen3 精灵 anim（连续 ≥2 个 `0x08/09` ROM 指针，或连续 ≥2 个帧字 `xx 0{0,1} 10 00`，或帧字 + `FFFF` / 后随指针）则命中 |
 | `address_filter` | 正则或 `{start,end}` | 地址命中禁止规则（正则同样用 `regex`） |
 | `original_text_filter` | 列表 | 原文精确/去空白命中。元素可以是字符串，或 `{original, address}` / `{original, start, end}`（绑地址后才放行）。常配 `filter: false` 做白名单 |
 

@@ -80,6 +80,8 @@
     "GameBinAddresses": "0x08800000",
     "ChineseTileState": "0x0203FFF8",
     "ChineseTileCursor": "0x0203FFFC",
+    "ChsPitchCtrl": "0x0203FF80",
+    "ChsPitchSlots": "0x0203FF90",
     "TestString_Addr": "0x08801000"
   },
   "win_offsets": {

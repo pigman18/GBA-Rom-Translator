@@ -29,9 +29,64 @@ static uint8_t pitch_capture_base_tx(TextPrinter *win)
     return win_u8(win, WIN_CURSOR_TILE_X);
 }
 
+/*
+ * SoftKeyboard / party / shop share one CHS tile pool (JP PCS must stay here).
+ * Isolate pitch+write_op per printer fingerprint so switching windows does not
+ * clobber another printer's chs_px (title glyph paste into keyboard rows).
+ */
+volatile struct ChineseTileState *chs_bind_pitch_slot(TextPrinter *win)
+{
+    volatile struct ChsPitchCtrl *ctrl =
+        (volatile struct ChsPitchCtrl *)ADDR_CHS_PITCH_CTRL;
+    volatile struct ChineseTileState *slots =
+        (volatile struct ChineseTileState *)ADDR_CHS_PITCH_SLOTS;
+    uint8_t *tpl = win_template(win);
+    uint8_t char_base = tpl ? tpl[1] : 0;
+    uint16_t key = chs_pitch_key(win);
+    unsigned i;
+    unsigned best;
+    uint8_t best_age;
+    uint8_t gen;
+
+    for (i = 0; i < CHS_PITCH_SLOT_COUNT; i++) {
+        if (slots[i].pitch_key == key && slots[i].char_base == char_base) {
+            gen = (uint8_t)(ctrl->gen + 1u);
+            ctrl->gen = gen;
+            ctrl->age[i] = gen;
+            ctrl->cur = (uint8_t)i;
+            return &slots[i];
+        }
+    }
+
+    best = 0;
+    best_age = 255;
+    for (i = 0; i < CHS_PITCH_SLOT_COUNT; i++) {
+        if (ctrl->age[i] == 0) {
+            best = i;
+            break;
+        }
+        if (ctrl->age[i] < best_age) {
+            best_age = ctrl->age[i];
+            best = i;
+        }
+    }
+
+    slots[best].char_base = char_base;
+    slots[best].write_op = 0;
+    slots[best].base_tx = pitch_capture_base_tx(win);
+    slots[best].last_adv = (uint8_t)CHS_GLYPH_ADVANCE_PX;
+    slots[best].pitch_key = key;
+    slots[best].chs_px = 0;
+    gen = (uint8_t)(ctrl->gen + 1u);
+    ctrl->gen = gen;
+    ctrl->age[best] = gen;
+    ctrl->cur = (uint8_t)best;
+    return &slots[best];
+}
+
 static void pitch_reset(TextPrinter *win)
 {
-    volatile struct ChineseTileState *st = chinese_tile_state();
+    volatile struct ChineseTileState *st = chs_bind_pitch_slot(win);
     st->chs_px = 0;
     st->base_tx = pitch_capture_base_tx(win);
 }
@@ -233,7 +288,7 @@ void drawGlyph_Adv(TextPrinter *win, const uint8_t *src128, int linear, unsigned
      * 16px 字模 → adv_px advance（默认 12=8+4；JP via CHS 为 8=仅左半）。
      * 推进由 chs_px 累积；Mode2/Linear 落点与中文共用。
      */
-    volatile struct ChineseTileState *st = chinese_tile_state();
+    volatile struct ChineseTileState *st = chs_bind_pitch_slot(win);
     unsigned startPixel;
     unsigned pass2_w;
     uint16_t off, abs_u, abs_l, su, sl;
@@ -360,21 +415,23 @@ void drawGlyph_Adv(TextPrinter *win, const uint8_t *src128, int linear, unsigned
 
 int DrawGlyph_ShouldUseLinear(TextPrinter *win, uint8_t write_op)
 {
-    uint8_t *tpl;
-
+    /*
+     * Align with pokeruby Font3 + pokeRS GetCursorTileNum: SoftKeyboard/title
+     * use Mode2 (y*30+x) so rows do not share Linear tiles ~4 with the title.
+     * Shop list/desc keep Linear; battle fixed base stays Linear.
+     * JP PCS still draws via CHS — only the tile index formula changes.
+     */
     if (scene_battle_force_linear(win))
-        return 1;
-    /* charBase2 menu pool: Mode2 must win over inject LINEAR (F9 03).
-     * shop_desc / shop-bag list keep Linear; ▶ is DrawMenuCursorEF. */
-    if (scene_menu_wants_mode2(win))
-        return 0;
-    (void)write_op;
-    tpl = win_template(win);
-    if (!tpl || tpl[1] != 2)
         return 1;
     if (scene_is_shop_desc(win) || scene_is_shop_bag_list(win))
         return 1;
-    return 0;
+    (void)write_op;
+    if (scene_menu_wants_mode2(win))
+        return 0;
+    /* Other Font3 (should be rare): still Mode2 like vanilla Font3. */
+    if (win_u8(win, WIN_FONTNUM_REAL) == FONT_NORMAL_SHADOWED)
+        return 0;
+    return 1;
 }
 
 /* InitMenu ▶: blit JP glyph into CHS_MENU_CURSOR_TILE; map cursor cell only. */
@@ -427,35 +484,27 @@ void DrawGlyph_Chinese(TextPrinter *win, const uint8_t *glyph_src)
 
 void DrawGlyph_Chinese_Adv(TextPrinter *win, const uint8_t *glyph_src, unsigned adv_px)
 {
-    volatile struct ChineseTileState *st = chinese_tile_state();
-    uint8_t *tpl = win_template(win);
-    uint8_t char_base = tpl ? tpl[1] : 0;
+    volatile struct ChineseTileState *st = chs_bind_pitch_slot(win);
     uint8_t cur_tx = win_u8(win, WIN_CURSOR_TILE_X);
-    uint16_t key = chs_pitch_key(win);
     unsigned last;
     int linear;
     int newline_reset = 0;
 
-    if (char_base != st->char_base || key != st->pitch_key) {
-        /* Window / line fingerprint changed (incl. FE bumping Y).
-         * FE is handled by vanilla (not PrintNextChar_C) — reset here. */
-        st->char_base = char_base;
-        st->pitch_key = key;
-        st->write_op = 0;
-        st->last_adv = (uint8_t)CHS_GLYPH_ADVANCE_PX;
-        pitch_reset(win);
-        newline_reset = 1;
-    } else if (st->chs_px != 0 && cur_tx <= st->base_tx) {
+    /* Slot bind already switched windows without wiping other printers.
+     * Only reset pitch inside this slot on FE / cursor desync. */
+    if (st->chs_px != 0 && cur_tx <= st->base_tx) {
         /* FE reset CURSOR_TILE_X to line start while chs_px still mid-run
          * → first glyph would start at startPixel=chs_px&7 (左缘切半). */
-        pitch_reset(win);
+        st->chs_px = 0;
+        st->base_tx = pitch_capture_base_tx(win);
         newline_reset = 1;
     } else if (st->chs_px != 0) {
         last = st->last_adv ? st->last_adv : CHS_GLYPH_ADVANCE_PX;
         {
             uint8_t expect = (uint8_t)(st->base_tx + ((st->chs_px + last - 1) >> 3));
             if (cur_tx != expect) {
-                pitch_reset(win);
+                st->chs_px = 0;
+                st->base_tx = pitch_capture_base_tx(win);
                 newline_reset = 1;
             }
         }

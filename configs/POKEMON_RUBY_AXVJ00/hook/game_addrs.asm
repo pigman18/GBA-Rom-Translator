@@ -60,10 +60,14 @@ PokeRSFontChsSmall                     equ FontChsSmall
 gFont3JapaneseGlyphs                   equ 0x081B6D2C
 ; Sym punct: free ROM after Small; Font3 8x16 4bpp U+L (not 16x16 2bpp)
 PokeRSFontChsSymAddress                equ 0x091E0000
-; EWRAM ChineseTileState @ 0x0203FFF8 (8B):
-; +0 char_base +1 write_op +2 base_tx +3 last_adv +4 pitch_key(u16) +6 chs_px(u16)
+; EWRAM pitch slots (JP+CN share CHS pool; do not dual-path FontFunc):
+;   ChsPitchCtrl  @ 0x0203FF80 (16B): cur, gen, pad[2], age[8]
+;   ChineseTileState slots[8] @ 0x0203FF90 (64B)
+; Legacy single ChineseTileState @ 0x0203FFF8 (unused by hook)
 ChineseTileState                       equ 0x0203FFF8
 ChineseTileCursor                      equ 0x0203FFFC
+ChsPitchCtrl                           equ 0x0203FF80
+ChsPitchSlots                          equ 0x0203FF90
 CHS_ESCAPE                             equ 0xF9
 
 ; --- Healthbox ---

@@ -16,14 +16,17 @@
 - 入口：`drawGlyph12()` ← Font_Patch **8+4** + ROM `CopyGlyph2bppTo4bpp`（IWRAM 拼好再 32-bit 拷 VRAM；禁止对 VRAM 字节写，否则半字镜像→重影）
 - 取字：`base + (index << 7)`
 - 步进：`CHS_GLYPH_ADVANCE_PX = 12`
+- **JP PCS 必须走同一 CHS 瓦片池**（`draw_chs_pcs` → `DrawGlyph_Chinese_Adv`）。交还 FontFunc 会双路径拆台 → 移光标整屏乱飞。**禁止**再拆回。
+- **Pitch 多槽**：`ChsPitchCtrl`@`0x0203FF80` + `slots[8]`@`0x0203FF90`；按 `chs_pitch_key`（tileBase⊕Y⊕template⊕text_ptr）绑定，切窗恢复该窗 `chs_px`/`write_op`，不整槽清零。单槽 `0x0203FFF8` 仅遗留。
 - **换行（FE/FB/FA）后必须 `chs_px = 0`**（`pitch_reset`），否则下一行首字相位错 → 左缘切半
-  - `FE` 由原版处理；下一字 `DrawGlyph_Chinese_Adv` 在 `pitch_key`/行首变化时 `pitch_reset`
+  - `FE` 由原版处理；下一字 `DrawGlyph_Chinese_Adv` 在行首/光标失步时对本槽 `pitch_reset`
   - **Linear**：换行时 `TILE_OFFSET += 2`，避免下一行 pass1 覆写仍挂在上一行行尾的 pass2 字模 → 行尾半个「捉/性」
   - **禁止**写 `WIN_CURSOR_X=0`（会整体左偏）
-- 落点：[`draw_glyph.c`](../configs/POKEMON_RUBY_AXVJ00/hook/src/text/PrintNextChar/draw_glyph.c)
+- 落点：[`DrawGlyphTiles_hook.c`](../configs/POKEMON_RUBY_AXVJ00/hook/src/text/DrawGlyphTiles_hook.c)
 - **Linear 地板**：野外/说明 `0x100`，商店说明 `0x228`（见 `CHS_TILE_LAYOUT.md`）；无 `next_abs` sticky
 - **调色**：`CopyGlyph(C,E,D)` → `15→C` / `14→E` / `0→D`；右缘填 D，不碰左缘
-- **Mode2**：vanilla `origin+2`；`MENU_BAND` 仅 left≥20 **且** y≥13（存档屏禁止误进）；**偶 tile Y（0..20）** 排除商店/图鉴 tile 打印机；sticky `write_op != 0`（如 `F9 01`）跳过 MENU_BAND
+- **Mode2**：vanilla `origin+2`；Font3（含命名 SoftKeyboard **charBase 0** 与菜单 charBase 2）走 Mode2，**禁止**把 SoftKeyboard 误判 Linear（否则标题与四行键盘共用低段 Linear 瓦片 → 每行开头「你的名字是？」）。`MENU_BAND` 仅 left≥20 **且** y≥13；**偶 tile Y（0..20）** 排除商店/图鉴 tile 打印机；sticky `write_op != 0`（如 `F9 01`）跳过 MENU_BAND。商店说明/背包列表仍 Linear。
+- pokeRS 对照：非日文才进 Chinese；日文回原版 `DrawGlyphTiles`。AXVJ 日版底必须 JP-via-CHS，但 Font3 瓦片公式须与 pokeruby `GetCursorTileNum` 一致（Mode2），不可另起 Linear 池与标题抢瓦。
 - **F9 路由**：仅第二字节 `00` → 旁载单字；其余（含 `F9 80`）→ PhraseTable 切流再复用 00（`80` 清 sticky；样式 op sticky）。**禁止**把 `<0x80` 一律当旁载
 - **样式 left（整体偏移）**：`texts.styles` 按序交错分配 `01/81/02/82…`（勿写 `channel`）；切流时读 `StyleLeft[op]` 减一次 `WIN_CURSOR_X`。首样式「图鉴」→ `F9 01`。**禁止**改全局 `CHS_GLYPH_ADVANCE`；**禁止** CreateMonName 钩子
 - **图鉴列表 № / 详情页 A·B 图标**：AXVJ 共用低段 UI tile **`0x1E8..0x1FF`**（No/球在 `0x1FC..0x1FF`；取消/切换旁 A·B 图标可落到 `0x1E8..0x1FB`）。美版 pret 的 `0x3FC..` **不适用**。Mode2 **与** Linear 若算到该段，重映射到 **`0x3E8..`**（JP 上闲置的美版 dex 段；**禁止**再映回 `0x1E8..0x1FF`，否则等于踩图标）。详情顶栏 A/B 为 OBJ：曾用 `left≥22&&top≤2` 右移「取消/切换」，会误伤主菜单「图鉴」且顶栏更乱，**已撤**。PCS `♂♀` 交还 FontFunc；`►`(0xEF) 走 `DrawMenuCursorEF` → `0x1E0/0x1E1`（中文避让到 `0x168`，禁止 avoid→`0x1D0`）。队伍底栏固定句是 PartyMenuPromptTexts 的 `\02を どうする？`（不是 `なにを しますか？`）；ROM 正文已是「要做什么？」时若仍显示「要查看能力」，是 Mode2 把 pixel Y=136 当成 tile 行 → 与选项带撞瓦片：`scene_mode2_apply` 对 footer 先 `/8`，并用 `PARTY_FOOTER_BAND=0x2A0` + `chs_pitch_key` 异或 template。

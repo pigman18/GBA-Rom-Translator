@@ -34,6 +34,7 @@
  *   StyleLeft[256] @ 0x0880F000 — F9 第二字节 → left(px)
  * PrintNextChar：非 0x80 的短语 op sticky 后按 StyleLeft[op] 整体左移一次。
  * 勿在 0x0203FFF0/F7F8 放 PhraseResume（崩/踩图）。
+ * Pitch 多槽在 0x0203FF80..FFCF（避开 FFF0）；勿拆回 JP→FontFunc 双路径。
  * 改 styles/phrases 只重生 asm + armips，不必重编 game.bin。
  */
 #define ADDR_STYLE_LEFT            0x0880F000u
@@ -47,7 +48,12 @@
 #define ADDR_FONT_CHS_SYM          0x091E0000u
 #define SYM_GLYPH_BASE             0x36u
 #define SYM_GLYPH_COUNT            9u
+/* Legacy single-slot (unused by hook; kept for docs/config). */
 #define ADDR_CHINESE_TILE_STATE    0x0203FFF8u
+/* Pitch slot table: ctrl @ FF80 (16B), slots[8] @ FF90 (64B). */
+#define ADDR_CHS_PITCH_CTRL        0x0203FF80u
+#define ADDR_CHS_PITCH_SLOTS       0x0203FF90u
+#define CHS_PITCH_SLOT_COUNT       8u
 
 #define WIN_TEMPLATE        0x00
 #define WIN_STATE           0x04
@@ -76,7 +82,7 @@
 #define ADDR_BATTLE_IF_GFX  0x02020004u
 #define BATTLE_IF_GFX_SIZE  0x1000u
 
-/* 8 bytes at EWRAM high (0x0203FFF8..FFFF). */
+/* Per-window pitch slot (8B). Table @ ADDR_CHS_PITCH_SLOTS. */
 struct ChineseTileState {
     uint8_t  char_base;  /* +0 template charBaseBlock */
     uint8_t  write_op;   /* +1 */
@@ -84,6 +90,14 @@ struct ChineseTileState {
     uint8_t  last_adv;   /* +3 last glyph advance (8 JP / 12 CN) */
     uint16_t pitch_key;  /* +4 window fingerprint for pitch_reset */
     uint16_t chs_px;     /* +6 pixel X in pitch run */
+};
+
+/* LRU control for pitch slots (16B @ ADDR_CHS_PITCH_CTRL). */
+struct ChsPitchCtrl {
+    uint8_t cur;                         /* +0 last bound slot */
+    uint8_t gen;                         /* +1 bump on each bind */
+    uint8_t pad[2];                      /* +2 */
+    uint8_t age[CHS_PITCH_SLOT_COUNT];   /* +4 last-used gen per slot */
 };
 
 /*
@@ -108,12 +122,10 @@ struct ChineseTileState {
 #define CHS_MODE2_PITCH12 0
 #endif
 /* FE/FB newline: DrawGlyph_Chinese_Adv clears chs_px when cur_tx returns to
- * line start or pitch_key (Y) changes — see draw_glyph.c. */
+ * line start or pitch_key (Y) changes — see DrawGlyphTiles_hook.c. */
 #ifndef CHS_LINE_FEED_PATCH
 #define CHS_LINE_FEED_PATCH 1
 #endif
-
-#define chinese_tile_state() ((volatile struct ChineseTileState *)ADDR_CHINESE_TILE_STATE)
 
 #define CHS_WRITE_AUTO    0
 #define CHS_WRITE_GRID    1
@@ -179,6 +191,9 @@ struct ChineseTileState {
 
 typedef uint8_t TextPrinter;
 
+/* Bind/restore per-window pitch slot (JP+CN share CHS pool; never FontFunc dual-path). */
+volatile struct ChineseTileState *chs_bind_pitch_slot(TextPrinter *win);
+
 static inline uint8_t  win_u8(const TextPrinter *w, unsigned off)  { return w[off]; }
 static inline uint16_t win_u16(const TextPrinter *w, unsigned off)
 {
@@ -232,14 +247,18 @@ static inline void chs_copy_glyph_1bpp_to_4bpp(
 
 static inline uint16_t chs_pitch_key(TextPrinter *win)
 {
-    /* Window identity only — do NOT fold CURSOR_X (JP advances it each glyph).
-     * XOR template ptr so party footer (y=17) ≠ action menu item (also y=17). */
+    /* Window identity — do NOT fold CURSOR_X (JP advances it each glyph).
+     * XOR template + text stream so title vs SoftKeyboard (same WindowTemplate)
+     * land in different pitch slots. Do NOT XOR TextPrinter* (often stack/
+     * recycled → thrash slots mid-string). */
     uint8_t *tpl = win_template(win);
     uint16_t w = tpl ? (uint16_t)(((uintptr_t)tpl >> 2) & 0xFFFFu) : 0;
+    uint16_t stream = (uint16_t)((win_u32(win, WIN_TEXT_PTR) >> 2) & 0xFFFFu);
     return (uint16_t)(win_u16(win, WIN_TILE_BASE)
                       ^ ((uint16_t)win_u8(win, WIN_CURSOR_Y) << 8)
                       ^ (uint16_t)win_u8(win, WIN_CURSOR_TILE_Y)
-                      ^ w);
+                      ^ w
+                      ^ stream);
 }
 
 int PrintNextChar_C(TextPrinter *win, uint32_t cur_char);

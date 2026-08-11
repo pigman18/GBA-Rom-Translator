@@ -42,13 +42,20 @@ int scene_field_wants_linear(TextPrinter *win)
     return 0;
 }
 
-/** charBase2 + font3 menu pool → Mode2 (shop_desc / shop-bag list excluded). */
+/** Font3 Mode2 grid: charBase 0 (naming SoftKeyboard/title) or 2 (menus).
+ * SoftKeyboard BG1 is charBase 0 — requiring only charBase2 forced Linear and
+ * aliased every keyboard row + title onto the same low Linear tiles. */
 int scene_menu_wants_mode2(TextPrinter *win)
 {
     uint8_t *tpl = win_template(win);
-    if (!tpl || tpl[1] != 2)
+    uint8_t char_base;
+
+    if (!tpl)
         return 0;
     if (win_u8(win, WIN_FONTNUM_REAL) != 3)
+        return 0;
+    char_base = tpl[1];
+    if (char_base != 0 && char_base != 2)
         return 0;
     if (scene_is_shop_desc(win))
         return 0;
@@ -125,7 +132,7 @@ int scene_is_shop_bag_list(TextPrinter *win)
  */
 void scene_mode2_apply(TextPrinter *win, int *x, int *y, int *band, int *origin)
 {
-    volatile struct ChineseTileState *st = chinese_tile_state();
+    volatile struct ChineseTileState *st = chs_bind_pitch_slot(win);
     uint8_t op = st->write_op;
     uint8_t left = win_u8(win, WIN_CURSOR_X);
 

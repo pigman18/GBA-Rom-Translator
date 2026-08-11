@@ -18,6 +18,7 @@
 模块定义与语料均在 ``translate/texts.json``；inject 的 ``read``/``write``/
 ``word_count`` 写在 texts.json 的 modules 上（一行最多汉字数，缺省 14）。
 旧字段 ``line_width`` 读取时会映射为 ``word_count``，配置侧请改用 ``word_count``。
+语料由 util yaml export 后**晋升**到本路径（不由流水线每次扫 ROM 生成）。
 """
 
 from __future__ import annotations
@@ -28,6 +29,7 @@ from typing import Any
 
 _CONFIG_DIR_CWD = Path("configs")
 _CONFIG_DIR_TOOL = Path(__file__).resolve().parents[2] / "configs"
+_UTIL_CONFIGS = Path(__file__).resolve().parents[1] / "util" / "configs"
 
 _cache: dict[str, dict[str, Any]] = {}
 _profile_cache: dict[str, dict[str, Any]] = {}
@@ -412,6 +414,11 @@ def set_active_game_id(game_id: str | None) -> None:
 
 def get_active_game_id() -> str | None:
     return _active_game_id
+
+
+def util_yaml_path(game_id: str) -> Path:
+    """``src/util/configs/<game_id>.yaml``（离线 export 模块表真源）。"""
+    return _UTIL_CONFIGS / f"{game_id}.yaml"
 
 
 def _resolve_config_dir(game_id: str) -> Path:

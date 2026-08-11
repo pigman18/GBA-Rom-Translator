@@ -645,6 +645,18 @@ def plain_original(original: str) -> str:
     return s
 
 
+def _has_msg_include_filter(filters: list[dict[str, Any]] | None) -> bool:
+    """模块是否有 msg_filter 包含模式（语料白名单）。"""
+    for spec in filters or []:
+        if not isinstance(spec, dict):
+            continue
+        if str(spec.get("type") or "") != "msg_filter":
+            continue
+        if "filter" in spec and not bool(spec.get("filter")):
+            return True
+    return False
+
+
 def _has_include_original_text_filter(filters: list[dict[str, Any]]) -> bool:
     """模块是否声明了 original_text_filter 且为包含模式（filter: false）。"""
     for spec in filters or []:
@@ -679,8 +691,8 @@ def resolve_filters(cfg: dict, mod: dict) -> list[dict[str, Any]]:
     - ``type: scan``：基线 = 全局 ``texts.filters``。
     - 非 scan 且模块未写 ``filters`` 键：基线为空（兼容旧 stride/struct: []）。
     - 非 scan 且写了 ``filters``：基线 = 全局，再按 id 覆盖/追加。
-    - 若模块声明了 ``original_text_filter`` 且 ``filter: false``：不合并全局，
-      只用 ``module.filters``（避免全局 min_byte/dialogue 滤掉短 UI 白名单）。
+    - 若模块声明了 ``msg_filter`` / ``original_text_filter`` 且 ``filter: false``：
+      不叠全局启发式（长度/形似/垃圾等），只保留 address/anim/ime/msg。
     """
     mtype = str(mod.get("type") or "scan")
     texts = cfg.get("texts") or {}
@@ -697,8 +709,19 @@ def resolve_filters(cfg: dict, mod: dict) -> list[dict[str, Any]]:
     has_mod_filters_key = "filters" in mod
     extra = list(mod.get("filters") or []) if has_mod_filters_key else []
 
-    if _has_include_original_text_filter(extra):
-        base = []
+    # 语料白名单 / 原文白名单：不叠全局启发式（短标·填充槽靠文本匹配）
+    if _has_include_original_text_filter(extra) or _has_msg_include_filter(extra):
+        keep_types = {
+            "msg_filter",
+            "address_filter",
+            "anim_cmd_filter",
+            "ime_keyboard_filter",
+        }
+        base = [
+            dict(s)
+            for s in base
+            if isinstance(s, dict) and str(s.get("type") or "") in keep_types
+        ]
     elif mtype != "scan" and not has_mod_filters_key:
         base = []
 
@@ -1138,19 +1161,28 @@ def _parse_original_text_items(
             orig = item.get("original")
             if orig is None:
                 orig = item.get("text")
-            s = str(orig).strip() if orig is not None else ""
-            if not s:
+            if orig is None:
                 continue
+            # address/start-end 绑定：保留尾部空格（盒子菜单填充槽「やめる   」）
+            # 无地址短词：strip 空白，避免误扫
+            raw_s = str(orig)
             if item.get("address") is not None:
+                if not raw_s.strip():
+                    continue
                 fo = _file_off_from_yaml_addr(item.get("address"))
-                out.append((s, fo, fo))
+                out.append((raw_s, fo, fo))
                 continue
             if item.get("start") is not None or item.get("end") is not None:
+                if not raw_s.strip():
+                    continue
                 lo = _file_off_from_yaml_addr(item.get("start") or item.get("end"))
                 hi = _file_off_from_yaml_addr(item.get("end") or item.get("start"))
                 if hi < lo:
                     lo, hi = hi, lo
-                out.append((s, lo, hi))
+                out.append((raw_s, lo, hi))
+                continue
+            s = raw_s.strip()
+            if not s:
                 continue
             out.append((s, None, None))
             continue
@@ -1198,6 +1230,114 @@ class OriginalTextFilter(TextFilter):
         return False
 
 
+# msg_filter 语料缓存：(resolved_path, mapping_tuple) → (exact_set, norm_set)
+_MSG_FILTER_CACHE: dict[tuple[Any, ...], tuple[frozenset[str], frozenset[str]]] = {}
+
+
+def _util_work_root() -> Path:
+    return Path(__file__).resolve().parent / "work"
+
+
+def _resolve_msg_filter_file(file_spec: str) -> Path:
+    p = Path(str(file_spec))
+    if p.is_file():
+        return p.resolve()
+    cand = _util_work_root() / p
+    if cand.is_file():
+        return cand.resolve()
+    raise SystemExit(f"msg_filter 找不到语料文件: {file_spec!r} (试过 {cand})")
+
+
+def _apply_msg_mapping(text: str, mapping: dict[str, str]) -> str:
+    s = text or ""
+    # 长键优先，避免短替换打断长 tag
+    for src in sorted(mapping.keys(), key=len, reverse=True):
+        s = s.replace(src, mapping[src])
+    return s
+
+
+def _load_msg_filter_sets(
+    file_spec: str, mapping: dict[str, str]
+) -> tuple[frozenset[str], frozenset[str]]:
+    path = _resolve_msg_filter_file(file_spec)
+    map_items = tuple(sorted((str(k), str(v)) for k, v in mapping.items()))
+    cache_key = (str(path), path.stat().st_mtime_ns, map_items)
+    hit = _MSG_FILTER_CACHE.get(cache_key)
+    if hit is not None:
+        return hit
+    exact: set[str] = set()
+    norms: set[str] = set()
+    for line in path.read_text(encoding="utf-8").splitlines():
+        if not line.strip():
+            continue
+        mapped = _apply_msg_mapping(line, mapping)
+        if not mapped.strip():
+            continue
+        exact.add(mapped)
+        nk = _norm_original_key(mapped)
+        if nk:
+            norms.add(nk)
+    out = (frozenset(exact), frozenset(norms))
+    _MSG_FILTER_CACHE[cache_key] = out
+    return out
+
+
+class MsgFilter(TextFilter):
+    """语料白名单：file + mapping 后与 ROM 解码原文比对。"""
+
+    type_name = "msg_filter"
+
+    def hit(self, ctx: FilterContext) -> bool | None:
+        val = self.value
+        if not isinstance(val, dict):
+            return None
+        file_spec = val.get("file")
+        if not file_spec:
+            return None
+        raw_map = val.get("mapping") or {}
+        if not isinstance(raw_map, dict):
+            raise SystemExit(f"msg_filter.mapping 须为对象 id={self.id!r}")
+        mapping = {str(k): str(v) for k, v in raw_map.items()}
+        exact, norms = _load_msg_filter_sets(str(file_spec), mapping)
+        o = ctx.original or ""
+        plain = ctx.original_plain or ""
+        if o in exact or plain in exact:
+            return True
+        for candidate in (o, plain):
+            nk = _norm_original_key(candidate)
+            if nk and nk in norms:
+                return True
+        return False
+
+
+class ControlOrShortFilter(TextFilter):
+    """UI 归属：控制符开头，或去控制符后短标签。"""
+
+    type_name = "control_or_short_filter"
+
+    def hit(self, ctx: FilterContext) -> bool | None:
+        val = self.value
+        if val is None:
+            return None
+        if not isinstance(val, dict):
+            # value: true → 默认 control_prefix + max_plain_chars 12
+            if not bool(val):
+                return None
+            val = {"control_prefix": True, "max_plain_chars": 12}
+        control_prefix = bool(val.get("control_prefix", True))
+        try:
+            max_plain = int(val.get("max_plain_chars", 12))
+        except (TypeError, ValueError):
+            max_plain = 12
+        o = ctx.original or ""
+        plain = ctx.original_plain or ""
+        if control_prefix and o.startswith("\\"):
+            return True
+        if max_plain > 0 and 0 < len(plain) <= max_plain:
+            return True
+        return False
+
+
 FILTER_TYPES: dict[str, type[TextFilter]] = {
     CharacterFilter.type_name: CharacterFilter,
     DialogueShapeFilter.type_name: DialogueShapeFilter,
@@ -1209,6 +1349,8 @@ FILTER_TYPES: dict[str, type[TextFilter]] = {
     ImeKeyboardFilter.type_name: ImeKeyboardFilter,
     AddressFilter.type_name: AddressFilter,
     OriginalTextFilter.type_name: OriginalTextFilter,
+    MsgFilter.type_name: MsgFilter,
+    ControlOrShortFilter.type_name: ControlOrShortFilter,
 }
 
 
@@ -1430,11 +1572,11 @@ def extract_scan(
     ptrs_map = ptr_index or {}
 
     include_items = _original_include_items(filt)
+    out: list[dict] = []
+    seen: set[int] = set()
+    pins_only_fallthrough = False
     if include_items is not None:
         # 包含模式：无地址绑定时 band 内 find；有地址时只读指定点/带
-        out: list[dict] = []
-        seen: set[int] = set()
-
         def _try_accept(
             a: int, body: bytes | None, *, pinned: bool = False
         ) -> None:
@@ -1449,12 +1591,15 @@ def extract_scan(
                 raw = body
             if raw is None:
                 return
-            if not looks_like_jp_text(raw):
-                if body is None or not (
-                    body.endswith(b"\xff") and rom[a : a + len(body)] == body
-                ):
-                    return
-                raw = body
+            # pinned（yaml address/start-end）：跳过 looks_like（填充槽多 0x00 会误杀）
+            if not pinned:
+                if not looks_like_jp_text(raw):
+                    if body is None or not (
+                        body.endswith(b"\xff")
+                        and rom[a : a + len(body)] == body
+                    ):
+                        return
+                    raw = body
             text = decode_pcs(raw)
             ptrs = list(ptrs_map.get(a, []))
             ctx = make_filter_context(
@@ -1465,13 +1610,17 @@ def extract_scan(
                 module_id=str(mid),
                 module_type=mtype,
             )
-            # yaml 白名单绑了 address/start-end 时允许无指针（本地池/相对引用）
+            # yaml 白名单绑了 address/start-end 时允许无指针；跳过 UI 归属短标闸
             use_filt = filt
             if pinned and filt:
+                skip = {
+                    "require_pointer_filter",
+                    "control_or_short_filter",
+                }
                 use_filt = [
                     f
                     for f in filt
-                    if str(f.get("type") or "") != "require_pointer_filter"
+                    if str(f.get("type") or "") not in skip
                 ]
             if use_filt and not apply_filters(ctx, use_filt):
                 return
@@ -1530,7 +1679,13 @@ def extract_scan(
                         break
                     start = a + 1
                     _try_accept(a, body)
-        return out
+        # 全部为地址钉：合并进常规 scan（msg_filter 等仍扫 band）
+        # 含无地址白名单短词：保持旧行为，仅白名单命中
+        pins_only_fallthrough = all(
+            lo is not None and hi is not None for _t, lo, hi in include_items
+        )
+        if not pins_only_fallthrough:
+            return out
 
     def _start_rank(text: str, ptrs: list[int]) -> tuple[int, int]:
         """同 EOS 多起点时择优：(分, 长度)；分高优先，同分取更长（更早对齐）。"""
@@ -1549,6 +1704,20 @@ def extract_scan(
             score -= 40
         return (score, len(text or ""))
 
+    msg_rescue = _has_msg_include_filter(filt)
+
+    def _shape_ok(raw_b: bytes) -> bool:
+        """形似日文；有语料白名单时允许填充槽（多 0x00）稍后再靠 msg_filter 拦。"""
+        if looks_like_jp_text(raw_b):
+            return True
+        if not msg_rescue:
+            return False
+        # 最小可解码：FF 终止、有正文、无非法高字节尾
+        if not raw_b or raw_b[-1] != 0xFF:
+            return False
+        body = raw_b[:-1]
+        return 2 <= len(body) <= 512
+
     def _scan_candidate(
         a: int, raw: bytes
     ) -> tuple[int, bytes, str, list[int]] | None:
@@ -1557,7 +1726,7 @@ def extract_scan(
             return None
         if a in seen:
             return None
-        if not looks_like_jp_text(raw):
+        if not _shape_ok(raw):
             return None
         text = decode_pcs(raw)
         ptrs = list(ptrs_map.get(a, []))
@@ -1581,7 +1750,7 @@ def extract_scan(
             raw2 = read_pcs(rom, a2, 512)
             if raw2 is None or a2 + len(raw2) - 1 != end:
                 continue
-            if a2 in seen or not looks_like_jp_text(raw2):
+            if a2 in seen or not _shape_ok(raw2):
                 continue
             if a2 < SCRIPT_BANK_MIN or TITLE_LZ_BAND[0] <= a2 < TITLE_LZ_BAND[1]:
                 continue
@@ -1603,8 +1772,6 @@ def extract_scan(
                 best_rank = rank2
         return best_a, best_raw, best_text, best_ptrs
 
-    out: list[dict] = []
-    seen: set[int] = set()
     for lo, hi in band_pairs:
         a = lo
         while a <= hi:
@@ -1722,34 +1889,72 @@ def export_texts(
             file=sys.stderr,
         )
 
-    modules = list(cfg["texts"]["modules"] or [])
-    modules_dict = _modules_as_dict(modules)
+    all_modules = list(cfg["texts"]["modules"] or [])
+    modules_dict_full = _modules_as_dict(all_modules)
     omit_ranges = get_texts_omit_ranges(cfg)
     if omit_ranges:
         print(
             f"[i] texts.omit_ranges ×{len(omit_ranges)} "
             f"(bytes={sum(b - a + 1 for a, b in omit_ranges)})"
         )
+
+    target_idx: int | None = None
+    claimed_by: dict[str, str] = {}
     if module:
-        modules = [m for m in modules if (m.get("id") or "") == module]
-        if not modules:
-            known = list(modules_dict.keys())
+        for i, m in enumerate(all_modules):
+            if (m.get("id") or "") == module:
+                target_idx = i
+                break
+        if target_idx is None:
+            known = list(modules_dict_full.keys())
             raise SystemExit(
                 f"module not found: {module!r}; known={known}"
             )
+        modules = [all_modules[target_idx]]
         modules_dict = _modules_as_dict(modules)
+        # 单模块：干跑前序，模拟整表 FCFS 归属
+        scan_scope = all_modules[: target_idx + 1]
+    else:
+        modules = all_modules
+        modules_dict = modules_dict_full
+        scan_scope = all_modules
 
     need_ptr = any(
-        str(m.get("type") or "scan") in ("scan", "addr_bands") for m in modules
+        str(m.get("type") or "scan") in ("scan", "addr_bands") for m in scan_scope
     )
     ptr_index: dict[int, list[int]] | None = None
     if need_ptr:
         print("[i] building pointer index…")
         ptr_index = _build_ptr_index(rom)
 
+    if target_idx is not None and target_idx > 0:
+        print(f"[i] FCFS dry-run: {target_idx} earlier module(s)…")
+        for pred in all_modules[:target_idx]:
+            pid = str(pred.get("id") or "")
+            rtype = str(pred.get("type") or "scan")
+            chunk = extract_module(
+                rom,
+                pred,
+                game_code,
+                ptr_index=ptr_index,
+                omit_ranges=omit_ranges,
+                filters=resolve_filters(cfg, pred),
+            )
+            if not chunk and rtype in ("needle", "prefix", "pointer"):
+                continue
+            n_new = 0
+            for e in chunk:
+                addr = e.get("address") or ""
+                if not addr or addr in claimed_by:
+                    continue
+                claimed_by[addr] = pid
+                n_new += 1
+            print(f"  (claim) [{pid}] type={rtype} -> +{n_new}")
+
     entries: list[dict] = []
     seen_addr: set[str] = set()
     skipped: dict[str, int] = {}
+    shadow_counts: dict[str, int] = {}
 
     for mod in modules:
         mid = mod.get("id") or ""
@@ -1772,12 +1977,24 @@ def export_texts(
                 continue
             if addr:
                 seen_addr.add(addr)
+            if addr and addr in claimed_by:
+                by = claimed_by[addr]
+                e = dict(e)
+                e["shadowed_by"] = by
+                shadow_counts[by] = shadow_counts.get(by, 0) + 1
             entries.append(_order_entry(e))
             n += 1
         print(f"  [{mid}] type={rtype} -> {n}")
 
     if skipped:
         print(f"[i] skipped module types (not implemented): {skipped}")
+    if shadow_counts:
+        n_shadow = sum(shadow_counts.values())
+        by_s = ", ".join(f"{k}×{v}" for k, v in sorted(shadow_counts.items()))
+        print(
+            f"[i] FCFS shadow: {n_shadow}/{len(entries)} entries "
+            f"would be claimed earlier ({by_s})"
+        )
 
     out_path = refuse_pipeline_write(
         output or default_output_path(game_id, module=module)

@@ -270,7 +270,8 @@ def resolve_usable_pointers(
     """编排期校验指针：只保留当前确实指向该正文的可用站点。
 
     无 ROM 时无法校验，原样返回登记指针（单测/缺 ROM 兜底）。
-    短共字串会 expand 后再 filter（与旧 inject 行为对齐，但结果写入 plan）。
+    始终 expand（全 ROM 搜 LE 字面量，含脚本 message 非对齐嵌入）再 filter，
+    避免只改 C 字面量池、漏掉 ``02 67 <ptr>`` 一类脚本站点（PC 连接提示等）。
     ``text_address`` 可指定正文起点（FD 回退后用 addr-1）。
     """
     raw = list(_ptr_sources(entry))
@@ -279,11 +280,7 @@ def resolve_usable_pointers(
     if rom is None:
         return [str(p) for p in raw]
 
-    from .policy import (
-        expand_pointer_sources,
-        filter_pointer_sources,
-        should_expand_shared_literal,
-    )
+    from .policy import expand_pointer_sources
 
     addr = text_address if text_address is not None else _entry_address_off(entry)
     if addr is None:
@@ -300,10 +297,7 @@ def resolve_usable_pointers(
         min_pointer_source=min_pointer_source,
         text_spans=text_spans,
     )
-    if should_expand_shared_literal(original, module_id, raw):
-        offs = expand_pointer_sources(rom, addr, raw, **kwargs)
-    else:
-        offs = filter_pointer_sources(rom, raw, addr, **kwargs)
+    offs = expand_pointer_sources(rom, addr, raw, **kwargs)
     return [f"0x{p:X}" if isinstance(p, int) else str(p) for p in offs]
 
 

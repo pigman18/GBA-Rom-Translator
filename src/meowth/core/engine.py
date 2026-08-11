@@ -1632,7 +1632,7 @@ class TranslationEngine:
         src = texts_json_path(game_id)
         if not src.is_file():
             raise FileNotFoundError(
-                f"缺少语料 {src}；请先用 texts_patcher export 生成 "
+                f"缺少语料 {src}；请用 util texts_patcher export 后晋升到 "
                 f"configs/{game_id}/translate/texts.json"
             )
         self._log("info", f"[texts] 读取 {src}")
@@ -1644,6 +1644,10 @@ class TranslationEngine:
             shutil.copy2(src, output_path)
             return output_path
         return src
+
+    def _extract_texts(self, rom_path: Path, output_dir: Path) -> Path:
+        """Load ``translate/texts.json`` (no ROM extract)."""
+        return self.extract_texts(rom_path, output_path=None)
 
     def _apply_check_reject(
         self,
@@ -1701,10 +1705,6 @@ class TranslationEngine:
             f"（候选 {scope}）",
         )
         return rejected
-
-    def _extract_texts(self, rom_path: Path, output_dir: Path) -> Path:
-        """Load ``translate/texts.json`` (no ROM extract)."""
-        return self.extract_texts(rom_path, output_path=None)
 
     @staticmethod
     def _decompress_4bpp_glyph(glyph_data: bytes) -> bytearray:

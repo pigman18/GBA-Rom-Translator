@@ -18,7 +18,7 @@ python tiles_patcher.py export <ROM> --preset <id> [-o 目录]
 python tiles_patcher.py export <ROM> --all [-o 目录]
 ```
 
-默认输出到 `works/{ROM文件名}/tiles/`，可用 `-o` 指定其他目录。
+默认输出到 `work/{ROM文件名}/tiles/`，可用 `-o` 指定其他目录。
 
 **参数:**
 
@@ -78,7 +78,7 @@ python tiles_patcher.py export ROMS/rom.gba 0x087EE9C8 \
 **输出文件:**
 
 ```
-works/POKEMON_RUBY_AXVJ00/tiles/
+work/POKEMON_RUBY_AXVJ00/tiles/
   0x087EE9C8_00.png      # sprite 图片
   0x087EE9C8_01.png
   ...
@@ -114,7 +114,7 @@ python tiles_patcher.py import <ROM> <tiles目录> [-o 输出ROM] [-a 新调色�
 ```bash
 # 导入修改后的 sprites
 python tiles_patcher.py import ROMS/POKEMON_RUBY_AXVJ00.gba \
-  works/POKEMON_RUBY_AXVJ00/tiles/ -o ROMS/POKEMON_RUBY_patched.gba
+  work/POKEMON_RUBY_AXVJ00/tiles/ -o ROMS/POKEMON_RUBY_patched.gba
 
 # 标题图：缺色进新调色板（指定空闲地址，勿与字库/图块冲突）
 python tiles_patcher.py import roms/origin/POKEMON_RUBY_AXVJ00.gba \
@@ -237,7 +237,7 @@ JP 版游戏内置的 lz77_swap **解压器不支持 dist=1 的回引**（RLE �
 4. 用户报告"RGB 240,240,240 镂空" → 开发者又说"问题只能是编辑器"，继续质疑
 5. 用户说"自己跑 export import 就知道两个 ROM 不一样" → 开发者没听，跑去 dump VRAM
 6. 用户说"直接比较文件不行吗？为什么要用模拟器" → 开发者还在搞 gdb stub 运行时分析
-7. 用户删掉 test.gba/works 让重新生成 → 开发者还在写运行时检查脚本，没先重新生成
+7. 用户删掉 test.gba/work 让重新生成 → 开发者还在写运行时检查脚本，没先重新生成
 8. 用户说"谁让你跳过写入了" → 开发者又理解错方向，想用跳过写入回避问题
 
 **核心错误：**
@@ -251,7 +251,7 @@ JP 版游戏内置的 lz77_swap **解压器不支持 dist=1 的回引**（RLE �
 ## 文件结构
 
 ```
-works/
+work/
   POKEMON_RUBY_AXVJ00/
     tiles/
       0x087EE9C8_00.png

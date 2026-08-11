@@ -799,10 +799,10 @@ def _get_rom_id(rom_path: Path) -> str:
 
 
 def _get_export_dir(rom_path: Path) -> Path:
-    """获取导出目录: works/{romId}/tiles"""
+    """获取导出目录: work/{romId}/tiles"""
     rom_id = _get_rom_id(rom_path)
     script_dir = Path(__file__).parent
-    return script_dir / "works" / rom_id / "tiles"
+    return script_dir / "work" / rom_id / "tiles"
 
 
 def _util_configs_dir() -> Path:
@@ -2208,7 +2208,7 @@ def main():
         formatter_class=argparse.RawDescriptionHelpFormatter,
         epilog="""
 示例:
-  # 导出 type icons (输出到 works/{romId}/tiles/)
+  # 导出 type icons (输出到 work/{romId}/tiles/)
   python tiles_patcher.py export rom.gba 0x087EE9C8 \\
     --format 4bpp --sprite-size 32x16 --count 23 \\
     --compression lz77_swap --palette 0x087EF450
@@ -2261,7 +2261,7 @@ def main():
         "--config",
         help="游戏 yaml（默认 configs/<rom_stem>.yaml）",
     )
-    p_export.add_argument("-o", "--output", help="输出目录 (默认: works/{romId}/tiles)")
+    p_export.add_argument("-o", "--output", help="输出目录 (默认: work/{romId}/tiles)")
 
     # ── import ──
     p_import = sub.add_parser("import", help="将 PNG 导入回 ROM")

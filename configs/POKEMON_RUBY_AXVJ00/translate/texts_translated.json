@@ -41,6 +41,76 @@
   },
   {
     "status": 200,
+    "original": "\\00\nもどれ！",
+    "translated": "\\00\\n回来！"
+  },
+  {
+    "status": 200,
+    "original": "\\00 いいぞ！\nもどれ！",
+    "translated": "\\00 很好！\\n回来！"
+  },
+  {
+    "status": 200,
+    "original": "\\00 もういい！\nもどれ！",
+    "translated": "\\00 够了！\\n回来！"
+  },
+  {
+    "status": 200,
+    "original": "\\00 よくやった！\nもどれ！",
+    "translated": "\\00 干得好！\\n回来！"
+  },
+  {
+    "status": 200,
+    "original": "\\00\\01 けいけんちを もらった！\n\n",
+    "translated": "\\00\\01 获得了经验值！\\p"
+  },
+  {
+    "status": 200,
+    "original": "\\00かい あたった！",
+    "translated": "\\00会心一击！"
+  },
+  {
+    "status": 200,
+    "original": "\\00の\nねがいごとが かなった！",
+    "translated": "\\00的\\n愿望实现了！"
+  },
+  {
+    "status": 200,
+    "original": "\\00の \\14で\n\\01を もどすことが できない！\n\n",
+    "translated": "\\00的\\14无法\\n让\\01复原！\\p"
+  },
+  {
+    "status": 200,
+    "original": "\\00の こうげき！",
+    "translated": "\\00的攻击！"
+  },
+  {
+    "status": 200,
+    "original": "\\00は\n\\01を おぼえた！\\CC0A\n\n",
+    "translated": "\\00\\n\\01学会了！\\CC0A\\p"
+  },
+  {
+    "status": 200,
+    "original": "\\00は\nレベル\\01 に あがった！\\CC0A\n\n",
+    "translated": "\\00升到了\\n级\\01！\\CC0A\\p"
+  },
+  {
+    "status": 200,
+    "original": "\\00は \\01の\nつかいかたを きれいに わすれた！\n\n",
+    "translated": "\\00把\\01的\\n使用方法忘得一干二净！\\p"
+  },
+  {
+    "status": 200,
+    "original": "\\00は \\01を\nおぼえずに おわった！\n\n",
+    "translated": "\\00没有学会\\01\\n就结束了！\\p"
+  },
+  {
+    "status": 200,
+    "original": "\\00は あたらしく\n\\01を おぼえたい‥‥‥！\n\n",
+    "translated": "\\00想学会新的\\n\\01……！\\p"
+  },
+  {
+    "status": 200,
     "original": "\\01 は\nレポートに しっかり かきのこした！",
     "translated": "\\01\n已牢牢写入记录！"
   },
@@ -48,6 +118,11 @@
     "status": 200,
     "original": "\\01\\05 いらっしゃい！\n\nおかいものね！",
     "translated": "\\01\\05 欢迎！\n\n是来买东西的吧！"
+  },
+  {
+    "status": 200,
+    "original": "\\01の かわりに\nほかの わざを わすれさせますか？",
+    "translated": "要让\\n忘记其他招式，来代替\\01吗？"
   },
   {
     "status": 200,
@@ -71,8 +146,448 @@
   },
   {
     "status": 200,
+    "original": "\\03は\nこちらの ようすを うかがっている！",
+    "translated": "\\03\\n在观察这边的样子！"
+  },
+  {
+    "status": 200,
+    "original": "\\03は \\00に\nきょうみを しめしている ようだ！",
+    "translated": "\\03似乎对 \\00\\n很感兴趣！"
+  },
+  {
+    "status": 200,
+    "original": "\\03は \\00に\nみむきも しない ようだ！",
+    "translated": "\\03似乎对 \\00\\n毫不在意！"
+  },
+  {
+    "status": 200,
+    "original": "\\03は \\00に\nむちゅうに なっている ようだ！",
+    "translated": "\\03似乎对 \\00\\n入迷了！"
+  },
+  {
+    "status": 200,
+    "original": "\\03は \\23 パソコンに\nてんそうされた！",
+    "translated": "\\03被传送到\\23的电脑\\n上了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cの\n\\00が \\01",
+    "translated": "\\0C的\\n\\00\\01"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cの\n\\00は もうあがらない！",
+    "translated": "\\0C的\\n\\00不会再提高！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cの\nかなしばりが とけた！",
+    "translated": "\\0C的\\n定身术解除了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cの\nがまんが とかれた！",
+    "translated": "\\0C的\\n忍耐解除了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cの\nこおりが とけた！",
+    "translated": "\\0C的\\n冰融化了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cの\nこんらんが とけた！",
+    "translated": "\\0C的{\\n}混乱解除了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cの\nぶんしんが あらわれた",
+    "translated": "\\0C的\\n分身出现了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cの\nアンコールじょうたいが とけた！",
+    "translated": "\\0C的\\n再来一次状态解除了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cの \\00は\nおんねんで わざポイントが ０に なった！",
+    "translated": "\\0C的\\00的\\n由于怨念，PP变成了0！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cの \\11は\nマジックコートに はねかえされた！",
+    "translated": "\\0C的\\11被\\n魔法反射反弹了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cの \\15で\n\\0Dの \\16は きかない！",
+    "translated": "\\0C的\\15使\\n\\0D的\\16无效！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cの こおりが\n\\11で とけた！",
+    "translated": "\\0C的冰\\n被\\11融化了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cの じょうたいいじょうが\nなおった！",
+    "translated": "\\0C的异常状态已经\\n治好了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cの のうりょくは\nもう あがらない！",
+    "translated": "\\0C的能力\\n已经无法再提高！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cの ほろびの\nカウントが \\00になった！",
+    "translated": "\\0C的灭亡之歌\\n倒计时变成了\\00！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cの まわりで\nくうきが うずを まく！",
+    "translated": "\\0C的周围{\\n}空气形成漩涡！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\n\\00から かいほうされた！",
+    "translated": "\\0C从\\n\\00中被解放了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\n\\00に へんしんした！",
+    "translated": "\\0C变成了\\n\\00！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\n\\00を おぼえた！",
+    "translated": "\\0C学会了\\n\\00！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\n\\00を スケッチした！",
+    "translated": "\\0C写生了\\n\\00！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\n\\00タイプに なった！",
+    "translated": "\\0C{\\n}变成了\\00属性！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\n\\10に メロメロだ！",
+    "translated": "\\0C{\\n}正对\\10着迷！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\n\\11に つつまれた！",
+    "translated": "\\0C被\\n\\11包裹了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nあいての でかたを うかがっている！",
+    "translated": "\\0C\\n正在观察对手的动向！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nあくむに うなされている！",
+    "translated": "\\0C正被\\n噩梦折磨着！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nあなをほって ちちゅうに もぐった！",
+    "translated": "\\0C{\\n}挖洞潜入到了地下！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nおとなしくなった",
+    "translated": "\\0C变得\\n安静了"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nからだが しびれて うごけない",
+    "translated": "\\0C\\n身体麻痹，无法行动"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nくびを ひっこめた！",
+    "translated": "\\0C{\\n}把脖子缩了进去！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nぐうぐう ねむっている",
+    "translated": "\\0C正在\\n呼呼大睡"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nけんこうになって ねむりはじめた！",
+    "translated": "\\0C{\\n}变得健康并开始睡着了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nこおって しまって うごかない！",
+    "translated": "\\0C被冻住了\\n，无法行动！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nこんらんしている！",
+    "translated": "\\0C\\n混乱了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nしゅうちゅうりょくを たかめている！",
+    "translated": "\\0C\\n的集中力提高了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nじゅうでんを はじめた！",
+    "translated": "\\0C\\n开始充电了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nすいちゅうに みをひそめた！",
+    "translated": "\\0C{\\n}潜入了水中！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nそらたかく とびあがった！",
+    "translated": "\\0C{\\n}高高地飞上了天空！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nちゅうもくの まとに なった！",
+    "translated": "\\0C那么，\\n成为了全场的焦点！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nつかれはてて こんらんした！",
+    "translated": "\\0C因为极度疲劳\\n而混乱了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nとびはねた！",
+    "translated": "\\0C{\\n}跳了起来！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nどくの ダメージを うけている！",
+    "translated": "\\0C受到了\\n毒的伤害！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nねがいごとを した！",
+    "translated": "\\0C的\\n许愿了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nねむりはじめた！",
+    "translated": "\\0C{\\n}开始睡着了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nのろわれている！",
+    "translated": "\\0C被\\n诅咒了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nはりきっている！",
+    "translated": "\\0C正在\\n干劲十足！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nひかりを きゅうしゅうした！",
+    "translated": "\\0C{\\n}吸收了光！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nまもりの たいせいに はいった！",
+    "translated": "\\0C摆出了\\n防守姿势！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nやけどの ダメージを うけている！",
+    "translated": "\\0C受到了\\n烧伤的伤害！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは\nやどりぎのタネを ふきとばした！",
+    "translated": "\\0C吹飞了\\n寄生种子！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは \\00つたくわえた！",
+    "translated": "\\0C积攒了\\00！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは \\00の\nダメージを うけている",
+    "translated": "\\0C受到了\\00点\\n伤害！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは \\00を\nてに いれた！",
+    "translated": "\\0C得到了\\00！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは \\00を\nてに いれた！\n\n\\0Dは \\01を\nてに いれた！",
+    "translated": "\\0C获得了\\00\\n！\\p\\0D获得了\\01\\n！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは \\0Dから\n\\13を うばいとった！",
+    "translated": "\\0C从\\0D那里抢走了\\n\\13！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは \\0Dに\nねらいを さだめた！",
+    "translated": "\\0C将目标锁定为\\0D了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは \\0Dの\n\\00から かいほうされた！",
+    "translated": "\\0C从\\0D的\\n\\00中被解放出来了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは \\0Dの\n\\13を はたきおとした！",
+    "translated": "\\0C拍落了\\0D的\\n\\13！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは \\0Dの\n\\16を コピーした！",
+    "translated": "\\0C复制了\\0D的\\n\\16！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは \\0Dの\nしょうたいを みやぶった！",
+    "translated": "\\0C识破了\\0D的\\n真面目！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは \\0Dの\nねむけを さそった！",
+    "translated": "\\0C令\\0D的\\n产生了睡意！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは \\0Dの\nほじょこうかを コピーした！",
+    "translated": "\\0C复制了\\0D的\\n辅助效果！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは \\0Dを\nてだすけ する たいせいに はいった！",
+    "translated": "\\0C 进入了帮助 \\0D 的\\n态势！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは \\11を\nみらいに たくした！",
+    "translated": "\\0C将\\11托付给了\\n未来！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは \\13を\nひろってきた！",
+    "translated": "\\0C捡到了\\13！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは \\15で\nすこし かいふく",
+    "translated": "\\0C会由\\15{\\n}稍微恢复"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは あいてに\nおんねんを かけようと している！",
+    "translated": "\\0C正在向对手\\n施加怨念！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは あいての\nわざを ふういんした！",
+    "translated": "\\0C封印了对方的\\n招式！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは あいてを\nみちづれに しようとしている",
+    "translated": "\\0C想和对手\\n同归于尽"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは いうことを きかない！",
+    "translated": "\\0C不听话！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは おたがいの\nとくせいを いれかえた！",
+    "translated": "\\0C互相交换了\\n特性！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは おたがいの\nどうぐを いれかえた！",
+    "translated": "\\0C双方的道具已{\\n}互换！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは がまんしている",
+    "translated": "\\0C正在忍耐"
+  },
+  {
+    "status": 200,
     "original": "\\0Cは こうげきの\nはんどうを うけた！",
     "translated": "\\0C受到了攻击的\n反作用力！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは こらえる\nたいせいに はいった！",
+    "translated": "\\0C摆出了\\n挺住的架势！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは さわいでいる！",
+    "translated": "\\0C正在骚动！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは さわがしくて\nめが さめた！",
+    "translated": "\\0C因为太吵\\n被吵醒了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは さわぎだした！",
+    "translated": "\\0C开始骚动起来了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは しゅうちゅうりょくが\nとぎれて わざが だせなかった！",
+    "translated": "\\0C的集中力\\n中断，没能使出招式！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは しらんぷりした！",
+    "translated": "\\0C装作不知道！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは じぶんの たいりょくを\nけずって \\0Dに のろいを かけた！",
+    "translated": "\\0C削减了自己的体力，\\n向\\0D下了诅咒！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは すでに\nねむっている",
+    "translated": "\\0C已经\\n睡着了"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは せんとうから\nりだつした！",
+    "translated": "\\0C从战斗中\\n脱离了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは そっぽを むいた！",
+    "translated": "\\0C转过头不理了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは たいりょくを けずって\nパワーぜんかいに なった！",
+    "translated": "\\0C削减了体力，\\n全力以赴了！"
   },
   {
     "status": 200,
@@ -81,8 +596,467 @@
   },
   {
     "status": 200,
+    "original": "\\0Cは なまけている！",
+    "translated": "\\0C在偷懒！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは にげられない！",
+    "translated": "\\0C无法逃跑！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは ねから\nようぶんを すいとった！",
+    "translated": "\\0C从根部\\n吸收了养分！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは ねむったまま\nめいれいを むしした！",
+    "translated": "\\0C因为睡着了\\n无视了命令！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは ねを はった！",
+    "translated": "\\0C扎根了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは ひるねを はじめた！",
+    "translated": "\\0C开始午睡了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは ひるんで\nうごけなかった！",
+    "translated": "\\0C畏缩了{\\n}而无法动弹！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは まきびしを\nふきとばした！",
+    "translated": "\\0C吹飞了\\n撒菱！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは みらいに\nこうげきを よちした！",
+    "translated": "\\0C预知了\\n未来的攻击！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは めいれいを むしした！",
+    "translated": "\\0C无视了命令！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは めを さました！",
+    "translated": "\\0C醒了过来！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは もう これいじょう\nたくわえられない！",
+    "translated": "\\0C已经无法继续\\n积攒了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cは メロメロで\nわざが だせなかった！",
+    "translated": "\\0C因为着迷{\\n}而无法使出招式！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Cを\nはげしい ひかりが つつむ！",
+    "translated": "\\0C{\\n}被强烈的光芒包裹！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dから\nたいりょくを すいとった！",
+    "translated": "从\\0D那里\\n吸取了体力！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dに\nたねを うえつけた！",
+    "translated": "\\0D被植入了\\n种子！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dに かわって\nぶんしんが こうげきを うけた！\n\n",
+    "translated": "分身代替\\0D\\n承受了攻击！\\p"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dには\nあたらなかった！",
+    "translated": "\\0D没有被\\n命中！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dには\nこうかが ない みたいだ‥‥",
+    "translated": "\\0D对\\n似乎没有效果……"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dには\nぜんぜんきいてない！",
+    "translated": "对\\0D\\n完全没有效果！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dの\n\\00が \\01",
+    "translated": "\\0D的\\n\\00\\01"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dの\n\\00は もうさがらない！",
+    "translated": "\\0D的\\n\\00不会再降低！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dの\n\\00を \\01けずった！",
+    "translated": "削减了\\0D的\\n\\00！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dの\n\\00を ふうじこめた！",
+    "translated": "\\0D的\\n\\00被封住了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dの\nこおりが とけた！",
+    "translated": "\\0D的\\n冰融化了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dの\nまひが なおった！",
+    "translated": "\\0D的\\n麻痹治好了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dの\nゆめを くった！",
+    "translated": "吃掉了\\0D的\\n梦！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dの \\16で\n\\0Cは \\11が できない！",
+    "translated": "在\\0D的\\16中\\n\\0C无法使用\\11！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dの \\16で\n\\0Cは きずついた！",
+    "translated": "\\0D的\\16让\\n\\0C受伤了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dの \\16で\n\\0Cは メロメロに なった！",
+    "translated": "\\0D的\\16使\\n\\0C着迷了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dの \\16で\n\\10の \\00は きかなかった！",
+    "translated": "\\0D的\\16\\n使\\10的\\00无效了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dの \\16で\n\\11は こうかが なかった！",
+    "translated": "\\0D的\\16对\\n\\11没有效果！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dの いかりの\nボルテージが あがっていく！",
+    "translated": "\\0D的愤怒能量\\n不断上升！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dの のうりょくは\nもう さがらない！",
+    "translated": "\\0D的能力\\n已经无法再降低！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dの ぶんしんは\nきえてしまった‥‥\n\n",
+    "translated": "\\0D的分身\\n消失了……\\p"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは\n\\16で ねむらない！",
+    "translated": "\\0D因为\\n\\16而没有睡着！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは\nあくむを みはじめた！",
+    "translated": "\\0D开始做\\n噩梦了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは\nいちゃもんを つけられた！",
+    "translated": "\\0D\\n被找茬了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは\nこうげきを かわした！",
+    "translated": "\\0D避开了\\n攻击！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは\nしんぴのベールに まもられている！",
+    "translated": "\\0D{\\n}被神秘面纱保护着！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは\nすでに こんらん している",
+    "translated": "\\0D{\\n}已经混乱了"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは\nふきとばされた！",
+    "translated": "\\0D{\\n}被吹飞了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは\nもう にげられない！",
+    "translated": "\\0D已经\\n无法逃走了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは\nアンコールを うけた！",
+    "translated": "\\0D受到了\\n再来一次的影响！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは\nメロメロに なった！",
+    "translated": "\\0D{\\n}着迷了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは \nちょうはつに のってしまった！",
+    "translated": "\\0D受到了\\n的挑衅！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは \\00の\nこうげきを うけた！",
+    "translated": "\\0D受到了\\00的\\n攻击！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは \\01を\nてに いれた！",
+    "translated": "\\0D把\\01\\n获得了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは \\0Cに\nしめつけられた！",
+    "translated": "\\0D被\\0C{\\n}束缚住了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは \\0Cに\nまきつかれた！",
+    "translated": "\\0D被\\0C\\n缠住了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは \\0Cの\nからに はさまれた！",
+    "translated": "\\0D被\\0C的\\n壳夹住了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは \\0Cを\nみちづれに した！",
+    "translated": "\\0D让\\0C和自己\\n同归于尽了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは \\10の\nわざを よこどりした！",
+    "translated": "\\0D夺取了\\10的\\n招式！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは \\16で\n\\00タイプに なった！",
+    "translated": "\\0D用\\16\\n变成了\\00属性！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは \\16で\n\\11が きかない！",
+    "translated": "\\0D因\\16\\n\\11无效！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは \\16で\n\\11を うけない！",
+    "translated": "\\0D因为\\16，不会受到\\n的\\11！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは \\16で\nかいふくした！",
+    "translated": "\\0D用\\16\\n恢复了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは \\16で\nきかなかった！",
+    "translated": "\\0D 在 \\16\\n 无效！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは \\16で\nこうげきを うけた！",
+    "translated": "\\0D受到了\\16\\n的攻击！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは \\16で\nこんらんしない！",
+    "translated": "\\0D因\\16而\\n不会混乱！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは \\16で\nじめんタイプの わざが あたらない！",
+    "translated": "\\0D被\\16保护着，\\n地面属性的招式无法命中！"
+  },
+  {
+    "status": 404,
+    "original": "\\0Dは \\16で\nはりついている！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは \\16で\nほのおの いりょくが あがった！",
+    "translated": "\\0D用\\16提升了\\n火属性的威力！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは \\16で\nダメージを うけない！",
+    "translated": "\\0D在\\16下不会受到\\n伤害！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは \\16で\nメロメロに ならない！",
+    "translated": "\\0D的\\16让\\n不会着迷！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは うずの なかに\nとじこめられた！",
+    "translated": "\\0D被困在了{\\n}漩涡之中！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは こうげきから\nみを まもった！",
+    "translated": "\\0D从攻击中保护了\\n的身体！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは こうげきを\nこらえた！",
+    "translated": "\\0D\\n挺住了攻击！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは すでに\nどくを あびている",
+    "translated": "\\0D已经\\n中毒了"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは すでに\nねむっている",
+    "translated": "\\0D已经\\n睡着了"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは すでに\nまひしている",
+    "translated": "\\0D已经\\n麻痹了"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは すでに\nやけどを おっている",
+    "translated": "\\0D已经\\n被烧伤了"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは すなじごくに\nとらわれた！",
+    "translated": "\\0D被困在了{\\n}流沙地狱里！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは せんとうに\nひきずりだされた！\n\n",
+    "translated": "\\0D被拖入了战斗\\n！\\p"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは たいりょくを\nかいふくした！",
+    "translated": "\\0D{\\n}恢复了体力！"
+  },
+  {
+    "status": 200,
     "original": "\\0Dは たおれた！\n\n",
     "translated": "\\0D倒下了！\n\n"
+  },
+  {
+    "status": 200,
+    "original": "\\0Dは ねを はって\nうごかない！",
+    "translated": "\\0D扎根了，\\n无法动弹！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Eは\n\\10の \\17で\\lまひして わざが でにくくなった！",
+    "translated": "\\0E因\\10的\\17\\n而麻痹，招式变得难以发出！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Eは\nこおりづけになった！",
+    "translated": "\\0E\\n被冻住了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Eは\nこんらんした！",
+    "translated": "\\0E{\\n}陷入了混乱！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Eは\nねむってしまった！",
+    "translated": "\\0E\\n睡着了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Eは\nもうどくをあびた！",
+    "translated": "\\0E\\n中剧毒了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Eは\nやけどをおった！",
+    "translated": "\\0E\\n被烧伤了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Eは \\16で\nどくを うけない！",
+    "translated": "\\0E因为\\\\16\\n不会中毒！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Eは \\16で\nまひしない！",
+    "translated": "\\0E 不会因 \\16 而\\n麻痹！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Eは \\18で\nひるまない！",
+    "translated": "\\0E因\\18\\n不会畏缩！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Eは \\18で\nやけどしない！",
+    "translated": "\\0E用\\18\\n不会烧伤！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Eは どくをあびた！",
+    "translated": "\\0E中毒了！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Eは まひして\nわざが でにくくなった！",
+    "translated": "\\0E麻痹了，\\n招式变得难以发出！"
+  },
+  {
+    "status": 200,
+    "original": "\\0Fは いちゃもんを つけられたので\nつづけて おなじ わざが だせない！\n\n",
+    "translated": "\\0F因为被找碴了，\\n不能连续使出相同的招式！\\p"
+  },
+  {
+    "status": 200,
+    "original": "\\0Fは かなしばりで\n\\11が だせない！\n\n",
+    "translated": "\\0F因定身法而无法使出\\n\\11！\\p"
+  },
+  {
+    "status": 200,
+    "original": "\\0Fは だすことの できる\nわざが ない！\n\n",
+    "translated": "\\0F没有可以使用的\\n招式！\\p"
+  },
+  {
+    "status": 200,
+    "original": "\\0Fは ちょうはつ されて\n\\11が だせない！\n\n",
+    "translated": "\\0F被挑衅了！\\n\\11无法使出！\\p"
   },
   {
     "status": 200,
@@ -91,8 +1065,387 @@
   },
   {
     "status": 200,
+    "original": "\\0Fは ふういんで\n\\11が だせない！\n\n",
+    "translated": "\\0F被封印了！\\n无法使出\\11！\\p"
+  },
+  {
+    "status": 200,
+    "original": "\\10の \\17で\n\\0Dの こうげきりょくが さがった！",
+    "translated": "\\10的\\17降低了\\n\\0D的攻击力！"
+  },
+  {
+    "status": 200,
+    "original": "\\10の \\17で\n\\0Eは こおりづけになった！",
+    "translated": "\\10的\\17\\n让\\0E被冻住了！"
+  },
+  {
+    "status": 200,
+    "original": "\\10の \\17で\n\\0Eは どくをあびた！",
+    "translated": "\\10的\\17\\n让\\0E中毒了！"
+  },
+  {
+    "status": 200,
+    "original": "\\10の \\17で\n\\0Eは ねむってしまった！",
+    "translated": "\\10的\\17\\n让\\0E睡着了！"
+  },
+  {
+    "status": 200,
+    "original": "\\10の \\17で\n\\0Eは やけどをおった！",
+    "translated": "\\10的\\17\\n让\\0E被烧伤了！"
+  },
+  {
+    "status": 200,
+    "original": "\\10の \\17で\nあめが ふりはじめた！",
+    "translated": "在\\10的 \\17\\n开始下雨了！"
+  },
+  {
+    "status": 200,
+    "original": "\\10の \\17で\nうまく きまらなかった！",
+    "translated": "\\10的\\17\\n没有成功！"
+  },
+  {
+    "status": 200,
+    "original": "\\10の \\17で\nすなあらしに なった！",
+    "translated": "由于\\10的\\17，\\n扬起了沙暴！"
+  },
+  {
+    "status": 200,
+    "original": "\\10の \\17で\nにげられない！\n\n",
+    "translated": "\\10的 \\17令\\n无法逃跑！\\p"
+  },
+  {
+    "status": 200,
+    "original": "\\10の \\17で\nひざしが つよくなった！",
+    "translated": "\\10的\\17使\\n阳光变强了！"
+  },
+  {
+    "status": 200,
+    "original": "\\10の \\17は\n\\0Eに きかなかった！",
+    "translated": "\\10的\\17对\\n\\0E无效！"
+  },
+  {
+    "status": 200,
+    "original": "\\10の すがたが\nへんかした！",
+    "translated": "\\10的样子\\n发生了变化！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は \\00の\n\\01を トレースした！",
+    "translated": "\\10复制了\\00的\\n\\01！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は \\13で\n\\00が \\01",
+    "translated": "\\10因\\13\\n\\00\\01"
+  },
+  {
+    "status": 200,
+    "original": "\\10は \\13で\n\\00じょうたいが なおった！",
+    "translated": "\\10使用了\\13，\\n\\00的状态恢复了！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は \\13で\n\\00の わざポイントを かいふくした！",
+    "translated": "\\10使用了\\13，\\n\\00的招式PP恢复了！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は \\13で\nこおりじょうたいが なおった！",
+    "translated": "\\10用\\13治好了\\n冰冻状态！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は \\13で\nこんらんが なおった！",
+    "translated": "\\10用\\13治好了\\n混乱！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は \\13で\nじょうたいいじょうが なおった！",
+    "translated": "\\10使用了\\13，\\n异常状态恢复了！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は \\13で\nたいりょくを かいふくした！",
+    "translated": "\\10使用了\\13，\\n体力恢复了！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は \\13で\nどくが なおった！",
+    "translated": "\\10用\\13治好了\\n中毒！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は \\13で\nねむりから さめた！",
+    "translated": "\\10用\\13从\\n睡眠中醒来了！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は \\13で\nまひが なおった！",
+    "translated": "\\10用\\13治好了\\n麻痹！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は \\13で\nやけどが なおった！",
+    "translated": "\\10用\\13治好了\\n烧伤！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は \\13で\nステータスを もとに もどした！",
+    "translated": "\\10使用了\\13，\\n能力变化复原了！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は \\13を つかって\nはりきり だした！",
+    "translated": "\\10使用了\\13\\n，干劲十足！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は \\17で\n\\00が さがらない！",
+    "translated": "\\10因\\17\\n\\00不会下降！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は \\17で\n\\00が なおった！",
+    "translated": "\\10因\\17\\n\\00痊愈了！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は \\17で\n\\00じょうたいが なおった！",
+    "translated": "\\10因\\17\\n\\00的异常状态治愈了！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は \\17で\n\\11を うけない！",
+    "translated": "\\10的\\17使\\n\\11无效！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は \\17で\nすばやさが あがった！",
+    "translated": "\\10因\\17\\n速度提升了！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は \\17で\nのうりょくが さがらない！",
+    "translated": "\\10在\\17中\\n能力不会下降！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は しろいきりに\nまもられている",
+    "translated": "\\10正受到白雾\\n保护！"
+  },
+  {
+    "status": 200,
+    "original": "\\10は まきびしの\nダメージを うけた！",
+    "translated": "\\10受到了撒菱的\\n伤害！"
+  },
+  {
+    "status": 404,
+    "original": "\\13は \\10には\n\\00"
+  },
+  {
+    "status": 200,
+    "original": "\\19の \\1A\nとの しょうぶに かった！\n\n",
+    "translated": "战胜了 \\19的 \\1A！\\p"
+  },
+  {
+    "status": 200,
+    "original": "\\19の \\1Aが\nしょうぶを しかけてきた！\n\n",
+    "translated": "\\19的 \\1A\\n发起了挑战！\\p"
+  },
+  {
+    "status": 200,
+    "original": "\\19の \\1Aは\n\\00を くりだした！",
+    "translated": "\\19的 \\1A使出了\\n\\00！"
+  },
+  {
+    "status": 200,
+    "original": "\\19の \\1Aは\n\\00を ひっこめた！",
+    "translated": "\\19的\\1A收回了\\n\\00！"
+  },
+  {
+    "status": 200,
+    "original": "\\19の \\1Aは\n\\01を くりだそうと している\n\n\\20も ポケモンを\nいれかえますか？",
+    "translated": "\\19的 \\1A想要\\n使出 \\01！\\p\\20也要替换宝可梦吗？"
+  },
+  {
+    "status": 200,
+    "original": "\\19の \\1Aは\n\\03と \\05を くりだした！",
+    "translated": "\\19的 \\1A使出了\\n\\03和 \\05！"
+  },
+  {
+    "status": 200,
+    "original": "\\19の \\1Aは\n\\03を くりだした！",
+    "translated": "\\19的 \\1A使出了\\n\\03！"
+  },
+  {
+    "status": 200,
+    "original": "\\19の \\1Aは\n\\13を つかった！",
+    "translated": "\\19的\\1A使用了\\n\\13！"
+  },
+  {
+    "status": 200,
+    "original": "\\1Cは \\08を くりだした！\nゆけっ！ \\06！",
+    "translated": "\\1C使出了 \\08！\\n上吧！ \\06！"
+  },
+  {
+    "status": 200,
+    "original": "\\1Dが\nしょうぶを しかけてきた！",
+    "translated": "\\1D\\n发起了挑战！"
+  },
+  {
+    "status": 200,
+    "original": "\\1Dと \\1Eが\nしょうぶを しかけてきた！",
+    "translated": "\\1D和 \\1E\\n发起了挑战！"
+  },
+  {
+    "status": 200,
+    "original": "\\1Dと \\1Eとの\nしょうぶに かった！",
+    "translated": "战胜了\\1D和\\1E！"
+  },
+  {
+    "status": 200,
+    "original": "\\1Dと \\1Eとの\nしょうぶに ひきわけた！",
+    "translated": "与 \\1D和 \\1E的战斗\\n打平了！"
+  },
+  {
+    "status": 200,
+    "original": "\\1Dと \\1Eとの\nしょうぶに まけた！",
+    "translated": "输给了\\1D和\\1E！"
+  },
+  {
+    "status": 200,
+    "original": "\\1Dとの\nしょうぶに かった！",
+    "translated": "战胜了\\1D！"
+  },
+  {
+    "status": 200,
+    "original": "\\1Dとの\nしょうぶに ひきわけた！",
+    "translated": "与\\1D打平了！"
+  },
+  {
+    "status": 200,
+    "original": "\\1Dとの\nしょうぶに まけた！",
+    "translated": "输给了\\1D！"
+  },
+  {
+    "status": 200,
+    "original": "\\1Dは\n\\00を くりだした！",
+    "translated": "\\1D使出了\\n\\00！"
+  },
+  {
+    "status": 200,
+    "original": "\\1Dは\n\\00を ひっこめた！",
+    "translated": "\\1D收回了\\n\\00！"
+  },
+  {
+    "status": 200,
+    "original": "\\1Dは\n\\03と \\05を くりだした！",
+    "translated": "\\1D使出了\\n\\03和 \\05！"
+  },
+  {
+    "status": 200,
+    "original": "\\1Dは\n\\03を くりだした！",
+    "translated": "\\1D使出了\\n\\03！"
+  },
+  {
+    "status": 200,
+    "original": "\\1Dは \\07を くりだした！\n\\1Eは \\09を くりだした！",
+    "translated": "\\1D使出了 \\07！\\n\\1E使出了 \\09！"
+  },
+  {
+    "status": 200,
+    "original": "\\1Fは\n\\00を くりだした！",
+    "translated": "\\1F使出了\\n\\00！"
+  },
+  {
+    "status": 200,
+    "original": "\\1Fは\n\\00を ひっこめた！",
+    "translated": "\\1F收回了\\n\\00！"
+  },
+  {
+    "status": 200,
+    "original": "\\20の てもとには\nたたかえる ポケモンが いない！\n\n",
+    "translated": "\\20的手头\\n没有能战斗的宝可梦！\\p"
+  },
+  {
+    "status": 200,
+    "original": "\\20は\n\\03に ちかづいた！",
+    "translated": "\\20\\n靠近了 \\03！"
+  },
+  {
+    "status": 200,
+    "original": "\\20は\n\\03に ポロックを なげた！",
+    "translated": "\\20向 \\03\\n扔出了宝可方块！"
+  },
+  {
+    "status": 200,
+    "original": "\\20は\nこれいじょう ちかづけない！",
+    "translated": "\\20\\n无法再靠近了！"
+  },
+  {
+    "status": 200,
+    "original": "\\20は\nめのまえが まっくらに なった！\\CC09",
+    "translated": "\\20让\\n眼前变得一片漆黑！\\CC09"
+  },
+  {
+    "status": 200,
+    "original": "\\20は \\00円\nひろった！\n\n",
+    "translated": "\\20捡到了\\00日元！\\p"
+  },
+  {
+    "status": 200,
+    "original": "\\20は しょうきんとして\n\\00円 てにいれた！\n\n",
+    "translated": "\\20作为奖金得到了\\n\\00日元！\\p"
+  },
+  {
+    "status": 200,
     "original": "\\20は どうする？",
     "translated": "\\20怎么办？"
+  },
+  {
+    "status": 200,
+    "original": "\\24 \\00の\nこうかが きれた！",
+    "translated": "\\24的\\n\\00效果消失了！"
+  },
+  {
+    "status": 200,
+    "original": "\\25 あしもとに\nまきびしが ちらばった！",
+    "translated": "\\25的脚下\\n撒满了撒菱！"
+  },
+  {
+    "status": 200,
+    "original": "\\26\nしろいきりに つつまれた！",
+    "translated": "\\26\\n被白雾笼罩了！"
+  },
+  {
+    "status": 200,
+    "original": "\\26\nしんぴのベールに つつまれた！",
+    "translated": "\\26{\\n}被神秘面纱包裹了！"
+  },
+  {
+    "status": 200,
+    "original": "\\26 \\11で\nだげきこうげきに すこし つよくなった！",
+    "translated": "\\26因\\11{\\n}的物理攻击稍微提高了！"
+  },
+  {
+    "status": 200,
+    "original": "\\26 \\11で\nだげきこうげきに つよくなった！",
+    "translated": "\\26因\\11{\\n}的物理攻击提高了！"
+  },
+  {
+    "status": 200,
+    "original": "\\26 \\11で\nとくこうに すこし つよくなった！",
+    "translated": "\\26因\\11{\\n}的特攻稍微提高了！"
+  },
+  {
+    "status": 200,
+    "original": "\\26 \\11で\nとくこうに つよくなった！",
+    "translated": "\\26因\\11{\\n}的特攻提高了！"
+  },
+  {
+    "status": 200,
+    "original": "\\28 つつんでいた\nしんぴの ベールが なくなった！",
+    "translated": "\\28包裹着的{\\n}神秘面纱消失了！"
   },
   {
     "status": 200,
@@ -1366,6 +2719,16 @@
   },
   {
     "status": 200,
+    "original": "あいての",
+    "translated": "对手的"
+  },
+  {
+    "status": 200,
+    "original": "あいての ",
+    "translated": "对手的"
+  },
+  {
+    "status": 200,
     "original": "あいての \\00の\nこうかが きれた！",
     "translated": "对方\\00的\\n效果结束了！"
   },
@@ -1401,6 +2764,11 @@
   },
   {
     "status": 200,
+    "original": "あいては",
+    "translated": "对手"
+  },
+  {
+    "status": 200,
     "original": "あいてより さきに こうげき！",
     "translated": "比对手先发动攻击！"
   },
@@ -1408,6 +2776,11 @@
     "status": 200,
     "original": "あいてよりも さきに こうげき できる‥‥\n\nそれだけで しょうぶは\nかなり ゆうりに なるだろう？",
     "translated": "能比对手先出手攻击……\\p仅此一点就能让对战变\\n得相当有利吧？"
+  },
+  {
+    "status": 200,
+    "original": "あいてを",
+    "translated": "对手"
   },
   {
     "status": 200,
@@ -1626,6 +2999,11 @@
     "status": 200,
     "original": "あかパプリカスライス",
     "translated": "红椒片"
+  },
+  {
+    "status": 200,
+    "original": "あがった！",
+    "translated": "上升了！"
   },
   {
     "status": 200,
@@ -2259,6 +3637,11 @@
   },
   {
     "status": 200,
+    "original": "あなたの だいじな ポケモン\nあいじょうを こめて そだてます！\n\nポケモンの いくせい なら\n１１７ばんどうろの そだてや まで どうぞ",
+    "translated": "我会满怀爱心培育你重要的\\n宝可梦\\p！\\p要培育宝可梦的话，请到117\\n号道路的培育屋来。"
+  },
+  {
+    "status": 200,
     "original": "あなたの つよさ\nだれかを おもいださせるの よね‥‥\n\nそうだ！ トウカシティの ジムリーダー\nセンリさんに にているんだ！",
     "translated": "你的强大\\n让我想起某个人呢……\\p对了！和橙华市的道馆\\n馆主千里先生很像！"
   },
@@ -2786,6 +4169,11 @@
     "status": 200,
     "original": "あまごい",
     "translated": "求雨"
+  },
+  {
+    "status": 200,
+    "original": "あますぎた！",
+    "translated": "太甜了！"
   },
   {
     "status": 200,
@@ -5378,6 +6766,11 @@
   },
   {
     "status": 200,
+    "original": "うふふふふ\nオレは モグリの スイマー\\lもぐりは とくいちゅうの とくいだぜ！",
+    "translated": "嘿嘿嘿嘿嘿\\n我是潜水的游泳者，潜水可是\\p我最拿手中的拿手！"
+  },
+  {
+    "status": 200,
     "original": "うふふふふふ‥‥\n\nポケモンの たたかっている すがたに\nぞくぞく するんだ ボク",
     "translated": "呼呼呼呼呼……{\\p}看到宝可梦战斗的样\\n子就让我兴奋不已我"
   },
@@ -5610,6 +7003,10 @@
     "status": 200,
     "original": "うもうを ふりまき からみつかせて \nこうげきを ガクッとさげさせる",
     "translated": "散布羽毛缠住对手\\n大幅降低对手的攻击"
+  },
+  {
+    "status": 404,
+    "original": "うゃサなくえぜサなくいぺサなく えク\\17くえ\n\nぬくいャぞい べサなく  サ"
   },
   {
     "status": 200,
@@ -6230,6 +7627,11 @@
   },
   {
     "status": 200,
+    "original": "おいしいみず ２００円",
+    "translated": "美味之水 200円"
+  },
+  {
+    "status": 200,
     "original": "おいしいゴミ",
     "translated": "美味垃圾"
   },
@@ -6719,6 +8121,11 @@
   },
   {
     "status": 200,
+    "original": "おきゃくさま！\n\nさんかできる ポケモンが ３ひき いません！\n\nさんかする ためには レベルが ５０いかで\nすべて ちがうしゅるいの ポケモンを\\l３ひき よういして ください\n\nまた もたせる どうぐも\nすべて ちがう どうぐに してください！\n\nなお タマゴ\\02さんか させることは できません！\n\nじゅんびが できましたら\nまた おこし ください",
+    "translated": "客人！\\p能参加的宝可梦不够３只！\\p要参加的话，请准备等级在５\\n０以下、种类各不相同的３只\\p宝可梦\\p另外，携带的道具也请全部换\\n成不同的道具！\\p此外，蛋\\02不能参加！\\p准备好了的话，请再来吧"
+  },
+  {
+    "status": 200,
     "original": "おきゃくさま！\n\nぜんかい ちゃんと レポートを かいて\nしゅうりょう しませんでしたね？\n\nもうしわけ ありませんが そのばあい\nちょうせんは むこうと なります",
     "translated": "客人！\\p你上次没有好好写完报\\n告就结束了吧？\\p非常抱歉，这种情况下\\n挑战是无效的"
   },
@@ -7141,6 +8548,11 @@
     "status": 200,
     "original": "おとくな けいじばん！！\n\nバッグの たいせつなものに いれた\nどうぐを とうろく しておくと\\lセレクトボタンを おすだけで\\lつかえるように なって べんり です！",
     "translated": "有用的公告板！！{\\p}把道具登记在背包的\\n重要物品里按选择键就\\p能直接使用，很方便！"
+  },
+  {
+    "status": 200,
+    "original": "おとくな けいじばん！！\n\nポケモンの つよさを あらわす ことばで\nとくこう とは\\lとくしゅ こうげきりょく のこと！\n\nとくぼう とは\nとくしゅ ぼうぎょりょく のこと です！",
+    "translated": "好消息公告牌！！\\p用来表示宝可梦强度的词语\\n中，特攻是指特殊攻击力！\\p特防是指特殊防御力！"
   },
   {
     "status": 200,
@@ -7846,6 +9258,10 @@
     "status": 200,
     "original": "おんみつマント",
     "translated": "密探斗篷"
+  },
+  {
+    "status": 404,
+    "original": "おダシぬくあボシぬく ぞねざ"
   },
   {
     "status": 200,
@@ -8684,6 +10100,11 @@
   },
   {
     "status": 200,
+    "original": "からくりニンギョウ １ゴウ くいず！\n\nこのなかで １０３ばんどうろに\nいない ポケモンは どれ？",
+    "translated": "机关人偶1号的猜谜！\\p在这里面，不在103号道路上\\n的宝可梦是哪个？"
+  },
+  {
+    "status": 200,
     "original": "からくりニンギョウ ２ゴウ くいず！\n\nオダマキはかせの かばんの\nいちばん みぎの ポケモンは なんだった？",
     "translated": "机关人偶2号问答！{\\p}小田卷博士包里最右\\n边的宝可梦是什么？"
   },
@@ -8706,6 +10127,11 @@
     "status": 200,
     "original": "からくりニンギョウ ３ゴウ くいず！\n\nなんでもなおし と スーパーボールを かうと\nげんきのかけら より たかくなる？",
     "translated": "机关人偶3号谜题！\\p购买万能药和超级球比\\n元气碎片更贵？"
+  },
+  {
+    "status": 200,
+    "original": "からくりニンギョウ ３ゴウ くいず！\n\nモンスターボール ３つ かうのと\nいいキズぐすり １つ かうのと\\lどっちが たかい？",
+    "translated": "机关人偶3号猜谜！\\p买3个精灵球和买1个好伤\\n药，哪个更贵？"
   },
   {
     "status": 200,
@@ -9176,6 +10602,11 @@
     "status": 200,
     "original": "がくだい",
     "translated": "放大"
+  },
+  {
+    "status": 200,
+    "original": "がくっと ",
+    "translated": "急剧"
   },
   {
     "status": 200,
@@ -10758,6 +12189,11 @@
     "status": 200,
     "original": "ぐんぐんこやし",
     "translated": "劲劲肥"
+  },
+  {
+    "status": 200,
+    "original": "ぐーんと ",
+    "translated": "大幅"
   },
   {
     "status": 200,
@@ -12961,6 +14397,11 @@
   },
   {
     "status": 200,
+    "original": "さがった！",
+    "translated": "下降了！"
+  },
+  {
+    "status": 200,
     "original": "さがわ ひろみ",
     "translated": "佐川弘美"
   },
@@ -13559,6 +15000,11 @@
   },
   {
     "status": 200,
+    "original": "した！",
+    "translated": "使出了！"
+  },
+  {
+    "status": 200,
     "original": "しちせいだっこんたい",
     "translated": "七星夺魂腿"
   },
@@ -14076,6 +15522,11 @@
     "status": 200,
     "original": "しびれる オレの ハートが\nきみの やぼうを ふんさい するっ！",
     "translated": "我热血沸腾的心\\n将粉碎你的野心！"
+  },
+  {
+    "status": 200,
+    "original": "しぶすぎた！",
+    "translated": "太涩了！"
   },
   {
     "status": 200,
@@ -17325,6 +18776,10 @@
   },
   {
     "status": 404,
+    "original": "ぞいらいコうぃいぃとほほ・ぃまげァイみツチレ"
+  },
+  {
+    "status": 404,
     "original": "ぞいらいコうぃとほほ・ぃまげァぴみカチネ"
   },
   {
@@ -18310,6 +19765,11 @@
     "status": 200,
     "original": "だめだ！ ポケモンが\nボールから でてしまった！",
     "translated": "不行！宝可梦从{\\n}球中逃出来了！"
+  },
+  {
+    "status": 200,
+    "original": "だれかの",
+    "translated": "某人的"
   },
   {
     "status": 200,
@@ -22315,6 +23775,11 @@
   },
   {
     "status": 200,
+    "original": "にがすぎた！",
+    "translated": "太苦了！"
+  },
+  {
+    "status": 200,
     "original": "にぎりつぶす",
     "translated": "捏碎"
   },
@@ -22749,6 +24214,11 @@
   },
   {
     "status": 200,
+    "original": "の こどもは\n",
+    "translated": "的孩子是"
+  },
+  {
+    "status": 200,
     "original": "のうが どんどん おおきくなったので くびでは\nささえきれないほど あたまが おもくなった。\nちょうのうりょくで あたまを ささえているのだ。",
     "translated": "因为能力不断增强，头\\n部变得过于沉重，\\p已经无法用脖子支撑。\\n依靠超能力来托住脑袋。"
   },
@@ -22857,6 +24327,11 @@
   },
   {
     "status": 200,
+    "original": "のみ",
+    "translated": "只有"
+  },
+  {
+    "status": 200,
     "original": "のみこむ",
     "translated": "吞下"
   },
@@ -22947,6 +24422,11 @@
   },
   {
     "status": 200,
+    "original": "は おおめに\n",
+    "translated": "多一些"
+  },
+  {
+    "status": 200,
     "original": "は かえってきた！",
     "translated": "回来了！"
   },
@@ -22974,6 +24454,11 @@
     "status": 200,
     "original": "はい",
     "translated": "是"
+  },
+  {
+    "status": 200,
+    "original": "はい \nいいえ",
+    "translated": "是 \\n否"
   },
   {
     "status": 200,
@@ -24214,6 +25699,10 @@
     "status": 200,
     "original": "ひんししている ポケモン\nすべてを せいじょうな\nじょうたいに する",
     "translated": "让所有濒死的宝可梦\\n恢复到\\p正常状态"
+  },
+  {
+    "status": 404,
+    "original": "びいぎうぺいぶいっク"
   },
   {
     "status": 404,
@@ -26456,8 +27945,23 @@
   },
   {
     "status": 200,
+    "original": "みかたの",
+    "translated": "我方的"
+  },
+  {
+    "status": 200,
     "original": "みかたの \\00の\nこうかが きれた！",
     "translated": "我方\\00的\\n效果结束了！"
+  },
+  {
+    "status": 200,
+    "original": "みかたは",
+    "translated": "我方"
+  },
+  {
+    "status": 200,
+    "original": "みかたを",
+    "translated": "我方"
   },
   {
     "status": 200,
@@ -27148,9 +28652,17 @@
     "original": "むいらいせうふたエみツんねざれぶカエチセキネ"
   },
   {
+    "status": 404,
+    "original": "むいろいフいゃいフしゃねツれ？ずゥコゅリ"
+  },
+  {
     "status": 200,
     "original": "むいろいフいフしゃねツれ？ずゥエゅフ",
     "translated": "灰扑扑的风妖精？真是\\n少见啊！"
+  },
+  {
+    "status": 404,
+    "original": "むいろいフしゃねツよ？ょゥぶゅシ"
   },
   {
     "status": 404,
@@ -30145,6 +31657,11 @@
   },
   {
     "status": 200,
+    "original": "を した！",
+    "translated": "使出了！"
+  },
+  {
+    "status": 200,
     "original": "を そとに にがしてあげた",
     "translated": "已将放生"
   },
@@ -30572,6 +32089,11 @@
     "status": 200,
     "original": "アチャモの ぬいぐるみ\nマットや つくえの\nうえに おくもの",
     "translated": "阿柏怪的毛绒玩具\\n垫子和桌子的\\p上面放置的东西"
+  },
+  {
+    "status": 200,
+    "original": "アチャモドール  １０００まい",
+    "translated": "火稚鸡玩偶 1000枚"
   },
   {
     "status": 200,
@@ -33687,6 +35209,11 @@
   },
   {
     "status": 200,
+    "original": "キモリドール   １０００まい",
+    "translated": "木守宫玩偶 1000枚"
+  },
+  {
+    "status": 200,
     "original": "キャタピー",
     "translated": "绿毛虫"
   },
@@ -34997,6 +36524,11 @@
   },
   {
     "status": 200,
+    "original": "ゲームよう コイン ですね？\n\n５０まい １０００えんに なります！\nコインを かいますか？",
+    "translated": "是游戏币对吧？\\p50枚要1000日元！要买硬币\\n吗？"
+  },
+  {
+    "status": 200,
     "original": "ゲームキューブが ある！\n\nコントローラの かわりに\nゲームボーイ アドバンスが つながってる！",
     "translated": "有GameCube！{\\p}代替控制器连接着\\nGame Boy Advance！"
   },
@@ -35004,6 +36536,14 @@
     "status": 200,
     "original": "コ あいうえおかきく",
     "translated": "啊，一二三四五六七八\\n九十"
+  },
+  {
+    "status": 404,
+    "original": "コうこいらいぇいらこぇとスみヌんäずボクぎヤ"
+  },
+  {
+    "status": 404,
+    "original": "コうこいらこぇとスみヌんäずボっぎト"
   },
   {
     "status": 200,
@@ -35847,6 +37387,11 @@
   },
   {
     "status": 200,
+    "original": "サイコソーダ ３００円",
+    "translated": "劲爽汽水 300円"
+  },
+  {
+    "status": 200,
     "original": "サイコノイズ",
     "translated": "精神噪音"
   },
@@ -36074,6 +37619,11 @@
     "status": 200,
     "original": "サファリゾーンの おとくな じょうほう！\n\nであった ポケモンに\nポロックを なげると にげにくく なります！",
     "translated": "狩猎地带的优惠情报！\\p向遇到的宝可梦投掷宝\\n可方块会变得不容易逃\\p跑！"
+  },
+  {
+    "status": 200,
+    "original": "サファリゾーンへ ようこそ！\n\n５００えんで ポケモン つかまえほうだい！\nサファリゲームに さんか しますか？",
+    "translated": "欢迎来到狩猎地带！\\p花500日元就能随便抓\\n宝可梦！要参加狩猎游戏吗？"
   },
   {
     "status": 200,
@@ -38984,6 +40534,10 @@
   },
   {
     "status": 404,
+    "original": "ツいろいけいけつムめゥぇヌぶオセキヤ"
+  },
+  {
+    "status": 404,
     "original": "ツいろいけつムめゥぇヌぢオイキツ"
   },
   {
@@ -41771,6 +43325,10 @@
     "translated": "香草香肠"
   },
   {
+    "status": 404,
+    "original": "バいドいざうざいドせざなざみäよヘぇなぐセぼピカ。カエマ"
+  },
+  {
     "status": 200,
     "original": "バいドせざなざみäよヘぇなぐセでピぼ。ぼエキ",
     "translated": "这是一段乱码這是一段\\n亂碼這是一段亂碼這是\\p一段亂碼這是一段亂碼\\n這是一段亂碼這是一段\\p亂碼這是一段亂碼這是\\n一段亂碼這是一段亂碼\\p這是一段亂碼這是一段\\n亂碼這是一段亂碼這是\\p一段亂碼這是一段亂碼\\n這是一段亂碼這是一段\\p亂碼這是一段亂碼這是\\n一段亂碼這是一段亂碼\\p這是一段亂碼這是一段\\n亂碼這是一段亂碼這是\\p一段亂碼這是一段亂碼\\n這是一段亂碼這是一段\\p亂碼這是一段亂碼這是\\n一段亂碼這是一段亂碼\\p這是一段亂碼這是一段\\n亂碼這是一段亂碼這是\\p一段亂碼這是一段亂碼\\n這是一段亂碼這是一段\\p亂碼這是一段亂碼這是\\n一段亂码"
@@ -43319,6 +44877,11 @@
     "status": 200,
     "original": "フウ『ぼっ ぼくたちの\nラン『コンビネーションが‥‥！\n\nフウ『やぶれた からには しかたない\nラン『まけを みとめて これを あげるヨ！",
     "translated": "枫『我 我们的{\\n}楠『配合被……！{\\p}枫『既然被打破了也\\n没办法 楠『认输，把\\p这个给你！"
+  },
+  {
+    "status": 200,
+    "original": "フウ『マインドバッジには ポケモンの\nとくこうと とくぼうを たかめる\\lこうかが ひめられている！\n\nラン『それから ダイビング という\nひでんわざも つかえるように なるヨ！\n\nフウ『あと これも もっていきなよ！",
+    "translated": "小枫：『心灵徽章中蕴含着提\\n高宝可梦的\\p特攻和特防的效果！\\p小兰：『而且还可以使用“潜\\n水”这个秘传招式哦！\\p小枫：『还有，这个也拿去\\n吧！"
   },
   {
     "status": 200,
@@ -47134,6 +48697,11 @@
   },
   {
     "status": 200,
+    "original": "マユミの",
+    "translated": "真由美的"
+  },
+  {
+    "status": 200,
     "original": "マユミの パソコンに せつぞく した！",
     "translated": "连接到了真由美的电脑！"
   },
@@ -47548,6 +49116,11 @@
   },
   {
     "status": 200,
+    "original": "ミズゴロウドール １０００まい",
+    "translated": "水跃鱼玩偶 1000枚"
+  },
+  {
+    "status": 200,
     "original": "ミズＺ",
     "translated": "水Ｚ"
   },
@@ -47565,6 +49138,11 @@
     "status": 200,
     "original": "ミックスオレ",
     "translated": "果汁牛奶"
+  },
+  {
+    "status": 200,
+    "original": "ミックスオレ ３５０円",
+    "translated": "果汁牛奶 350円"
   },
   {
     "status": 200,
@@ -52440,6 +54018,46 @@
     "status": 200,
     "original": "２００ぽ すすむ あいだ\nよわい ポケモンと\nそうぐう しなくなる",
     "translated": "在200步内，\\n弱小的野生宝可梦\\p将完全不会出现"
+  },
+  {
+    "status": 200,
+    "original": "２００３ねん ぜんこく たいかい",
+    "translated": "2003年全国大会"
+  },
+  {
+    "status": 200,
+    "original": "２００３ねん ワールドカップ",
+    "translated": "2003年世界杯"
+  },
+  {
+    "status": 200,
+    "original": "２００４ねん ぜんこく たいかい",
+    "translated": "2004年全国大会"
+  },
+  {
+    "status": 200,
+    "original": "２００４ねん ちほう たいかい",
+    "translated": "2004年地区大会"
+  },
+  {
+    "status": 200,
+    "original": "２００４ねん ワールドカップ",
+    "translated": "2004年世界杯"
+  },
+  {
+    "status": 200,
+    "original": "２００５ねん ぜんこく たいかい",
+    "translated": "2005年全国大会"
+  },
+  {
+    "status": 200,
+    "original": "２００５ねん ちほう たいかい",
+    "translated": "2005年地方大会"
+  },
+  {
+    "status": 200,
+    "original": "２００５ねん ワールドカップ",
+    "translated": "2005年世界杯"
   },
   {
     "status": 200,

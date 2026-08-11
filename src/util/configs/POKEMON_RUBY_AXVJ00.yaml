@@ -69,12 +69,6 @@ texts:
     - id: global_ime_keyboard_filter
       type: ime_keyboard_filter
       value: true
-    # 姓名输入 SoftKeyboard：提示语 + 码表页（勿汉化 / 勿 in_place）
-    - id: global_naming_screen_filter
-      type: address_filter
-      value:
-        start: '0x083A32D0'
-        end: '0x083A34FF'
     # 标题 logo LZ 带：禁止当正文扫入；指针索引亦跳过此带假指针槽
     - id: global_title_lz_filter
       type: address_filter

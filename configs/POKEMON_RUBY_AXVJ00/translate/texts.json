@@ -736,7 +736,7 @@
       "hook": true
     }
   },
-  "count": 7868,
+  "count": 7872,
   "entries": [
     {
       "id": "axvj_92f0510597a5",
@@ -92615,6 +92615,62 @@
       "byte_length": 28,
       "original": "やさくöやさく\\02は パソコンへ てんそうされた！\\CC09",
       "original_hex": "24 0b 08 f5 24 0b 08 fd 02 1a 00 9b 5f 5a 7e 1d 00 13 2e 0f 03 0b 2a 10 ab fc 09 ff",
+      "translated": "",
+      "is_pointer_based": false,
+      "pointer_sources": [],
+      "pointer_addresses": []
+    },
+    {
+      "id": "axvj_97d043c0a121",
+      "module": "后期剧情",
+      "address": "0x083A32DE",
+      "byte_length": 12,
+      "original": "あなた の なまえは？",
+      "original_hex": "01 15 10 00 19 00 15 1f 04 1a ac ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x083A3310"
+      ],
+      "pointer_addresses": [
+        "0x083A3310"
+      ]
+    },
+    {
+      "id": "axvj_9ad5c9f2d79b",
+      "module": "后期剧情",
+      "address": "0x083A32EA",
+      "byte_length": 13,
+      "original": "ボックス の なまえは？",
+      "original_hex": "9a a0 58 5d 00 19 00 15 1f 04 1a ac ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x083A331C"
+      ],
+      "pointer_addresses": [
+        "0x083A331C"
+      ]
+    },
+    {
+      "id": "axvj_50c956dec1a1",
+      "module": "后期剧情",
+      "address": "0x083A32F8",
+      "byte_length": 13,
+      "original": "い の ニックネームは？",
+      "original_hex": "02 00 19 00 66 a0 58 68 ae 71 1a ac ff",
+      "translated": "",
+      "is_pointer_based": false,
+      "pointer_sources": [],
+      "pointer_addresses": []
+    },
+    {
+      "id": "axvj_498e217df8d1",
+      "module": "后期剧情",
+      "address": "0x083A338D",
+      "byte_length": 19,
+      "original": "いうえお なにぬねの やゆよ！？  ",
+      "original_hex": "02 03 04 05 00 15 16 17 18 19 00 24 25 26 ab ac 00 00 ff",
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],

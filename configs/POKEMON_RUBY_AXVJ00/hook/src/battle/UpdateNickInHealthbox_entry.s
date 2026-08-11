@@ -1,5 +1,5 @@
 @ =============================================================================
-@ game.bin：UpdateNickInHealthbox 域入口（常量助手；原盘池见 hook_origin.s）
+@ game.bin: UpdateNickInHealthbox helpers (pools patched in *_hook_origin.s)
 @ =============================================================================
 
     .cpu arm7tdmi
@@ -13,7 +13,6 @@
     .type HealthboxNickCpusetCtrl_Entry, %function
     .extern HealthboxNickCpusetCtrl
 
-@ Thin export so the C unit is always linked (map / future BL from origin).
 HealthboxNickCpusetCtrl_Entry:
     push {lr}
     bl HealthboxNickCpusetCtrl

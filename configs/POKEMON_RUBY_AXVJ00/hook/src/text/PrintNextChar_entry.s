@@ -1,7 +1,6 @@
 @ =============================================================================
-@ game.bin 入口：对应 pokeruby PrintNextChar 常规字形支
-@ AXVJ equ: ProcessCurrentChar / ProcessCurrentChar_RegularGlyph
-@ 入：r3=当前字符，r4=Window/TextPrinter；栈上 saved r4、返回地址
+@ game.bin entry: pokeruby PrintNextChar / AXVJ ProcessCurrentChar RegularGlyph
+@ In: r3=cur char, r4=TextPrinter; stack has saved r4 + return
 @ =============================================================================
 
     .cpu arm7tdmi
@@ -17,15 +16,8 @@
     .global GetStringWidthChinese
     .thumb_func
     .type GetStringWidthChinese, %function
-    .global MapName_DisplayCellLength
-    .thumb_func
-    .type MapName_DisplayCellLength, %function
-    .global WaitArrow_Prepare
-    .thumb_func
-    .type WaitArrow_Prepare, %function
     .extern PrintNextChar_C
     .extern GetStringWidthChinese_Full
-    .extern WaitArrow_Prepare_C
 
 PrintNextChar:
     adds r0, r4, #0
@@ -60,33 +52,10 @@ FarBxR3:
     .pool
     .size PrintNextChar, .-PrintNextChar
 
-@ pokeruby GetStringWidth ABI: r0=win, r1=str → r0=width
+@ pokeruby GetStringWidth ABI: r0=win, r1=str → r0=width (no ROM hook this pass)
 GetStringWidthChinese:
     push {lr}
     bl GetStringWidthChinese_Full
     pop {r1}
     bx r1
     .size GetStringWidthChinese, .-GetStringWidthChinese
-
-@ DrawMapNamePopup @0x0809F67E: skip StringLength pad + 2nd GetMapName(fill).
-@ First GetMapName(fill=0) already left raw F9…FF on sp; MenuPrint reloads r0=sp.
-MapName_DisplayCellLength:
-    ldr r3, =0x0809F6CB
-    bx r3
-    .pool
-    .size MapName_DisplayCellLength, .-MapName_DisplayCellLength
-
-@ DrawInitialDownArrow @0x08003F4C — sync CHS cursor then vanilla body.
-WaitArrow_Prepare:
-    push {r0, lr}
-    bl WaitArrow_Prepare_C
-    pop {r0, r3}
-    movs r1, #0
-    strh r1, [r0, #6]
-    push {r3}
-    ldr r3, =0x08003DAD
-    bl FarBxR3
-    pop {r1}
-    bx r1
-    .pool
-    .size WaitArrow_Prepare, .-WaitArrow_Prepare

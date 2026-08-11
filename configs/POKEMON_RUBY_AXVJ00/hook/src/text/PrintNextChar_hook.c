@@ -1,14 +1,5 @@
-/* ?? pokeruby PrintNextChar � F9 ????????? */
+/* PrintNextChar_hook — F9 优先；普通 JP PCS 也走 DrawGlyphTiles_hook。 */
 #include "game.h"
-
-/** Was: force WIN_TILE_OFFSET from ChineseTileState.next_abs (menu floor /
- * sticky). That hijack mapped BG tiles into dialogue (green squares).
- * Linear dest now trusts the window's TILE_OFFSET only — see draw_glyph.c.
- */
-static void ensure_linear_tile_bump(TextPrinter *win)
-{
-    (void)win;
-}
 
 static int lead_trail_ok(uint8_t lead, uint8_t trail)
 {
@@ -33,27 +24,18 @@ static uint16_t pack_glyph_index(uint8_t lead, uint8_t trail)
     return (uint16_t)((idx << 8) | trail);
 }
 
-/*
- * 从 ROM 字库（ADDR_FONT_CHS_NORMAL @ 0x09000000）读取字模。
- * 每字 128B = 4 个 8×8 4bpp tile（TL/BL/TR/BR）
- * 映射为 16×16 bitmap。渲染时 drawGlyph12 只取左 8px + 右 4px，
- * 光标推进 12px，右 4px 跨入下一 tile 列形成 spill 重叠。
- */
 static const uint8_t *glyph_ptr(uint16_t index)
 {
-    /* 128B / glyph: 16x16 4bpp slot (TL,BL,TR,BR) — Gen3 hardware container. */
     return (const uint8_t *)(ADDR_FONT_CHS_NORMAL + ((uint32_t)index << 7));
 }
 
-/* forward — JP digits/etc share the same DrawGlyph pool */
 static int draw_jp_via_chs(TextPrinter *win, uint32_t cur_char);
 
 /*
- * Unified CHS printable PCS lookup (inject hex = JP PCS):
- *   00        → blank advance (no JP glyph0 / TILE_OFFSET steal)
- *   0x36..3E  → Sym bank ink → DrawGlyph_Chinese_Adv(..., 8)
- *   other     → JP-via-CHS (digits etc.) → same DrawGlyph pool
- * Sym is a glyph source only — not a separate “punct philosophy” path.
+ * 普通 JP PCS → 同一套 CHS 绘制：
+ *   00        → 空白推进 8px
+ *   0x36..3E  → Sym
+ *   其它可印 → GetGlyphTilePointers + DrawGlyph_Chinese_Adv(8)
  */
 static int draw_chs_pcs(TextPrinter *win, uint32_t cur_char)
 {
@@ -70,7 +52,6 @@ static int draw_chs_pcs(TextPrinter *win, uint32_t cur_char)
 
     if (cur_char >= SYM_GLYPH_BASE
         && cur_char < SYM_GLYPH_BASE + SYM_GLYPH_COUNT) {
-        /* Sym bank: Font3-layout 8×16 (U/L 32B), not 16×16 2bpp. */
         src = (const uint8_t *)(ADDR_FONT_CHS_SYM
                                 + (cur_char - SYM_GLYPH_BASE) * 64u);
         for (i = 0; i < 128u; i++)
@@ -86,11 +67,6 @@ static int draw_chs_pcs(TextPrinter *win, uint32_t cur_char)
     return draw_jp_via_chs(win, cur_char);
 }
 
-/*
- * Mid-string F9 phrase must not EOS the parent (JP placeholder semantics).
- * GetStringWidth skips the 4B ref and keeps walking; print matches via inline.
- * No PhraseResume EWRAM (F7F8/FFF0 both unsafe — map corrupt / boot crash).
- */
 static const uint8_t *phrase_stream_lookup(uint16_t code)
 {
     const uint32_t *offsets = (const uint32_t *)ADDR_PHRASE_OFFSETS;
@@ -102,7 +78,6 @@ static const uint8_t *phrase_stream_lookup(uint16_t code)
     return table + off;
 }
 
-/* No FE/FB/FA — safe to inline (species F9 00×N, or place JP digits+F9 00). */
 static int phrase_stream_no_wait_controls(const uint8_t *stream)
 {
     unsigned i = 0;
@@ -112,7 +87,7 @@ static int phrase_stream_no_wait_controls(const uint8_t *stream)
     while (stream[i] != 0xFF) {
         if (stream[i] == CHS_ESCAPE) {
             if (stream[i + 1] != 0)
-                return 0; /* nested phrase ref */
+                return 0;
             i += 4;
             if (i > 256u)
                 return 0;
@@ -125,17 +100,11 @@ static int phrase_stream_no_wait_controls(const uint8_t *stream)
     return 1;
 }
 
-/* Parent continues after F9 op hi lo (battle expand); else whole-string phrase. */
 static int phrase_parent_continues(const uint8_t *text, uint16_t index)
 {
     return text[index + 3] != 0xFF;
 }
 
-/*
- * Draw phrase onto current window; keep WIN_TEXT_PTR on parent; INDEX += 3.
- * Used when parent continues (species-in-battle). Whole-string map names
- * still redirect (one glyph/frame) — no EWRAM walk state.
- */
 static int inline_phrase_no_controls(TextPrinter *win, uint16_t index, uint16_t code)
 {
     const uint8_t *stream = phrase_stream_lookup(code);
@@ -157,7 +126,6 @@ static int inline_phrase_no_controls(TextPrinter *win, uint16_t index, uint16_t 
                 DrawGlyph_Chinese(win, glyph_ptr(gidx));
             i += 4;
         } else {
-            /* Digits / Sym punct / blank — same draw_chs_pcs pool. */
             if (!draw_chs_pcs(win, stream[i]))
                 return 0;
             i++;
@@ -179,14 +147,6 @@ static void redirect_phrase_stream(TextPrinter *win, uint16_t code)
     win_set_u16(win, WIN_TEXT_INDEX, 0);
 }
 
-/**
- * PrintNextChar_C — CJK + JP-via-CHS (ProcessCurrentChar hook).
- *
- * F9: Chinese sideload / phrase (skipped when textMode==2 → FontFunc).
- * Printable PCS: JP-via-CHS except textMode==2 (FontFunc[2] healthbox).
- * AXVJ GetGlyphTilePointers is 4-arg (font, glyph, &u, &l) — no language.
- */
-/* 1bpp row bytes → 32B 4bpp-index tile with ink=0xF (CopyGlyph2bpp-ready). */
 static void expand_1bpp_tile(const uint8_t *src8, uint8_t *dst32)
 {
     unsigned row, col;
@@ -204,7 +164,6 @@ static void expand_1bpp_tile(const uint8_t *src8, uint8_t *dst32)
     }
 }
 
-/* Returns 1 for printable PCS (consumed by CHS path). Controls return 0. */
 static int draw_jp_via_chs(TextPrinter *win, uint32_t cur_char)
 {
     uint8_t *upper = 0;
@@ -215,25 +174,18 @@ static int draw_jp_via_chs(TextPrinter *win, uint32_t cur_char)
 
     if (cur_char == 0 || cur_char >= 0xF7)
         return 0;
-
-    /* Gender: FontFunc. EF handled in PrintNextChar_C via DrawMenuCursorEF. */
     if (cur_char == 0xB5u || cur_char == 0xB6u)
         return 0;
     if (cur_char == 0xEFu)
         return 0;
 
-    /* textMode 2 = FontFunc[2] bold/healthbox; CHS would write wrong VRAM. */
-//    if (scene_is_battle_interface_dest(win))
-//        return 0;
-
     font = win_u8(win, WIN_FONTNUM_REAL);
-    /* 0x0B is fontNum; if aliased garbage (>6), fall back to shadowed. */
     if (font > 6u)
         font = FONT_NORMAL_SHADOWED;
 
     chs_get_glyph_tile_pointers(font, (uint16_t)cur_char, &upper, &lower);
     if (!upper || !lower)
-        return 0; /* ABI/lookup fail → original FontFunc (never blank claim) */
+        return 0;
 
     for (i = 0; i < 128u; i++)
         tmp[i] = 0;
@@ -252,11 +204,12 @@ static int draw_jp_via_chs(TextPrinter *win, uint32_t cur_char)
     return 1;
 }
 
+/**
+ * PrintNextChar_C — F9 优先，其它可印 JP 走 CHS 绘制；失败则 0 → FontFunc。
+ */
 int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
 {
-    ensure_linear_tile_bump(win);
-
-    /* Bold/healthbox: no CHS (incl. sym); FontFunc[2] owns the blit. */
+    /* textMode 2 / 血条缓冲：交原版 FontFunc[2] */
     if (scene_is_battle_interface_dest(win))
         return 0;
 
@@ -266,29 +219,19 @@ int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
         return 0;
     }
 
-    /* FE/FB/FA are handled in PCC control jumptable — they never reach this
-     * RegularGlyph hook. Wait-arrow sync is WaitArrow_Prepare_C @ 0x3F4C.
-     * Pitch reset after FE happens on next glyph via pitch_key / cur_tx. */
-
-    if (cur_char != CHS_ESCAPE) {
-        /* Printable PCS → unified CHS lookup (blank / Sym / JP-via-CHS). */
-        return draw_chs_pcs(win, cur_char);
-    }
-
-    {
-        const uint8_t *text = (const uint8_t *)(uintptr_t)win_u32(win, WIN_TEXT_PTR);
+    /* ---- F9 协议优先 ---- */
+    if (cur_char == CHS_ESCAPE) {
+        const uint8_t *text =
+            (const uint8_t *)(uintptr_t)win_u32(win, WIN_TEXT_PTR);
         uint16_t index = win_u16(win, WIN_TEXT_INDEX);
         const uint8_t *p = text + index;
         uint8_t op = p[0];
 
         if (op == 0) {
-            /* 串首 F9 00 清 sticky；PhraseTable 流内首字勿清（保留 F9 op 的 write_op）。 */
-            {
-                uint32_t tptr = win_u32(win, WIN_TEXT_PTR);
-                if (index == 1
-                    && (tptr < ADDR_PHRASE_TABLE || tptr >= ADDR_FONT_CHS_NORMAL))
-                    chinese_tile_state()->write_op = 0;
-            }
+            uint32_t tptr = win_u32(win, WIN_TEXT_PTR);
+            if (index == 1
+                && (tptr < ADDR_PHRASE_TABLE || tptr >= ADDR_FONT_CHS_NORMAL))
+                chinese_tile_state()->write_op = 0;
             {
                 uint8_t lead = p[1];
                 uint8_t trail = p[2];
@@ -306,36 +249,29 @@ int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
 
         {
             volatile struct ChineseTileState *st = chinese_tile_state();
-            uint16_t code;
-            int parent_cont;
+            uint16_t code = (uint16_t)((p[1] << 8) | p[2]);
+            int parent_cont = phrase_parent_continues(text, index);
 
-            code = (uint16_t)((p[1] << 8) | p[2]);
-            parent_cont = phrase_parent_continues(text, index);
-
-            if (op == CHS_PHRASE_DEFAULT) {
-                st->write_op = 0;
-            } else if (parent_cont) {
-                /* Mid-string species/etc: StyleLeft is for whole-field labels
-                 * (dex). Nudging here backs up into 野生的 → glitch tile. */
+            if (op == CHS_PHRASE_DEFAULT || parent_cont) {
                 st->write_op = 0;
             } else {
                 uint8_t L;
                 uint8_t cx;
                 st->write_op = op;
-                /* StyleLeft[op]: one-shot X nudge for whole-string phrase. */
                 L = *(const uint8_t *)(uintptr_t)(ADDR_STYLE_LEFT + op);
                 cx = win_u8(win, WIN_CURSOR_X);
                 if (L && cx >= L)
                     win_set_u8(win, WIN_CURSOR_X, (uint8_t)(cx - L));
             }
 
-            /* Mid-string (battle \03): inline so phrase FF does not EOS parent. */
             if (parent_cont && inline_phrase_no_controls(win, index, code))
                 return 1;
 
-            /* Whole-string phrase (map name) or controls inside phrase. */
             redirect_phrase_stream(win, code);
             return 1;
         }
     }
+
+    /* ---- 普通 JP PCS：同套 CHS 绘制 ---- */
+    return draw_chs_pcs(win, cur_char);
 }

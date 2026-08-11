@@ -248,9 +248,8 @@ void DrawGlyph_Chinese(TextPrinter *win, const uint8_t *glyph_src);
 void DrawGlyph_Chinese_Adv(TextPrinter *win, const uint8_t *glyph_src, unsigned adv_px);
 /* Clear ChineseTileState pitch after FE/FB/FA (optional asm hook). */
 void Chinese_PitchReset(TextPrinter *win);
-/* FA/FB DrawInitialDownArrow：同步 TILE_OFFSET / CURSOR，避免双▼。 */
-void WaitArrow_Prepare_C(TextPrinter *win);
 int  DrawGlyph_ShouldUseLinear(TextPrinter *win, uint8_t write_op);
+uint8_t GetGlyphWidth_Chinese(TextPrinter *win, uint32_t glyph);
 void drawGlyph12(TextPrinter *win, const uint8_t *src18, int linear);
 void drawGlyph_Adv(TextPrinter *win, const uint8_t *src128, int linear, unsigned adv_px);
 int  GetStringWidth_Chinese(TextPrinter *win, const uint8_t *s,

@@ -1,63 +1,58 @@
-# src/ → out/game.bin（产物只进 out/）
+# AXVJ hook → out/game.bin (VMA 0x08800000)
+# Prefer build.bat on Windows.
+
 PREFIX   ?= arm-none-eabi-
 CC       := $(PREFIX)gcc
-AS       := $(PREFIX)gcc
 OBJCOPY  := $(PREFIX)objcopy
 
 SRC_ROOT := src
-PNC      := $(SRC_ROOT)/text/PrintNextChar
-NICK     := $(SRC_ROOT)/battle/UpdateNickInHealthbox
+TEXT     := $(SRC_ROOT)/text
+BATTLE   := $(SRC_ROOT)/battle
 OUT      := out
 BUILD    := $(OUT)/obj
-LINK_DIR := link
 
-OBJS     := $(BUILD)/entry.o \
-            $(BUILD)/print_next_char.o \
-            $(BUILD)/draw_glyph.o \
-            $(BUILD)/draw_scene.o \
-            $(BUILD)/get_string_width.o \
-            $(BUILD)/nick_entry.o \
-            $(BUILD)/update_nick_in_healthbox.o
+CFLAGS  := -mthumb -mcpu=arm7tdmi -ffreestanding -O2 -fno-builtin -Wall -I$(SRC_ROOT) -nostdlib -c
+ASFLAGS := -mthumb -mcpu=arm7tdmi -ffreestanding -x assembler-with-cpp -c
+LDFLAGS := -mthumb -mcpu=arm7tdmi -nostdlib -T link/game.ld -Wl,-Map=$(OUT)/game.map
 
-CFLAGS   := -mthumb -mcpu=arm7tdmi -ffreestanding -O2 -fno-builtin \
-            -Wall -Wextra -I$(SRC_ROOT) -nostdlib
-ASFLAGS  := -mthumb -mcpu=arm7tdmi -ffreestanding -x assembler-with-cpp
-LDFLAGS  := -mthumb -mcpu=arm7tdmi -nostdlib \
-            -T $(LINK_DIR)/game.ld -Wl,-Map=$(OUT)/game.map
+OBJS := \
+	$(BUILD)/PrintNextChar_entry.o \
+	$(BUILD)/PrintNextChar_hook.o \
+	$(BUILD)/DrawGlyphTiles_hook.o \
+	$(BUILD)/DrawGlyphTiles_scene.o \
+	$(BUILD)/GetStringWidth_hook.o \
+	$(BUILD)/GetGlyphWidth_hook.o \
+	$(BUILD)/UpdateNickInHealthbox_entry.o \
+	$(BUILD)/UpdateNickInHealthbox_hook.o
 
 .PHONY: all clean
 
-all: $(OUT)/game.bin
+all: $(OUT)/game.bin $(OUT)/game_syms.asm
 
-$(OUT) $(BUILD):
+$(BUILD):
 	mkdir -p $(BUILD)
 
-$(BUILD)/entry.o: $(PNC)/entry.s | $(BUILD)
-	$(AS) $(ASFLAGS) -c $< -o $@
+$(BUILD)/%.o: $(TEXT)/%.s | $(BUILD)
+	$(CC) $(ASFLAGS) $< -o $@
 
-$(BUILD)/print_next_char.o: $(PNC)/print_next_char.c $(SRC_ROOT)/game.h | $(BUILD)
-	$(CC) $(CFLAGS) -c $< -o $@
+$(BUILD)/%.o: $(TEXT)/%.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@
 
-$(BUILD)/draw_glyph.o: $(PNC)/draw_glyph.c $(SRC_ROOT)/game.h | $(BUILD)
-	$(CC) $(CFLAGS) -c $< -o $@
+$(BUILD)/%.o: $(BATTLE)/%.s | $(BUILD)
+	$(CC) $(ASFLAGS) $< -o $@
 
-$(BUILD)/draw_scene.o: $(PNC)/draw_scene.c $(SRC_ROOT)/game.h | $(BUILD)
-	$(CC) $(CFLAGS) -c $< -o $@
+$(BUILD)/%.o: $(BATTLE)/%.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@
 
-$(BUILD)/get_string_width.o: $(PNC)/get_string_width.c $(SRC_ROOT)/game.h | $(BUILD)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(BUILD)/nick_entry.o: $(NICK)/entry.s | $(BUILD)
-	$(AS) $(ASFLAGS) -c $< -o $@
-
-$(BUILD)/update_nick_in_healthbox.o: $(NICK)/update_nick_in_healthbox.c $(SRC_ROOT)/game.h | $(BUILD)
-	$(CC) $(CFLAGS) -c $< -o $@
-
-$(OUT)/game.elf: $(OBJS) $(LINK_DIR)/game.ld | $(OUT)
+$(OUT)/game.elf: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS)
 
 $(OUT)/game.bin: $(OUT)/game.elf
 	$(OBJCOPY) -O binary $< $@
 
+$(OUT)/game_syms.asm: $(OUT)/game.map
+	@GSW=$$(grep -E 'GetStringWidthChinese$$' $(OUT)/game.map | awk '{print $$1}'); \
+	printf '; Auto-generated from out/game.map - do not edit\nGetStringWidthChinese                   equ %s\n' "$${GSW:-0x08800000}" > $@
+
 clean:
-	rm -rf $(OUT)
+	rm -rf $(OUT)/obj $(OUT)/game.elf $(OUT)/game.bin $(OUT)/game.map $(OUT)/game_syms.asm

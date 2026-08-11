@@ -1,4 +1,4 @@
-/* F9-aware string width: Hanzi advance matches draw (CHS_GLYPH_ADVANCE_PX). */
+/* GetStringWidth_hook — pokeRS GetStringWidthChinese + F900/F980 widths. */
 #include "game.h"
 
 /* Walk PhraseTable PCS stream: F9 00 → glyph_px; FA..FE skip; stop at FF. */

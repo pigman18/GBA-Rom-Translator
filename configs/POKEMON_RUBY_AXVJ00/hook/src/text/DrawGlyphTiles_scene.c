@@ -1,4 +1,4 @@
-/* DrawGlyph scene routing */
+/* DrawGlyphTiles_scene — layout gates for DrawGlyphTiles_hook (AXVJ). */
 #include "game.h"
 
 /**

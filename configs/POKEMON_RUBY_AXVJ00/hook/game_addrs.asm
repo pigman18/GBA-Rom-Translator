@@ -93,11 +93,17 @@ gMiscBlank_Gfx                         equ 0x082089dc
 gPSSMenuHeader_Tilemap                 equ 0x08e8e128
 
 ; --- HW / lib (TODO GDB: need JP offsets) ---
-CpuSet                                 equ 0x081e07ec
-GetBattlerPosition                     equ 0x08078828
+CpuSet                                 equ 0x081B1294
+GetBattlerPosition                     equ 0x08075860
 
-; --- Window attribute ---
-GetWindowAttribute                     equ 0x0800414C
+; --- Window fill (NOT emerald GetWindowAttribute) ---
+; Callers: mov r1=left, r2=top, r3=width, [sp]=height; bl FillWindowRect
+; 旧名 GetWindowAttribute @ 0x0800414C 是本函数中段，日版 RS 无 pokeemerald 式
+; GetWindowAttribute(windowId, attr) API；不可对「返回值 *2」。
+FillWindowRect                         equ 0x0800413C
+FillWindowRect_Mid                     equ 0x0800414C
+FillWindowRect_Inner                   equ 0x08004108
+; 旧钩 Continue 位点（误挂中段时的恢复点）；保留符号以免旧文档断链
 GetWindowAttribute_Continue            equ 0x08004154 | 1
 WINDOW_WIDTH                           equ 1
 

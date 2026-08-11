@@ -2,19 +2,19 @@
 
 type:
   in_place — 写入原槽：F900 整串，或越槽时的 F9 80 短语引用（带 ``phrase_code``）
-  relocate — 编码超槽位且有指针源且模块 ``relocate=true``，写扩展区 + 指针改写
-  hook     — 前序失败且模块 ``hook=true`` 且有指针：生成 pointer_redirect.asm
+  relocate — 编码超槽位且有可用指针源且模块 ``relocate=true``，写扩展区 + 指针改写
+  hook     — 前序失败且模块 ``hook=true`` 且有可用指针：生成 pointer_redirect.asm
   keep     — 都无法满足，保留原文（ROM 不动）
 
-优先级链：F900 原地 → relocate → F9 80 原地 → hook → keep。
-（旧 build 里的 upgrade/f980 视为 in_place 别名。）
+优先级链（纯 1→4，编排期一次定死）：
+  1. F900 原地
+  2. 不够 → relocate（指针须在编排期校验可用）
+  3. 指针不够 → F980 原地
+  4. F980 不够 → hook
+  否则 keep
 
-含 ``FD`` / ``\\XX`` 占位的模板禁止整串 F9 80：PhraseTable 内的裸 FD
-会被 ProcessCurrentChar 当成控制码（非 StringExpand），出招等会狂打卡死。
-此类串只许 F900 原地（仍含 FD）、relocate/hook（扩展区仍含 FD）、或 keep。
-
-translate 阶段只做决策与编码（不注入 ROM），产出 translate.build.json，
-build 阶段按 type 注入（hook 交 armips）。
+translate 阶段产出 ``translate.build.json``（含已校验的 pointer_sources /
+phrase_code / target_hex）；build 阶段按 type **直入**，不再改路径、不再回退。
 """
 from __future__ import annotations
 
@@ -29,6 +29,8 @@ _RE_EXPAND_PLACEHOLDER = re.compile(r"\\(?!CC)(?:v|[0-9A-Fa-f]{2})")
 
 # 定长槽类型强制不可指针改写（不受 modules.json relocate 覆盖为 true）
 NO_RELOCATE_TYPES = frozenset({"stride", "struct", "ptr_stride", "stride_ptr"})
+
+POINTER_OFFSET = 0x08000000
 
 # 同 id 多 type 冲突时保留优先级更高者（注入去重 / 载入 build 用）
 PLAN_TYPE_RANK: dict[str, int] = {
@@ -187,23 +189,27 @@ def _ptr_sources(entry: dict) -> list:
     return entry.get("pointer_sources") or entry.get("pointer_addresses") or []
 
 
+def _file_offset(addr: int | str) -> int:
+    a = int(str(addr).replace("0x", ""), 16)
+    if a >= POINTER_OFFSET:
+        a -= POINTER_OFFSET
+    return a
+
+
 def entry_has_expand_placeholder(entry: dict) -> bool:
     """True if the JP slot is a StringExpand template (FD xx / \\XX).
 
-    Whole-string F9 80 must not wrap these: expand runs on the ROM/buffer
-    pointer before print; a phrase redirect leaves raw FD for the printer.
+    仅作形态标记；纯 1→4 链不再据此禁止 F980。
     """
     hx = (entry.get("original_hex") or "").replace(" ", "").lower()
     i = 0
     while i < len(hx) - 3:
         if hx[i : i + 2] == "fd":
-            # FD FF is not a buffer id; still treat as expand-ish control.
             return True
         if hx[i : i + 2] == "f9":
             i += 8  # skip F9 op hi lo
             continue
         if hx[i : i + 2] in ("fc",):
-            # FC extended controls — length varies; skip 1 byte + try next
             i += 2
             continue
         i += 2
@@ -213,80 +219,120 @@ def entry_has_expand_placeholder(entry: dict) -> bool:
     return False
 
 
-def preallocate_upgrade_phrases(
-    entries: list[dict],
-    charmap: Any,
-    phrase_codes: dict[str, int],
-    game_id: str = "",
-) -> None:
-    """只给“超槽位且确定走 F9 80”的条目预分配短语码。
+def _entry_address_off(entry: dict) -> int | None:
+    raw = entry.get("address")
+    if raw in (None, ""):
+        return None
+    try:
+        return _file_offset(raw)
+    except (TypeError, ValueError):
+        return None
 
-    走 relocate 的条目（有指针 + 允许 relocate）不预占码——F9 80 按需申请，
-    可 relocate 的路径用不到；只有无法 relocate（无指针/禁 relocate）的
-    超槽条目才需要 F9 80 码。
+
+def extract_truncated_fd_prefix(
+    rom: bytes | bytearray | None, entry: dict
+) -> bool:
+    """extract 裁掉串首 FD 时，address 落在缓冲 id 上（ROM[addr-1]==FD）。"""
+    if rom is None:
+        return False
+    addr = _entry_address_off(entry)
+    if addr is None or addr <= 0 or addr > len(rom):
+        return False
+    return rom[addr - 1] == 0xFD
+
+
+def rebase_truncated_fd_slot(
+    rom: bytes | bytearray | None, entry: dict
+) -> tuple[int, int] | None:
+    """若 extract 地址落在 FD 后的缓冲 id，回退到 FD 起点并扩 1 字节槽。
+
+    返回 ``(write_addr_file_off, byte_length)``；无需回退则 None。
     """
-    for e in entries:
-        t = _translated_of(e)
-        o = _original_of(e)
-        if e.get("_reject"):
-            continue
-        if not t or t == o:
-            continue
-        if "|||" in t:
-            continue
-        s = normalize_zh_punct(charmap._sanitize(normalize_zh_punct(t)))
-        if s in phrase_codes:
-            continue
-        byte_length = e.get("byte_length", 0) or 0
-        if byte_length < 5:
-            continue  # 槽位连 F9 80 都放不下 → keep
-        module_id = e.get("module") or e.get("_axvj_module") or e.get("category")
-        if _ptr_sources(e) and module_allows_relocate(game_id, module_id):
-            continue  # 可 relocate → 走 relocate，不预占 F9 80 码
-        if entry_has_expand_placeholder(e):
-            continue  # FD/\\XX 模板禁止整串 F9 80（B02h）
-        if not module_allows_phrase(game_id, module_id):
-            continue  # ui 特殊界面不短语引用 → keep
-        try:
-            raw_len = len(charmap.encode(s))
-        except Exception:
-            continue
-        if raw_len > byte_length:
-            phrase_codes[s] = len(phrase_codes)
+    if not extract_truncated_fd_prefix(rom, entry):
+        return None
+    addr = _entry_address_off(entry)
+    if addr is None:
+        return None
+    bl = int(entry.get("byte_length") or 0) + 1
+    return addr - 1, bl
 
 
-def plan_entry(
+def resolve_usable_pointers(
+    entry: dict,
+    rom: bytes | bytearray | None,
+    *,
+    game_id: str = "",
+    text_spans: list[tuple[int, int]] | None = None,
+    lz_spans: list[tuple[int, int]] | None = None,
+    min_pointer_source: int = 0x6000,
+    text_address: int | None = None,
+) -> list[str]:
+    """编排期校验指针：只保留当前确实指向该正文的可用站点。
+
+    无 ROM 时无法校验，原样返回登记指针（单测/缺 ROM 兜底）。
+    短共字串会 expand 后再 filter（与旧 inject 行为对齐，但结果写入 plan）。
+    ``text_address`` 可指定正文起点（FD 回退后用 addr-1）。
+    """
+    raw = list(_ptr_sources(entry))
+    if not raw:
+        return []
+    if rom is None:
+        return [str(p) for p in raw]
+
+    from .policy import (
+        expand_pointer_sources,
+        filter_pointer_sources,
+        should_expand_shared_literal,
+    )
+
+    addr = text_address if text_address is not None else _entry_address_off(entry)
+    if addr is None:
+        return []
+
+    module_id = entry.get("module") or entry.get("_axvj_module") or entry.get("category") or ""
+    original = _original_of(entry)
+    expected = POINTER_OFFSET + addr
+    kwargs = dict(
+        category=module_id,
+        original=original,
+        expected_pointer=expected,
+        lz_spans=lz_spans,
+        min_pointer_source=min_pointer_source,
+        text_spans=text_spans,
+    )
+    if should_expand_shared_literal(original, module_id, raw):
+        offs = expand_pointer_sources(rom, addr, raw, **kwargs)
+    else:
+        offs = filter_pointer_sources(rom, raw, addr, **kwargs)
+    return [f"0x{p:X}" if isinstance(p, int) else str(p) for p in offs]
+
+
+def _prepare_encoded(
     entry: dict,
     charmap: Any,
-    phrase_codes: dict[str, int],
-    game_id: str = "",
-) -> dict:
-    """决策单个条目的 type + target_hex。不改动 entry。"""
-    from .config_loader import module_wrap_kwargs
+    game_id: str,
+) -> tuple[str, str, bytes] | dict:
+    """返回 (sanitized, to_encode, encoded)；失败则返回 keep plan dict。"""
+    from .config_loader import apply_module_phrase_channel, module_wrap_kwargs
     from .text_wrap import wrap_text
 
     original = _original_of(entry)
     translated = _translated_of(entry)
-    byte_length = entry.get("byte_length", 0) or 0
     original_hex = entry.get("original_hex") or ""
     module_id = entry.get("module") or entry.get("_axvj_module") or entry.get("category")
 
-    # config.json rejects / 阈值校验：无条件 keep，不进 relocate/upgrade
     if entry.get("_reject"):
         return {
             "type": "keep",
             "target_hex": original_hex,
             "reason": "rejects/校验拒绝(_reject)",
         }
-
     if not translated or translated == original:
         return {
             "type": "keep",
             "target_hex": original_hex,
             "reason": "无翻译或译文与原文相同",
         }
-
-    # LLM batch 分隔符泄漏：||| 会编进 target_hex（含 00 填充），禁止注入
     if "|||" in translated:
         return {
             "type": "keep",
@@ -294,23 +340,13 @@ def plan_entry(
             "reason": "译文含 LLM 分隔符 |||",
         }
 
-    # Halfwidth/ASCII punct → fullwidth (JP PCS); sanitize; re-normalize if
-    # sanitize emitted ASCII punct (digits/letters halfwidth only).
     translated = normalize_zh_punct(translated)
     s = normalize_zh_punct(charmap._sanitize(translated))
-    allow_reloc = module_allows_relocate(game_id, module_id)
-    allow_phrase = module_allows_phrase(game_id, module_id)
-    allow_hook = module_allows_hook(game_id, module_id)
-    ptrs = _ptr_sources(entry)
-
-    # 按模块 word_count / wrap_pages 再折行后再编码。
     to_encode = wrap_text(
         s,
         target_lang="zh-Hans",
         **module_wrap_kwargs(game_id, module_id),
     )
-
-    # 编码（F9 00 单字流等）
     try:
         encoded = charmap.encode(to_encode)
     except Exception:
@@ -319,70 +355,213 @@ def plan_entry(
             "target_hex": original_hex,
             "reason": "译文编码失败",
         }
-
-    from .config_loader import apply_module_phrase_channel, module_phrase_channel
-
     encoded = apply_module_phrase_channel(encoded, game_id, module_id)
+    return s, to_encode, encoded
+
+
+def _ensure_phrase_code(phrase_codes: dict[str, int], text: str) -> int:
+    code = phrase_codes.get(text)
+    if code is None:
+        code = len(phrase_codes)
+        phrase_codes[text] = code
+    return code
+
+
+def _keep(original_hex: str, reason: str) -> dict:
+    return {"type": "keep", "target_hex": original_hex, "reason": reason}
+
+
+def plan_entry(
+    entry: dict,
+    charmap: Any,
+    phrase_codes: dict[str, int],
+    game_id: str = "",
+    *,
+    rom: bytes | bytearray | None = None,
+    text_spans: list[tuple[int, int]] | None = None,
+    lz_spans: list[tuple[int, int]] | None = None,
+    usable_ptrs: list[str] | None = None,
+) -> dict:
+    """决策单个条目的 type + target_hex。不改动 entry。
+
+    纯 1→4：F900 → relocate → F980 → hook → keep。
+    extract 若把地址落在 FD 后的缓冲 id：回退到 FD 起点写 in_place（槽+1）。
+    """
+    from .config_loader import module_phrase_channel
+
+    prepared = _prepare_encoded(entry, charmap, game_id)
+    if isinstance(prepared, dict):
+        return prepared
+    _s, to_encode, encoded = prepared
+
+    byte_length = entry.get("byte_length", 0) or 0
+    original_hex = entry.get("original_hex") or ""
+    module_id = entry.get("module") or entry.get("_axvj_module") or entry.get("category")
+    allow_reloc = module_allows_relocate(game_id, module_id)
+    allow_phrase = module_allows_phrase(game_id, module_id)
+    allow_hook = module_allows_hook(game_id, module_id)
     channel = module_phrase_channel(game_id, module_id)
 
-    # type 1: F900 编码 ≤ 原始槽位 → 原地（最高优先）；FF 补齐到 byte_length
+    rebase = rebase_truncated_fd_slot(rom, entry)
+    write_addr = _entry_address_off(entry)
+    if rebase is not None:
+        write_addr, byte_length = rebase
+
+    if usable_ptrs is None:
+        usable_ptrs = resolve_usable_pointers(
+            entry,
+            rom,
+            game_id=game_id,
+            text_spans=text_spans,
+            lz_spans=lz_spans,
+            text_address=write_addr,
+        )
+        # 回退前地址上也可能挂着指针
+        if not usable_ptrs and rebase is not None:
+            usable_ptrs = resolve_usable_pointers(
+                entry,
+                rom,
+                game_id=game_id,
+                text_spans=text_spans,
+                lz_spans=lz_spans,
+                text_address=_entry_address_off(entry),
+            )
+
+    def _with_write_meta(plan: dict) -> dict:
+        if rebase is not None and write_addr is not None:
+            plan["address"] = f"0x{write_addr:X}"
+            plan["byte_length"] = byte_length
+            plan["fd_rebased"] = True
+        return plan
+
+    # 1) F900 原地
     if len(encoded) <= byte_length:
-        return {
+        return _with_write_meta({
             "type": "in_place",
             "target_hex": pad_inplace_to_slot(encoded, byte_length).hex(" "),
-        }
+        })
 
-    # type 2: 编码超槽位且该模块允许 relocate 且有指针 → 指针扩表。
-    if allow_reloc and ptrs:
-        return {
+    # 2) relocate
+    if allow_reloc and usable_ptrs:
+        return _with_write_meta({
             "type": "relocate",
             "target_hex": encoded.hex(" "),
-            "pointer_sources": ptrs,
-        }
+            "pointer_sources": list(usable_ptrs),
+        })
 
-    # type 3: 超槽位且 relocate 不可用但允许短语 → F9 短语引用仍原地写入
-    # 禁止：原文含 FD/\\XX（须先 StringExpand；PhraseTable 内裸 FD 会当控制码狂打）
-    if allow_phrase and byte_length >= 5 and not entry_has_expand_placeholder(entry):
-        code = phrase_codes.get(s)
-        if code is not None:
-            return {
-                "type": "in_place",
-                "target_hex": pad_inplace_to_slot(
-                    _encode_phrase_ref(code, channel), byte_length
-                ).hex(" "),
-                "phrase_code": code,
-            }
+    # 3) F980 原地升槽
+    if allow_phrase and byte_length >= 5:
+        code = _ensure_phrase_code(phrase_codes, to_encode)
+        return _with_write_meta({
+            "type": "in_place",
+            "target_hex": pad_inplace_to_slot(
+                _encode_phrase_ref(code, channel), byte_length
+            ).hex(" "),
+            "phrase_code": code,
+        })
 
-    # type 4: 前序失败且 hook=true 且有指针 → armips 指针重定向 asm
-    if allow_hook and ptrs:
-        return {
+    # 4) hook
+    if allow_hook and usable_ptrs:
+        return _with_write_meta({
             "type": "hook",
             "target_hex": encoded.hex(" "),
-            "pointer_sources": ptrs,
+            "pointer_sources": list(usable_ptrs),
             "reason": "hook 指针重定向 asm",
-        }
+        })
 
-    # type 5: 保留原文，记录具体原因（勿把「有 hook 但无指针」说成「无 hook」）
-    if entry_has_expand_placeholder(entry) and allow_phrase:
-        reason = "含FD/\\XX占位：禁止整串F980；无指针可relocate/hook则keep"
+    if allow_phrase and byte_length < 5 and not usable_ptrs:
+        reason = "超槽位；槽位<5无法F980；无可用指针可relocate/hook"
+    elif not usable_ptrs and not allow_phrase:
+        reason = "无可用指针且无法短语升槽"
+    elif not usable_ptrs:
+        reason = "超槽位；无可用指针；无法F980升槽"
     elif not allow_reloc and not allow_hook and not allow_phrase:
         reason = "模块禁止 relocate/hook/短语，且超槽位"
-    elif not allow_reloc and not allow_hook:
-        reason = "模块禁止 relocate/hook，且槽位<5无法升槽"
-    elif allow_hook and not ptrs:
-        if allow_phrase and byte_length < 5:
-            reason = "允许 hook 但无指针；槽位<5 无法 F980 短语升槽"
-        elif allow_phrase:
-            reason = "允许 hook 但无指针，且无可用短语码"
-        else:
-            reason = "允许 hook 但无指针，且无法短语升槽"
-    elif not allow_phrase and not allow_hook:
-        reason = "模块禁止短语/hook，且无指针可 relocate"
-    elif not ptrs and not allow_phrase:
-        reason = "无指针且无法短语升槽"
     else:
-        reason = "无可用注入路径（超槽位/无指针/无短语码/无 hook）"
-    return {"type": "keep", "target_hex": original_hex, "reason": reason}
+        reason = "无可用注入路径（超槽位/模块禁路径）"
+    return _keep(original_hex, reason)
+
+
+def _plan_ptr_slots(plans: list[dict]) -> set[int]:
+    """relocate/hook 计划的指针站点（文件偏移），供 in_place 避让。"""
+    slots: set[int] = set()
+    for p in plans:
+        if (p.get("type") or "") not in ("relocate", "hook"):
+            continue
+        for src in p.get("pointer_sources") or []:
+            try:
+                slots.add(_file_offset(src))
+            except (TypeError, ValueError):
+                continue
+    return slots
+
+
+def _inplace_write_len(plan: dict, byte_length: int) -> int:
+    try:
+        raw = bytes.fromhex((plan.get("target_hex") or "").replace(" ", ""))
+    except ValueError:
+        return 0
+    if not raw:
+        return 0
+    return min(len(raw), byte_length) if byte_length > 0 else len(raw)
+
+
+def finalize_plans_against_ptr_slots(
+    entries: list[dict],
+    plans: list[dict],
+) -> list[dict]:
+    """编排期末：in_place 若会盖住 relocate/hook 指针槽 → 降为 keep。
+
+    不再在 build 注入时改路径；冲突在 build.json 里就写成 keep。
+    """
+    slots = _plan_ptr_slots(plans)
+    if not slots:
+        return plans
+    out: list[dict] = []
+    for e, p in zip(entries, plans):
+        if (p.get("type") or "") != "in_place":
+            out.append(p)
+            continue
+        try:
+            if p.get("address"):
+                addr = _file_offset(p["address"])
+            else:
+                addr = _entry_address_off(e)
+        except (TypeError, ValueError):
+            addr = _entry_address_off(e)
+        if addr is None:
+            out.append(p)
+            continue
+        bl = int(p.get("byte_length") or e.get("byte_length") or 0)
+        wlen = _inplace_write_len(p, bl)
+        if wlen <= 0:
+            out.append(p)
+            continue
+        end = addr + wlen
+        hits = sorted(s for s in slots if addr <= s < end)
+        if not hits:
+            out.append(p)
+            continue
+        out.append(
+            _keep(
+                e.get("original_hex") or p.get("target_hex") or "",
+                "in_place会覆盖relocate/hook指针槽 "
+                + ",".join(f"0x{h:X}" for h in hits[:4])
+                + ("…" if len(hits) > 4 else ""),
+            )
+        )
+    return out
+
+
+def preallocate_upgrade_phrases(
+    entries: list[dict],
+    charmap: Any,
+    phrase_codes: dict[str, int],
+    game_id: str = "",
+    **_kwargs: Any,
+) -> None:
+    """兼容旧调用：短语码改为 plan_entry 按需分配，此处不再预占。"""
+    return None
 
 
 def plan_entries(
@@ -390,8 +569,36 @@ def plan_entries(
     charmap: Any,
     phrase_codes: dict[str, int],
     game_id: str = "",
+    *,
+    rom: bytes | bytearray | None = None,
+    min_pointer_source: int = 0x6000,
 ) -> list[dict]:
-    """批量决策：先按 id 去重，再预分配 upgrade 短语码，再逐条 plan。"""
+    """批量决策：去重 → 纯1→4 plan（含 FD 回退/指针校验）→ 指针槽避让收尾。"""
     entries = dedupe_entries_by_id(entries)
-    preallocate_upgrade_phrases(entries, charmap, phrase_codes, game_id=game_id)
-    return [plan_entry(e, charmap, phrase_codes, game_id=game_id) for e in entries]
+
+    text_spans = None
+    lz_spans = None
+    if rom is not None:
+        from .policy import collect_entry_text_spans
+
+        text_spans = collect_entry_text_spans(entries)
+        try:
+            from .extract import trusted_lz_spans
+
+            lz_spans = trusted_lz_spans(rom)
+        except Exception:
+            lz_spans = None
+
+    plans = [
+        plan_entry(
+            e,
+            charmap,
+            phrase_codes,
+            game_id=game_id,
+            rom=rom,
+            text_spans=text_spans,
+            lz_spans=lz_spans,
+        )
+        for e in entries
+    ]
+    return finalize_plans_against_ptr_slots(entries, plans)

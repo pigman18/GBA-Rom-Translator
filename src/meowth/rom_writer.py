@@ -483,7 +483,7 @@ class RomWriter:
 
         in_place     → target_hex 写入原地址（含 F900 整串或 F9 80 短语引用）
         upgrade/f980 → 旧 build 别名，按 in_place 处理
-        relocate     → target_hex 写入扩展区并改写指针（弱化指针验证）
+        relocate     → target_hex 写入扩展区并改写 plan.pointer_sources（不再校验/回退）
         hook         → 跳过（armips pointer_redirect.asm 已写）
         keep         → 保留原文，日志打印
         """
@@ -499,10 +499,17 @@ class RomWriter:
         except ValueError:
             target = b""
 
-        address = int(entry.get("address", "0x0").replace("0x", ""), 16)
+        address = int(
+            (plan.get("address") or entry.get("address") or "0x0").replace("0x", ""),
+            16,
+        )
         if address >= self.POINTER_OFFSET:
             address -= self.POINTER_OFFSET
-        byte_length = entry.get("byte_length", 0) or 0
+        byte_length = int(
+            plan.get("byte_length")
+            if plan.get("byte_length") is not None
+            else (entry.get("byte_length", 0) or 0)
+        )
 
         if ptype == "hook":
             # armips 已通过 pointer_redirect.asm 写扩展区 + 改指针；避免双写
@@ -510,31 +517,8 @@ class RomWriter:
             return
 
         if ptype == "in_place":
-            # Never stamp F9 op≠00 over StringExpand templates:
-            # 1) entry original_hex / \\XX still has FD
-            # 2) extract skipped leading FD (addr points at buffer id; ROM[addr-1]==FD)
-            from .translate_plan import entry_has_expand_placeholder
-
-            phrase_ref = (
-                len(target) >= 2
-                and target[0] == 0xF9
-                and target[1] != 0x00
-            )
-            fd_prefix = address > 0 and address <= len(rom) and rom[address - 1] == 0xFD
-            if phrase_ref and (
-                entry_has_expand_placeholder(entry) or fd_prefix
-            ):
-                why = (
-                    "串首FD被extract裁掉（ROM[addr-1]==FD）"
-                    if fd_prefix and not entry_has_expand_placeholder(entry)
-                    else "含FD/\\XX"
-                )
-                print(
-                    f"  KEEP {entry_id} @ 0x{address:X} (cat={category}): "
-                    f"保留原文（{why}，禁止整串F9短语）"
-                )
-                stats["kept"] = stats.get("kept", 0) + 1
-                return
+            # translate.build.json 已编排好；此处只按 target_hex 直写。
+            # 指针槽避让已在 plan finalize；若仍撞上，属 build.json 过期，记 keep。
             write_len = min(len(target), byte_length) if target else 0
             clobber = self._body_covers_pointer_slot(
                 address, write_len, entry_id=str(entry_id)
@@ -544,7 +528,7 @@ class RomWriter:
                     f"  KEEP {entry_id} @ 0x{address:X} (cat={category}): "
                     f"保留原文（in_place 会覆盖 relocate 指针槽 "
                     f"{', '.join(f'0x{p:X}' for p in clobber[:4])}"
-                    f"{'…' if len(clobber) > 4 else ''}）"
+                    f"{'…' if len(clobber) > 4 else ''}；请重跑 translate）"
                 )
                 stats["skipped_ptr_clobber"] = stats.get("skipped_ptr_clobber", 0) + 1
                 stats["kept"] = stats.get("kept", 0) + 1
@@ -555,66 +539,40 @@ class RomWriter:
             else:
                 print(
                     f"  KEEP {entry_id} @ 0x{address:X} (cat={category}): "
-                    f"保留原文（in_place {len(target)}B 超槽位 {byte_length}B）"
+                    f"保留原文（in_place {len(target)}B 超槽位 {byte_length}B；"
+                    f"build.json 与槽不一致，请重跑 translate）"
                 )
                 stats["kept"] = stats.get("kept", 0) + 1
             return
 
         if ptype == "relocate":
-            ptrs = (
-                plan.get("pointer_sources")
-                or entry.get("pointer_addresses")
-                or entry.get("pointer_sources")
-                or []
-            )
-            if ptrs:
-                try:
-                    # 默认不传 expected_target（快）。短共字串（やめる 等）才
-                    # expand + 校验目标，避免菜单表只改到 1 个指针。
-                    from .policy import should_expand_shared_literal
-
-                    expand = should_expand_shared_literal(
-                        original, category, ptrs
-                    )
-                    self._write_relocated(
-                        rom,
-                        target,
-                        ptrs,
-                        expected_target=address if expand else None,
-                        category=category,
-                        original=original,
-                        lz_spans=getattr(self, "_axvj_lz_spans", None),
-                        expand_ptrs=expand,
-                    )
-                    stats["relocated"] += 1
-                    return
-                except RuntimeError as e:
-                    # 细化 relocate 失败原因：统计被 MIN_POINTER_SOURCE 跳过的指针
-                    skipped = sum(
-                        1
-                        for p in ptrs
-                        if self._to_rom_offset(int(str(p).replace("0x", ""), 16))
-                        < self.MIN_POINTER_SOURCE
-                    )
-                    detail = f"{e}"
-                    if skipped:
-                        detail += f"（其中 {skipped}/{len(ptrs)} 个指针低于 MIN_POINTER_SOURCE=0x{self.MIN_POINTER_SOURCE:X}）"
-                    print(
-                        f"  WARN {entry_id} @ 0x{address:X} (cat={category}): "
-                        f"relocate failed: {detail}; 保留原文"
-                    )
-            else:
+            # 指针已在编排期校验并写入 plan.pointer_sources；不再 expand/回退改路径
+            ptrs = plan.get("pointer_sources") or []
+            if not ptrs:
                 print(
                     f"  WARN {entry_id} @ 0x{address:X} (cat={category}): "
-                    f"relocate 计划但无指针源; 保留原文"
+                    f"relocate 计划但无 pointer_sources；保留原文（请重跑 translate）"
                 )
-            # 回退：relocate 失败/无指针 → F9 80 短语原地插入（需 phrase_code）
-            if self._try_phrase_fallback(
-                rom, address, byte_length, plan, stats, entry_id, category,
-                entry=entry,
-            ):
+                stats["kept"] = stats.get("kept", 0) + 1
                 return
-            stats["kept"] = stats.get("kept", 0) + 1
+            try:
+                self._write_relocated(
+                    rom,
+                    target,
+                    ptrs,
+                    expected_target=None,
+                    category=category,
+                    original=original,
+                    lz_spans=getattr(self, "_axvj_lz_spans", None),
+                    expand_ptrs=False,
+                )
+                stats["relocated"] += 1
+            except RuntimeError as e:
+                print(
+                    f"  WARN {entry_id} @ 0x{address:X} (cat={category}): "
+                    f"relocate failed: {e}; 保留原文（build.json 与 ROM 不一致，请重跑 translate）"
+                )
+                stats["kept"] = stats.get("kept", 0) + 1
             return
 
         # keep / 未知类型：保留原文，带具体原因
@@ -624,72 +582,6 @@ class RomWriter:
             f"保留原文（{reason}）"
         )
         stats["kept"] = stats.get("kept", 0) + 1
-
-    def _try_phrase_fallback(
-        self,
-        rom: bytearray,
-        address: int,
-        byte_length: int,
-        plan: dict,
-        stats: dict,
-        entry_id: str,
-        category: str,
-        entry: dict | None = None,
-    ) -> bool:
-        """relocate 失败回退：F9 80 短语引用（5 字节）写入原槽位。
-
-        优先级链：F900 原地 → relocate → F9 80 原地 → keep。
-        仅当 plan 已预分配 phrase_code 且槽位 ≥ 5 字节才成功。
-        含 FD/\\XX 的模板禁止回退 F980（B02h：PhraseTable 裸 FD 当控制码狂打）。
-        """
-        from .translate_plan import entry_has_expand_placeholder
-
-        code = plan.get("phrase_code")
-        if code is None:
-            return False
-        src = entry or {}
-        probe = {
-            "original": src.get("original") or plan.get("original"),
-            "original_hex": src.get("original_hex") or plan.get("original_hex"),
-        }
-        if entry_has_expand_placeholder(probe):
-            return False
-        if address > 0 and address <= len(rom) and rom[address - 1] == 0xFD:
-            return False
-        from .config_loader import (
-            F9_EOS,
-            F9_PHRASE_DEFAULT,
-            apply_module_phrase_channel,
-        )
-
-        target = bytes([
-            0xF9,
-            F9_PHRASE_DEFAULT,
-            (int(code) >> 8) & 0xFF,
-            int(code) & 0xFF,
-            F9_EOS,
-        ])
-        mid = plan.get("module") or category
-        target = apply_module_phrase_channel(target, self.game, mid)
-        if byte_length < len(target):
-            return False
-        clobber = self._body_covers_pointer_slot(
-            address, len(target), entry_id=entry_id
-        )
-        if clobber:
-            print(
-                f"  KEEP {entry_id} @ 0x{address:X} (cat={category}): "
-                f"保留原文（F9 短语回退会覆盖指针槽）"
-            )
-            stats["skipped_ptr_clobber"] = stats.get("skipped_ptr_clobber", 0) + 1
-            return False
-        self._write_in_place_v2(rom, address, target, byte_length)
-        stats["in_place"] = stats.get("in_place", 0) + 1
-        print(
-            f"  回退 F9 短语 @ 0x{address:X} (cat={category}): {entry_id} "
-            f"(relocate 失败/无指针，短语 {len(target)}B 原地)"
-        )
-        return True
 
     def _process_entry_v2(self, rom: bytearray, entry: dict, stats: dict) -> None:
         """Process a single entry. Raises ValueError on any write failure."""

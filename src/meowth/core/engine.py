@@ -1045,7 +1045,31 @@ class TranslationEngine:
                 self.charmap._phrase_codes[s] = code
 
         phrase_codes = self.charmap._phrase_codes
-        plans = plan_entries(flat, self.charmap, phrase_codes, game_id=self.config.game)
+        # 编排期用原盘校验指针；build.json 直入，不再在 inject 时改路径
+        rom_bytes = None
+        rom_path = getattr(self.config, "rom_path", None)
+        if rom_path:
+            try:
+                rp = Path(rom_path)
+                if rp.is_file():
+                    rom_bytes = rp.read_bytes()
+            except OSError as exc:
+                self._log(
+                    "warning",
+                    f"[翻译通路] 无法读取 ROM 做指针校验 ({rom_path}): {exc}",
+                )
+        if rom_bytes is None:
+            self._log(
+                "warning",
+                "[翻译通路] 无 ROM，跳过指针校验（relocate/hook 仅用登记指针）",
+            )
+        plans = plan_entries(
+            flat,
+            self.charmap,
+            phrase_codes,
+            game_id=self.config.game,
+            rom=rom_bytes,
+        )
 
         phrases_by_code = [None] * len(phrase_codes)
         for s, code in phrase_codes.items():
@@ -1068,8 +1092,8 @@ class TranslationEngine:
             row = {
                 "id": e.get("id", ""),
                 "type": p["type"],
-                "address": e.get("address", ""),
-                "byte_length": e.get("byte_length", 0),
+                "address": p.get("address") or e.get("address", ""),
+                "byte_length": p.get("byte_length", e.get("byte_length", 0)),
                 "module": mid,
                 "original": e.get("original", ""),
                 "translated": e.get("translated", ""),
@@ -1077,6 +1101,8 @@ class TranslationEngine:
                 "target_hex": p.get("target_hex", ""),
                 "_reject": bool(e.get("_reject")),
             }
+            if p.get("fd_rebased"):
+                row["fd_rebased"] = True
             ptrs = p.get("pointer_sources") or []
             if ptrs:
                 row["pointer_sources"] = ptrs

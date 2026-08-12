@@ -47,31 +47,8 @@ tiles:
       pointers:
         - '0x0839747C'
 texts:
-  # 剧情/UI/特殊文本语料白名单（词条·说明模块不引用）
-  msg_corpus: &msg_corpus
-    file: reference_corpus/RubySapphire/ja-Hrkt_msg.txt
-    mapping:
-      "　": " "
-      "\\n": "\n"
-      "\\c": "\n\n"
-      "\\r": "\\l"
-      "\\e": ""
-      "[PLAYER]": "\\01"
-      "[STR_VAR_1]": "\\02"
-      "[STR_VAR_2]": "\\03"
-      "[STR_VAR_3]": "\\04"
-      "[RIVAL]": "\\06"
-      "[KUN]": ""
-      "[RIGHT_ARROW]": "\\CC0CFA"
-      "[LEFT_ARROW]": "\\CC0CFB"
-      "[UP_ARROW]": "\\CC0CFC"
-      "[DOWN_ARROW]": "\\CC0CFD"
-      "[EVIL_TEAM]": "マグマだん"
-      "[GOOD_TEAM]": "アクアだん"
-      "[EVIL_LEADER]": "マツブサ"
-      "[GOOD_LEADER]": "アオヤギ"
   filters:
-    # 全局仅保留扫进危险区防护；词条/说明启发式挂在模块上；剧情/UI/特殊靠偏置锚点
+    # 全局危险区；词条/说明靠定址·定长，剧情/UI 靠 callers_filter
     - id: global_anim_cmd_filter
       type: anim_cmd_filter
       value: true
@@ -83,40 +60,67 @@ texts:
       value:
         start: '0x0836D000'
         end: '0x0836FFFF'
-  # 剧情偏对白 / UI 偏短标·控制符（模块 filters: *story_bias / *ui_bias）
+  # AXVJ 日版汇点（对照 pokeruby）；剧情 / 训练家 / UI 分列
+  # 训练家台词经 RAM→ShowFieldMessage，须 script_ops: trainerbattle，不能只靠 BL 回溯
+  story_callers: &story_callers
+    id: story_callers
+    type: callers_filter
+    filter: false
+    value:
+      sinks:
+        - name: ShowFieldMessage
+          address: '0x08061CF4'
+        - name: ShowFieldAutoScrollMessage
+          address: '0x08061D1C'
+      script_ops: [message, messageautoscroll, loadword_callstd]
+  trainer_callers: &trainer_callers
+    id: trainer_callers
+    type: callers_filter
+    filter: false
+    value:
+      script_ops: [trainerbattle]
+  ui_callers: &ui_callers
+    id: ui_callers
+    type: callers_filter
+    filter: false
+    value:
+      sinks:
+        - name: Menu_PrintText
+          address: '0x0806F16C'
+          text_arg: r0
+        - name: MenuPrintMessage
+          address: '0x0806F32C'
+          text_arg: r0
+        - name: MenuPrintMessageDefaultCoords
+          address: '0x0806F360'
+          text_arg: r0
+        - name: DisplayPartyMenuMessage
+          address: '0x0806BB3C'
+          text_arg: r0
+        - name: DisplayItemMessageOnField
+          address: '0x080F4020'
+          text_arg: r1
+        - name: PrintMessage
+          address: '0x080F3FC0'
+          text_arg: r0
+        - name: Text_InitWindowAndPrintText
+          address: '0x080030A8'
+          text_arg: r1
+        - name: Text_InitWindow
+          address: '0x08002CFC'
+          text_arg: r1
+        - name: Contest_StartTextPrinter
+          address: '0x08002D1C'
+          text_arg: r1
+        # P1 未钉（AXVJ 无独立 Menu_* 包装或与叶函数重合；直 bl Text_InitWindow 已由上项覆盖）:
+        # Menu_PrintTextPixelCoords / MenuPrint_Centered / MenuPrint_RightAligned /
+        # sub_8072A18 / sub_8072AB0
   story_bias: &story_bias
-    - id: story_msg_filter
-      type: msg_filter
-      filter: false
-      value: *msg_corpus
-    - id: story_dialogue_shape
-      type: dialogue_shape_filter
-      value: true
+    - *story_callers
+  trainer_bias: &trainer_bias
+    - *trainer_callers
   ui_bias: &ui_bias
-    - id: story_msg_filter
-      type: msg_filter
-      filter: false
-      value: *msg_corpus
-    - id: ui_assign_filter
-      type: control_or_short_filter
-      filter: false
-      value:
-        control_prefix: true
-        max_plain_chars: 12
-  # 说明类 scan 启发式（全局已瘦身，显式挂回）
-  desc_scan_filters: &desc_scan_filters
-    - id: desc_character_filter
-      type: character_filter
-      value: 'ＤＮＡ(*SKIP)(*FAIL)|[üÜ►♂♀ÖÄß：Ｃ-Ｚａ-ｚ]'
-    - id: desc_dialogue_shape_filter
-      type: dialogue_shape_filter
-      value: true
-    - id: desc_min_byte_length_filter
-      type: min_byte_length_filter
-      value: 8
-    - id: desc_garbage_heuristic_filter
-      type: garbage_heuristic_filter
-      value: true
+    - *ui_callers
   styles:
     # 按列表顺序交错分配 F9：01, 81, 02, 82…（勿写 channel）
     - id: 样式1
@@ -138,9 +142,9 @@ texts:
       label: 词条·性格
       group: 词条
       default: true
-      description: 性格名表/相遇与蛋描述
-      start: '0x397168'
-      end: '0x39734C'
+      description: 性格名指针表（25）；相遇/蛋描述走 UI callers
+      start: '0x3971E8'
+      end: '0x39724B'
       type: stride_ptr
       read:
         stride: 4
@@ -172,19 +176,11 @@ texts:
       hook: true
       style: 样式1
       filters:
-        - id: global_character_filter
+        # 占位名「？？？？？」跳过
+        - id: species_skip_qmark
           type: character_filter
           value: '？？？？？'
           filter: true
-        - id: global_dialogue_shape_filter
-          type: dialogue_shape_filter
-          value: false
-        - id: global_min_byte_length_filter
-          type: min_byte_length_filter
-          value: 1
-        - id: global_garbage_heuristic_filter
-          type: garbage_heuristic_filter
-          value: false
     - id: 招式名
       label: 词条·招式
       group: 词条
@@ -201,30 +197,18 @@ texts:
       label: 词条·训练家
       group: 词条
       default: true
-      description: Trainer class 名表
+      description: Trainer class 名表（窄带定址）
       start: '0x1C4A10'
       end: '0x3E95FF'
       type: scan
       relocate: true
       hook: true
+      min_byte_length: 3
       ranges:
         - start: '0x1C4A10'
           end: '0x1C4D00'
         - start: '0x3E944C'
           end: '0x3E9453'
-      filters:
-        - id: desc_character_filter
-          type: character_filter
-          value: 'ＤＮＡ(*SKIP)(*FAIL)|[üÜ►♂♀ÖÄß：Ｃ-Ｚａ-ｚ]'
-        - id: desc_dialogue_shape_filter
-          type: dialogue_shape_filter
-          value: false
-        - id: global_min_byte_length_filter
-          type: min_byte_length_filter
-          value: 3
-        - id: desc_garbage_heuristic_filter
-          type: garbage_heuristic_filter
-          value: true
     - id: 地点名
       label: 词条·地点
       group: 词条
@@ -237,19 +221,6 @@ texts:
       max_byte_length: 20
       relocate: false
       hook: true
-      filters:
-        - id: global_dialogue_shape_filter
-          type: dialogue_shape_filter
-          value: false
-        - id: global_min_byte_length_filter
-          type: min_byte_length_filter
-          value: 5
-        - id: place_max_byte_length_filter
-          type: max_byte_length_filter
-          value: 20
-        - id: global_garbage_heuristic_filter
-          type: garbage_heuristic_filter
-          value: false
     - id: 道具名
       label: 词条·道具
       group: 词条
@@ -281,7 +252,7 @@ texts:
       label: 说明·道具
       group: 说明
       default: true
-      description: 道具描述指针目标
+      description: 道具描述指针目标（定址 scan）
       start: '0x3984DC'
       end: '0x39A647'
       type: scan
@@ -290,7 +261,6 @@ texts:
       max_lines: 3
       relocate: true
       hook: true
-      filters: *desc_scan_filters
     - id: 招式说明
       label: 说明·招式
       group: 说明
@@ -325,7 +295,7 @@ texts:
       label: 说明·图鉴说明
       group: 说明
       default: true
-      description: 图鉴正文
+      description: 图鉴正文（定址 scan）
       start: '0x37DB9C'
       end: '0x384703'
       type: scan
@@ -334,14 +304,25 @@ texts:
       word_count: 16
       wrap_pages: false
       max_lines: 3
-      filters: *desc_scan_filters
 
-    # 文本大模块：词条/说明 → 剧情带 → 训练家 → UI → 特殊（差集）；地址先到先得
+    # 文本大模块：词条/说明 → 训练家(trainerbattle) → 剧情带 → UI
+    # callers 正文几乎都在 0x1xxxxx；前/中期按该池切分；不再单列「后期」（带内≈空）
+    - id: 训练家对白
+      label: 文本·训练家对白
+      group: 文本
+      default: true
+      description: 全 ROM；trainerbattle 脚本操作数（须排在剧情之前认领）
+      start: '0x0'
+      end: '0xFFFFFF'
+      type: scan
+      relocate: true
+      hook: true
+      filters: *trainer_bias
     - id: 前期剧情
       label: 文本·前期剧情
       group: 文本
       default: true
-      description: 全 ROM 前段地址带；语料+对白形态
+      description: 前段；callers（ShowFieldMessage / message）
       start: '0x0'
       end: '0x15C6AF'
       type: scan
@@ -352,30 +333,8 @@ texts:
       label: 文本·中期剧情
       group: 文本
       default: true
-      description: 中段地址带；语料+对白形态
+      description: 中后段；callers（含原后期带，正文多在 0x1xxxxx）
       start: '0x15C6B0'
-      end: '0x2AFFFF'
-      type: scan
-      relocate: true
-      hook: true
-      filters: *story_bias
-    - id: 训练家对白
-      label: 文本·训练家对白
-      group: 文本
-      default: true
-      description: 训练家登场/挑战前台词池（先于后期整带）
-      start: '0x3B4C01'
-      end: '0x3B9200'
-      type: scan
-      relocate: true
-      hook: true
-      filters: *story_bias
-    - id: 后期剧情
-      label: 文本·后期剧情
-      group: 文本
-      default: true
-      description: 后段至 ROM 末；语料+对白形态
-      start: '0x2B0000'
       end: '0xFFFFFF'
       type: scan
       relocate: true
@@ -385,25 +344,10 @@ texts:
       label: UI界面
       group: 文本
       default: true
-      description: 全 ROM；语料+短标/控制符；排在剧情之后
+      description: 全 ROM；callers（Menu_PrintText 等）；排在剧情之后
       start: '0x0'
       end: '0xFFFFFF'
       type: scan
       relocate: true
       hook: true
       filters: *ui_bias
-    - id: 特殊文本
-      label: 文本·特殊文本
-      group: 文本
-      default: true
-      description: 全 ROM；仅语料；整表导出时收剧情/UI 差集
-      start: '0x0'
-      end: '0xFFFFFF'
-      type: scan
-      relocate: true
-      hook: true
-      filters:
-        - id: story_msg_filter
-          type: msg_filter
-          filter: false
-          value: *msg_corpus

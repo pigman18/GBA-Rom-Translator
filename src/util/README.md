@@ -320,6 +320,26 @@ python src/util/gdb_patcher.py trap 0x5F0A00F9 --any-f9
 
 ---
 
+# addr_patcher.py
+
+ROM 地址交叉引用（Thumb）。默认 ROM：`roms/origin/POKEMON_RUBY_AXVJ00.gba`。
+
+```bash
+# 谁 bl/blx 到该函数（默认 depth=1）
+python src/util/addr_patcher.py callers 0x08061CF4
+# 向上展开调用链：调用点 → 归属函数 → 再查谁调该函数
+python src/util/addr_patcher.py callers 0x08061CF4 --depth 3
+python src/util/addr_patcher.py callers 0x08061CF4 --depth 3 -o callers.json
+
+# 谁以 LE 指针引用该地址（默认含非对齐；只要对齐加 --aligned-only）
+python src/util/addr_patcher.py refs 0x0814BA38
+python src/util/addr_patcher.py refs 0x0814BA38 --aligned-only
+```
+
+跳过标题 LZ 带；`callers` 先建全盘调用索引（一次反汇编），再按 `--depth` 查链。归属函数启发式：最近 bl 目标 / `push {…,lr}`。
+
+---
+
 # texts_patcher.py
 
 按 `src/util/configs/<game_id>.yaml` 的模块地址带导出 / 搜索 PCS 文本；坏句写入全局 `texts.omit_ranges`，模块 `ranges` 保持粗带。
@@ -457,6 +477,70 @@ python src/util/texts_patcher.py export <rom.gba> [--config yaml] [--module 模�
 默认按 yaml 全部模块扫 PCS（已减 `omit_ranges`），写出 `src/util/work/<game_id>/texts.json`。  
 单模块：`--module 道具名` → `src/util/work/<game_id>/texts_道具名.json`。  
 **禁止**默认写到流水线 `configs/<game_id>/translate/`（见 `.cursor/rules/util-no-pipeline-output.mdc`）。
+
+含 `msg_filter`（`filter: false`）的模块：**指针优先**——只验收 `ptr_index` 目标正文，再跑语料/形态闸；不再按语料 PCS 全盘 FF 针扫。
+
+含 `callers_filter`（`filter: false`）的模块：只验收预计算「经 sink callers 可达」正文（∩ 模块地址带）；AXVJ 剧情/UI 偏置仅挂此闸。
+
+### `callers_filter`（与 addr_patcher callers 同向）
+
+```yaml
+- id: story_callers
+  type: callers_filter
+  filter: false
+  value:
+    sinks:
+      - name: ShowFieldMessage
+        address: '0x08061CF4'          # text_arg 默认 r0
+      - name: ShowFieldAutoScrollMessage
+        address: '0x08061D1C'
+    script_ops: [message, messageautoscroll, loadword_callstd]
+- id: trainer_callers
+  type: callers_filter
+  filter: false
+  value:
+    script_ops: [trainerbattle]   # 训练家台词在 RAM，BL 回溯看不到
+- id: ui_callers
+  type: callers_filter
+  filter: false
+  value:
+    sinks:
+      - name: Menu_PrintText
+        address: '0x0806F16C'
+        text_arg: r0
+      - name: Text_InitWindow
+        address: '0x08002CFC'
+        text_arg: r1              # 战斗四键等走 ldr r1; bl
+```
+
+预计算（一次性反汇编，可慢）：
+1. 有 `sinks`：按原始 Thumb **BL 编码**全盘找调用点（避免 Capstone 线性失步），再向前回溯解析 `text_arg`（`r0`|`r1`，默认 `r0`）上的 `ldr …,[pc,#…]` ROM 字面量；只保留 ROM 正文指针（RAM 缓冲不进池）；
+2. `script_ops`：`message` / `messageautoscroll`；`loadword_callstd`（0x0F 后须有 callstd）；`trainerbattle`（0x5C，按 type 取 intro/defeat 等文本指针）；
+3. 调用链解析到的 ROM 指针直接收录（仅 `_is_rom_text_ptr` 闸）；形态二次过滤交给模块其它 filter，不在此用 Thumb/形态启发式否决。
+
+说明：AXVJ 字段本正文几乎都在 `0x1xxxxx`；模块「前/中期」按该池地址切分，不是按通关进度。训练家模块须排在剧情之前，并用 `trainerbattle` 单独认领。
+
+AXVJ 已钉 sinks（对照 pokeruby `menu.h` / `text.h`）：
+
+| 域 | 符号 | 地址 | text_arg |
+|----|------|------|----------|
+| story | ShowFieldMessage | `0x08061CF4` | r0 |
+| story | ShowFieldAutoScrollMessage | `0x08061D1C` | r0 |
+| UI | Menu_PrintText | `0x0806F16C` | r0 |
+| UI | MenuPrintMessage | `0x0806F32C` | r0 |
+| UI | MenuPrintMessageDefaultCoords | `0x0806F360` | r0 |
+| UI | DisplayPartyMenuMessage | `0x0806BB3C` | r0 |
+| UI | DisplayItemMessageOnField | `0x080F4020` | **r1** |
+| UI | PrintMessage（野外道具内部） | `0x080F3FC0` | r0 |
+| UI | Text_InitWindowAndPrintText | `0x080030A8` | **r1** |
+| UI | Text_InitWindow | `0x08002CFC` | **r1** |
+| UI | Contest_StartTextPrinter | `0x08002D1C` | **r1** |
+
+钉地址方法：用日版 `gScriptCmdTable` 的 `ScrCmd_message`（opcode 0x67）反汇编得到 `ShowFieldMessage`；`Menu_PrintText` 在 menu 区找「加载窗指针 + tile 偏移后 `bl`」的包装函数；`Text_InitWindow` 为 thunk（body=`InitTextPrinter`）。
+
+**不要**挂成 sink：`Text_InitWindowWithTemplate`（只建窗）、`StringExpandPlaceholders` / `BattleStringExpandPlaceholders*`（只展开）、`BufferStringBattle`（参数是 string ID）、`Text_PrintWindow*` / `Text_UpdateWindow*`（读已绑 `win->text`）、Emerald 系 `AddTextPrinter*`。
+
+P1 尚未钉到独立 AXVJ 包装（直 `bl Text_InitWindow` 已由叶入口覆盖；menu 旁路形态与美版不完全同址）：`Menu_PrintTextPixelCoords` / `MenuPrint_Centered` / `MenuPrint_RightAligned` / `sub_8072A18` / `sub_8072AB0`。
 
 ## 搜索 (scan)
 

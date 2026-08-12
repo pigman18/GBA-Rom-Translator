@@ -36,7 +36,7 @@ function isError4(original, translated) {
 // 移除无效的译文
 let tt2 = texts_translated.filter((tt) => {
     let al = getAddressList(tt.original);
-    return al.length > 0 && ((tt.translated || '').indexOf('|||') === -1);
+    return al.length > 0 && ((tt.translated || '').indexOf('|||') === -1) && tt.status !== 404;
 });
 texts_translated = tt2;
 fs.writeFileSync('./texts_translated.json', JSON.stringify(texts_translated, null, 2));

@@ -645,12 +645,46 @@ def plain_original(original: str) -> str:
     return s
 
 
+def _msg_soft_key(s: str) -> str:
+    """msg_filter 二次匹配键：剥控制码/换行、方括号 tag、首部变量占位与助词，再去空白。"""
+    t = plain_original(s)
+    # 语料残留 [PALETTE]/[PAUSE…] / 未 mapping 的 [STR_VAR_…]
+    t = re.sub(r"\[[^\]]*\]", "", t)
+    # [PLAYER]/01 等：语料 mapping 后常为 \\01は…；ROM 侧无此前缀
+    t = re.sub(r"^\\0[1-6][はがのもを]?", "", t)
+    t = re.sub(r"^[\u0001-\u0006][はがのもを]?", "", t)
+    # 句中仍可能残留的变量字节转义（软匹配用）
+    t = re.sub(r"\\0[1-6]", "", t)
+    return _norm_original_key(t)
+
+
+# msg_filter 语料缓存：(path, mtime, mapping) → (exact, norms, softs, mapped_lines)
+# softs：剥占位后全等键；mapped_lines 保留供诊断/兼容，匹配不再 fuzz 召回
+# v2：无后缀展开
+_MSG_FILTER_CACHE: dict[
+    tuple[Any, ...],
+    tuple[frozenset[str], frozenset[str], frozenset[str], tuple[str, ...]],
+] = {}
+
+
 def _has_msg_include_filter(filters: list[dict[str, Any]] | None) -> bool:
     """模块是否有 msg_filter 包含模式（语料白名单）。"""
     for spec in filters or []:
         if not isinstance(spec, dict):
             continue
         if str(spec.get("type") or "") != "msg_filter":
+            continue
+        if "filter" in spec and not bool(spec.get("filter")):
+            return True
+    return False
+
+
+def _has_callers_include_filter(filters: list[dict[str, Any]] | None) -> bool:
+    """模块是否有 callers_filter 包含模式（sink callers 白名单）。"""
+    for spec in filters or []:
+        if not isinstance(spec, dict):
+            continue
+        if str(spec.get("type") or "") != "callers_filter":
             continue
         if "filter" in spec and not bool(spec.get("filter")):
             return True
@@ -709,13 +743,19 @@ def resolve_filters(cfg: dict, mod: dict) -> list[dict[str, Any]]:
     has_mod_filters_key = "filters" in mod
     extra = list(mod.get("filters") or []) if has_mod_filters_key else []
 
-    # 语料白名单 / 原文白名单：不叠全局启发式（短标·填充槽靠文本匹配）
-    if _has_include_original_text_filter(extra) or _has_msg_include_filter(extra):
+    # 语料 / callers / 原文白名单：不叠全局启发式（靠白名单本身）
+    if (
+        _has_include_original_text_filter(extra)
+        or _has_msg_include_filter(extra)
+        or _has_callers_include_filter(extra)
+    ):
         keep_types = {
             "msg_filter",
+            "callers_filter",
             "address_filter",
             "anim_cmd_filter",
             "ime_keyboard_filter",
+            "require_pointer_filter",
         }
         base = [
             dict(s)
@@ -799,13 +839,25 @@ class DialogueShapeFilter(TextFilter):
     type_name = "dialogue_shape_filter"
 
     @staticmethod
-    def shape_ok(ctx: FilterContext) -> bool:
-        """对白形态：指针短标可留；否则须像真脚本句（\\n 单独不够）。"""
+    def shape_ok(ctx: FilterContext, *, pointer_ok: bool = True) -> bool:
+        """对白/说明形态。
+
+        ``pointer_ok=True``（默认，说明类兼容）：有指针即放行。
+        ``pointer_ok=False``（剧情）：须像真脚本句，避免吞掉 UI 短标。
+        """
         o = ctx.original or ""
         plain = ctx.original_plain or ""
-        if ctx.is_pointer_based:
+        if pointer_ok and ctx.is_pointer_based:
             return True
         jp = len(re.findall(r"[\u3040-\u30ff]", o))
+        # 剧情 + 有指针：短对白/路标式引号也放行（须在 jp<8 早退之前）
+        if (not pointer_ok) and ctx.is_pointer_based:
+            if ("\\l" in o or "\\p" in o or "\\n" in o) and jp >= 8:
+                return True
+            if ("『" in o or "「" in o) and jp >= 4:
+                return True
+            if ("！" in o or "？" in o or "！" in plain or "？" in plain) and jp >= 6:
+                return True
         if jp < 8:
             return False
         if "ポケモン" in o:
@@ -833,9 +885,15 @@ class DialogueShapeFilter(TextFilter):
         return False
 
     def hit(self, ctx: FilterContext) -> bool | None:
-        if not bool(self.value):
+        val = self.value
+        pointer_ok = True
+        if isinstance(val, dict):
+            if not bool(val.get("enabled", True)):
+                return None
+            pointer_ok = bool(val.get("pointer_ok", True))
+        elif not bool(val):
             return None
-        return not self.shape_ok(ctx)
+        return not self.shape_ok(ctx, pointer_ok=pointer_ok)
 
 
 class MinByteLengthFilter(TextFilter):
@@ -1230,8 +1288,7 @@ class OriginalTextFilter(TextFilter):
         return False
 
 
-# msg_filter 语料缓存：(resolved_path, mapping_tuple) → (exact_set, norm_set)
-_MSG_FILTER_CACHE: dict[tuple[Any, ...], tuple[frozenset[str], frozenset[str]]] = {}
+# msg_filter 语料加载见下方 _load_msg_filter_sets（缓存定义在 plain_original 旁）
 
 
 def _util_work_root() -> Path:
@@ -1258,7 +1315,8 @@ def _apply_msg_mapping(text: str, mapping: dict[str, str]) -> str:
 
 def _load_msg_filter_sets(
     file_spec: str, mapping: dict[str, str]
-) -> tuple[frozenset[str], frozenset[str]]:
+) -> tuple[frozenset[str], frozenset[str], frozenset[str], tuple[str, ...]]:
+    """返回 (exact, norms, softs, mapped_lines)。无后缀展开。"""
     path = _resolve_msg_filter_file(file_spec)
     map_items = tuple(sorted((str(k), str(v)) for k, v in mapping.items()))
     cache_key = (str(path), path.stat().st_mtime_ns, map_items)
@@ -1267,6 +1325,8 @@ def _load_msg_filter_sets(
         return hit
     exact: set[str] = set()
     norms: set[str] = set()
+    softs: set[str] = set()
+    mapped_list: list[str] = []
     for line in path.read_text(encoding="utf-8").splitlines():
         if not line.strip():
             continue
@@ -1274,16 +1334,41 @@ def _load_msg_filter_sets(
         if not mapped.strip():
             continue
         exact.add(mapped)
+        mapped_list.append(mapped)
         nk = _norm_original_key(mapped)
         if nk:
             norms.add(nk)
-    out = (frozenset(exact), frozenset(norms))
+        sk = _msg_soft_key(mapped)
+        if sk:
+            softs.add(sk)
+    out = (
+        frozenset(exact),
+        frozenset(norms),
+        frozenset(softs),
+        tuple(mapped_list),
+    )
     _MSG_FILTER_CACHE[cache_key] = out
     return out
 
 
+def _msg_soft_equal_after_fuzz(
+    rom_text: str,
+    softs: frozenset[str],
+    mapped_lines: tuple[str, ...],
+) -> bool:
+    """剥占位后 soft_key 全等（集合查找）。
+
+    旧路径曾用 rapidfuzz Top-K 再比 soft_key；若 soft_key 真相等，
+    语料 softs 集合已含该键，fuzz 召回无法多检出，却把指针优先扫拖成
+    O(目标数×语料行数)。故只保留集合命中。
+    """
+    del mapped_lines  # 兼容旧签名；不再做 fuzz 召回
+    sk = _msg_soft_key(rom_text)
+    return bool(sk) and sk in softs
+
+
 class MsgFilter(TextFilter):
-    """语料白名单：file + mapping 后与 ROM 解码原文比对。"""
+    """语料白名单：精确 → norm → soft_key 集合全等；可 min_plain_chars。"""
 
     type_name = "msg_filter"
 
@@ -1294,24 +1379,37 @@ class MsgFilter(TextFilter):
         file_spec = val.get("file")
         if not file_spec:
             return None
+        try:
+            min_plain = int(val.get("min_plain_chars", 0) or 0)
+        except (TypeError, ValueError):
+            min_plain = 0
+        plain = ctx.original_plain or ""
+        if min_plain > 0 and len(plain) < min_plain:
+            return False
         raw_map = val.get("mapping") or {}
         if not isinstance(raw_map, dict):
             raise SystemExit(f"msg_filter.mapping 须为对象 id={self.id!r}")
         mapping = {str(k): str(v) for k, v in raw_map.items()}
-        exact, norms = _load_msg_filter_sets(str(file_spec), mapping)
+        exact, norms, softs, mapped_lines = _load_msg_filter_sets(
+            str(file_spec), mapping
+        )
         o = ctx.original or ""
-        plain = ctx.original_plain or ""
         if o in exact or plain in exact:
             return True
         for candidate in (o, plain):
             nk = _norm_original_key(candidate)
             if nk and nk in norms:
                 return True
+        for candidate in (o, plain):
+            if candidate and _msg_soft_equal_after_fuzz(
+                candidate, softs, mapped_lines
+            ):
+                return True
         return False
 
 
 class ControlOrShortFilter(TextFilter):
-    """UI 归属：控制符开头，或去控制符后短标签。"""
+    """UI 归属：\\CC 控制符开头，或去控制符后短标签（可设 min/max_plain_chars）。"""
 
     type_name = "control_or_short_filter"
 
@@ -1329,13 +1427,50 @@ class ControlOrShortFilter(TextFilter):
             max_plain = int(val.get("max_plain_chars", 12))
         except (TypeError, ValueError):
             max_plain = 12
+        try:
+            min_plain = int(val.get("min_plain_chars", 1))
+        except (TypeError, ValueError):
+            min_plain = 1
+        if min_plain < 0:
+            min_plain = 0
         o = ctx.original or ""
         plain = ctx.original_plain or ""
-        if control_prefix and o.startswith("\\"):
+        # 仅 \\CC…（含行首换行）；\\01–\\06 玩家/变量占位不算 UI 控制符
+        if control_prefix and re.match(r"^[\n]*\\CC", o):
             return True
-        if max_plain > 0 and 0 < len(plain) <= max_plain:
+        if max_plain > 0 and min_plain <= len(plain) <= max_plain:
             return True
         return False
+
+
+class CallersFilter(TextFilter):
+    """callers 可达：正文是否经配置 sink 的 bl 调用点 / 脚本 message 传入。
+
+    value.sinks: [{name, address}, ...]；name 对照 pokeruby，address 为日版入口。
+    与 addr_patcher callers 同向；filter: false 时作包含闸（命中才留）。
+    """
+
+    type_name = "callers_filter"
+
+    def hit(self, ctx: FilterContext) -> bool | None:
+        val = self.value
+        if not isinstance(val, dict):
+            return None
+        sinks = val.get("sinks")
+        if not isinstance(sinks, list) or not sinks:
+            return None
+        from util._callers_filter import (
+            ensure_callers_cache,
+            get_active_rom,
+        )
+
+        rom = get_active_rom()
+        if rom is None:
+            return False
+        reachable = ensure_callers_cache(rom, [self.spec])
+        if reachable is None:
+            return False
+        return ctx.address in reachable
 
 
 FILTER_TYPES: dict[str, type[TextFilter]] = {
@@ -1351,6 +1486,7 @@ FILTER_TYPES: dict[str, type[TextFilter]] = {
     OriginalTextFilter.type_name: OriginalTextFilter,
     MsgFilter.type_name: MsgFilter,
     ControlOrShortFilter.type_name: ControlOrShortFilter,
+    CallersFilter.type_name: CallersFilter,
 }
 
 
@@ -1462,6 +1598,88 @@ def _original_include_items(
     return None
 
 
+# msg_filter 语料 → PCS 体缓存（按 file+mtime+mapping）
+_MSG_BODY_CACHE: dict[tuple[Any, ...], set[bytes]] = {}
+
+
+def _msg_needle_variants(mapped: str) -> set[str]:
+    """语料整行变体（禁止句中切段）：mapping 全文 / 去 tag / 去行首变量 / 去行尾 CC。"""
+    out: set[str] = set()
+
+    def add(s: str) -> None:
+        s = (s or "").strip("\n")
+        if not s:
+            return
+        out.add(s)
+        t = re.sub(r"(\\CC[0-9A-Fa-f]+)+$", "", s)
+        if t and t != s:
+            out.add(t)
+        t = re.sub(r"\[PAUSE[^\]]*\]$", "", s)
+        if t and t != s:
+            out.add(t.strip("\n"))
+
+    add(mapped)
+    no_tag = re.sub(r"\[[^\]]*\]", "", mapped)
+    add(no_tag)
+    for base in (mapped, no_tag):
+        t = re.sub(r"^\\0[1-6][はがのもを]?", "", base)
+        t = re.sub(r"^[\n ]+", "", t)
+        add(t)
+    return out
+
+
+def _msg_include_needle_bodies(
+    filters: list[dict[str, Any]] | None,
+) -> set[bytes]:
+    """msg_filter 包含模式：语料变体编成 PCS（含 FF），供按 EOS 反查。"""
+    out: set[bytes] = set()
+    for spec in filters or []:
+        if not isinstance(spec, dict):
+            continue
+        if str(spec.get("type") or "") != "msg_filter":
+            continue
+        if bool(spec.get("filter", True)):
+            continue
+        val = spec.get("value")
+        if not isinstance(val, dict):
+            continue
+        file_spec = val.get("file")
+        if not file_spec:
+            continue
+        raw_map = val.get("mapping") or {}
+        if not isinstance(raw_map, dict):
+            raise SystemExit(f"msg_filter.mapping 须为对象 id={spec.get('id')!r}")
+        mapping = {str(k): str(v) for k, v in raw_map.items()}
+        path = _resolve_msg_filter_file(str(file_spec))
+        map_items = tuple(sorted((str(k), str(v)) for k, v in mapping.items()))
+        # v3：整行针 + 与 msg min_plain 对齐（跳过过短/纯控制）
+        cache_key = ("v3", str(path), path.stat().st_mtime_ns, map_items)
+        hit = _MSG_BODY_CACHE.get(cache_key)
+        if hit is not None:
+            out |= hit
+            continue
+        try:
+            min_plain = int(val.get("min_plain_chars", 0) or 0)
+        except (TypeError, ValueError):
+            min_plain = 0
+        chunk: set[bytes] = set()
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            mapped = _apply_msg_mapping(line, mapping)
+            if not mapped.strip():
+                continue
+            for text in _msg_needle_variants(mapped):
+                if min_plain > 0 and len(plain_original(text)) < min_plain:
+                    continue
+                body = _encode_jp_needle(text)
+                if body and len(body) >= 2:
+                    chunk.add(body)
+        _MSG_BODY_CACHE[cache_key] = chunk
+        out |= chunk
+    return out
+
+
 def _encode_jp_needle(text: str) -> bytes | None:
     """把抽出原文编码为 JP PCS（含 FF）。失败返回 None。"""
     from meowth.jp_pcs import CHAR_TO_BYTE
@@ -1539,13 +1757,29 @@ def extract_scan(
     # 只用 jp_pcs + 本地 read_pcs / SCRIPT_BANK_MIN；禁止 import meowth.extract
     #（extract 会 load_game_config → 读流水线 texts.json，与 util 导出死锁）。
     from meowth.jp_pcs import decode_pcs, looks_like_jp_text
+    from util._callers_filter import (
+        ensure_callers_cache,
+        filters_need_callers,
+        set_active_rom,
+    )
+
+    set_active_rom(rom)
+    filt = _merge_legacy_length_filters(mod, filters)
+    if filters_need_callers(filt):
+        for spec in filt:
+            if str(spec.get("type") or "") != "callers_filter":
+                continue
+            s = ensure_callers_cache(rom, [spec]) or frozenset()
+            print(
+                f"  [callers] {spec.get('id')}: reachable ×{len(s)} "
+                f"({mod.get('id')})"
+            )
 
     mid = mod["id"]
     mtype = str(mod.get("type") or "scan")
     bands = effective_module_bands(mod, omit_ranges or [])
     if not bands:
         return []
-    filt = _merge_legacy_length_filters(mod, filters)
 
     def _parse(v: object) -> int:
         if isinstance(v, int):
@@ -1575,76 +1809,77 @@ def extract_scan(
     out: list[dict] = []
     seen: set[int] = set()
     pins_only_fallthrough = False
+
+    def _try_accept(
+        a: int, body: bytes | None, *, pinned: bool = False, trust_chain: bool = False
+    ) -> None:
+        if a in seen:
+            return
+        if not _in_bands(a):
+            return
+        if a < SCRIPT_BANK_MIN or TITLE_LZ_BAND[0] <= a < TITLE_LZ_BAND[1]:
+            return
+        raw = read_pcs(rom, a, 512)
+        if raw is None and body is not None:
+            raw = body
+        if raw is None:
+            return
+        # pinned / trust_chain（callers 已解析）：跳过 looks_like；形态闸交给其它 filter
+        if not pinned and not trust_chain:
+            if not looks_like_jp_text(raw):
+                if body is None or not (
+                    body.endswith(b"\xff")
+                    and rom[a : a + len(body)] == body
+                ):
+                    return
+                raw = body
+        text = decode_pcs(raw)
+        ptrs = list(ptrs_map.get(a, []))
+        ctx = make_filter_context(
+            fo=a,
+            raw=raw,
+            original=text,
+            ptrs=ptrs,
+            module_id=str(mid),
+            module_type=mtype,
+        )
+        # yaml 白名单绑了 address/start-end 时允许无指针；跳过 UI 归属短标闸
+        use_filt = filt
+        if pinned and filt:
+            skip = {
+                "require_pointer_filter",
+                "control_or_short_filter",
+            }
+            use_filt = [
+                f
+                for f in filt
+                if str(f.get("type") or "") not in skip
+            ]
+        if use_filt and not apply_filters(ctx, use_filt):
+            return
+        seen.add(a)
+        out.append(
+            _stamp(
+                {
+                    "address": f"0x{BASE + a:08X}",
+                    "original": text,
+                    "original_hex": raw.hex(" "),
+                    "byte_length": len(raw),
+                    "is_pointer_based": bool(ptrs),
+                    "pointer_sources": [
+                        f"0x{BASE + q:08X}" for q in ptrs
+                    ],
+                    "pointer_addresses": [
+                        f"0x{BASE + q:08X}" for q in ptrs
+                    ],
+                },
+                mid=mid,
+                game_code=game_code,
+            )
+        )
+
     if include_items is not None:
         # 包含模式：无地址绑定时 band 内 find；有地址时只读指定点/带
-        def _try_accept(
-            a: int, body: bytes | None, *, pinned: bool = False
-        ) -> None:
-            if a in seen:
-                return
-            if not _in_bands(a):
-                return
-            if a < SCRIPT_BANK_MIN or TITLE_LZ_BAND[0] <= a < TITLE_LZ_BAND[1]:
-                return
-            raw = read_pcs(rom, a, 512)
-            if raw is None and body is not None:
-                raw = body
-            if raw is None:
-                return
-            # pinned（yaml address/start-end）：跳过 looks_like（填充槽多 0x00 会误杀）
-            if not pinned:
-                if not looks_like_jp_text(raw):
-                    if body is None or not (
-                        body.endswith(b"\xff")
-                        and rom[a : a + len(body)] == body
-                    ):
-                        return
-                    raw = body
-            text = decode_pcs(raw)
-            ptrs = list(ptrs_map.get(a, []))
-            ctx = make_filter_context(
-                fo=a,
-                raw=raw,
-                original=text,
-                ptrs=ptrs,
-                module_id=str(mid),
-                module_type=mtype,
-            )
-            # yaml 白名单绑了 address/start-end 时允许无指针；跳过 UI 归属短标闸
-            use_filt = filt
-            if pinned and filt:
-                skip = {
-                    "require_pointer_filter",
-                    "control_or_short_filter",
-                }
-                use_filt = [
-                    f
-                    for f in filt
-                    if str(f.get("type") or "") not in skip
-                ]
-            if use_filt and not apply_filters(ctx, use_filt):
-                return
-            seen.add(a)
-            out.append(
-                _stamp(
-                    {
-                        "address": f"0x{BASE + a:08X}",
-                        "original": text,
-                        "original_hex": raw.hex(" "),
-                        "byte_length": len(raw),
-                        "is_pointer_based": bool(ptrs),
-                        "pointer_sources": [
-                            f"0x{BASE + q:08X}" for q in ptrs
-                        ],
-                        "pointer_addresses": [
-                            f"0x{BASE + q:08X}" for q in ptrs
-                        ],
-                    },
-                    mid=mid,
-                    game_code=game_code,
-                )
-            )
-
         for text, lo, hi in include_items:
             needle = _encode_jp_needle(text)
             needles: list[bytes] = []
@@ -1687,6 +1922,33 @@ def extract_scan(
         if not pins_only_fallthrough:
             return out
 
+    # callers 包含：只验收预计算可达正文（∩ 模块带），不再全盘 PCS 漫步
+    if _has_callers_include_filter(filt):
+        from util._callers_filter import ensure_callers_cache
+
+        reachable: set[int] = set()
+        for spec in filt:
+            if str(spec.get("type") or "") != "callers_filter":
+                continue
+            if "filter" not in spec or bool(spec.get("filter")):
+                continue
+            reachable |= set(ensure_callers_cache(rom, [spec]) or ())
+        for a in sorted(reachable):
+            if _in_bands(a):
+                _try_accept(a, None, trust_chain=True)
+        return out
+
+    # msg_filter 白名单：指针优先——只验收「有 ROM 指针指向」的正文，
+    # 再靠 msg_filter / dialogue_shape / control_or_short 等闸门；
+    # 禁止再按语料 PCS 全盘 FF 针扫（会收录无引用的句中碎片）。
+    if _has_msg_include_filter(filt):
+        if not ptrs_map:
+            return out
+        targets = sorted(a for a in ptrs_map if _in_bands(a))
+        for a in targets:
+            _try_accept(a, None)
+        return out
+
     def _start_rank(text: str, ptrs: list[int]) -> tuple[int, int]:
         """同 EOS 多起点时择优：(分, 长度)；分高优先，同分取更长（更早对齐）。"""
         score = 0
@@ -1704,20 +1966,6 @@ def extract_scan(
             score -= 40
         return (score, len(text or ""))
 
-    msg_rescue = _has_msg_include_filter(filt)
-
-    def _shape_ok(raw_b: bytes) -> bool:
-        """形似日文；有语料白名单时允许填充槽（多 0x00）稍后再靠 msg_filter 拦。"""
-        if looks_like_jp_text(raw_b):
-            return True
-        if not msg_rescue:
-            return False
-        # 最小可解码：FF 终止、有正文、无非法高字节尾
-        if not raw_b or raw_b[-1] != 0xFF:
-            return False
-        body = raw_b[:-1]
-        return 2 <= len(body) <= 512
-
     def _scan_candidate(
         a: int, raw: bytes
     ) -> tuple[int, bytes, str, list[int]] | None:
@@ -1726,7 +1974,7 @@ def extract_scan(
             return None
         if a in seen:
             return None
-        if not _shape_ok(raw):
+        if not looks_like_jp_text(raw):
             return None
         text = decode_pcs(raw)
         ptrs = list(ptrs_map.get(a, []))
@@ -1750,7 +1998,7 @@ def extract_scan(
             raw2 = read_pcs(rom, a2, 512)
             if raw2 is None or a2 + len(raw2) - 1 != end:
                 continue
-            if a2 in seen or not _shape_ok(raw2):
+            if a2 in seen or not looks_like_jp_text(raw2):
                 continue
             if a2 < SCRIPT_BANK_MIN or TITLE_LZ_BAND[0] <= a2 < TITLE_LZ_BAND[1]:
                 continue
@@ -1772,6 +2020,7 @@ def extract_scan(
                 best_rank = rank2
         return best_a, best_raw, best_text, best_ptrs
 
+    pcs_maxlen = 512
     for lo, hi in band_pairs:
         a = lo
         while a <= hi:
@@ -1780,18 +2029,17 @@ def extract_scan(
             if b == 0xFF or b == 0x00 or (b >= 0xF7 and b != 0xFC):
                 a += 1
                 continue
-            raw = read_pcs(rom, a, 512)
+            raw = read_pcs(rom, a, pcs_maxlen)
             if raw is None:
-                a += 1
+                ff = rom.find(b"\xff", a + pcs_maxlen, hi + 1)
+                if ff < 0:
+                    break
+                a = max(a + 1, ff - (pcs_maxlen - 1))
                 continue
             end = a + len(raw) - 1
             cand = _scan_candidate(a, raw)
             if cand is None:
-                # 勿 end+1：长垃圾窗会吞掉窗内真正剧情起点（如妈妈开场 0x0814B9A1）
-                if looks_like_jp_text(raw):
-                    a += 1
-                else:
-                    a = end + 1
+                a = end + 1
                 continue
             best_a, best_raw, best_text, best_ptrs = cand
             seen.add(best_a)
@@ -1848,22 +2096,36 @@ def extract_module(
 
 
 def _build_ptr_index(rom: bytes) -> dict[int, list[int]]:
-    """ROM 内 LE 指针 → 目标正文偏移。跳过标题 LZ 带内的假指针槽。"""
+    """ROM 内 LE 指针 → 目标正文偏移。
+
+    - 对齐扫（步长 4）：常规指针表 / loadword 池。
+    - 非对齐扫：脚本里嵌的 ``xx <ptr>``（高字节须为 0x08/0x09）。
+    跳过标题 LZ 带内的假指针槽。
+    """
     ptr_index: dict[int, list[int]] = {}
     n = len(rom)
     tlz_lo, tlz_hi = TITLE_LZ_BAND
-    o = 0
-    while o + 4 <= n:
-        # 压缩图形区内的巧合 0x08xxxxxx 不是文本指针
+
+    def _add(o: int) -> None:
         if tlz_lo <= o < tlz_hi:
-            o += 4
-            continue
+            return
         v = struct.unpack_from("<I", rom, o)[0]
         if BASE <= v < BASE + n:
             so = v - BASE
-            if so >= 0x100000 and so < n:
+            if so >= SCRIPT_BANK_MIN and so < n:
                 ptr_index.setdefault(so, []).append(o)
+
+    o = 0
+    while o + 4 <= n:
+        _add(o)
         o += 4
+    # 非对齐：仅当高字节像 ROM 指针，避免 O(n) 全解
+    for o in range(1, n - 3):
+        if (o & 3) == 0:
+            continue
+        if rom[o + 3] not in (0x08, 0x09):
+            continue
+        _add(o)
     return ptr_index
 
 
@@ -1882,6 +2144,9 @@ def export_texts(
         raise ValueError(f"config missing game_code: {cfg_path}")
 
     rom = rom_path.read_bytes()
+    from util._callers_filter import set_active_rom
+
+    set_active_rom(rom)
     rom_code = identify_rom(rom)
     if rom_code.upper() != game_code.upper():
         print(

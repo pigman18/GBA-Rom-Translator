@@ -137,6 +137,7 @@ def looks_like_jp_text(s: bytes) -> bool:
         return False
 
     # Walk body; allow FE/FA/FB and FD xx / FC xx… as controls only.
+    # 尾部完整 FC（如 おぼえられない！\\CC09 FF）与句中 FC 同样放行。
     i = 0
     glyph = 0
     kanaish = 0

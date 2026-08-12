@@ -11,6 +11,8 @@ dependencies = [
     "click>=8.0",
     "httpx>=0.25",
     "PyYAML>=6.0",
+    "rapidfuzz>=3.0",
+    "capstone>=5.0",
 ]
 
 [project.optional-dependencies]

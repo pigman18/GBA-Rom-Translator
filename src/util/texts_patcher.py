@@ -2144,9 +2144,10 @@ def export_texts(
         raise ValueError(f"config missing game_code: {cfg_path}")
 
     rom = rom_path.read_bytes()
-    from util._callers_filter import set_active_rom
+    from util._callers_filter import set_active_rom, set_script_roots
 
     set_active_rom(rom)
+    set_script_roots((cfg.get("texts") or {}).get("script_roots") or {})
     rom_code = identify_rom(rom)
     if rom_code.upper() != game_code.upper():
         print(

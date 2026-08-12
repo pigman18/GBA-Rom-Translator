@@ -2,11 +2,13 @@
 """callers_filter：预计算「经 callers(sinks) / 脚本操作数」可达的正文文件偏移。
 
 与 addr_patcher callers 同向：
-1. 全盘 Thumb 反汇编，找 bl/blx 到配置 sink，按 text_arg（r0/r1）回溯 ROM 指针；
-2. 按 value.script_ops 收脚本操作数（message / msgbox / trainerbattle）。
+1. 全盘原始 Thumb BL 找调用点，按 text_arg（r0/r1）回溯 ROM 指针；
+2. 有 script_ops 时：自 texts.script_roots 入口 BFS walk 脚本字节码，
+   只在真实指令流上抽 message / loadword_callstd / trainerbattle 操作数
+   （不再全盘 rom.find(opcode)）。
 
 训练家开场经 ShowFieldMessage(GetTrainerIntroSpeech())，指针在 RAM，
-BL 回溯看不到 → 必须扫脚本 trainerbattle(0x5C) 操作数。
+BL 回溯看不到 → 须 script_ops: trainerbattle。
 """
 
 from __future__ import annotations
@@ -16,16 +18,11 @@ from typing import Any
 
 from capstone import CS_ARCH_ARM, CS_MODE_THUMB, Cs
 
+from util._script_walk import get_script_roots, set_script_roots, walk_script_ops
+
 BASE = 0x08000000
 SCRIPT_BANK_MIN = 0x100000
 TITLE_LZ_BAND = (0x36D000, 0x370000)
-
-# pokeruby data/script_cmd_table.inc
-_SCRIPT_OP_LOADWORD = 0x0F
-_SCRIPT_OP_CALLSTD = 0x09
-_SCRIPT_OP_MESSAGE = 0x67
-_SCRIPT_OP_MESSAGE_AUTOSCROLL = 0x9B
-_SCRIPT_OP_TRAINERBATTLE = 0x5C
 
 _FIELD_MESSAGE_SINK_NAMES = frozenset(
     {
@@ -33,19 +30,6 @@ _FIELD_MESSAGE_SINK_NAMES = frozenset(
         "ShowFieldAutoScrollMessage",
     }
 )
-
-# include/constants/battle_setup.h → 各 type 的文本指针个数（其后可能还有 event script）
-_TRAINERBATTLE_TEXT_PTRS: dict[int, int] = {
-    0: 2,  # SINGLE
-    1: 2,  # CONTINUE_SCRIPT_NO_MUSIC
-    2: 2,  # CONTINUE_SCRIPT
-    3: 1,  # SINGLE_NO_INTRO_TEXT
-    4: 3,  # DOUBLE
-    5: 2,  # REMATCH
-    6: 3,  # CONTINUE_SCRIPT_DOUBLE
-    7: 3,  # REMATCH_DOUBLE
-    8: 3,  # CONTINUE_SCRIPT_DOUBLE_NO_MUSIC
-}
 
 _DEFAULT_FIELD_SCRIPT_OPS = frozenset(
     {"message", "messageautoscroll", "loadword_callstd"}
@@ -319,67 +303,6 @@ def _collect_from_bl_call_sites(
                     _add_ptr(out, v, rom)
 
 
-def _collect_script_message_ptrs(rom: bytes, out: set[int], ops: frozenset[str]) -> None:
-    n = len(rom)
-    if "message" in ops:
-        start = 0
-        while True:
-            i = rom.find(bytes([_SCRIPT_OP_MESSAGE]), start, n - 5)
-            if i < 0:
-                break
-            start = i + 1
-            v = struct.unpack_from("<I", rom, i + 1)[0]
-            _add_ptr(out, v, rom)
-    if "messageautoscroll" in ops:
-        start = 0
-        while True:
-            i = rom.find(bytes([_SCRIPT_OP_MESSAGE_AUTOSCROLL]), start, n - 5)
-            if i < 0:
-                break
-            start = i + 1
-            v = struct.unpack_from("<I", rom, i + 1)[0]
-            _add_ptr(out, v, rom)
-    if "loadword_callstd" in ops:
-        start = 0
-        while True:
-            i = rom.find(bytes([_SCRIPT_OP_LOADWORD]), start, n - 8)
-            if i < 0:
-                break
-            start = i + 1
-            v = struct.unpack_from("<I", rom, i + 2)[0]
-            if not _is_rom_text_ptr(v, n):
-                continue
-            window = rom[i + 6 : i + 18]
-            if _SCRIPT_OP_CALLSTD not in window:
-                continue
-            _add_ptr(out, v, rom)
-
-
-def _collect_trainerbattle_ptrs(rom: bytes, out: set[int]) -> None:
-    """脚本 trainerbattle(0x5C)：按 type 取 intro/defeat/… 文本指针。"""
-    n = len(rom)
-    start = SCRIPT_BANK_MIN
-    end = min(n, 0x3C0000)
-    while True:
-        i = rom.find(bytes([_SCRIPT_OP_TRAINERBATTLE]), start, end)
-        if i < 0:
-            break
-        start = i + 1
-        if i + 6 >= n:
-            continue
-        tb_type = rom[i + 1]
-        n_ptr = _TRAINERBATTLE_TEXT_PTRS.get(tb_type)
-        if n_ptr is None:
-            continue
-        base = i + 6
-        need = base + 4 * n_ptr
-        if need > n:
-            continue
-        for k in range(n_ptr):
-            v = struct.unpack_from("<I", rom, base + 4 * k)[0]
-            _add_ptr(out, v, rom)
-
-
 def build_callers_reachable(
     rom: bytes,
     sinks: list[tuple[str, int]] | list[SinkSpec],
@@ -400,10 +323,13 @@ def build_callers_reachable(
     out: set[int] = set()
     if norm:
         _collect_from_bl_call_sites(rom, norm, out)
-    if ops & {"message", "messageautoscroll", "loadword_callstd"}:
-        _collect_script_message_ptrs(rom, out, ops)
-    if "trainerbattle" in ops:
-        _collect_trainerbattle_ptrs(rom, out)
+    if ops & {
+        "message",
+        "messageautoscroll",
+        "loadword_callstd",
+        "trainerbattle",
+    }:
+        walk_script_ops(rom, ops, out, add_ptr=_add_ptr)
     return frozenset(out)
 
 
@@ -423,10 +349,13 @@ def ensure_callers_cache(
         (name, fo, ta) for (fo, ta), name in sorted(merged.items(), key=lambda x: (x[0][0], x[0][1]))
     ]
     ops_fs = frozenset(merged_ops)
+    roots = get_script_roots()
+    roots_key = tuple(sorted((str(k), str(v)) for k, v in roots.items()))
     key = (
         id(rom),
         tuple((n, fo, ta) for n, fo, ta in sinks_list),
         tuple(sorted(ops_fs)),
+        roots_key,
     )
     hit = _CALLERS_CACHE.get(key)
     if hit is not None:

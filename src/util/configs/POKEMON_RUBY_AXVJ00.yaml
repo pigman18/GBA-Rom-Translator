@@ -60,6 +60,15 @@ texts:
       value:
         start: '0x0836D000'
         end: '0x0836FFFF'
+  # 脚本入口（AXVJ 钉址）：callers_filter 的 script_ops 自此处 walk，非全盘 find
+  # map_header_ptrs = 各组 MapHeader* 表拼接（393）；gStdScripts 自 ScrCmd_gotostd 字面量
+  script_roots:
+    map_header_ptrs: '0x082E03CC'
+    map_header_count: 393
+    gMapGroups: '0x082E09F4'
+    gMapGroups_count: 33
+    gStdScripts: '0x08145A48'
+    gStdScripts_count: 8
   # AXVJ 日版汇点（对照 pokeruby）；剧情 / 训练家 / UI 分列
   # 训练家台词经 RAM→ShowFieldMessage，须 script_ops: trainerbattle，不能只靠 BL 回溯
   story_callers: &story_callers

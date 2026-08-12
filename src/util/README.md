@@ -515,10 +515,21 @@ python src/util/texts_patcher.py export <rom.gba> [--config yaml] [--module 模�
 
 预计算（一次性反汇编，可慢）：
 1. 有 `sinks`：按原始 Thumb **BL 编码**全盘找调用点（避免 Capstone 线性失步），再向前回溯解析 `text_arg`（`r0`|`r1`，默认 `r0`）上的 `ldr …,[pc,#…]` ROM 字面量；只保留 ROM 正文指针（RAM 缓冲不进池）；
-2. `script_ops`：`message` / `messageautoscroll`；`loadword_callstd`（0x0F 后须有 callstd）；`trainerbattle`（0x5C，按 type 取 intro/defeat 等文本指针）；
+2. `script_ops`：自 `texts.script_roots` **脚本入口 walk**（非全盘 `find(opcode)`）——`gMapGroups` / `map_header_ptrs` → 每图 `mapScripts` + `events`（object/coord/bg）+ `gStdScripts`，按固定 opcode 长度表 BFS；在指令流上抽 `message` / `messageautoscroll`、`loadword_callstd`（0x0F 后窗口内须有 callstd）、`trainerbattle`（0x5C，按 type 取 intro/defeat 等文本指针）；
 3. 调用链解析到的 ROM 指针直接收录（仅 `_is_rom_text_ptr` 闸）；形态二次过滤交给模块其它 filter，不在此用 Thumb/形态启发式否决。
 
 说明：AXVJ 字段本正文几乎都在 `0x1xxxxx`；模块「前/中期」按该池地址切分，不是按通关进度。训练家模块须排在剧情之前，并用 `trainerbattle` 单独认领。
+
+AXVJ `texts.script_roots`（util yaml 钉址）：
+
+| 字段 | 地址 / 值 | 说明 |
+|------|-----------|------|
+| `map_header_ptrs` | `0x082E03CC` | 各组 `MapHeader*` 表拼接（393） |
+| `map_header_count` | `393` | |
+| `gMapGroups` | `0x082E09F4` | 组索引表（33；group0 即 `map_header_ptrs` 起） |
+| `gStdScripts` | `0x08145A48` | `gotostd`/`callstd` 目标（×8） |
+
+字段本 `gScriptCmdTable` 在 `0x08145190`（`ScrCmd_message`→`ShowFieldMessage`）；walk 用固定长度表，不依赖运行时表。
 
 AXVJ 已钉 sinks（对照 pokeruby `menu.h` / `text.h`）：
 

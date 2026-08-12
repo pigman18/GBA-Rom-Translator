@@ -369,6 +369,11 @@
                 "name": "Contest_StartTextPrinter",
                 "address": "0x08002D1C",
                 "text_arg": "r1"
+              },
+              {
+                "name": "PrintMainMenuItem",
+                "address": "0x080076C0",
+                "text_arg": "r0"
               }
             ]
           }
@@ -376,7 +381,7 @@
       ]
     }
   },
-  "count": 6228,
+  "count": 6232,
   "entries": [
     {
       "id": "axvj_92f0510597a5",
@@ -97893,6 +97898,80 @@
       ],
       "pointer_addresses": [
         "0x08140D3C"
+      ]
+    },
+    {
+      "id": "axvj_6eefcf7fc163",
+      "module": "UI界面",
+      "address": "0x083E945D",
+      "byte_length": 12,
+      "original": "さいしょから はじめる",
+      "original_hex": "0b 02 0c 36 06 27 00 1a 3d 22 29 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x08007260",
+        "0x080072B4",
+        "0x08007330"
+      ],
+      "pointer_addresses": [
+        "0x08007260",
+        "0x080072B4",
+        "0x08007330"
+      ]
+    },
+    {
+      "id": "axvj_dd6a78a617d8",
+      "module": "UI界面",
+      "address": "0x083E9469",
+      "byte_length": 11,
+      "original": "つづきから はじめる",
+      "original_hex": "12 43 07 06 27 00 1a 3d 22 29 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x080072B0",
+        "0x0800732C"
+      ],
+      "pointer_addresses": [
+        "0x080072B0",
+        "0x0800732C"
+      ]
+    },
+    {
+      "id": "axvj_149f1e2ef36c",
+      "module": "UI界面",
+      "address": "0x083E9474",
+      "byte_length": 10,
+      "original": "せっていを かえる",
+      "original_hex": "0e 50 13 02 2d 00 06 04 29 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x08007264",
+        "0x080072B8",
+        "0x08007338"
+      ],
+      "pointer_addresses": [
+        "0x08007264",
+        "0x080072B8",
+        "0x08007338"
+      ]
+    },
+    {
+      "id": "axvj_86709bdda9a0",
+      "module": "UI界面",
+      "address": "0x083E947E",
+      "byte_length": 10,
+      "original": "ふしぎな できごと",
+      "original_hex": "1c 0c 38 15 00 44 07 3b 14 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x08007334"
+      ],
+      "pointer_addresses": [
+        "0x08007334"
       ]
     },
     {

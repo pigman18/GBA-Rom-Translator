@@ -1,0 +1,39 @@
+{
+  "name": "0x0836FEC0",
+  "rom_address": "0x0836FEC0",
+  "format": "4bpp",
+  "compression": "lz77_swap",
+  "raw_size": 8192,
+  "sprite_size_px": [
+    128,
+    128
+  ],
+  "sprite_count": 1,
+  "tile_size_px": [
+    8,
+    8
+  ],
+  "tiles_per_sprite": 256,
+  "tile_order": "row_major",
+  "palette": {
+    "rom_address": "0x081DA0E0",
+    "format": "gbapal555",
+    "bank_count": 8,
+    "palette_size": 256,
+    "colors_per_bank": 16
+  },
+  "palette_bank_per_sprite": null,
+  "pointer_sources": [
+    {
+      "address": "0x08372E80",
+      "current_value": "0x0836FEC0",
+      "label": ""
+    }
+  ],
+  "sprites": [
+    {
+      "index": 0,
+      "file": "0x0836FEC0_00.png"
+    }
+  ]
+}

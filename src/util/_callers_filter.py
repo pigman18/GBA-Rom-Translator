@@ -98,10 +98,19 @@ def _sinks_from_spec(spec: dict[str, Any]) -> list[SinkSpec]:
     for item in sinks:
         if not isinstance(item, dict):
             continue
+        name = str(item.get("name") or "").strip() or "<unnamed>"
+        # 常见拼写：有 name 却无 address → 静默丢弃会漏汇点，直接报错
+        if "address" not in item:
+            extras = sorted(k for k in item if k not in ("name", "text_arg"))
+            hint = ""
+            if any(k for k in extras if "addr" in str(k).lower()):
+                hint = f" (did you mean address=? got keys {extras})"
+            raise SystemExit(
+                f"callers_filter sink {name!r} missing required key 'address'{hint}"
+            )
         addr = item.get("address")
         if addr is None:
-            continue
-        name = str(item.get("name") or "").strip()
+            raise SystemExit(f"callers_filter sink {name!r} address is null")
         fo = _fo(_parse_addr(addr))
         text_arg = _parse_text_arg(item.get("text_arg", "r0"))
         key = (fo, text_arg)

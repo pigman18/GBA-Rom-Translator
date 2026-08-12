@@ -546,8 +546,9 @@ AXVJ 已钉 sinks（对照 pokeruby `menu.h` / `text.h`）：
 | UI | Text_InitWindowAndPrintText | `0x080030A8` | **r1** |
 | UI | Text_InitWindow | `0x08002CFC` | **r1** |
 | UI | Contest_StartTextPrinter | `0x08002D1C` | **r1** |
+| UI | **PrintMainMenuItem** | `0x080076C0` | r0 | 标题「继续/新游戏/设置」：函数内拷栈再 `Menu_PrintText`，只钉叶函数看不到 |
 
-钉地址方法：用日版 `gScriptCmdTable` 的 `ScrCmd_message`（opcode 0x67）反汇编得到 `ShowFieldMessage`；`Menu_PrintText` 在 menu 区找「加载窗指针 + tile 偏移后 `bl`」的包装函数；`Text_InitWindow` 为 thunk（body=`InitTextPrinter`）。
+钉地址方法：用日版 `gScriptCmdTable@0x08145190` 的 `ScrCmd_message`（opcode 0x67）反汇编得到 `ShowFieldMessage`；`Menu_PrintText` 在 menu 区找「加载窗指针 + tile 偏移后 `bl`」的包装函数；`Text_InitWindow` 为 thunk（body=`InitTextPrinter`）；标题三选项须钉 `PrintMainMenuItem`（pokeruby `main_menu.c`）。sink 项必须写 **`address`**（缺键或写成 `addrsss` 会直接报错退出）。
 
 **不要**挂成 sink：`Text_InitWindowWithTemplate`（只建窗）、`StringExpandPlaceholders` / `BattleStringExpandPlaceholders*`（只展开）、`BufferStringBattle`（参数是 string ID）、`Text_PrintWindow*` / `Text_UpdateWindow*`（读已绑 `win->text`）、Emerald 系 `AddTextPrinter*`。
 

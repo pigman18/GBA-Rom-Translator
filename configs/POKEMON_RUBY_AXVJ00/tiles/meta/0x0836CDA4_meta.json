@@ -1,0 +1,199 @@
+{
+  "name": "0x0836CDA4",
+  "rom_address": "0x0836CDA4",
+  "format": "4bpp",
+  "compression": "lz77_swap",
+  "raw_size": 1312,
+  "sprite_size_px": [
+    8,
+    8
+  ],
+  "sprite_count": 41,
+  "tile_size_px": [
+    8,
+    8
+  ],
+  "tiles_per_sprite": 1,
+  "tile_order": "row_major",
+  "palette": {
+    "rom_address": "0x0836D148",
+    "format": "gbapal555",
+    "bank_count": 9,
+    "palette_size": 288,
+    "colors_per_bank": 16
+  },
+  "palette_bank_per_sprite": null,
+  "pointer_sources": [
+    {
+      "address": "0x0836FE64",
+      "current_value": "0x0836CDA4",
+      "label": ""
+    }
+  ],
+  "sprites": [
+    {
+      "index": 0,
+      "file": "0x0836CDA4_00.png"
+    },
+    {
+      "index": 1,
+      "file": "0x0836CDA4_01.png"
+    },
+    {
+      "index": 2,
+      "file": "0x0836CDA4_02.png"
+    },
+    {
+      "index": 3,
+      "file": "0x0836CDA4_03.png"
+    },
+    {
+      "index": 4,
+      "file": "0x0836CDA4_04.png"
+    },
+    {
+      "index": 5,
+      "file": "0x0836CDA4_05.png"
+    },
+    {
+      "index": 6,
+      "file": "0x0836CDA4_06.png"
+    },
+    {
+      "index": 7,
+      "file": "0x0836CDA4_07.png"
+    },
+    {
+      "index": 8,
+      "file": "0x0836CDA4_08.png"
+    },
+    {
+      "index": 9,
+      "file": "0x0836CDA4_09.png"
+    },
+    {
+      "index": 10,
+      "file": "0x0836CDA4_10.png"
+    },
+    {
+      "index": 11,
+      "file": "0x0836CDA4_11.png"
+    },
+    {
+      "index": 12,
+      "file": "0x0836CDA4_12.png"
+    },
+    {
+      "index": 13,
+      "file": "0x0836CDA4_13.png"
+    },
+    {
+      "index": 14,
+      "file": "0x0836CDA4_14.png"
+    },
+    {
+      "index": 15,
+      "file": "0x0836CDA4_15.png"
+    },
+    {
+      "index": 16,
+      "file": "0x0836CDA4_16.png"
+    },
+    {
+      "index": 17,
+      "file": "0x0836CDA4_17.png"
+    },
+    {
+      "index": 18,
+      "file": "0x0836CDA4_18.png"
+    },
+    {
+      "index": 19,
+      "file": "0x0836CDA4_19.png"
+    },
+    {
+      "index": 20,
+      "file": "0x0836CDA4_20.png"
+    },
+    {
+      "index": 21,
+      "file": "0x0836CDA4_21.png"
+    },
+    {
+      "index": 22,
+      "file": "0x0836CDA4_22.png"
+    },
+    {
+      "index": 23,
+      "file": "0x0836CDA4_23.png"
+    },
+    {
+      "index": 24,
+      "file": "0x0836CDA4_24.png"
+    },
+    {
+      "index": 25,
+      "file": "0x0836CDA4_25.png"
+    },
+    {
+      "index": 26,
+      "file": "0x0836CDA4_26.png"
+    },
+    {
+      "index": 27,
+      "file": "0x0836CDA4_27.png"
+    },
+    {
+      "index": 28,
+      "file": "0x0836CDA4_28.png"
+    },
+    {
+      "index": 29,
+      "file": "0x0836CDA4_29.png"
+    },
+    {
+      "index": 30,
+      "file": "0x0836CDA4_30.png"
+    },
+    {
+      "index": 31,
+      "file": "0x0836CDA4_31.png"
+    },
+    {
+      "index": 32,
+      "file": "0x0836CDA4_32.png"
+    },
+    {
+      "index": 33,
+      "file": "0x0836CDA4_33.png"
+    },
+    {
+      "index": 34,
+      "file": "0x0836CDA4_34.png"
+    },
+    {
+      "index": 35,
+      "file": "0x0836CDA4_35.png"
+    },
+    {
+      "index": 36,
+      "file": "0x0836CDA4_36.png"
+    },
+    {
+      "index": 37,
+      "file": "0x0836CDA4_37.png"
+    },
+    {
+      "index": 38,
+      "file": "0x0836CDA4_38.png"
+    },
+    {
+      "index": 39,
+      "file": "0x0836CDA4_39.png"
+    },
+    {
+      "index": 40,
+      "file": "0x0836CDA4_40.png"
+    }
+  ]
+}

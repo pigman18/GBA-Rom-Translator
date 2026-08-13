@@ -69,40 +69,11 @@ texts:
     gMapGroups_count: 33
     gStdScripts: '0x08145A48'
     gStdScripts_count: 8
-  # callers_filter 只判「会否被 PrintNextChar 消费」。
-  # 剧情：脚本 message 等（指针常经 RAM）→ script_ops。
-  # UI：InitTextPrinter 叶闭包 + 表展开（含 StringCopy 表源）。
-  # 训练家：trainerbattle。归属靠模块地址带/顺序，不靠 callers 再分域。
-  _print_bind: &print_bind
-    bind_leaf:
-      name: InitTextPrinter
-      address: '0x08002C68'
-      text_arg: r1
-    wrapper_depth: 4
-  story_callers: &story_callers
-    id: story_callers
-    type: callers_filter
-    filter: false
-    value:
-      script_ops: [message, messageautoscroll, loadword_callstd]
-  trainer_callers: &trainer_callers
-    id: trainer_callers
-    type: callers_filter
-    filter: false
-    value:
-      script_ops: [trainerbattle]
-  ui_callers: &ui_callers
-    id: ui_callers
-    type: callers_filter
-    filter: false
-    value:
-      <<: *print_bind
-  story_bias: &story_bias
-    - *story_callers
-  trainer_bias: &trainer_bias
-    - *trainer_callers
-  ui_bias: &ui_bias
-    - *ui_callers
+  # callers_filter 只判「类文本会否被消费」：value 列表，两种项。
+  # {name}（内建 op 类别）：程序自动 walk 脚本找调用点——剧情 message / 训练家 trainerbattle。
+  # {name, address}：BL 逆推 r0/r1/r2 + 父级闭包（depth 默认 8）；消费叶自动映射注入叶。
+  # 归属靠模块地址带/顺序，不靠 callers 再分域。
+  # 各模块 filters 已改为内联 execute_filter（is_execute API）。
   styles:
     # 按列表顺序交错分配 F9：01, 81, 02, 82…（勿写 channel）
     - id: 样式1
@@ -287,49 +258,63 @@ texts:
       wrap_pages: false
       max_lines: 3
 
-    # 文本大模块：词条/说明 → 训练家(trainerbattle) → 剧情带 → UI
-    # callers 正文几乎都在 0x1xxxxx；前/中期按该池切分；不再单列「后期」（带内≈空）
-    - id: 训练家对白
-      label: 文本·训练家对白
+    # 文本大模块：词条/说明 → 剧情(trainerbattle+message) → UI(菜单/文本打印)
+    # 训练家对白已并入剧情（ShowTrainerIntroSpeech → ShowFieldMessage）
+    - id: 剧情
+      label: 文本·剧情
       group: 文本
       default: true
-      description: 全 ROM；trainerbattle 脚本操作数（须排在剧情之前认领）
+      description: 全 ROM；execute_filter（ShowFieldMessage + 脚本 op message/trainerbattle）
       start: '0x0'
       end: '0xFFFFFF'
       type: scan
       relocate: true
       hook: true
-      filters: *trainer_bias
-    - id: 前期剧情
-      label: 文本·前期剧情
-      group: 文本
-      default: true
-      description: 前段；callers script_ops（message）
-      start: '0x0'
-      end: '0x15C6AF'
-      type: scan
-      relocate: true
-      hook: true
-      filters: *story_bias
-    - id: 中期剧情
-      label: 文本·中期剧情
-      group: 文本
-      default: true
-      description: 中后段；callers（含原后期带，正文多在 0x1xxxxx）
-      start: '0x15C6B0'
-      end: '0xFFFFFF'
-      type: scan
-      relocate: true
-      hook: true
-      filters: *story_bias
+      filters:
+        - id: story_execute
+          type: execute_filter
+          filter: false
+          filter_id: story_execute
+          value:
+            - name: ShowFieldMessage
+              address: '0x08061CF4'
+            - name: ShowFieldAutoScrollMessage
+              address: '0x08061D1C'
+            - name: message
+            - name: messageautoscroll
+            - name: loadword
+            - name: trainerbattle
     - id: UI界面
       label: UI界面
       group: 文本
       default: true
-      description: 全 ROM；callers bind_leaf（InitTextPrinter）；排在剧情之后
+      description: 全 ROM；execute_filter（Menu/Text 打印函数，排除故事已消费）
       start: '0x0'
       end: '0xFFFFFF'
       type: scan
       relocate: true
       hook: true
-      filters: *ui_bias
+      filters:
+        - id: ui_execute
+          type: execute_filter
+          filter: false
+          filter_id: ui_execute
+          exclude_filters:
+            - story_execute
+          value:
+            - name: Menu_PrintText
+              address: '0x0806F16C'
+            - name: MenuPrintMessage
+              address: '0x0806F32C'
+            - name: MenuPrintMessageDefaultCoords
+              address: '0x0806F360'
+            - name: Text_InitWindowAndPrintText
+              address: '0x080030A8'
+            - name: Contest_StartTextPrinter
+              address: '0x08002D1C'
+            - name: InitTextPrinter
+              address: '0x08002C68'
+            - name: RunTextPrinter
+              address: '0x08002DE8'
+            - name: ProcessCurrentChar
+              address: '0x080032F8'

@@ -22,7 +22,7 @@
 ```bat
 cd /d C:\code\GBA-Rom-Translator
 set PYTHONPATH=%cd%\src
-C:\Python314\python.exe -m meowth full roms/origin/POKEMON_RUBY_AXVJ00.gba -o roms/outputs --work-dir work --source ja --target zh-Hans --seed-only --modules 属性名,性格名,特性名,宝可梦名,招式名,训练家名,地点名,道具名,道具说明,招式说明,特性说明,图鉴说明,UI界面,前期剧情,中期剧情,训练家对白
+C:\Python314\python.exe -m meowth full roms/origin/POKEMON_RUBY_AXVJ00.gba -o roms/outputs --work-dir work --source ja --target zh-Hans --seed-only --modules 属性名,性格名,特性名,宝可梦名,招式名,训练家名,地点名,道具名,道具说明,招式说明,特性说明,图鉴说明,UI界面,剧情,训练家对白
 ```
 
 - 输入 ROM：`roms/origin/POKEMON_RUBY_AXVJ00.gba`

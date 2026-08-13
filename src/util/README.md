@@ -385,9 +385,9 @@ texts:
         start: '0x083A32D0'
         end: '0x083A34FF'
   modules:
-    - id: 前期剧情
+    - id: 剧情
       start: '0x100000'        # 粗带；洞写 omit，不要切碎 ranges
-      end: '0x15C6AF'          # 与中期等模块勿重叠（export 按模块顺序 seen_addr 去重）
+      end: '0xFFFFFF'          # 全 ROM（export 按模块顺序 seen_addr 去重）
       type: scan
     - id: 宝可梦名
       type: stride             # filters 对 scan/stride/struct/stride_ptr 一律生效
@@ -461,6 +461,7 @@ texts:
 | `ime_keyboard_filter` | bool | `value: true`：`raw` 像 Gen3 姓名五十音键盘表（RS/FRLG 日版共有页头/`5` 递增假名行；勿 `in_place`）则命中 |
 | `address_filter` | 正则或 `{start,end}` | 地址命中禁止规则（正则同样用 `regex`） |
 | `original_text_filter` | 列表 | 原文精确/去空白命中。元素可以是字符串，或 `{original, address}` / `{original, start, end}`（绑地址后才放行）。常配 `filter: false` 做白名单 |
+| `execute_filter` | `[{name, address, depth?}]` | 候选地址被 value 指定函数的消费链消费（BL 闭包，见下文）。常配 `filter: false` 做「被消费才留」 |
 
 **短危词**（单字/极短如 `こ`、`ひき`）：**禁止**在包含名单里裸写字符串——会全 ROM 命中假名表或错指针，`relocate` 易炸菜单。必须写成 `{ original: "こ", address: "0x08…" }`；若 ROM 根本没有独立 PCS 串（继续画面「只/个」常为绘制拼接），不要进白名单，改查绘制/hook。
 
@@ -480,42 +481,83 @@ python src/util/texts_patcher.py export <rom.gba> [--config yaml] [--module 模�
 
 含 `msg_filter`（`filter: false`）的模块：**指针优先**——只验收 `ptr_index` 目标正文，再跑语料/形态闸；不再按语料 PCS 全盘 FF 针扫。
 
-含 `callers_filter`（`filter: false`）的模块：只验收预计算「经 PrintNextChar 绑串路径可达」正文（∩ 模块地址带）；剧情/UI 归属靠地址带等其它 filter，不靠 callers 再分域。
+含 `callers_filter`（`filter: false`）的模块：只验收预计算「可达汇点」的正文（∩ 模块地址带）；剧情/UI 归属靠地址带等其它 filter，不靠 callers 再分域。
 
-### `callers_filter`（是否会被 PrintNextChar 消费）
+含 `execute_filter`（`filter: false`）的模块：同理，只验收预计算「被消费链消费」正文（∩ 模块地址带）。
 
-`PrintNextChar` 读 `win[+0x10]`；绑串叶是 **`InitTextPrinter`**（`str r1 → +0x10`）。本 filter **只**回答：类文本最终会不会进这条路径。
+### `execute_filter`（判定：类文本是否被指定函数的消费链消费）
+
+**定义**：自 value 指定的消费函数地址（如 `PrintNextChar` `0x080032F8`）沿 **Thumb/ARM BL 逆调用图自下而上** BFS（`depth` 默认 8）：`BL→sink 的调用点 → 归属函数（最近的上方 push {…, lr}）→ 该函数的调用者 → …`。每个新收函数的区间（到下一 push 起点，含末尾字面量池）内、值指向 ROM 的 4 对齐 LE word 目标计入「被消费」集合；候选地址命中 = 被消费。即 `C(t) ⇒ B(t) ⇒ PrintNextChar(t)` 形态可判定。
+
+**代码指针不算文本**（防回调误判）：目标是函数起点 / BL 调用目标 / 落在任一 visited 函数区间内（含 `地址|1` 的 Thumb 指针形态）→ 排除。例：AXVJ `0x081050B5`、`0x08105208|1` 是回调函数指针，不作正文收录。
 
 ```yaml
+- id: ui_execute
+  type: execute_filter
+  filter: false
+  value:
+    - name: PrintNextChar
+      address: '0x080032F8'
+      # depth: 8   # 可选，BFS 层数上限
+```
+
+边界：只追**代码调用链**。脚本数据（`message` op 等）里的文本指针不经 BL 传参，不在覆盖内（剧情 op 走 `callers_filter` 的 script_ops 路径）。残余非文本引用（绘制缓冲等）靠 `garbage_heuristic_filter` 等形态闸兜底。
+
+### `callers_filter`（判定：候选地址是否可达汇点）
+
+**定义**：`type: scan` 负责产出「类文本」候选（含垃圾）；本 filter 对每个候选**判定**它是否「可达」某个汇点地址——从候选地址正向爬升，看调用链是否经过 `value` 里的任一 `address`。**不负责识别文本**，也不叠任何「这是文本」的含义：它只是通用的「地址可达性」判定，换一种数据（如图片）把 `value` 换成对应消费点即可复用。
+
+正向爬升链路：
+
+```
+候选地址 A ──(ldr rN,=A)──> 加载进寄存器 ──(bl F)──> F ──(被调方闭包)──> 汇点(如 PrintNextChar)
+```
+
+实现要点：
+
+1. 全盘找 `ldr rN, [pc, #imm]`（含 Thumb-2 `ldr.w`），定位「谁加载了候选 A」。
+2. 自加载点正向走到下一条 `bl`，得到接收函数 F；值被解引用（`ldr rM,[rN,…]`）则当作**表基**，按 stride 展开整表再逐项判定。
+3. 从 F 沿**被调方闭包** BFS（以函数返回指令 `bx lr` / `pop {…,pc}` 为界，不再扫进后续无关代码），看是否到达任一汇点 `address`。
+
+`value` 推荐写成列表，两种项：
+
+```yaml
+# 剧情 / 训练家：{name} = 内建 op 类别（程序自动 walk 脚本找调用点）
 - id: story_callers
   type: callers_filter
   filter: false
   value:
-    # 剧情：脚本入口 walk（指针常经 RAM，BL 回溯看不到）
-    script_ops: [message, messageautoscroll, loadword_callstd]
+    - name: message
+    - name: messageautoscroll
+    - name: loadword_callstd
+
 - id: trainer_callers
   type: callers_filter
   filter: false
   value:
-    script_ops: [trainerbattle]
+    - name: trainerbattle
+
+# UI：{name, address} = 正向爬升（汇点）
 - id: ui_callers
   type: callers_filter
   filter: false
   value:
-    bind_leaf:
-      name: InitTextPrinter
-      address: '0x08002C68'
-      text_arg: r1
-    wrapper_depth: 4
+    - name: PrintNextChar
+      address: '0x080032F8'
 ```
 
-预计算（一次性反汇编，可慢）：
-1. **`bind_leaf`（UI）**：全盘找 BL→叶；解析 `text_arg` 上的 PC 字面量；`lsl/add` + `ldr [Rn]` / `ldr [基,idx]` 则按 stride **整表展开**；包装闭包（含 LR 的 push）扩到 `Menu_PrintText` 等；并扫 `StringCopy` 的 ROM 表源（口袋名等先拷 RAM 再打印）。
-2. **`script_ops`（剧情/训练家）**：自 `texts.script_roots` 入口 walk，抽 `message` / `loadword_callstd` / `trainerbattle`。
-3. 可选 **`sinks`**：旧路径直连 BL。
-4. 只收录 ROM 正文指针；剧情 vs UI 用模块顺序 + 地址带等其它 filter（story 先认领脚本池，UI 收剩余 bind_leaf）。
+- `{name, address}`：`address` 是汇点，走正向爬升（不区分注入叶/消费叶，不内置任何映射）。
+- `{name}`（name ∈ `message` / `messageautoscroll` / `loadword_callstd` / `trainerbattle`）：内建 op 类别，程序 `walk_script_ops` 正向找脚本调用点，判定候选是否被该 op 引用。
 
-说明：AXVJ 字段本正文几乎都在 `0x1xxxxx`；模块「前/中期」按该池地址切分。训练家模块须排在剧情之前，并用 `trainerbattle` 单独认领。
+不再需要 `script_ops` / `bind_leaf` / `sinks` / `text_arg` / `wrapper_depth`。
+
+预计算（一次性反汇编，可慢）：
+
+1. **`{name, address}`（UI）**：全盘 `ldr [pc,#imm]` 建字面量索引 → 正向找 `bl` → 被调方闭包到汇点；表基展开。
+2. **`{name}`（剧情/训练家）**：自 `texts.script_roots` 入口 walk，抽 `message` / `loadword_callstd` / `trainerbattle`。
+3. 只收录 ROM 正文指针；剧情 vs UI 用模块顺序 + 地址带等其它 filter（story 先认领脚本池，UI 收剩余）。
+
+说明：AXVJ 字段本正文几乎都在 `0x1xxxxx`；训练家模块须排在剧情之前，并用 `trainerbattle` 单独认领。
 
 AXVJ `texts.script_roots`（util yaml 钉址）：
 

@@ -691,6 +691,18 @@ def _has_callers_include_filter(filters: list[dict[str, Any]] | None) -> bool:
     return False
 
 
+def _has_execute_include_filter(filters: list[dict[str, Any]] | None) -> bool:
+    """模块是否有 execute_filter 包含模式（消费链白名单）。"""
+    for spec in filters or []:
+        if not isinstance(spec, dict):
+            continue
+        if str(spec.get("type") or "") != "execute_filter":
+            continue
+        if "filter" in spec and not bool(spec.get("filter")):
+            return True
+    return False
+
+
 def _has_include_original_text_filter(filters: list[dict[str, Any]]) -> bool:
     """模块是否声明了 original_text_filter 且为包含模式（filter: false）。"""
     for spec in filters or []:
@@ -752,6 +764,7 @@ def resolve_filters(cfg: dict, mod: dict) -> list[dict[str, Any]]:
         keep_types = {
             "msg_filter",
             "callers_filter",
+            "execute_filter",
             "address_filter",
             "anim_cmd_filter",
             "ime_keyboard_filter",
@@ -1444,17 +1457,20 @@ class ControlOrShortFilter(TextFilter):
 
 
 class CallersFilter(TextFilter):
-    """callers 可达：正文是否经 PrintNextChar 绑串路径（bind_leaf / sinks / script_ops）。
+    """callers 可达：候选地址沿「谁 ldr 我 → 我传给谁（BL）→ 被调方闭包」正向爬升，
+    只要经过 value 列表里任一 address，即判命中。不做文本识别，只判可达。
 
-    value.bind_leaf: InitTextPrinter 等；value.sinks 为可选直连汇点；
-    script_ops 覆盖经 RAM 的脚本指针。filter: false 时作包含闸（命中才留）。
+    value 为列表，两种项：
+    - ``{name, address}``：address 是汇点，走正向爬升（正向 BL 闭包）。
+    - ``{name}``（内建 op：message / trainerbattle / …）：脚本操作数，走脚本 walk。
+    filter: false 时作包含闸（命中才留）。
     """
 
     type_name = "callers_filter"
 
     def hit(self, ctx: FilterContext) -> bool | None:
         val = self.value
-        if not isinstance(val, dict):
+        if not isinstance(val, (dict, list)):
             return None
         from util._callers_filter import (
             ensure_callers_cache,
@@ -1473,6 +1489,55 @@ class CallersFilter(TextFilter):
         return ctx.address in reachable
 
 
+class ExecuteFilter(TextFilter):
+    """execute_filter：候选是否被 value 指定消费函数的调用链消费（自下而上）。
+
+    value: ``[{name, address, depth?}]``。自 address 沿 BL 逆调用图向上 BFS
+    （depth 默认 8），沿途函数体内引用的 ROM 地址计入「被消费」集合；
+    候选地址命中 = 被消费。``filter: false`` 时作包含闸（被消费才留）。
+
+    只追代码调用链；脚本数据（message op 等）里的文本指针不经 BL 传参，
+    不在覆盖内。
+
+    exclude_filters: 其它 execute_filter 的 filter_id 列表，已消费地址从本 filter
+    消费集合中排除（避免上游 filter 已覆盖的地址重复归属）。
+    """
+
+    type_name = "execute_filter"
+
+    def __init__(self, spec: dict[str, Any]) -> None:
+        super().__init__(spec)
+        self._filter_id = str(spec.get("filter_id") or self.id or "")
+        self._exclude_filters: list[str] = list(spec.get("exclude_filters") or [])
+        self._exclude_set: frozenset[int] | None = None
+
+    def set_exclude_set(self, s: frozenset[int] | None) -> None:
+        self._exclude_set = s
+
+    def hit(self, ctx: FilterContext) -> bool | None:
+        val = self.value
+        if not isinstance(val, (dict, list)):
+            return None
+        from util._execute_filter import (
+            filters_need_execute,
+            get_active_rom,
+            is_execute,
+            parse_sink_items,
+        )
+
+        if not filters_need_execute([self.spec]):
+            return None
+        rom = get_active_rom()
+        if rom is None:
+            return False
+        funcs, ops = parse_sink_items(self.spec.get("value"), rom_len=len(rom))
+        sinks = [fo for _, fo, _ in funcs]
+        return is_execute(
+            rom, ctx.address, sinks, script_ops=ops or None,
+            exclude_set=self._exclude_set,
+        )
+
+
 FILTER_TYPES: dict[str, type[TextFilter]] = {
     CharacterFilter.type_name: CharacterFilter,
     DialogueShapeFilter.type_name: DialogueShapeFilter,
@@ -1487,7 +1552,11 @@ FILTER_TYPES: dict[str, type[TextFilter]] = {
     MsgFilter.type_name: MsgFilter,
     ControlOrShortFilter.type_name: ControlOrShortFilter,
     CallersFilter.type_name: CallersFilter,
+    ExecuteFilter.type_name: ExecuteFilter,
 }
+
+# filter_id → spec：供 ExecuteFilter.exclude_filters 反查
+_FILTER_REGISTRY: dict[str, dict[str, Any]] = {}
 
 
 def build_filter(spec: dict[str, Any]) -> TextFilter:
@@ -1495,12 +1564,31 @@ def build_filter(spec: dict[str, Any]) -> TextFilter:
     cls = FILTER_TYPES.get(t)
     if cls is None:
         raise SystemExit(f"未知 filter type: {t!r}")
-    return cls(spec)
+    f = cls(spec)
+    # 注册到全局表，供 exclude_filters 反查
+    fid = str(spec.get("filter_id") or spec.get("id") or "")
+    if fid:
+        _FILTER_REGISTRY[fid] = spec
+    return f
 
 
 def apply_one_filter(ctx: FilterContext, spec: dict[str, Any]) -> bool:
     """True=保留，False=拒绝。"""
-    return build_filter(spec).keep(ctx)
+    f = build_filter(spec)
+    # ExecuteFilter 的 exclude_filters 解析：从全局 filter 表查找被排除 filter 的消费集合
+    if isinstance(f, ExecuteFilter) and f._exclude_filters:
+        from util._execute_filter import get_consumed_set, get_active_rom
+
+        rom = get_active_rom()
+        if rom is not None:
+            exclude_specs = [
+                _FILTER_REGISTRY[fid]
+                for fid in f._exclude_filters
+                if fid in _FILTER_REGISTRY
+            ]
+            if exclude_specs:
+                f.set_exclude_set(get_consumed_set(rom, exclude_specs))
+    return f.keep(ctx)
 
 
 def apply_filters(ctx: FilterContext, filters: list[dict[str, Any]]) -> bool:
@@ -1762,8 +1850,14 @@ def extract_scan(
         filters_need_callers,
         set_active_rom,
     )
+    from util._execute_filter import (
+        filters_need_execute,
+        get_consumed_set,
+        set_active_rom as set_execute_rom,
+    )
 
     set_active_rom(rom)
+    set_execute_rom(rom)
     filt = _merge_legacy_length_filters(mod, filters)
     if filters_need_callers(filt):
         for spec in filt:
@@ -1772,6 +1866,15 @@ def extract_scan(
             s = ensure_callers_cache(rom, [spec]) or frozenset()
             print(
                 f"  [callers] {spec.get('id')}: reachable ×{len(s)} "
+                f"({mod.get('id')})"
+            )
+    if filters_need_execute(filt):
+        for spec in filt:
+            if str(spec.get("type") or "") != "execute_filter":
+                continue
+            s = get_consumed_set(rom, [spec]) or frozenset()
+            print(
+                f"  [execute] {spec.get('id')}: consumed ×{len(s)} "
                 f"({mod.get('id')})"
             )
 
@@ -1811,7 +1914,7 @@ def extract_scan(
     pins_only_fallthrough = False
 
     def _try_accept(
-        a: int, body: bytes | None, *, pinned: bool = False, trust_chain: bool = False
+        a: int, body: bytes | None, *, pinned: bool = False
     ) -> None:
         if a in seen:
             return
@@ -1824,8 +1927,8 @@ def extract_scan(
             raw = body
         if raw is None:
             return
-        # pinned / trust_chain（callers 已解析）：跳过 looks_like；形态闸交给其它 filter
-        if not pinned and not trust_chain:
+        # pinned（yaml 地址钉）：跳过 looks_like；形态闸交给其它 filter
+        if not pinned:
             if not looks_like_jp_text(raw):
                 if body is None or not (
                     body.endswith(b"\xff")
@@ -1935,7 +2038,23 @@ def extract_scan(
             reachable |= set(ensure_callers_cache(rom, [spec]) or ())
         for a in sorted(reachable):
             if _in_bands(a):
-                _try_accept(a, None, trust_chain=True)
+                _try_accept(a, None)
+        return out
+
+    # execute 包含：只验收预计算「被消费链消费」正文（∩ 模块带）
+    if _has_execute_include_filter(filt):
+        from util._execute_filter import get_consumed_set
+
+        consumed: set[int] = set()
+        for spec in filt:
+            if str(spec.get("type") or "") != "execute_filter":
+                continue
+            if "filter" not in spec or bool(spec.get("filter")):
+                continue
+            consumed |= set(get_consumed_set(rom, [spec]) or ())
+        for a in sorted(consumed):
+            if _in_bands(a):
+                _try_accept(a, None)
         return out
 
     # msg_filter 白名单：指针优先——只验收「有 ROM 指针指向」的正文，
@@ -2144,10 +2263,13 @@ def export_texts(
         raise ValueError(f"config missing game_code: {cfg_path}")
 
     rom = rom_path.read_bytes()
+    _FILTER_REGISTRY.clear()
     from util._callers_filter import set_active_rom
+    from util._execute_filter import set_active_rom as set_execute_rom
     from util._script_walk import set_script_roots
 
     set_active_rom(rom)
+    set_execute_rom(rom)
     set_script_roots((cfg.get("texts") or {}).get("script_roots") or {})
     rom_code = identify_rom(rom)
     if rom_code.upper() != game_code.upper():

@@ -181,6 +181,14 @@ struct ChsPitchCtrl {
 #define CHS_PARTY_MENU_TOP           13
 #define CHS_PARTY_FOOTER_TOP_TILE    17
 #define CHS_PARTY_FOOTER_TOP_PX      (17 * 8)
+/*
+ * Battle BG text (not healthbox textMode==2):
+ *   dialogue TILE_BASE=0x190, command menu=0x1B8 (AXVJ 0x0802D812 / 0x0802D852).
+ * Both sit below the old FIXED_BASE gate; they still own VRAM through 0x1E8..
+ * so avoid_dex must NOT remap that band to 0x3E8 (invisible → fill-tile black bars).
+ */
+#define CHS_BATTLE_TEXT_BASE_LO 0x190
+#define CHS_BATTLE_TEXT_BASE_HI 0x1C0 /* exclusive; covers 0x190 and 0x1B8 */
 #define CHS_BATTLE_FIXED_BASE   0x280
 #define CHS_FONT_GLYPH_MAX      7168
 #define CHS_ESCAPE              0xF9
@@ -286,6 +294,7 @@ int  scene_is_party_footer(TextPrinter *win);
 int  DrawMenuCursorEF(TextPrinter *win);
 int  scene_jp_via_chs(TextPrinter *win);
 int  scene_is_battle_interface_dest(TextPrinter *win);
+int  scene_is_battle_text_window(TextPrinter *win);
 void scene_mode2_apply(TextPrinter *win, int *x, int *y, int *band, int *origin);
 int  scene_battle_force_linear(TextPrinter *win);
 int  scene_keep_linear_16(TextPrinter *win);

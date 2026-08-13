@@ -1444,10 +1444,10 @@ class ControlOrShortFilter(TextFilter):
 
 
 class CallersFilter(TextFilter):
-    """callers 可达：正文是否经配置 sink 的 bl 调用点 / 脚本 message 传入。
+    """callers 可达：正文是否经 PrintNextChar 绑串路径（bind_leaf / sinks / script_ops）。
 
-    value.sinks: [{name, address}, ...]；name 对照 pokeruby，address 为日版入口。
-    与 addr_patcher callers 同向；filter: false 时作包含闸（命中才留）。
+    value.bind_leaf: InitTextPrinter 等；value.sinks 为可选直连汇点；
+    script_ops 覆盖经 RAM 的脚本指针。filter: false 时作包含闸（命中才留）。
     """
 
     type_name = "callers_filter"
@@ -1456,14 +1456,14 @@ class CallersFilter(TextFilter):
         val = self.value
         if not isinstance(val, dict):
             return None
-        sinks = val.get("sinks")
-        if not isinstance(sinks, list) or not sinks:
-            return None
         from util._callers_filter import (
             ensure_callers_cache,
+            filters_need_callers,
             get_active_rom,
         )
 
+        if not filters_need_callers([self.spec]):
+            return None
         rom = get_active_rom()
         if rom is None:
             return False
@@ -2144,7 +2144,8 @@ def export_texts(
         raise ValueError(f"config missing game_code: {cfg_path}")
 
     rom = rom_path.read_bytes()
-    from util._callers_filter import set_active_rom, set_script_roots
+    from util._callers_filter import set_active_rom
+    from util._script_walk import set_script_roots
 
     set_active_rom(rom)
     set_script_roots((cfg.get("texts") or {}).get("script_roots") or {})

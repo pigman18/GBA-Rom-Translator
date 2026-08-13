@@ -103,9 +103,13 @@ static uint8_t *vram_tile(TextPrinter *win, uint16_t tile)
     return tile_data + ((uint32_t)tile << 5);
 }
 
-/* Remap abs tile out of reserved UI bands. Mode2 + Linear. */
-static uint16_t avoid_dex_ui_tile(uint16_t tile)
+/* Remap abs tile out of reserved UI bands. Mode2 + Linear.
+ * Battle dialogue/menu keep 0x1E8.. — remapping to 0x3E8 leaves FillWindow
+ * tile 0x0A visible as solid black bars. */
+static uint16_t avoid_dex_ui_tile(TextPrinter *win, uint16_t tile)
 {
+    if (scene_is_battle_text_window(win))
+        return tile;
     /* ▶ pair only — wrap into Linear pool (never 0x1D0; that broke summary). */
     if (tile >= CHS_MENU_CURSOR_TILE && tile <= CHS_MENU_CURSOR_TILE_HI)
         return (uint16_t)(CHS_MENU_CURSOR_TILE_ALT
@@ -119,11 +123,10 @@ static uint16_t avoid_dex_ui_tile(uint16_t tile)
 static void ensure_linear_dest_floor(TextPrinter *win)
 {
     uint8_t *tpl;
-    uint16_t tile_base = win_u16(win, WIN_TILE_BASE);
     uint16_t off = win_u16(win, WIN_TILE_OFFSET);
     uint16_t floor;
 
-    if (tile_base >= CHS_BATTLE_FIXED_BASE)
+    if (scene_is_battle_text_window(win))
         return;
 
     tpl = win_template(win);
@@ -147,7 +150,7 @@ static uint16_t linear_cursor_tile(TextPrinter *win, unsigned x_off, unsigned y_
     uint16_t tile_base = win_u16(win, WIN_TILE_BASE);
     uint16_t off = win_u16(win, WIN_TILE_OFFSET);
     return avoid_dex_ui_tile(
-        (uint16_t)(tile_base + off + 2u * x_off + y_off));
+        win, (uint16_t)(tile_base + off + 2u * x_off + y_off));
 }
 
 static void compute_mode2_pair(
@@ -166,8 +169,8 @@ static void compute_mode2_pair(
         uint32_t idx = (uint32_t)(y * CHS_TILE_GRID_W + x + band);
         idx += win_u16(win, WIN_TILE_BASE);
         idx += (uint32_t)origin;
-        *upper = avoid_dex_ui_tile((uint16_t)idx);
-        *lower = avoid_dex_ui_tile((uint16_t)(idx + CHS_TILE_GRID_W));
+        *upper = avoid_dex_ui_tile(win, (uint16_t)idx);
+        *lower = avoid_dex_ui_tile(win, (uint16_t)(idx + CHS_TILE_GRID_W));
     }
 }
 

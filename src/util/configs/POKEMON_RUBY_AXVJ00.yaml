@@ -69,18 +69,21 @@ texts:
     gMapGroups_count: 33
     gStdScripts: '0x08145A48'
     gStdScripts_count: 8
-  # AXVJ 日版汇点（对照 pokeruby）；剧情 / 训练家 / UI 分列
-  # 训练家台词经 RAM→ShowFieldMessage，须 script_ops: trainerbattle，不能只靠 BL 回溯
+  # callers_filter 只判「会否被 PrintNextChar 消费」。
+  # 剧情：脚本 message 等（指针常经 RAM）→ script_ops。
+  # UI：InitTextPrinter 叶闭包 + 表展开（含 StringCopy 表源）。
+  # 训练家：trainerbattle。归属靠模块地址带/顺序，不靠 callers 再分域。
+  _print_bind: &print_bind
+    bind_leaf:
+      name: InitTextPrinter
+      address: '0x08002C68'
+      text_arg: r1
+    wrapper_depth: 4
   story_callers: &story_callers
     id: story_callers
     type: callers_filter
     filter: false
     value:
-      sinks:
-        - name: ShowFieldMessage
-          address: '0x08061CF4'
-        - name: ShowFieldAutoScrollMessage
-          address: '0x08061D1C'
       script_ops: [message, messageautoscroll, loadword_callstd]
   trainer_callers: &trainer_callers
     id: trainer_callers
@@ -93,37 +96,7 @@ texts:
     type: callers_filter
     filter: false
     value:
-      sinks:
-        - name: Menu_PrintText
-          address: '0x0806F16C'
-          text_arg: r0
-        - name: MenuPrintMessage
-          address: '0x0806F32C'
-          text_arg: r0
-        - name: MenuPrintMessageDefaultCoords
-          address: '0x0806F360'
-          text_arg: r0
-        - name: DisplayPartyMenuMessage
-          address: '0x0806BB3C'
-          text_arg: r0
-        - name: DisplayItemMessageOnField
-          address: '0x080F4020'
-          text_arg: r1
-        - name: PrintMessage
-          address: '0x080F3FC0'
-          text_arg: r0
-        - name: Text_InitWindowAndPrintText
-          address: '0x080030A8'
-          text_arg: r1
-        - name: Text_InitWindow
-          address: '0x08002CFC'
-          text_arg: r1
-        - name: Contest_StartTextPrinter
-          address: '0x08002D1C'
-          text_arg: r1
-        # P1 未钉（AXVJ 无独立 Menu_* 包装或与叶函数重合；直 bl Text_InitWindow 已由上项覆盖）:
-        # Menu_PrintTextPixelCoords / MenuPrint_Centered / MenuPrint_RightAligned /
-        # sub_8072A18 / sub_8072AB0
+      <<: *print_bind
   story_bias: &story_bias
     - *story_callers
   trainer_bias: &trainer_bias
@@ -331,7 +304,7 @@ texts:
       label: 文本·前期剧情
       group: 文本
       default: true
-      description: 前段；callers（ShowFieldMessage / message）
+      description: 前段；callers script_ops（message）
       start: '0x0'
       end: '0x15C6AF'
       type: scan
@@ -353,7 +326,7 @@ texts:
       label: UI界面
       group: 文本
       default: true
-      description: 全 ROM；callers（Menu_PrintText 等）；排在剧情之后
+      description: 全 ROM；callers bind_leaf（InitTextPrinter）；排在剧情之后
       start: '0x0'
       end: '0xFFFFFF'
       type: scan

@@ -480,45 +480,42 @@ python src/util/texts_patcher.py export <rom.gba> [--config yaml] [--module 模�
 
 含 `msg_filter`（`filter: false`）的模块：**指针优先**——只验收 `ptr_index` 目标正文，再跑语料/形态闸；不再按语料 PCS 全盘 FF 针扫。
 
-含 `callers_filter`（`filter: false`）的模块：只验收预计算「经 sink callers 可达」正文（∩ 模块地址带）；AXVJ 剧情/UI 偏置仅挂此闸。
+含 `callers_filter`（`filter: false`）的模块：只验收预计算「经 PrintNextChar 绑串路径可达」正文（∩ 模块地址带）；剧情/UI 归属靠地址带等其它 filter，不靠 callers 再分域。
 
-### `callers_filter`（与 addr_patcher callers 同向）
+### `callers_filter`（是否会被 PrintNextChar 消费）
+
+`PrintNextChar` 读 `win[+0x10]`；绑串叶是 **`InitTextPrinter`**（`str r1 → +0x10`）。本 filter **只**回答：类文本最终会不会进这条路径。
 
 ```yaml
 - id: story_callers
   type: callers_filter
   filter: false
   value:
-    sinks:
-      - name: ShowFieldMessage
-        address: '0x08061CF4'          # text_arg 默认 r0
-      - name: ShowFieldAutoScrollMessage
-        address: '0x08061D1C'
+    # 剧情：脚本入口 walk（指针常经 RAM，BL 回溯看不到）
     script_ops: [message, messageautoscroll, loadword_callstd]
 - id: trainer_callers
   type: callers_filter
   filter: false
   value:
-    script_ops: [trainerbattle]   # 训练家台词在 RAM，BL 回溯看不到
+    script_ops: [trainerbattle]
 - id: ui_callers
   type: callers_filter
   filter: false
   value:
-    sinks:
-      - name: Menu_PrintText
-        address: '0x0806F16C'
-        text_arg: r0
-      - name: Text_InitWindow
-        address: '0x08002CFC'
-        text_arg: r1              # 战斗四键等走 ldr r1; bl
+    bind_leaf:
+      name: InitTextPrinter
+      address: '0x08002C68'
+      text_arg: r1
+    wrapper_depth: 4
 ```
 
 预计算（一次性反汇编，可慢）：
-1. 有 `sinks`：按原始 Thumb **BL 编码**全盘找调用点（避免 Capstone 线性失步），再向前回溯解析 `text_arg`（`r0`|`r1`，默认 `r0`）上的 `ldr …,[pc,#…]` ROM 字面量；只保留 ROM 正文指针（RAM 缓冲不进池）；
-2. `script_ops`：自 `texts.script_roots` **脚本入口 walk**（非全盘 `find(opcode)`）——`gMapGroups` / `map_header_ptrs` → 每图 `mapScripts` + `events`（object/coord/bg）+ `gStdScripts`，按固定 opcode 长度表 BFS；在指令流上抽 `message` / `messageautoscroll`、`loadword_callstd`（0x0F 后窗口内须有 callstd）、`trainerbattle`（0x5C，按 type 取 intro/defeat 等文本指针）；
-3. 调用链解析到的 ROM 指针直接收录（仅 `_is_rom_text_ptr` 闸）；形态二次过滤交给模块其它 filter，不在此用 Thumb/形态启发式否决。
+1. **`bind_leaf`（UI）**：全盘找 BL→叶；解析 `text_arg` 上的 PC 字面量；`lsl/add` + `ldr [Rn]` / `ldr [基,idx]` 则按 stride **整表展开**；包装闭包（含 LR 的 push）扩到 `Menu_PrintText` 等；并扫 `StringCopy` 的 ROM 表源（口袋名等先拷 RAM 再打印）。
+2. **`script_ops`（剧情/训练家）**：自 `texts.script_roots` 入口 walk，抽 `message` / `loadword_callstd` / `trainerbattle`。
+3. 可选 **`sinks`**：旧路径直连 BL。
+4. 只收录 ROM 正文指针；剧情 vs UI 用模块顺序 + 地址带等其它 filter（story 先认领脚本池，UI 收剩余 bind_leaf）。
 
-说明：AXVJ 字段本正文几乎都在 `0x1xxxxx`；模块「前/中期」按该池地址切分，不是按通关进度。训练家模块须排在剧情之前，并用 `trainerbattle` 单独认领。
+说明：AXVJ 字段本正文几乎都在 `0x1xxxxx`；模块「前/中期」按该池地址切分。训练家模块须排在剧情之前，并用 `trainerbattle` 单独认领。
 
 AXVJ `texts.script_roots`（util yaml 钉址）：
 
@@ -526,33 +523,12 @@ AXVJ `texts.script_roots`（util yaml 钉址）：
 |------|-----------|------|
 | `map_header_ptrs` | `0x082E03CC` | 各组 `MapHeader*` 表拼接（393） |
 | `map_header_count` | `393` | |
-| `gMapGroups` | `0x082E09F4` | 组索引表（33；group0 即 `map_header_ptrs` 起） |
+| `gMapGroups` | `0x082E09F4` | 组索引表（33） |
 | `gStdScripts` | `0x08145A48` | `gotostd`/`callstd` 目标（×8） |
 
-字段本 `gScriptCmdTable` 在 `0x08145190`（`ScrCmd_message`→`ShowFieldMessage`）；walk 用固定长度表，不依赖运行时表。
+叶与闭包（对照 pokeruby）：`InitTextPrinter@0x08002C68` ← `Text_InitWindow` ← `Text_InitWindowAndPrintText` ← `Menu_PrintText` / 字段 `ShowFieldMessage*` 等。表形例：Start Menu `MenuAction`（stride 8）、口袋名指针表。
 
-AXVJ 已钉 sinks（对照 pokeruby `menu.h` / `text.h`）：
-
-| 域 | 符号 | 地址 | text_arg |
-|----|------|------|----------|
-| story | ShowFieldMessage | `0x08061CF4` | r0 |
-| story | ShowFieldAutoScrollMessage | `0x08061D1C` | r0 |
-| UI | Menu_PrintText | `0x0806F16C` | r0 |
-| UI | MenuPrintMessage | `0x0806F32C` | r0 |
-| UI | MenuPrintMessageDefaultCoords | `0x0806F360` | r0 |
-| UI | DisplayPartyMenuMessage | `0x0806BB3C` | r0 |
-| UI | DisplayItemMessageOnField | `0x080F4020` | **r1** |
-| UI | PrintMessage（野外道具内部） | `0x080F3FC0` | r0 |
-| UI | Text_InitWindowAndPrintText | `0x080030A8` | **r1** |
-| UI | Text_InitWindow | `0x08002CFC` | **r1** |
-| UI | Contest_StartTextPrinter | `0x08002D1C` | **r1** |
-| UI | **PrintMainMenuItem** | `0x080076C0` | r0 | 标题「继续/新游戏/设置」：函数内拷栈再 `Menu_PrintText`，只钉叶函数看不到 |
-
-钉地址方法：用日版 `gScriptCmdTable@0x08145190` 的 `ScrCmd_message`（opcode 0x67）反汇编得到 `ShowFieldMessage`；`Menu_PrintText` 在 menu 区找「加载窗指针 + tile 偏移后 `bl`」的包装函数；`Text_InitWindow` 为 thunk（body=`InitTextPrinter`）；标题三选项须钉 `PrintMainMenuItem`（pokeruby `main_menu.c`）。sink 项必须写 **`address`**（缺键或写成 `addrsss` 会直接报错退出）。
-
-**不要**挂成 sink：`Text_InitWindowWithTemplate`（只建窗）、`StringExpandPlaceholders` / `BattleStringExpandPlaceholders*`（只展开）、`BufferStringBattle`（参数是 string ID）、`Text_PrintWindow*` / `Text_UpdateWindow*`（读已绑 `win->text`）、Emerald 系 `AddTextPrinter*`。
-
-P1 尚未钉到独立 AXVJ 包装（直 `bl Text_InitWindow` 已由叶入口覆盖；menu 旁路形态与美版不完全同址）：`Menu_PrintTextPixelCoords` / `MenuPrint_Centered` / `MenuPrint_RightAligned` / `sub_8072A18` / `sub_8072AB0`。
+**不要**当叶：`Text_InitWindowWithTemplate`（只建窗）、`StringExpandPlaceholders` / `BattleStringExpandPlaceholders*`（只展开）、`BufferStringBattle`（string ID）、`Text_PrintWindow*` / `Text_UpdateWindow*`（读已绑 `win->text`）。
 
 ## 搜索 (scan)
 

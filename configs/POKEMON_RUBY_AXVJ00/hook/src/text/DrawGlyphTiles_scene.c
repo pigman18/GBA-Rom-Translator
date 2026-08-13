@@ -161,9 +161,18 @@ void scene_mode2_apply(TextPrinter *win, int *x, int *y, int *band, int *origin)
     }
 }
 
+int scene_is_battle_text_window(TextPrinter *win)
+{
+    uint16_t tb = win_u16(win, WIN_TILE_BASE);
+
+    if (tb >= CHS_BATTLE_TEXT_BASE_LO && tb < CHS_BATTLE_TEXT_BASE_HI)
+        return 1;
+    return tb >= CHS_BATTLE_FIXED_BASE;
+}
+
 int scene_battle_force_linear(TextPrinter *win)
 {
-    return win_u16(win, WIN_TILE_BASE) >= CHS_BATTLE_FIXED_BASE;
+    return scene_is_battle_text_window(win);
 }
 
 int scene_is_battle_interface_dest(TextPrinter *win)

@@ -1,20 +1,4 @@
 {
-  "allows": [],
-  "rejects": [
-
-  ],
-  "protect": {
-    "word_count": 32,
-    "semantic_threshold_ratio": 0.75,
-    "paragraph_codes": [
-      "\\.",
-      "\\p"
-    ],
-    "strip_layout_codes": [
-      "\\l",
-      "\\n"
-    ]
-  },
   "reject": {
     "title_gfx_sites": {
       "sites": [

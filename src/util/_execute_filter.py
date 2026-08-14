@@ -233,6 +233,7 @@ _BRANCH_MNEMS = frozenset(
         "bx", "blx", "bl", "swi", "svc", "cbz", "cbnz",
     }
 )
+_UNCOND_BRANCH_MNEMS = frozenset({"b", "bx", "blx", "bl", "swi", "svc"})
 _NO_WRITE_MNEMS = frozenset(
     {
         "cmp", "cmn", "tst", "teq", "str", "strh", "strb",
@@ -301,7 +302,7 @@ def _call_param_refs(
         steps += 1
         mn = insn.mnemonic
         ops = insn.operands
-        if mn in _BRANCH_MNEMS:
+        if mn in _UNCOND_BRANCH_MNEMS:
             break
         if mn in _NO_WRITE_MNEMS or not ops:
             continue
@@ -565,6 +566,7 @@ def _collect_consumed_set(
             if v is not None:
                 table_bases.add(v)
     for tb in table_bases:
+        raw_refs.append(tb)
         raw_refs.extend(_expand_pointer_table(rom, tb))
 
     # 第三阶段：代码指针排除

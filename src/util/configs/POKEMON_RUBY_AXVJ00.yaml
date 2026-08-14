@@ -96,8 +96,8 @@ texts:
       group: 词条
       default: true
       description: 性格名指针表（25）；相遇/蛋描述走 UI callers
-      start: '0x3971E8'
-      end: '0x39724B'
+      start: '0x397168'
+      end: '0x39734C'
       type: stride_ptr
       read:
         stride: 4
@@ -162,6 +162,10 @@ texts:
           end: '0x1C4D00'
         - start: '0x3E944C'
           end: '0x3E9453'
+      filters:
+        - id: name_min_byte_length_filter
+          type: min_byte_length_filter
+          value: 3
     - id: 地点名
       label: 词条·地点
       group: 词条
@@ -200,7 +204,6 @@ texts:
         desc_ptr_offset: 16
       relocate: true
       hook: true
-
     - id: 道具说明
       label: 说明·道具
       group: 说明
@@ -257,7 +260,6 @@ texts:
       word_count: 16
       wrap_pages: false
       max_lines: 3
-
     # 文本大模块：词条/说明 → 剧情(trainerbattle+message) → UI(菜单/文本打印)
     # 训练家对白已并入剧情（ShowTrainerIntroSpeech → ShowFieldMessage）
     - id: 剧情

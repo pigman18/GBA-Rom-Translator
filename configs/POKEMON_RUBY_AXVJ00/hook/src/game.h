@@ -199,8 +199,10 @@ struct ChsPitchCtrl {
 
 typedef uint8_t TextPrinter;
 
-/* Bind/restore per-window pitch slot (JP+CN share CHS pool; never FontFunc dual-path). */
-volatile struct ChineseTileState *chs_bind_pitch_slot(TextPrinter *win);
+/* Bind/restore per-window pitch slot (JP+CN share CHS pool; never FontFunc dual-path).
+ * out_is_new (optional, may be NULL): set to 1 when this bind created a fresh
+ * slot for a new pitch key (换行/换窗), so caller can compensate TILE_OFFSET. */
+volatile struct ChineseTileState *chs_bind_pitch_slot(TextPrinter *win, int *out_is_new);
 
 static inline uint8_t  win_u8(const TextPrinter *w, unsigned off)  { return w[off]; }
 static inline uint16_t win_u16(const TextPrinter *w, unsigned off)

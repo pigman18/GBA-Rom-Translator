@@ -34,7 +34,7 @@ static uint8_t pitch_capture_base_tx(TextPrinter *win)
  * Isolate pitch+write_op per printer fingerprint so switching windows does not
  * clobber another printer's chs_px (title glyph paste into keyboard rows).
  */
-volatile struct ChineseTileState *chs_bind_pitch_slot(TextPrinter *win)
+volatile struct ChineseTileState *chs_bind_pitch_slot(TextPrinter *win, int *out_is_new)
 {
     volatile struct ChsPitchCtrl *ctrl =
         (volatile struct ChsPitchCtrl *)ADDR_CHS_PITCH_CTRL;
@@ -47,6 +47,9 @@ volatile struct ChineseTileState *chs_bind_pitch_slot(TextPrinter *win)
     unsigned best;
     uint8_t best_age;
     uint8_t gen;
+
+    if (out_is_new)
+        *out_is_new = 0;
 
     for (i = 0; i < CHS_PITCH_SLOT_COUNT; i++) {
         if (slots[i].pitch_key == key && slots[i].char_base == char_base) {
@@ -81,12 +84,14 @@ volatile struct ChineseTileState *chs_bind_pitch_slot(TextPrinter *win)
     ctrl->gen = gen;
     ctrl->age[best] = gen;
     ctrl->cur = (uint8_t)best;
+    if (out_is_new)
+        *out_is_new = 1;
     return &slots[best];
 }
 
 static void pitch_reset(TextPrinter *win)
 {
-    volatile struct ChineseTileState *st = chs_bind_pitch_slot(win);
+    volatile struct ChineseTileState *st = chs_bind_pitch_slot(win, 0);
     st->chs_px = 0;
     st->base_tx = pitch_capture_base_tx(win);
 }
@@ -291,7 +296,7 @@ void drawGlyph_Adv(TextPrinter *win, const uint8_t *src128, int linear, unsigned
      * 16px 字模 → adv_px advance（默认 12=8+4；JP via CHS 为 8=仅左半）。
      * 推进由 chs_px 累积；Mode2/Linear 落点与中文共用。
      */
-    volatile struct ChineseTileState *st = chs_bind_pitch_slot(win);
+    volatile struct ChineseTileState *st = chs_bind_pitch_slot(win, 0);
     unsigned startPixel;
     unsigned pass2_w;
     uint16_t off, abs_u, abs_l, su, sl;
@@ -487,11 +492,22 @@ void DrawGlyph_Chinese(TextPrinter *win, const uint8_t *glyph_src)
 
 void DrawGlyph_Chinese_Adv(TextPrinter *win, const uint8_t *glyph_src, unsigned adv_px)
 {
-    volatile struct ChineseTileState *st = chs_bind_pitch_slot(win);
+    int slot_new = 0;
+    volatile struct ChineseTileState *st = chs_bind_pitch_slot(win, &slot_new);
     uint8_t cur_tx = win_u8(win, WIN_CURSOR_TILE_X);
     unsigned last;
     int linear;
     int newline_reset = 0;
+
+    /*
+     * 换行（FE）后原版置 cursorTileX=0 且 cursorTileY+=2 → pitch_key 变化 →
+     * 此处为新 slot。Linear 下行尾 pass2 spill（右 4px）仍挂在上一行末尾
+     * 的 tile 上，若不 bump TILE_OFFSET，下一行首字 pass1 会复用该 tile →
+     * 行尾出现下一行首字的前半拉（Bug3，奇数标点相位为 4 时必现）。
+     * 历史版在 key 变化时 newline_reset=1；8 槽化后该补偿丢失，这里补回。
+     */
+    if (slot_new && st->chs_px == 0)
+        newline_reset = 1;
 
     /* Slot bind already switched windows without wiping other printers.
      * Only reset pitch inside this slot on FE / cursor desync. */

@@ -231,7 +231,7 @@ int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
             uint32_t tptr = win_u32(win, WIN_TEXT_PTR);
             if (index == 1
                 && (tptr < ADDR_PHRASE_TABLE || tptr >= ADDR_FONT_CHS_NORMAL))
-                chs_bind_pitch_slot(win)->write_op = 0;
+                chs_bind_pitch_slot(win, 0)->write_op = 0;
             {
                 uint8_t lead = p[1];
                 uint8_t trail = p[2];
@@ -248,7 +248,7 @@ int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
         }
 
         {
-            volatile struct ChineseTileState *st = chs_bind_pitch_slot(win);
+            volatile struct ChineseTileState *st = chs_bind_pitch_slot(win, 0);
             uint16_t code = (uint16_t)((p[1] << 8) | p[2]);
             int parent_cont = phrase_parent_continues(text, index);
 

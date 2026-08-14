@@ -132,7 +132,7 @@ int scene_is_shop_bag_list(TextPrinter *win)
  */
 void scene_mode2_apply(TextPrinter *win, int *x, int *y, int *band, int *origin)
 {
-    volatile struct ChineseTileState *st = chs_bind_pitch_slot(win);
+    volatile struct ChineseTileState *st = chs_bind_pitch_slot(win, 0);
     uint8_t op = st->write_op;
     uint8_t left = win_u8(win, WIN_CURSOR_X);
 

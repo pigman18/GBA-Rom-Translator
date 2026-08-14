@@ -16,6 +16,9 @@
     .global GetStringWidthChinese
     .thumb_func
     .type GetStringWidthChinese, %function
+    .global MapName_DisplayCellLength
+    .thumb_func
+    .type MapName_DisplayCellLength, %function
     .extern PrintNextChar_C
     .extern GetStringWidthChinese_Full
 
@@ -59,3 +62,13 @@ GetStringWidthChinese:
     pop {r1}
     bx r1
     .size GetStringWidthChinese, .-GetStringWidthChinese
+
+@ DrawMapNamePopup @0x0809F67E: skip StringLength pad + 2nd GetMapName(fill).
+@ First GetMapName(fill=0) already left raw F9…FF on sp; MenuPrint reloads r0=sp.
+@ 原版在 StringLength 后仍 GetMapName(fill=10) 填 0x00，把中文 F9 短语顶出
+@ 白空格（Bug1）并二次覆盖导致重复（Bug2）。直跳 MenuPrint 跳过 pad/二次 fill。
+MapName_DisplayCellLength:
+    ldr r3, =0x0809F6CB
+    bx r3
+    .pool
+    .size MapName_DisplayCellLength, .-MapName_DisplayCellLength

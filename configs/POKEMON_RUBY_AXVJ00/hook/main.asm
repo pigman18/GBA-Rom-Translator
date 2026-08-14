@@ -21,6 +21,13 @@
 ; 战斗 HP 条昵称：遮罩 tile CpuSet 32B→24B（pokeRS / 增益版）
 .include "./src/battle/UpdateNickInHealthbox_hook_origin.s"
 
+; 地图名弹窗：跳过 StringLength pad + 二次 GetMapName(fill=10)，
+; 直跳 MenuPrint。否则中文 F9 短语被 fill 顶出 → 白空格(Bug1)+重复(Bug2)。
+.org DrawMapNamePopup_StringLength
+    ldr r0, =(MapName_DisplayCellLength | 1)
+    bx r0
+.pool
+
 .org GameBinAddresses
 PrintNextChar:
 .incbin "out/game.bin"

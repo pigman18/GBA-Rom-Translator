@@ -1312,7 +1312,7 @@ def _resolve_msg_filter_file(file_spec: str) -> Path:
     p = Path(str(file_spec))
     if p.is_file():
         return p.resolve()
-    cand = _util_work_root() / p
+    cand = CONFIGS_DIR / p
     if cand.is_file():
         return cand.resolve()
     raise SystemExit(f"msg_filter 找不到语料文件: {file_spec!r} (试过 {cand})")

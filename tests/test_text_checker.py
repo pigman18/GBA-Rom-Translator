@@ -1,4 +1,4 @@
-"""Unit tests for text_checker scoring + looks_like_jp_text katakana UI."""
+"""Unit tests for text_checker scoring."""
 
 from __future__ import annotations
 
@@ -9,7 +9,6 @@ from pathlib import Path
 ROOT = Path(__file__).resolve().parents[1]
 sys.path.insert(0, str(ROOT / "src"))
 
-from meowth.jp_pcs import looks_like_jp_text  # noqa: E402
 from meowth.text_checker import (  # noqa: E402
     WEIGHTS,
     _entropy,
@@ -35,23 +34,6 @@ def _entry(
         "byte_length": len(hex_bytes),
         "is_fixed_table": is_fixed_table,
     }
-
-
-class TestLooksLikeJpText(unittest.TestCase):
-    def test_hiragana_dialogue(self) -> None:
-        # あいうえおかきく + FF
-        bs = bytes([0x01, 0x02, 0x03, 0x04, 0x05, 0x06, 0x07, 0x08, 0xFF])
-        self.assertTrue(looks_like_jp_text(bs))
-
-    def test_katakana_ui_long(self) -> None:
-        # 8+ pure katakana glyphs (no hiragana) — previously rejected
-        bs = bytes([0x9F, 0x59, 0x73, 0x7E, 0x96, 0x64, 0x6E, 0x5D, 0xFF])
-        self.assertTrue(looks_like_jp_text(bs))
-        self.assertGreaterEqual(len(bs) - 1, 8)
-
-    def test_rejects_no_terminator(self) -> None:
-        bs = bytes([0x01, 0x02, 0x03, 0x04])
-        self.assertFalse(looks_like_jp_text(bs))
 
 
 class TestNewSignals(unittest.TestCase):
@@ -121,7 +103,7 @@ class TestScoreEntries(unittest.TestCase):
         e = _entry(bs, original="????")
         (_e, hits, score) = score_entries([e], rom=None)[0]
         self.assertTrue(
-            "repeat" in hits or "entropy" in hits or "jp_text" in hits,
+            "repeat" in hits or "entropy" in hits,
             f"hits={hits}",
         )
         self.assertLess(score, 90)

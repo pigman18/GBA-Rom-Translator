@@ -327,10 +327,13 @@ class RomWriter:
         font_end = self._font_slots_end_offset()
         floor = max(self.EXPANSION_START, font_end)
         if self._is_armips:
-            free_start = self._find_free_space(rom, self.FONT_BOUNDARY, fill=0x00)
-            free_start = max(free_start, floor)
-            if free_start >= self.FONT_BOUNDARY - 0x1000:
-                free_start = floor
+            # ARMIPS 已先把 ROM 扩到 32MB 并写好 game.bin/字库/hook 池(0x09E00000)。
+            # 此刻若用 _find_free_space(..., fill=0x00) 往回扫，会把 hook 池之后
+            # 的 0x00 填充当成空闲区 → relocate 正文从 0x09E00000 起写，与 hook
+            # 池紧邻/挤到 ROM 末尾，遇敌战斗访问 ROM 高区时数据被破坏 → PC 跑飞
+            # (0x04002FE8)。故必须固定从 floor (= expansion_start, 字库 Sym 之后、
+            # hook 池之前的安全空隙) 开始，不再"猜"空闲。
+            free_start = floor
         else:
             free_start = max(
                 self._find_free_space(rom, self.FONT_BOUNDARY, fill=0xFF),

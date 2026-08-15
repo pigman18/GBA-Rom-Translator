@@ -41,6 +41,51 @@
 .org 0x081053D0
     mov r2, 0x1D
 
+; =============================================================================
+; B06 初始宠 label 第一行「分类+宝可梦」栈溢出 → 宝可梦名重复打印
+; -----------------------------------------------------------------------------
+; CreateStarterPokemonLabel @0x081053A8 栈帧 sub sp,#0x20：
+;   sp[0..15]=第一行 buffer，sp[16..31]=第二行 buffer。
+; 第一行 = 颜色码(5)+分类假名(≤5)+「ポケモン」拷贝(5B)+FF，恰好 16B。
+; 汉化把「ポケモン」→「宝可梦」=F9 00×3+FF=13B（指针 0x08105534 被 pointer_redirect
+; 重定向到扩展区），但该函数是「读指针所指字节直接拷贝」，固定拷 5B：
+;   a) 固定 5B 只拷到 f9 00 01 63 f9，第二组 F9 序列悬空，PrintNextChar 把
+;      缓冲区外的字节当 F9 短语码去查表 → 随机乱码（14~16.png 字符乱飞）。
+;   b) 若改成整串拷入，第一行膨胀到 5+5+13+1=24B，超出 16B 写进第二行 buffer，
+;      打印第一行时吃掉第二行颜色码后把名字打出来 → 名字重复（5~13.png）。
+; 修复：两件事必须同时做——
+;   1) 栈帧 0x20→0x60，第二行 buffer 从 sp+0x10 移到 sp+0x30，两行各 48B 隔离；
+;   2) 「ポケモン」拷贝从固定 5B 改为拷到 0xFF（上限 0x11），整串 F9 序列完整
+;      落入第一行 buffer，其后 FF 让打印干净收尾，无悬空 F9、无溢出。
+; =============================================================================
+.org 0x081053B2
+    sub sp, 0x60
+
+.org 0x08105416
+    add r1, sp, 0x30
+
+.org 0x0810551C
+    add sp, 0x60
+
+; 0x0810544C：ポケモン拷贝循环（原固定 5B：cmp r7,#4 / bls）
+; 替换为「拷到 0xFF，上限 0x11」，字节数与原循环一致（0x1A）。
+.org 0x0810544C
+StarterPokeCopyLoop:
+    mov r0, sp
+    add r1, r0, r4
+    add r0, r7, r2
+    ldrb r0, [r0, #0]
+    strb r0, [r1, #0]
+    cmp r0, #0xFF
+    beq StarterPokeCopyDone
+    add r7, #1
+    add r4, #1
+    cmp r7, #0x11
+    bls StarterPokeCopyLoop
+    nop
+    nop
+StarterPokeCopyDone:
+
 .org GameBinAddresses
 PrintNextChar:
 .incbin "out/game.bin"

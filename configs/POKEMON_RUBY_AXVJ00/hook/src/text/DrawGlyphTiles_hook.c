@@ -101,6 +101,55 @@ void Chinese_PitchReset(TextPrinter *win)
     pitch_reset(win);
 }
 
+/*
+ * FA/FB never reach PrintNextChar (PCC control jumptable → DrawInitialDownArrow).
+ * Arrow blits VRAM at TILE_BASE+TILE_OFFSET, then UpdateTilemap at
+ * CURSOR_X+TILE_X. 12px linear lag leaves OFFSET one column behind → ▼
+ * overwrites ink VRAM (still mapped) AND stamps at the visual end → 双▼.
+ */
+void WaitArrow_Prepare_C(TextPrinter *win)
+{
+    volatile struct ChineseTileState *st;
+    uint16_t cols;
+    uint16_t off;
+    uint8_t want;
+    uint8_t cur_tx;
+
+    if (!win)
+        return;
+    st = chs_bind_pitch_slot(win, 0);
+    if (!st->chs_px)
+        return;
+
+    cols = (uint16_t)((st->chs_px + 7u) >> 3);
+    want = (uint8_t)(st->base_tx + cols);
+    cur_tx = win_u8(win, WIN_CURSOR_TILE_X);
+
+    /*
+     * \\n{\\p}: FE already moved to the next line (TILE_X==0). Keep that
+     * cursor — do NOT stamp at previous-line end (双▼: static at 梦 + animated
+     * corner). Only refresh TILE_OFFSET so arrow ink misses glyph VRAM.
+     *
+     * Same-line \\p (shop): TILE_X still at ink end → sync to want.
+     */
+    if (cur_tx == 0u && want > 0u) {
+        off = win_u16(win, WIN_TILE_OFFSET);
+        if (st->chs_px & 7u)
+            win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
+        pitch_reset(win);
+        return;
+    }
+
+    /* want is TILE_X space — never subtract CURSOR_X (shop mid-line ♥). */
+    win_set_u8(win, WIN_CURSOR_TILE_X, want);
+
+    off = win_u16(win, WIN_TILE_OFFSET);
+    if (st->chs_px & 7u)
+        win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
+
+    pitch_reset(win);
+}
+
 static uint8_t *vram_tile(TextPrinter *win, uint16_t tile)
 {
     uint8_t *tpl = win_template(win);

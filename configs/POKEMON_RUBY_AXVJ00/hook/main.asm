@@ -28,6 +28,12 @@
     bx r0
 .pool
 
+; 等 A 箭头：FA/FB 不经 PrintNextChar；TILE_OFFSET 与 CURSOR 错位 → 双▼。
+.org DrawInitialDownArrow
+    ldr r3, =(WaitArrow_Prepare | 1)
+    bx r3
+.pool
+
 .org GameBinAddresses
 PrintNextChar:
 .incbin "out/game.bin"

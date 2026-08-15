@@ -298,6 +298,8 @@ int  scene_is_shop_bag_list(TextPrinter *win);
 int  scene_is_party_footer(TextPrinter *win);
 /* PCS 0xEF ► → CHS_MENU_CURSOR_TILE pair. 1=drawn, 0=FontFunc. */
 int  DrawMenuCursorEF(TextPrinter *win);
+/* FA/FB 等 A 箭头：chs_px 对齐 TILE_X，必要时 TILE_OFFSET+=2（B04 双▼）。 */
+void WaitArrow_Prepare_C(TextPrinter *win);
 int  scene_jp_via_chs(TextPrinter *win);
 int  scene_is_battle_interface_dest(TextPrinter *win);
 int  scene_is_battle_text_window(TextPrinter *win);

@@ -35,6 +35,11 @@ function isError4(original, translated) {
 
 // 移除无效的译文
 let tt2 = texts_translated.filter((tt) => {
+    let originalLength = (tt.original || '').length;
+    let translatedLength = (tt.translated || '').length;
+    if (translatedLength >= originalLength * 3) {
+        return false;
+    }
     let al = getAddressList(tt.original);
     return al.length > 0 && ((tt.translated || '').indexOf('|||') === -1) && tt.status !== 404;
 });

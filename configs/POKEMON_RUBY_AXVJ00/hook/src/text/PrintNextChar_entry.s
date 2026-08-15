@@ -19,8 +19,12 @@
     .global MapName_DisplayCellLength
     .thumb_func
     .type MapName_DisplayCellLength, %function
+    .global WaitArrow_Prepare
+    .thumb_func
+    .type WaitArrow_Prepare, %function
     .extern PrintNextChar_C
     .extern GetStringWidthChinese_Full
+    .extern WaitArrow_Prepare_C
 
 PrintNextChar:
     adds r0, r4, #0
@@ -72,3 +76,18 @@ MapName_DisplayCellLength:
     bx r3
     .pool
     .size MapName_DisplayCellLength, .-MapName_DisplayCellLength
+
+@ DrawInitialDownArrow @0x08003F4C — sync CHS cursor then vanilla body.
+WaitArrow_Prepare:
+    push {r0, lr}
+    bl WaitArrow_Prepare_C
+    pop {r0, r3}
+    movs r1, #0
+    strh r1, [r0, #6]
+    push {r3}
+    ldr r3, =0x08003DAD
+    bl FarBxR3
+    pop {r1}
+    bx r1
+    .pool
+    .size WaitArrow_Prepare, .-WaitArrow_Prepare

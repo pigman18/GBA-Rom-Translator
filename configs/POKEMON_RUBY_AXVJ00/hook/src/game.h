@@ -182,11 +182,15 @@ struct ChsPitchCtrl {
 #define CHS_PARTY_FOOTER_TOP_TILE    17
 #define CHS_PARTY_FOOTER_TOP_PX      (17 * 8)
 /*
- * Battle BG text (not healthbox textMode==2):
- *   dialogue TILE_BASE=0x190, command menu=0x1B8 (AXVJ 0x0802D812 / 0x0802D852).
- * Both sit below the old FIXED_BASE gate; they still own VRAM through 0x1E8..
- * so avoid_dex must NOT remap that band to 0x3E8 (invisible → fill-tile black bars).
+ * Battle BG text (not healthbox textMode==2) uses MULTIPLE tile bases:
+ *   dialogue/招式台词 TILE_BASE=0x90 (AXVJ 0x0802D766, left=2 top=15)
+ *   dialogue/command TILE_BASE=0x190 / 0x1B8 (AXVJ 0x0802D812 / 0x0802D852)
+ * All must force Linear. If 0x90 is not recognised as battle text,
+ * DrawGlyph_ShouldUseLinear falls through to scene_menu_wants_mode2 (charBase
+ * 0 → Mode2), whose tile = CURSOR_Y*30 + x + TILE_BASE = 15*30+0x90 = 0x254
+ * → charblock 1 (MoveBattlerSpriteToBG 区) → 招式描述变黑块。
  */
+#define CHS_BATTLE_DIALOG_BASE_LO 0x90
 #define CHS_BATTLE_TEXT_BASE_LO 0x190
 #define CHS_BATTLE_TEXT_BASE_HI 0x1C0 /* exclusive; covers 0x190 and 0x1B8 */
 #define CHS_BATTLE_FIXED_BASE   0x280

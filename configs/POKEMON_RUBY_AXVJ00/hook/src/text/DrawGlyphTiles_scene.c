@@ -165,6 +165,8 @@ int scene_is_battle_text_window(TextPrinter *win)
 {
     uint16_t tb = win_u16(win, WIN_TILE_BASE);
 
+    if (tb == CHS_BATTLE_DIALOG_BASE_LO)
+        return 1;
     if (tb >= CHS_BATTLE_TEXT_BASE_LO && tb < CHS_BATTLE_TEXT_BASE_HI)
         return 1;
     return tb >= CHS_BATTLE_FIXED_BASE;

@@ -174,7 +174,7 @@ def layout_texts(
     from .extract import trusted_lz_spans
     from .policy import filter_pointer_sources
     from .config_loader import (
-        F9_PHRASE_DEFAULT, F9_EOS, apply_module_phrase_channel, load_game_config,
+        F9_PHRASE_DEFAULT, F9_EOS, load_game_config,
         parse_int_addr,
     )
     from .text_wrap import wrap_text
@@ -233,7 +233,7 @@ def layout_texts(
             # Build table binary
             def encode_tbl(text: str) -> bytes:
                 raw = charmap.encode(text)
-                return apply_module_phrase_channel(raw, game, module)
+                return raw
 
             # Simple path: write table data to expansion area
             chs_stride = patch.get("chs_stride", 0)
@@ -319,10 +319,7 @@ def layout_texts(
         else:
             encoded = charmap.encode(translated)
 
-        # F9 phrase channel rewrite (module.style / legacy write.op)
-        if is_armips and target_lang.startswith("zh") and len(encoded) >= 4:
-            mid = entry.get("_axvj_module") or entry.get("module")
-            encoded = apply_module_phrase_channel(encoded, game, mid)
+        # F901/F981 直接通道已移除：短语恒 F9 80，不再重写通道字节。
 
         # ---- decide: relocate or in-place ----
         if is_armips:

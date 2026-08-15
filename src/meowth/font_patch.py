@@ -1,8 +1,8 @@
 """字库/补丁阶段：armips 打 hook + game.bin + 字库。
 
 ``patch/`` 消费 ``font/`` 字形与 F9 转义；``game.bin`` 由 ``build.bat`` 编一次
-（仅 C/hook 变更时重编）。短语/样式表来自 ``translate.build.json`` →
-``phrase_data.asm`` / ``styles_data.asm``（armips 数据，不进 game.bin）。
+（仅 C/hook 变更时重编）。短语表来自 ``translate.build.json`` →
+``phrase_data.asm``（armips 数据，不进 game.bin）。
 """
 
 import shutil
@@ -18,7 +18,7 @@ from .config_loader import (
     parse_int_addr,
 )
 
-_GAME_BIN_MAX = 0xF000  # 不得超过 StyleLeft @ 0x0880F000；PhraseOffsets @ 0x08810000
+_GAME_BIN_MAX = 0x10000  # 不得超过 PhraseOffsets @ 0x08810000（StyleLeft 已移除）
 _GAME_BIN_VMA = 0x08800000
 _ROM_LOAD_ADDR = 0x08000000
 
@@ -105,7 +105,7 @@ def _normalize_font_slots(cfg: dict[str, Any], game_id: str = "") -> list[dict[s
 
 
 def _generate_fonts_s(cfg: dict[str, Any], work_font_dir: Path, output_path: Path, game_id: str = "") -> None:
-    """生成 graphic/fonts.s：字库 .incbin + phrase/styles data include。"""
+    """生成 graphic/fonts.s：字库 .incbin + phrase data include。"""
     slots = _normalize_font_slots(cfg, game_id=game_id)
     prefix = cfg.get("font_bin_prefix", "PokeRSFontChs")
     prefer_unshadow = cfg.get("shadow") is False
@@ -137,16 +137,12 @@ def _generate_fonts_s(cfg: dict[str, Any], work_font_dir: Path, output_path: Pat
         lines.append("")
 
     graphic_dir = output_path.parent
-    # styles first (0x0880F000), then phrase (0x08810000 / 0x08820000)
-    for name in ("styles_data.asm", "phrase_data.asm"):
-        src = work_font_dir / name
-        if not src.is_file():
-            continue
+    # phrase (0x08810000 / 0x08820000)
+    name = "phrase_data.asm"
+    src = work_font_dir / name
+    if src.is_file():
         staged = graphic_dir / name
-        if name == "phrase_data.asm":
-            _stage_phrase_data_fixed_vma(src, staged)
-        else:
-            shutil.copy2(src, staged)
+        _stage_phrase_data_fixed_vma(src, staged)
         lines.append(f'.include "{staged.resolve()}"')
     output_path.parent.mkdir(parents=True, exist_ok=True)
     output_path.write_text("\n".join(lines), encoding="utf-8")
@@ -182,10 +178,10 @@ def apply_font_patch(
     work_dir: Path | None = None,
     game_id: str = "",
 ) -> Path:
-    """打字库补丁：armips（hook + game.bin + fonts + phrase/styles data）→ 输出 ROM。
+    """打字库补丁：armips（hook + game.bin + fonts + phrase data）→ 输出 ROM。
 
-    ``translate.build.json`` → ``phrase_data.asm`` / ``styles_data.asm``（数据区）。
-    ``game.bin`` 由 hook ``build.bat`` 预编好复制进来；改 styles/phrases 不重编 C。
+    ``translate.build.json`` → ``phrase_data.asm``（数据区）。
+    ``game.bin`` 由 hook ``build.bat`` 预编好复制进来；改 phrases 不重编 C。
     """
     if not font_patch_cfg:
         raise ValueError("font_patch_cfg is required")
@@ -228,7 +224,7 @@ def apply_font_patch(
 
     shutil.copy2(rom_path, build_dir / "baserom.gba")
 
-    # translate.build.json → phrase_data.asm + styles_data.asm（armips 数据，不编进 game.bin）
+    # translate.build.json → phrase_data.asm（armips 数据，不编进 game.bin）
     build_json = work_dir / "translate.build.json"
     fonts_src.mkdir(parents=True, exist_ok=True)
     if build_json.is_file():
@@ -242,17 +238,15 @@ def apply_font_patch(
             # PhraseTable streams must be F9 00 sideload, not F9 80 wrap
             encode_fn = cm.encode
         except Exception as exc:
-            print(f"[data] warn: charmap for phrases unavailable ({exc}); styles only")
+            print(f"[data] warn: charmap for phrases unavailable ({exc}); no phrases")
         stats = emit_data_asms_from_build_json(
             build_json,
             fonts_src,
             encode_fn=encode_fn,
             write_phrases=encode_fn is not None,
-            write_styles=True,
         )
         print(
             f"[data] from translate.build.json → "
-            f"styles={stats.get('styles_data', '-')} "
             f"phrases={stats.get('phrase_count', 0)}/{stats.get('phrase_bytes', 0)}B"
         )
         # refresh fonts.s so includes pick up new asms
@@ -260,14 +254,7 @@ def apply_font_patch(
             font_patch_cfg, fonts_src, graphic_dir / "fonts.s", game_id=game_id
         )
     else:
-        # 无 build.json 时仍钉一张全 0 的 StyleLeft，避免 sticky style 读到脏字节
-        from .build_rom_data import write_styles_data_asm
-
-        write_styles_data_asm({}, fonts_src / "styles_data.asm")
-        print(f"[data] warn: no {build_json}; styles_data.asm zeros only")
-        _generate_fonts_s(
-            font_patch_cfg, fonts_src, graphic_dir / "fonts.s", game_id=game_id
-        )
+        print(f"[data] warn: no {build_json}; phrases only")
 
     # type=hook → pointer_redirect.asm（正文池 + 指针槽 .word）；无条目则空桩
     from .pointer_redirect import write_pointer_redirect_asm
@@ -280,7 +267,7 @@ def apply_font_patch(
     if n_hook:
         print(f"[hook] pointer_redirect.asm: {n_hook} type=hook entries")
 
-    # game.bin：仅当 out/ 缺失时提示；pack 不强制重编（改 styles/phrase 只走 asm）
+    # game.bin：仅当 out/ 缺失时提示；pack 不强制重编（改 phrase 只走 asm）
     game_bin = build_dir / "out" / "game.bin"
 
     # armips: 只管 main.asm

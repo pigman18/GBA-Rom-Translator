@@ -2,11 +2,6 @@
   "game": "POKEMON_RUBY_AXVJ00",
   "game_id": "POKEMON_RUBY_AXVJ00",
   "source_lang": "ja",
-  "styles": {
-    "样式1": {
-      "left": 1
-    }
-  },
   "modules": {
     "属性名": {
       "label": "词条·属性",
@@ -63,7 +58,6 @@
       },
       "relocate": true,
       "hook": true,
-      "style": "样式1",
       "filters": [
         {
           "id": "species_skip_qmark",

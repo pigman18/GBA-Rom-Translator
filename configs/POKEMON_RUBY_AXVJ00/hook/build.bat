@@ -10,6 +10,7 @@ set OBJCOPY=%PREFIX%objcopy
 set SRC_ROOT=src
 set TEXT=%SRC_ROOT%\text
 set BATTLE=%SRC_ROOT%\battle
+set POKEDEX=%SRC_ROOT%\pokedex
 set OUT=out
 set BUILD=%OUT%\obj
 set LINK_DIR=link
@@ -44,6 +45,10 @@ echo === Compiling GetGlyphWidth_hook.c ===
 %CC% %CFLAGS% %TEXT%\GetGlyphWidth_hook.c -o %BUILD%\GetGlyphWidth_hook.o
 if errorlevel 1 exit /b 1
 
+echo === Compiling pokedex/CreateMonName_hook.c ===
+%CC% %CFLAGS% %POKEDEX%\CreateMonName_hook.c -o %BUILD%\CreateMonName_hook.o
+if errorlevel 1 exit /b 1
+
 echo === Assembling UpdateNickInHealthbox_entry.s ===
 %CC% %ASFLAGS% %BATTLE%\UpdateNickInHealthbox_entry.s -o %BUILD%\UpdateNickInHealthbox_entry.o
 if errorlevel 1 exit /b 1
@@ -60,6 +65,7 @@ echo === Linking game.elf ===
   %BUILD%/DrawGlyphTiles_scene.o ^
   %BUILD%/GetStringWidth_hook.o ^
   %BUILD%/GetGlyphWidth_hook.o ^
+  %BUILD%/CreateMonName_hook.o ^
   %BUILD%/UpdateNickInHealthbox_entry.o ^
   %BUILD%/UpdateNickInHealthbox_hook.o
 if errorlevel 1 exit /b 1

@@ -620,12 +620,7 @@ class RomWriter:
         except Exception as e:
             raise ValueError(f"Entry {entry_id}: encoding failed for '{translated}': {e}") from e
 
-        # module.style / legacy write.op → rewrite F9 80 → F9 <channel>
-        if self._is_armips and self.target_lang.startswith("zh") and len(encoded) >= 4:
-            from .config_loader import apply_module_phrase_channel
-
-            mid = entry.get("_axvj_module") or entry.get("module")
-            encoded = apply_module_phrase_channel(encoded, self.game, mid)
+        # F901/F981 直接通道已移除：短语恒 F9 80，不再重写通道字节。
 
         is_pointer_based = entry.get("is_pointer_based", bool(pointer_sources))
         original_length = entry.get("byte_length", 0)

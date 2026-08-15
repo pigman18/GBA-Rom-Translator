@@ -255,13 +255,7 @@ int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
             if (op == CHS_PHRASE_DEFAULT || parent_cont) {
                 st->write_op = 0;
             } else {
-                uint8_t L;
-                uint8_t cx;
                 st->write_op = op;
-                L = *(const uint8_t *)(uintptr_t)(ADDR_STYLE_LEFT + op);
-                cx = win_u8(win, WIN_CURSOR_X);
-                if (L && cx >= L)
-                    win_set_u8(win, WIN_CURSOR_X, (uint8_t)(cx - L));
             }
 
             if (parent_cont && inline_phrase_no_controls(win, index, code))

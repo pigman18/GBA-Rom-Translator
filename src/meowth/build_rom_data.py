@@ -1,13 +1,9 @@
 """ROM data asms from ``translate.build.json`` (armips .org, not game.bin).
 
-Parallel tables:
-
 - ``phrase_data.asm`` ← ``phrases``  → PhraseOffsets @ 0x08810000 / PhraseTable @ 0x08820000
-- ``styles_data.asm`` ← ``styles`` + ``style_alloc``
-  → StyleLeft[256] @ 0x0880F000
 
-game.bin only needs rebuild when C/hook logic changes; changing style left or
-phrases is asm + armips only.
+game.bin only needs rebuild when C/hook logic changes; changing phrases is
+asm + armips only.
 """
 
 from __future__ import annotations
@@ -16,8 +12,7 @@ import json
 from pathlib import Path
 from typing import Any, Callable
 
-# Must match game.h ADDR_STYLE_* / ADDR_PHRASE_*
-ADDR_STYLE_LEFT = 0x0880F000
+# Must match game.h ADDR_PHRASE_*
 ADDR_PHRASE_OFFSETS = 0x08810000
 ADDR_PHRASE_TABLE = 0x08820000
 
@@ -32,53 +27,6 @@ def load_build_json(path: Path) -> dict[str, Any]:
     except (OSError, json.JSONDecodeError):
         return {}
     return data if isinstance(data, dict) else {}
-
-
-def write_styles_data_asm(
-    build: dict[str, Any],
-    out_path: Path,
-) -> Path:
-    """Emit ``styles_data.asm`` from build.json styles / style_alloc."""
-    left_by_f9 = [0] * 256
-    styles = build.get("styles") or {}
-    alloc_raw = build.get("style_alloc") or {}
-    if isinstance(styles, dict) and isinstance(alloc_raw, dict):
-        for sid, code_s in alloc_raw.items():
-            meta = styles.get(sid) or {}
-            if not isinstance(meta, dict):
-                continue
-            try:
-                code = int(str(code_s), 0) & 0xFF
-            except (TypeError, ValueError):
-                continue
-            try:
-                left = max(0, int(meta.get("left") or 0))
-            except (TypeError, ValueError):
-                left = 0
-            if left > 255:
-                left = 255
-            left_by_f9[code] = left
-
-    lines = [
-        "; auto-generated from translate.build.json styles — do not edit",
-        f".org 0x{ADDR_STYLE_LEFT:08X}",
-        ".align 4",
-        "StyleLeft:",
-    ]
-    for i in range(0, 256, 16):
-        chunk = left_by_f9[i : i + 16]
-        hex_bytes = ", ".join(f"0x{b:02X}" for b in chunk)
-        comment = ""
-        for j, b in enumerate(chunk):
-            if b:
-                comment = f"  ; +0x{i + j:02X}={b}"
-                break
-        lines.append(f"  .byte {hex_bytes}{comment}")
-
-    lines.append("")
-    out_path.parent.mkdir(parents=True, exist_ok=True)
-    out_path.write_text("\n".join(lines), encoding="utf-8", newline="\n")
-    return out_path
 
 
 def write_phrase_data_asm(
@@ -188,17 +136,11 @@ def emit_data_asms_from_build_json(
     *,
     encode_fn: Callable[[str], bytes] | None = None,
     write_phrases: bool = True,
-    write_styles: bool = True,
 ) -> dict[str, Any]:
-    """Write phrase_data.asm + styles_data.asm under ``out_dir`` from build.json."""
+    """Write phrase_data.asm under ``out_dir`` from build.json."""
     build = load_build_json(build_json_path)
     stats: dict[str, Any] = {"build_json": str(build_json_path)}
     out_dir.mkdir(parents=True, exist_ok=True)
-
-    if write_styles:
-        styles_path = out_dir / "styles_data.asm"
-        write_styles_data_asm(build, styles_path)
-        stats["styles_data"] = str(styles_path)
 
     if write_phrases and encode_fn is not None:
         phrases = build.get("phrases") or []

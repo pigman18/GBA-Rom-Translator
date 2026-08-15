@@ -48,9 +48,9 @@ DrawMapNamePopup_StringLength          equ 0x0809F67E
 DrawMapNamePopup_MenuPrint             equ 0x0809F6CA
 ; PokemonSummaryScreen_PrintTrainerMemo nature follow-X (byte len → tiles)
 ; --- 扩展区 / game.bin 装入点 ---
-GameBinAddresses                       equ 0x08800000  ; main.asm .incbin game.bin（≤0xF000）
+GameBinAddresses                       equ 0x08800000  ; main.asm .incbin game.bin（≤0x10000）
 HackFunctionAddresses                  equ GameBinAddresses  ; 旧名兼容
-; StyleLeft：styles_data.asm（.org 0x0880F000）
+; StyleLeft 表已移除（宝可梦名起笔左移 = hook 常量 CHS_NAME_PHRASE_LEFT）
 ; PhraseOffsets / PhraseTable：phrase_data.asm（.org 0x08810000 / 0x08820000）
 FontChsNormal                          equ 0x09000000
 FontChsSmall                           equ 0x09100000

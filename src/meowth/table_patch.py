@@ -550,15 +550,14 @@ def inject_name_tables(
     if not patches:
         return write_offset, {}
 
-    from .config_loader import apply_module_phrase_channel, get_active_game_id
     from .translate_plan import module_allows_table_widen
+    from .config_loader import get_active_game_id
 
     game_id = get_active_game_id() or ""
 
     def encode(text: str) -> bytes:
         raw = charmap.encode(text)
-        mid = getattr(encode, "_module", None)
-        return apply_module_phrase_channel(raw, get_active_game_id() or "", mid)
+        return raw
 
     while write_offset % 4:
         write_offset += 1

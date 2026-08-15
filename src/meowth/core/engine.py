@@ -1076,14 +1076,6 @@ class TranslationEngine:
             phrases_by_code[code] = s
 
         from ..translate_plan import module_write_build_meta
-        from ..config_loader import (
-            alloc_style_channels,
-            collect_module_left_px,
-            load_styles,
-            module_left_px,
-            module_phrase_channel,
-            module_style_id,
-        )
 
         game_id = self.config.game or ""
         entry_rows = []
@@ -1118,25 +1110,14 @@ class TranslationEngine:
             wmeta = module_write_build_meta(game_id, mid)
             if wmeta is not None:
                 row["write"] = wmeta
-            sid = module_style_id(game_id, mid)
-            if sid:
-                row["style"] = sid
-                row["f9"] = module_phrase_channel(game_id, mid)
-            left_px = module_left_px(game_id, mid)
-            if left_px:
-                row["left"] = left_px
             entry_rows.append(row)
 
-        style_alloc = alloc_style_channels(game_id)
         payload = {
             "game_id": self.config.game,
             "modules": list(self.config.modules or []) if self.config.modules else active_list,
             "active_modules": active_list,
             "count": len(flat),
             "phrases": phrases_by_code,
-            "styles": load_styles(game_id),
-            "style_alloc": {k: f"0x{v:02X}" for k, v in style_alloc.items()},
-            "module_left": collect_module_left_px(game_id),
             "entries": entry_rows,
         }
         build_dir = Path(self.config.work_dir) / self.config.game

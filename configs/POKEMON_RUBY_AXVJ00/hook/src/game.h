@@ -30,14 +30,10 @@
  * layout: .org 0x08810000 → offsets （u32[code_max], sentinel = total_size）
  *         .org 0x08820000 → streams （PCS bytes ending in FF）
  *
- * 样式表（styles_data.asm，与 phrase_data.asm 对仗，均来自 translate.build.json）：
- *   StyleLeft[256] @ 0x0880F000 — F9 第二字节 → left(px)
- * PrintNextChar：非 0x80 的短语 op sticky 后按 StyleLeft[op] 整体左移一次。
  * 勿在 0x0203FFF0/F7F8 放 PhraseResume（崩/踩图）。
  * Pitch 多槽在 0x0203FF80..FFCF（避开 FFF0）；勿拆回 JP→FontFunc 双路径。
- * 改 styles/phrases 只重生 asm + armips，不必重编 game.bin。
+ * 改 phrases 只重生 asm + armips，不必重编 game.bin。
  */
-#define ADDR_STYLE_LEFT            0x0880F000u
 #define ADDR_PHRASE_OFFSETS        0x08810000u
 #define ADDR_PHRASE_TABLE          0x08820000u
 #define ADDR_FONT_CHS_NORMAL       0x09000000u

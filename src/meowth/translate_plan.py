@@ -307,7 +307,7 @@ def _prepare_encoded(
     game_id: str,
 ) -> tuple[str, str, bytes] | dict:
     """返回 (sanitized, to_encode, encoded)；失败则返回 keep plan dict。"""
-    from .config_loader import apply_module_phrase_channel, module_wrap_kwargs
+    from .config_loader import module_wrap_kwargs
     from .text_wrap import wrap_text
 
     original = _original_of(entry)
@@ -349,7 +349,7 @@ def _prepare_encoded(
             "target_hex": original_hex,
             "reason": "译文编码失败",
         }
-    encoded = apply_module_phrase_channel(encoded, game_id, module_id)
+    # F901/F981 已移除：短语恒 F9 80，不再重写通道字节。
     return s, to_encode, encoded
 
 
@@ -381,8 +381,6 @@ def plan_entry(
     纯 1→4：F900 → relocate → F980 → hook → keep。
     extract 若把地址落在 FD 后的缓冲 id：回退到 FD 起点写 in_place（槽+1）。
     """
-    from .config_loader import module_phrase_channel
-
     prepared = _prepare_encoded(entry, charmap, game_id)
     if isinstance(prepared, dict):
         return prepared
@@ -394,7 +392,7 @@ def plan_entry(
     allow_reloc = module_allows_relocate(game_id, module_id)
     allow_phrase = module_allows_phrase(game_id, module_id)
     allow_hook = module_allows_hook(game_id, module_id)
-    channel = module_phrase_channel(game_id, module_id)
+    channel = F9_PHRASE_DEFAULT  # F901/F981 已移除，短语恒 F9 80
 
     rebase = rebase_truncated_fd_slot(rom, entry)
     write_addr = _entry_address_off(entry)

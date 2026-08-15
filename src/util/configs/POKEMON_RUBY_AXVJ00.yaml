@@ -244,44 +244,6 @@ texts:
       max_lines: 3
     # 文本大模块：词条/说明 → 剧情(trainerbattle+message) → UI(菜单/文本打印)
     # 训练家对白已并入剧情（ShowTrainerIntroSpeech → ShowFieldMessage）
-    - id: 剧情
-      label: 文本·剧情
-      group: 文本
-      default: true
-      description: 全 ROM；execute_filter（ShowFieldMessage + 脚本 op message/trainerbattle）
-      start: '0x0'
-      end: '0xFFFFFF'
-      type: scan
-      relocate: true
-      hook: true
-      filters:
-        - id: msg_filter
-          type: msg_filter
-          filter: false
-          value:
-            file: reference_corpus/RubySapphire/ja-Hrkt_msg.txt
-            min_plain_chars: 3
-            mapping:
-              "　": " "
-              "\\n": "\n"
-              "\\c": "\n\n"
-              "\\r": "\\l"
-              "\\e": ""
-              "[PLAYER]": "\\01"
-              "[STR_VAR_1]": "\\02"
-              "[STR_VAR_2]": "\\03"
-              "[STR_VAR_3]": "\\04"
-              "[RIVAL]": "\\06"
-              "[KUN]": ""
-              "[RIGHT_ARROW]": "\\CC0CFA"
-              "[LEFT_ARROW]": "\\CC0CFB"
-              "[UP_ARROW]": "\\CC0CFC"
-              "[DOWN_ARROW]": "\\CC0CFD"
-              "[EVIL_TEAM]": "マグマだん"
-              "[GOOD_TEAM]": "アクアだん"
-              "[EVIL_LEADER]": "マツブサ"
-              "[GOOD_LEADER]": "アオヤギ"
-
     - id: UI界面
       label: UI界面
       group: 文本
@@ -570,3 +532,44 @@ texts:
             - "\\CC0509じょうほう かんり"  # 信息管理
             - "\\CC0509ファンクション マネージャー"  # 功能经理
             - "\\CC0509てんじ かんしゅう"  # 展示监修
+
+    - id: 剧情
+      label: 文本·剧情
+      group: 文本
+      default: true
+      description: 全 ROM；execute_filter（ShowFieldMessage + 脚本 op message/trainerbattle）
+      start: '0x0'
+      end: '0xFFFFFF'
+      type: scan
+      relocate: true
+      hook: true
+      filters:
+        - id: story_pointer_filter
+          type: require_pointer_filter
+          value: true
+        - id: msg_filter
+          type: msg_filter
+          filter: false
+          value:
+            file: reference_corpus/RubySapphire/ja-Hrkt_msg.txt
+            min_plain_chars: 3
+            mapping:
+              "　": " "
+              "\\n": "\n"
+              "\\c": "\n\n"
+              "\\r": "\\l"
+              "\\e": ""
+              "[PLAYER]": "\\01"
+              "[STR_VAR_1]": "\\02"
+              "[STR_VAR_2]": "\\03"
+              "[STR_VAR_3]": "\\04"
+              "[RIVAL]": "\\06"
+              "[KUN]": ""
+              "[RIGHT_ARROW]": "\\CC0CFA"
+              "[LEFT_ARROW]": "\\CC0CFB"
+              "[UP_ARROW]": "\\CC0CFC"
+              "[DOWN_ARROW]": "\\CC0CFD"
+              "[EVIL_TEAM]": "マグマだん"
+              "[GOOD_TEAM]": "アクアだん"
+              "[EVIL_LEADER]": "マツブサ"
+              "[GOOD_LEADER]": "アオヤギ"

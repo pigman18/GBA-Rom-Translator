@@ -1841,6 +1841,7 @@ def extract_scan(
     *,
     ptr_index: dict[int, list[int]] | None = None,
     omit_ranges: list[tuple[int, int]] | None = None,
+    exclude_ranges: list[tuple[int, int]] | None = None,
     filters: list[dict[str, Any]] | None = None,
 ) -> list[dict]:
     # 只用 jp_pcs + 本地 read_pcs / SCRIPT_BANK_MIN；禁止 import meowth.extract
@@ -1910,6 +1911,14 @@ def extract_scan(
     def _in_bands(a: int) -> bool:
         return any(lo <= a <= hi for lo, hi in band_pairs)
 
+    excl = exclude_ranges or []
+
+    def _in_exclude(a: int, length: int) -> bool:
+        """候选 [a, a+length) 是否与「已导出地址带」重叠（跨模块 FCFS 认领）。"""
+        if not excl or length <= 0:
+            return False
+        return any(a < hi and lo < a + length for lo, hi in excl)
+
     ptrs_map = ptr_index or {}
 
     include_items = _original_include_items(filt)
@@ -1930,6 +1939,8 @@ def extract_scan(
         if raw is None and body is not None:
             raw = body
         if raw is None:
+            return
+        if _in_exclude(a, len(raw)):
             return
         # pinned（yaml 地址钉）：跳过 looks_like；形态闸交给其它 filter
         if use_looks_like and not pinned:
@@ -2159,6 +2170,9 @@ def extract_scan(
                 a = end + 1
                 continue
             best_a, best_raw, best_text, best_ptrs = cand
+            if _in_exclude(best_a, len(best_raw)):
+                a = end + 1
+                continue
             seen.add(best_a)
             out.append(
                 _stamp(
@@ -2190,6 +2204,7 @@ def extract_module(
     *,
     ptr_index: dict[int, list[int]] | None = None,
     omit_ranges: list[tuple[int, int]] | None = None,
+    exclude_ranges: list[tuple[int, int]] | None = None,
     filters: list[dict[str, Any]] | None = None,
 ) -> list[dict]:
     rtype = str(mod.get("type") or "scan")
@@ -2206,6 +2221,7 @@ def extract_module(
             game_code,
             ptr_index=ptr_index,
             omit_ranges=omit_ranges,
+            exclude_ranges=exclude_ranges,
             filters=filters,
         )
     # needle/prefix/pointer: corpus already in texts.json; no Meowth re-scan
@@ -2342,6 +2358,9 @@ def export_texts(
     seen_addr: set[str] = set()
     skipped: dict[str, int] = {}
     shadow_counts: dict[str, int] = {}
+    # 已导出的字节带（跨模块 FCFS 认领）：后扫描的模块跳过落在这些带内的候选，
+    # 防止「带颜色码完整文本」与「剥码假名起点」被两模块重复导出造成地址重叠。
+    exported_bands: list[tuple[int, int]] = []
 
     for mod in modules:
         mid = mod.get("id") or ""
@@ -2352,6 +2371,7 @@ def export_texts(
             game_code,
             ptr_index=ptr_index,
             omit_ranges=omit_ranges,
+            exclude_ranges=exported_bands,
             filters=resolve_filters(cfg, mod),
         )
         if not chunk and rtype in ("needle", "prefix", "pointer"):
@@ -2364,6 +2384,10 @@ def export_texts(
                 continue
             if addr:
                 seen_addr.add(addr)
+                bl = e.get("byte_length") or 0
+                if bl > 0:
+                    lo = _to_file_offset(parse_int(addr), len(rom), default=0)
+                    exported_bands.append((lo, lo + bl))
             if addr and addr in claimed_by:
                 by = claimed_by[addr]
                 e = dict(e)

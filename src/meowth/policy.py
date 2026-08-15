@@ -1058,6 +1058,12 @@ def filter_pointer_sources(
         ptr_addr = _file(ptr_addr)
         if ptr_addr + 4 > len(rom):
             continue
+        # GBA 指针槽必须是 4 字节对齐（.word / ldr rX,=literal）。
+        # 非对齐的"指针源"是正文 PCS 里恰好拼成总线地址的假指针
+        # （剧情/图鉴说明 relocate 期间大量出现），改写了会踩坏相邻
+        # 数据/技能 → 黑屏。这里无条件过滤掉。
+        if ptr_addr & 3:
+            continue
         if ptr_site_in_text_body(ptr_addr, text_spans):
             continue
         if ptr_addr in title_gfx_ptr_deny():

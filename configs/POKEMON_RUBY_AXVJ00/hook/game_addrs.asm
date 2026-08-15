@@ -39,6 +39,9 @@ StringExpandPlaceholders               equ 0x08004530
 Menu_PrintText                         equ 0x0806F16C
 RedrawMenuCursor                       equ 0x0806F41C
 
+; --- 图鉴列表页名字列（唯一来源，C 里 DEX_NAME_COLUMN 同步此值）---
+DEX_NAME_COLUMN                        equ 0x16
+
 ; --- Width / map-name popup ---
 ; GetGlyphWidth/GetStringWidth @ 0x4B1C/0x4CC0 曾为 proximity 错猜（无调用方）；勿再整函数替换。
 ; 日版 DrawMapNamePopup：StringLength 后仍 GetMapName(fill=10) 填 0x00；

@@ -88,25 +88,22 @@ StarterPokeCopyDone:
 
 ; =============================================================================
 ; 图鉴列表页：名字列（NoXXX 与宝可梦名间距）。
-; pokeruby CreateMonListEntry 每行：编号 0x03 / 球 0x11 / 名字 0x17（23）。
-; 日版 CreateMonListEntry @0x0808A7F8（由 PrintSavePokedexCount 偏移对齐），
-; 名字列 = movs r1,#0x17 共 5 处（3 case 内联 + CreateMonName 尾部）。
-; 原值 23 → 15（0x0F），名字左移贴近 NoXXX；值与 C 常量 DEX_NAME_COLUMN 一致。
+; 唯一来源 DEX_NAME_COLUMN（game_addrs.asm），5 处 movr1 共用；原 0x17=23。
 ; =============================================================================
 .org 0x0808AA00
-    mov r1, 0x16
+    mov r1, DEX_NAME_COLUMN
 
 .org 0x0808AA24
-    mov r1, 0x16
+    mov r1, DEX_NAME_COLUMN
 
 .org 0x0808AB34
-    mov r1, 0x16
+    mov r1, DEX_NAME_COLUMN
 
 .org 0x0808ABDA
-    mov r1, 0x16
+    mov r1, DEX_NAME_COLUMN
 
 .org 0x0808ABFE
-    mov r1, 0x16
+    mov r1, DEX_NAME_COLUMN
 
 .org GameBinAddresses
 PrintNextChar:

@@ -421,6 +421,7 @@ texts:
 | `modules[].ranges` / `start`+`end` | 模块 | 粗扫描母带（相邻模块勿互相覆盖） |
 | `modules[].filters` | 模块 | 同 `id` 覆盖全局整条；新 `id` 追加 |
 | `require_pointer` / `min_byte_length` | 模块 | 旧字段；无同名 `*_filter` 时仍生效 |
+| `modules[].looks_like_jp_text` | 模块 | bool；默认 `false`。`true` 时才在 `type: scan` 的 FF 扫描路径调 `jp_pcs.looks_like_jp_text` 做形态预校验。**误判率很高，后续尽量不要用这个函数**——优先用地址带 / 语料白名单（msg_filter、original_text_filter、execute_filter）/ 结构定址（stride、struct），而不是形态启发式。 |
 
 ### `texts.filters` / `FilterContext`
 
@@ -479,7 +480,7 @@ python src/util/texts_patcher.py export <rom.gba> [--config yaml] [--module 模�
 单模块：`--module 道具名` → `src/util/work/<game_id>/texts_道具名.json`。  
 **禁止**默认写到流水线 `configs/<game_id>/translate/`（见 `.cursor/rules/util-no-pipeline-output.mdc`）。
 
-含 `msg_filter`（`filter: false`）的模块：**指针优先**——只验收 `ptr_index` 目标正文，再跑语料/形态闸；不再按语料 PCS 全盘 FF 针扫。
+含 `msg_filter`（`filter: false`）的模块：**不再指针优先**——落入全盘 FF 针扫，逐条交 `msg_filter` 白名单判定；无指针的定址文本表（如偏移索引的随机词表 `0x083B29C0` 的「ドラゴン」）也会被收录。若模块未写 `looks_like_jp_text: true`，扫出的候选不做形态预校验，直接由白名单收紧。
 
 含 `callers_filter`（`filter: false`）的模块：只验收预计算「可达汇点」的正文（∩ 模块地址带）；剧情/UI 归属靠地址带等其它 filter，不靠 callers 再分域。
 

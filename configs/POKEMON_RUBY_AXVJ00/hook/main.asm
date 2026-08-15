@@ -34,6 +34,13 @@
     bx r3
 .pool
 
+; 初始宠 label 擦除：日版按假名宽度擦 left+8 列，中文名字(12px)比假名(8px)宽，
+; 超出的右半 tile 没被 erase → 切 label 时残留右半碎字。
+; 把 adds r2,#8（右边界=left+8）改成 movs r2,#29（右边界固定 29=菜单窗口最右列）。
+; 屏上同时只显示一个 label，擦到窗口最右不会误伤其它 label。
+.org 0x081053D0
+    mov r2, 0x1D
+
 .org GameBinAddresses
 PrintNextChar:
 .incbin "out/game.bin"

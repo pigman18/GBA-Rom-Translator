@@ -60,24 +60,6 @@ texts:
       value:
         start: '0x0836D000'
         end: '0x0836FFFF'
-  # 脚本入口（AXVJ 钉址）：callers_filter 的 script_ops 自此处 walk，非全盘 find
-  # map_header_ptrs = 各组 MapHeader* 表拼接（393）；gStdScripts 自 ScrCmd_gotostd 字面量
-  script_roots:
-    map_header_ptrs: '0x082E03CC'
-    map_header_count: 393
-    gMapGroups: '0x082E09F4'
-    gMapGroups_count: 33
-    gStdScripts: '0x08145A48'
-    gStdScripts_count: 8
-  # callers_filter 只判「类文本会否被消费」：value 列表，两种项。
-  # {name}（内建 op 类别）：程序自动 walk 脚本找调用点——剧情 message / 训练家 trainerbattle。
-  # {name, address}：BL 逆推 r0/r1/r2 + 父级闭包（depth 默认 8）；消费叶自动映射注入叶。
-  # 归属靠模块地址带/顺序，不靠 callers 再分域。
-  # 各模块 filters 已改为内联 execute_filter（is_execute API）。
-  styles:
-    # 按列表顺序交错分配 F9：01, 81, 02, 82…（勿写 channel）
-    - id: 样式1
-      left: 1
   modules:
     - id: 属性名
       label: 词条·属性

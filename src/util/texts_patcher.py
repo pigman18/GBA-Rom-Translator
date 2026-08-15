@@ -16,6 +16,7 @@ texts_patcher.py
   python texts_patcher.py remove <rom.gba> --from-translated [texts_translated.json]
   python texts_patcher.py mark-404 [--translated PATH] [--game-id ID]
   python texts_patcher.py migrate-omit [rom.gba] [--config yaml]
+  python texts_patcher.py guess <rom.gba> 0x081CBB61 [--config yaml]
 
 export 默认写出 ``src/util/work/<game_id>/texts.json``（单模块为
 ``texts_<模块>.json``）；与产品 ``configs/.../translate/texts.json`` 分离。
@@ -1880,6 +1881,9 @@ def extract_scan(
 
     mid = mod["id"]
     mtype = str(mod.get("type") or "scan")
+    # 模块级开关：默认 false。true 时才在 FF 扫描路径调 looks_like_jp_text 做
+    # 形态预校验。该函数误判率高，后续新模块尽量不用（用地址带/语料白名单/结构定址）。
+    use_looks_like = bool(mod.get("looks_like_jp_text", False))
     bands = effective_module_bands(mod, omit_ranges or [])
     if not bands:
         return []
@@ -1928,7 +1932,7 @@ def extract_scan(
         if raw is None:
             return
         # pinned（yaml 地址钉）：跳过 looks_like；形态闸交给其它 filter
-        if not pinned:
+        if use_looks_like and not pinned:
             if not looks_like_jp_text(raw):
                 if body is None or not (
                     body.endswith(b"\xff")
@@ -2057,16 +2061,10 @@ def extract_scan(
                 _try_accept(a, None)
         return out
 
-    # msg_filter 白名单：指针优先——只验收「有 ROM 指针指向」的正文，
-    # 再靠 msg_filter / dialogue_shape / control_or_short 等闸门；
-    # 禁止再按语料 PCS 全盘 FF 针扫（会收录无引用的句中碎片）。
-    if _has_msg_include_filter(filt):
-        if not ptrs_map:
-            return out
-        targets = sorted(a for a in ptrs_map if _in_bands(a))
-        for a in targets:
-            _try_accept(a, None)
-        return out
+    # msg_filter 白名单：不再「指针优先」——直接落入下方全盘 FF 针扫，
+    # 由 msg_filter / dialogue_shape / control_or_short 等闸门逐条判定。
+    # （原实现只验收「有 ROM 指针指向」的正文，会漏掉靠偏移索引、无指针的
+    #   定址文本表，如 0x083B29C0 的「ドラゴン」随机词表。）
 
     def _start_rank(text: str, ptrs: list[int]) -> tuple[int, int]:
         """同 EOS 多起点时择优：(分, 长度)；分高优先，同分取更长（更早对齐）。"""
@@ -2093,7 +2091,7 @@ def extract_scan(
             return None
         if a in seen:
             return None
-        if not looks_like_jp_text(raw):
+        if use_looks_like and not looks_like_jp_text(raw):
             return None
         text = decode_pcs(raw)
         ptrs = list(ptrs_map.get(a, []))
@@ -2117,7 +2115,7 @@ def extract_scan(
             raw2 = read_pcs(rom, a2, 512)
             if raw2 is None or a2 + len(raw2) - 1 != end:
                 continue
-            if a2 in seen or not looks_like_jp_text(raw2):
+            if a2 in seen or (use_looks_like and not looks_like_jp_text(raw2)):
                 continue
             if a2 < SCRIPT_BANK_MIN or TITLE_LZ_BAND[0] <= a2 < TITLE_LZ_BAND[1]:
                 continue
@@ -3568,6 +3566,397 @@ def cmd_mark_404(
     return 0
 
 
+# ---------------------------------------------------------------------------
+# guess：由一段地址反推模块配置（start/end/type/read）
+# ---------------------------------------------------------------------------
+
+_STRIDE_CANDIDATES = (3, 4, 5, 6, 7, 8, 9, 10, 11, 12, 16, 19, 32, 40, 56)
+_ENTRY_SIZE_CANDIDATES = (5, 20, 28, 32, 36, 40, 44, 48, 56)
+
+
+def _slot_text_ok(rom: bytes, off: int, window: int) -> bool:
+    """槽 ``[off, off+window)`` 是否读得到有意义的 PCS 文本。
+
+    定长表常有「？？？」占位符（ac ac ac）等单字节符号构成的名，严格的
+    ``looks_like_jp_text`` 会误杀；故此处只看「FF 结尾、体非全空、解码非空
+    且不混入未识别 <xx> 垃圾」。再要求至少 2 个非空格/非ー 的有效字形，
+    以排除邻接结构的 1 字残片（き/ス）与纯填充（ー、空格）。"""
+    from meowth.jp_pcs import decode_pcs
+
+    if off < 0 or off + window > len(rom):
+        return False
+    slot = rom[off : off + window]
+    marker = slot.find(0xFF)
+    if marker < 0:
+        return False
+    body = slot[:marker]
+    if len(body) < 1 or all(b in (0xFF, 0x00) for b in body):
+        return False
+    if any(b >= 0xF7 for b in body):
+        return False
+    text = decode_pcs(slot[: marker + 1]).strip()
+    if not text:
+        return False
+    if "<" in text:
+        return False
+    # 有效字形（排除空格/全角空格/长音ー/中点・等填充）
+    sig = [c for c in text if c not in (" ", "\u3000", "ー", "・", "‥", "…", "-")]
+    if len(sig) < 2:
+        # 允许「？」占位槽（ac）单独构成一槽；拒绝单字假名残片（き/ス）
+        if text not in ("？", "？？", "？？？"):
+            return False
+    return True
+
+
+def _is_slot_start(rom: bytes, p: int, step: int) -> bool:
+    """``p`` 是定长槽起点：前驱为分界(FF/00)，槽内 FF 结尾且文本非空。"""
+    if p <= 0 or p + step > len(rom):
+        return False
+    if rom[p - 1] not in (0xFF, 0x00):
+        return False
+    if rom[p] == 0xFF:
+        return False
+    return _slot_text_ok(rom, p, step)
+
+
+def _has_slot_text(rom: bytes, p: int, step: int) -> bool:
+    """``p`` 处有定长文本槽（不要求前驱分界；用于表头首槽）。"""
+    if p < 0 or p + step > len(rom):
+        return False
+    return rom[p] != 0xFF and _slot_text_ok(rom, p, step)
+
+
+def _find_slot_start(rom: bytes, addr: int, step: int) -> int | None:
+    """找 ``addr`` 所属槽起点：文本槽落在 [addr-step+1, addr]。
+
+    优先前驱为分界（内部槽）；否则退而取首个文本槽（表头）。"""
+    for p in range(addr, addr - step, -1):
+        if _is_slot_start(rom, p, step):
+            return p
+    for p in range(addr, addr - step, -1):
+        if _has_slot_text(rom, p, step):
+            return p
+    return None
+
+
+def _scan_table_bounds(
+    rom: bytes, slot: int, step: int
+) -> tuple[int, int] | None:
+    """以 ``slot`` 为锚，沿 step 回/前推连续有效槽，返回 (start, end 含尾)。
+
+    end 语义与 extract_stride 一致（含尾）。表头首槽不要求前驱分界。"""
+    # 前推：后续槽须前驱为分界（定长槽填充特征）
+    end = slot
+    cur = slot + step
+    while cur < len(rom) and _is_slot_start(rom, cur, step):
+        end = cur
+        cur += step
+    # 回推：内部槽须前驱为分界；允许最后一次是表头（前驱无要求）
+    start = slot
+    cur = slot - step
+    while cur >= 0 and _is_slot_start(rom, cur, step):
+        start = cur
+        cur -= step
+    if cur >= 0 and _has_slot_text(rom, cur, step) and not _is_slot_start(rom, cur, step):
+        # cur 是表头首槽（前驱非分界但仍有文本）
+        start = cur
+    count = (end - start) // step + 1
+    if count < 2:
+        return None
+    return start, end + step - 1
+
+
+def _guess_stride(rom: bytes, addr: int) -> dict | None:
+    """反推 type=stride 表（start/end/stride）。"""
+    best: dict | None = None
+    for step in _STRIDE_CANDIDATES:
+        slot = _find_slot_start(rom, addr, step)
+        if slot is None:
+            continue
+        b = _scan_table_bounds(rom, slot, step)
+        if b is None:
+            continue
+        start, end = b
+        count = (end - start + 1) // step
+        # 定长表应较长（占位/短表如属性名也有 18 槽）；过短即是变长串块的假周期
+        if count < 8:
+            continue
+        filled = sum(
+            1 for i in range(count) if _slot_text_ok(rom, start + i * step, step)
+        )
+        ratio = filled / count
+        cand = {
+            "start": start,
+            "end": end,
+            "stride": step,
+            "count": count,
+            "filled": filled,
+            "ratio": ratio,
+        }
+        # 定长表槽首前驱必为 FF/00，且内部全覆盖：要求比值极高
+        if ratio < 0.95:
+            continue
+        # 更短 stride 往往是真正的固定槽宽（stride 的倍数也会误配成假周期）
+        if best is None or (step, -count) < (best["stride"], -best["count"]):
+            best = cand
+    return best
+
+
+def _struct_row_desc_ptr(rom: bytes, o: int, es: int, dpo: int) -> int | None:
+    """行 ``[o, o+es)`` 的 ``dpo`` 处 desc_ptr；无效/越界/指向空返回 None。"""
+    if dpo is None or o + dpo + 4 > len(rom):
+        return None
+    v = struct.unpack_from("<I", rom, o + dpo)[0]
+    if not (BASE <= v < BASE + len(rom)):
+        return None
+    so = v - BASE
+    if not (0 <= so < len(rom)):
+        return None
+    if rom[so : so + 1] in (b"\xFF", b"\x00", b""):
+        return None
+    return so
+
+
+def _guess_struct(rom: bytes, addr: int) -> dict | None:
+    """反推 type=struct 表（start/end/entry_size/desc_ptr_offset）。
+
+    结构行：行首 4 对齐且前驱为分界；名称 FF 结尾；其后某 4-align 位置是
+    稳定的 desc_ptr（逐行指向前方说明串区）。表边界由 desc_ptr 有效性驱动，
+    遇到 desc_ptr 重复（列表尾哨兵）或失效即停。"""
+    best: dict | None = None
+    for es in _ENTRY_SIZE_CANDIDATES:
+        for probe in (addr, addr - (addr % 4)):
+            slot = _find_slot_start(rom, probe, es)
+            if slot is None:
+                continue
+            # 先确定 desc_ptr 相对行首的稳定偏移
+            dpo_cand: dict[int, int] = {}
+            # 采样：从 slot 向前后各看几行，统计各 4-align 位置作为指针的频率
+            for off in range(slot - es * 2, slot + es * 3, es):
+                if off < 0 or off + es > len(rom):
+                    continue
+                row = rom[off : off + es]
+                name_end = row.find(0xFF)
+                if name_end < 0:
+                    continue
+                for p in range((name_end + 1 + 3) & ~3, es - 3, 4):
+                    if _struct_row_desc_ptr(rom, off, es, p) is not None:
+                        dpo_cand[p] = dpo_cand.get(p, 0) + 1
+            if not dpo_cand:
+                continue
+            dpo = max(dpo_cand.items(), key=lambda kv: kv[1])[0]
+
+            def _row_ok(o: int) -> bool:
+                return _struct_row_desc_ptr(rom, o, es, dpo) is not None
+
+            # 已在 slot 处；先回推表头（desc_ptr 有效 + 文本非空）
+            start = slot
+            cur = slot - es
+            while cur >= 0 and _row_ok(cur) and _slot_text_ok(rom, cur, es):
+                start = cur
+                cur -= es
+            # 前推表尾：desc_ptr 有效即继续（占位「？？？」共指 0x39A63F 属正常）
+            end = slot
+            cur = slot + es
+            while cur < len(rom):
+                dp = _struct_row_desc_ptr(rom, cur, es, dpo)
+                if dp is None or not _slot_text_ok(rom, cur, es):
+                    break
+                end = cur
+                cur += es
+            count = (end - start) // es + 1
+            if count < 8:
+                continue
+            filled = sum(
+                1
+                for i in range(count)
+                if _row_ok(start + i * es) and _slot_text_ok(rom, start + i * es, es)
+            )
+            ratio = filled / count
+            if ratio < 0.9:
+                continue
+            cand = {
+                "start": start,
+                "end": end + es - 1,
+                "entry_size": es,
+                "count": count,
+                "filled": filled,
+                "ratio": ratio,
+                "desc_ptr_offset": dpo,
+            }
+            if best is None or (cand["ratio"], cand["filled"]) > (
+                best["ratio"],
+                best["filled"],
+            ):
+                best = cand
+    if best is None:
+        return None
+    if best.get("desc_ptr_offset") is None:
+        return None
+    return best
+
+
+def _guess_stride_ptr(rom: bytes, addr: int) -> dict | None:
+    """反推 type=stride_ptr 指针表（默认 stride 4）。"""
+    from meowth.jp_pcs import decode_pcs
+
+    step = 4
+
+    def _is_ptr_slot(o: int) -> bool:
+        if o < 0 or o + 4 > len(rom):
+            return False
+        v = struct.unpack_from("<I", rom, o)[0]
+        if not (BASE <= v < BASE + len(rom)):
+            return False
+        so = v - BASE
+        raw = read_pcs(rom, so, 64)
+        if not raw:
+            return False
+        return bool(decode_pcs(raw).strip())
+
+    base = addr - (addr % step)
+    if not _is_ptr_slot(base):
+        nxt = None
+        for d in (-step, step, -2 * step, 2 * step):
+            if _is_ptr_slot(base + d):
+                nxt = base + d
+                break
+        if nxt is None:
+            return None
+        base = nxt
+
+    start = cur = base
+    while cur - step >= 0 and _is_ptr_slot(cur - step):
+        cur -= step
+        start = cur
+    end = cur = base
+    while cur + step <= len(rom) and _is_ptr_slot(cur + step):
+        cur += step
+        end = cur
+    count = (end - start) // step + 1
+    if count < 2:
+        return None
+    return {"start": start, "end": end, "stride": step, "count": count}
+
+
+def _varlen_block_hint(rom: bytes, addr: int) -> dict | None:
+    """兜底：addr 落在 FF 结尾变长串块，给近似边界（无定长语义）。"""
+    from meowth.jp_pcs import decode_pcs
+
+    n = len(rom)
+
+    def _dec(o: int, e: int) -> str:
+        try:
+            return decode_pcs(rom[o : e + 1]).strip()
+        except Exception:
+            return ""
+
+    start = addr
+    cur = addr
+    while cur > 0:
+        prev_ff = rom.rfind(0xFF, 0, cur)
+        so = prev_ff + 1 if prev_ff >= 0 else 0
+        nxt = rom.find(0xFF, so, min(n, so + 64))
+        if nxt < 0 or so >= nxt:
+            break
+        if not _dec(so, nxt):
+            break
+        start = so
+        cur = so - 1 if so > 0 else 0
+
+    end = addr
+    cur = addr
+    guard = 0
+    while cur < n and guard < 100000:
+        nxt = rom.find(0xFF, cur, min(n, cur + 64))
+        if nxt < 0 or cur >= nxt:
+            break
+        if not _dec(cur, nxt):
+            break
+        end = nxt
+        cur = nxt + 1
+        guard += 1
+    if end <= start:
+        return None
+    return {"start": start, "end": end, "kind": "varlen"}
+
+
+def _fmt_guess(d: dict, typ: str) -> None:
+    """打印一条推测模块 yaml 片段（不写盘）。"""
+    lines = [
+        f"- id: 模块名",
+        f"  start: '0x{d['start']:x}'",
+        f"  end: '0x{d['end']:x}'",
+        f"  type: {typ}",
+    ]
+    if typ == "stride":
+        lines += ["  read:", f"    stride: {d['stride']}"]
+    elif typ == "struct":
+        lines += ["  read:", f"    entry_size: {d['entry_size']}"]
+        if d.get("desc_ptr_offset") is not None:
+            lines.append(f"    desc_ptr_offset: {d['desc_ptr_offset']}")
+    elif typ == "stride_ptr":
+        lines += ["  read:", f"    stride: {d['stride']}"]
+    for ln in lines:
+        _safe_print(ln)
+
+
+def cmd_guess(rom_path: Path, addr_s: str, *, config_path: Path | None = None) -> int:
+    """由一段地址反推模块配置（start/end/type/read），只读不写盘。"""
+    rom = rom_path.read_bytes()
+    if len(rom) < 0x200:
+        raise SystemExit("ROM too small")
+    addr = parse_addr(addr_s)
+    fo = _to_file_offset(addr, len(rom), default=0)
+    print(f"[i] input={addr_s!r} -> file_offset=0x{fo:X}")
+
+    if TITLE_LZ_BAND[0] <= fo < TITLE_LZ_BAND[1]:
+        _safe_print(
+            f"[!] 0x{fo:X} 落在标题 LZ 带 "
+            f"0x{TITLE_LZ_BAND[0]:X}..0x{TITLE_LZ_BAND[1]:X}，不宜作文本模块"
+        )
+
+    results: list[tuple[dict, str]] = []
+    s = _guess_stride(rom, fo)
+    if s:
+        results.append((s, "stride"))
+    st = _guess_struct(rom, fo)
+    if st:
+        results.append((st, "struct"))
+    sp = _guess_stride_ptr(rom, fo)
+    if sp:
+        results.append((sp, "stride_ptr"))
+
+    if not results:
+        hint = _varlen_block_hint(rom, fo)
+        if hint:
+            _safe_print(
+                f"[i] 0x{fo:X} 落在变长 FF 串块（非定长/结构表）；"
+                f"近似边界 0x{hint['start']:X}..0x{hint['end']:X}（含）"
+            )
+            _safe_print("    建议按 type: scan + ranges: 处理，而非 stride/struct")
+        else:
+            _safe_print(f"[i] 0x{fo:X} 无法推断为定长/结构表，也无稳定变长串块")
+        return 0
+
+    # 优先级：struct（最具体，有 desc_ptr）> stride_ptr > stride
+    _type_rank = {"struct": 0, "stride_ptr": 1, "stride": 2}
+    results.sort(key=lambda r: (_type_rank.get(r[1], 9), -r[0].get("ratio", 1.0)))
+    d, typ = results[0]
+    print()
+    _safe_print(f"# 推测 type={typ}")
+    _fmt_guess(d, typ)
+    print()
+    _safe_print(
+        f"[i] 槽数={d.get('count')} 命中={d.get('filled', d.get('count'))} "
+        f"覆盖率={d.get('ratio', 1.0):.0%}"
+    )
+    if d.get("desc_ptr_offset") is not None:
+        _safe_print(f"[i] 检测到 desc_ptr 在行内 +{d['desc_ptr_offset']}")
+    _safe_print("[i] 只读：未修改 ROM / yaml / texts.json")
+    return 0
+
+
 def _add_remove_args(p: argparse.ArgumentParser) -> None:
     p.add_argument(
         "--addrs",
@@ -3705,6 +4094,14 @@ def main(argv: list[str] | None = None) -> int:
         help="邻近 ranges 合并的最大缝隙字节数（默认 32；大缝保留为多段）",
     )
 
+    p_gu = sub.add_parser(
+        "guess",
+        help="由一段地址反推模块配置（start/end/type/read），只读不写盘",
+    )
+    p_gu.add_argument("rom", type=Path)
+    p_gu.add_argument("addr", help="任一地址（0x08xxxxxx 或文件偏移 0x…；大小写不敏感）")
+    p_gu.add_argument("--config", type=Path, default=None)
+
     args = ap.parse_args(argv)
     if args.cmd == "export":
         export_texts(
@@ -3745,6 +4142,8 @@ def main(argv: list[str] | None = None) -> int:
         return cmd_migrate_omit(
             args.rom, config_path=args.config, max_gap=args.max_gap
         )
+    if args.cmd == "guess":
+        return cmd_guess(args.rom, args.addr, config_path=args.config)
     ap.error(f"unknown command {args.cmd}")
     return 2
 

@@ -97,6 +97,16 @@ texts:
         stride: 8
       relocate: true
       hook: true
+    - id: 宝可梦类型名
+      label: 词条·宝可梦类型名
+      group: 词条
+      default: true
+      description: 图鉴里宝可梦的类型
+      start: '0x3B286A'
+      end: '0x3B2AB8'
+      type: scan
+      relocate: true
+      hook: true
     - id: 宝可梦名
       label: 词条·宝可梦
       group: 词条

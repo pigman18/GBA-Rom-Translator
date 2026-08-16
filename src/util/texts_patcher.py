@@ -230,6 +230,14 @@ def _struct_name_window(read: dict, entry_size: int) -> int:
     return entry_size
 
 
+def _struct_name_offset(read: dict) -> int:
+    """行内文本起始偏移：可选 name_offset，默认 0（行首）。"""
+    try:
+        return max(0, int(read.get("name_offset") or 0))
+    except (TypeError, ValueError):
+        return 0
+
+
 def _stamp(
     e: dict,
     *,
@@ -418,6 +426,8 @@ def extract_struct(
     filters: list[dict[str, Any]] | None = None,
 ) -> list[dict]:
     """结构体行表：按行 entry_size 步进，名称读到 eos（默认 FF）；byte_length=原文实际长。"""
+    from meowth.jp_pcs import decode_pcs
+
     mid = mod["id"]
     start = parse_addr(mod.get("start"))
     end = parse_addr(mod.get("end"))
@@ -427,12 +437,15 @@ def extract_struct(
         return []
     eos = _parse_eos_byte(read.get("eos", read.get("suffix")))
     name_window = _struct_name_window(read, entry_size)
+    name_offset = _struct_name_offset(read)
     count = (end - start + 1) // entry_size
     out: list[dict] = []
     table_ptr = BASE + start
     for i in range(count):
         off = start + i * entry_size
-        text, raw = _slot_text(rom, off, name_window, eos=eos)
+        text, raw = _slot_text(rom, off + name_offset, name_window, eos=eos)
+        if eos != 0xFF and raw:
+            text = decode_pcs(raw[:-1])
         if not text or set(text) <= {"？", "ー", "-", " "}:
             continue
         if not _entry_passes_filters(
@@ -446,7 +459,7 @@ def extract_struct(
         ):
             continue
         e = {
-            "address": f"0x{BASE + off:08X}",
+            "address": f"0x{BASE + off + name_offset:08X}",
             "table_index": i,
             "table_base": f"0x{table_ptr:08X}",
             "byte_length": len(raw),

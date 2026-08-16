@@ -97,16 +97,6 @@ texts:
         stride: 8
       relocate: true
       hook: true
-    - id: 宝可梦类型名
-      label: 词条·宝可梦类型名
-      group: 词条
-      default: true
-      description: 图鉴里宝可梦的类型
-      start: '0x3B286A'
-      end: '0x3B2AB8'
-      type: scan
-      relocate: true
-      hook: true
     - id: 宝可梦名
       label: 词条·宝可梦
       group: 词条
@@ -239,6 +229,21 @@ texts:
       translate_rules:
         - 单行输出：禁止任何换行（不得出现实际换行或 \\n）；句末不得使用「。」
         - 全文不超过 12 个汉字（控制码占位符 {Cn} 不计入字数）；超长必须压缩语义，禁止用换行续写
+    - id: 图鉴分类名
+      label: 词条·图鉴分类名
+      group: 词条
+      default: true
+      description: 图鉴条目内联分类名（+0x06，6字节00补齐）
+      start: '0x384746'
+      end: '0x38717D'
+      type: struct
+      read:
+        entry_size: 0x1C
+        name_offset: 6
+        name_max: 6
+        eos: 0x00
+      relocate: true
+      hook: true
     - id: 图鉴说明
       label: 说明·图鉴说明
       group: 说明

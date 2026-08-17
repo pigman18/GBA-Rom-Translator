@@ -62,6 +62,7 @@ void UnusedPrintMonName_hook_C(const uint8_t *name,
     const uint8_t *ref = (const uint8_t *)ADDR_DEX_TEXT_UNKNOWN_POKE;
     uint8_t out[OUT_MAX];
     unsigned i = 0;
+    unsigned ncat = 0;
 
     /* 分类名：优先当作 F9 80 短语引用展开；否则当作原文字节流。 */
     if (name[0] == 0xF9u && name[1] == 0x80u) {
@@ -84,8 +85,35 @@ void UnusedPrintMonName_hook_C(const uint8_t *name,
         }
     }
 
+    /* 统计分类名汉字数（每 F9 00 = 1 字）用于补尾空格。 */
+    {
+        const uint8_t *q = cat_stream;
+        ncat = 0;
+        while (q && *q != 0xFF && *q != 0x00) {
+            if (*q == 0xF9u) {
+                ncat++;
+                q += 4;
+            } else {
+                q++;
+            }
+        }
+    }
+
     i = append_stream(out, i, cat_stream);
     i = append_stream(out, i, poke_stream);
+
+    /* 占位串整体 76px：5问号(40px)+宝可梦(36px)。
+     * 本串 宝可梦已紧跟分类名，若分类名不足 4 字则盖不满尾部，会露出
+     * 占位串宝可梦的残字（梦）。按缺口追加 8px 空格补齐覆盖。*/
+    {
+        int pad = 40 - 12 * ncat;
+        unsigned nsp, k2;
+        if (pad < 0)
+            pad = 0;
+        nsp = (unsigned)((pad + 7) / 8);
+        for (k2 = 0; k2 < nsp && i + 1u < OUT_MAX; k2++)
+            out[i++] = 0x00;
+    }
     out[i] = 0xFF;
 
     ((menu_print_t)(ADDR_MENU_PRINT_TEXT | 1u))(out, left, top);

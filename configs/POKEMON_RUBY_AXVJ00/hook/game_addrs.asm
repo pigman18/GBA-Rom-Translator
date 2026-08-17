@@ -43,6 +43,7 @@ UnusedPrintMonName                       equ 0x0808DD60
 
 ; --- Menu (shop/bag InitMenu ▶) ---
 Menu_PrintText                         equ 0x0806F16C
+DrawOptionMenuChoice                   equ 0x080889F0  ; 设置窗口选项绘制（dst[2]=style）
 RedrawMenuCursor                       equ 0x0806F41C
 
 ; --- 图鉴列表页名字列（唯一来源，C 里 DEX_NAME_COLUMN 同步此值）---

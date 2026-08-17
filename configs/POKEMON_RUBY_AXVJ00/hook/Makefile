@@ -9,6 +9,7 @@ SRC_ROOT := src
 TEXT     := $(SRC_ROOT)/text
 BATTLE   := $(SRC_ROOT)/battle
 POKEDEX  := $(SRC_ROOT)/pokedex
+OPTION   := $(SRC_ROOT)/option
 OUT      := out
 BUILD    := $(OUT)/obj
 
@@ -26,7 +27,9 @@ OBJS := \
 	$(BUILD)/UpdateNickInHealthbox_entry.o \
 	$(BUILD)/UpdateNickInHealthbox_hook.o \
 	$(BUILD)/UnusedPrintMonName_entry.o \
-	$(BUILD)/UnusedPrintMonName_hook.o
+	$(BUILD)/UnusedPrintMonName_hook.o \
+	$(BUILD)/DrawOptionMenuChoice_entry.o \
+	$(BUILD)/DrawOptionMenuChoice_hook.o
 
 .PHONY: all clean
 
@@ -53,6 +56,12 @@ $(BUILD)/%.o: $(POKEDEX)/%.s | $(BUILD)
 $(BUILD)/%.o: $(POKEDEX)/%.c | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@
 
+$(BUILD)/%.o: $(OPTION)/%.s | $(BUILD)
+	$(CC) $(ASFLAGS) $< -o $@
+
+$(BUILD)/%.o: $(OPTION)/%.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@
+
 $(OUT)/game.elf: $(OBJS)
 	$(CC) $(LDFLAGS) -o $@ $(OBJS)
 
@@ -64,7 +73,8 @@ $(OUT)/game_syms.asm: $(OUT)/game.map
 	MPN=$$(grep -E 'MapName_DisplayCellLength$$' $(OUT)/game.map | awk '{print $$1}'); \
 	WTA=$$(grep -E 'WaitArrow_Prepare$$' $(OUT)/game.map | awk '{print $$1}'); \
 	UPMN=$$(grep -E 'UnusedPrintMonName_Hook$$' $(OUT)/game.map | awk '{print $$1}'); \
-	printf '; Auto-generated from out/game.map - do not edit\nGetStringWidthChinese                   equ %s\nMapName_DisplayCellLength               equ %s\nWaitArrow_Prepare                       equ %s\nUnusedPrintMonName_Hook                 equ %s\n' "$${GSW:-0x08800000}" "$${MPN:-0x08800000}" "$${WTA:-0x08800000}" "$${UPMN:-0x08800000}" > $@
+	DOMC=$$(grep -E 'DrawOptionMenuChoice_Hook$$' $(OUT)/game.map | awk '{print $$1}'); \
+	printf '; Auto-generated from out/game.map - do not edit\nGetStringWidthChinese                   equ %s\nMapName_DisplayCellLength               equ %s\nWaitArrow_Prepare                       equ %s\nUnusedPrintMonName_Hook                 equ %s\nDrawOptionMenuChoice_Hook               equ %s\n' "$${GSW:-0x08800000}" "$${MPN:-0x08800000}" "$${WTA:-0x08800000}" "$${UPMN:-0x08800000}" "$${DOMC:-0x08800000}" > $@
 
 clean:
 	rm -rf $(OUT)/obj $(OUT)/game.elf $(OUT)/game.bin $(OUT)/game.map $(OUT)/game_syms.asm

@@ -11,6 +11,7 @@ set SRC_ROOT=src
 set TEXT=%SRC_ROOT%\text
 set BATTLE=%SRC_ROOT%\battle
 set POKEDEX=%SRC_ROOT%\pokedex
+set OPTION=%SRC_ROOT%\option
 set OUT=out
 set BUILD=%OUT%\obj
 set LINK_DIR=link
@@ -61,6 +62,14 @@ echo === Compiling UnusedPrintMonName_hook.c ===
 %CC% %CFLAGS% %POKEDEX%\UnusedPrintMonName_hook.c -o %BUILD%\UnusedPrintMonName_hook.o
 if errorlevel 1 exit /b 1
 
+echo === Assembling DrawOptionMenuChoice_entry.s ===
+%CC% %ASFLAGS% %OPTION%\DrawOptionMenuChoice_entry.s -o %BUILD%\DrawOptionMenuChoice_entry.o
+if errorlevel 1 exit /b 1
+
+echo === Compiling DrawOptionMenuChoice_hook.c ===
+%CC% %CFLAGS% %OPTION%\DrawOptionMenuChoice_hook.c -o %BUILD%\DrawOptionMenuChoice_hook.o
+if errorlevel 1 exit /b 1
+
 echo === Linking game.elf ===
 %CC% %LDFLAGS% -o %OUT%/game.elf ^
   %BUILD%/PrintNextChar_entry.o ^
@@ -72,7 +81,9 @@ echo === Linking game.elf ===
   %BUILD%/UpdateNickInHealthbox_entry.o ^
   %BUILD%/UpdateNickInHealthbox_hook.o ^
   %BUILD%/UnusedPrintMonName_entry.o ^
-  %BUILD%/UnusedPrintMonName_hook.o
+  %BUILD%/UnusedPrintMonName_hook.o ^
+  %BUILD%/DrawOptionMenuChoice_entry.o ^
+  %BUILD%/DrawOptionMenuChoice_hook.o
 if errorlevel 1 exit /b 1
 
 echo === Generating game.bin ===
@@ -84,16 +95,19 @@ set GSW_ADDR=0x08800000
 set MPN_ADDR=0x08800000
 set WTA_ADDR=0x08800000
 set UPMN_ADDR=0x08800000
+set DOMC_ADDR=0x08800000
 for /f "tokens=1" %%a in ('findstr /R "GetStringWidthChinese$" %OUT%\game.map') do set GSW_ADDR=%%a
 for /f "tokens=1" %%a in ('findstr /R "MapName_DisplayCellLength$" %OUT%\game.map') do set MPN_ADDR=%%a
 for /f "tokens=1" %%a in ('findstr /R "WaitArrow_Prepare$" %OUT%\game.map') do set WTA_ADDR=%%a
 for /f "tokens=1" %%a in ('findstr /R "UnusedPrintMonName_Hook$" %OUT%\game.map') do set UPMN_ADDR=%%a
+for /f "tokens=1" %%a in ('findstr /R "DrawOptionMenuChoice_Hook$" %OUT%\game.map') do set DOMC_ADDR=%%a
 > %OUT%\game_syms.asm (
     echo ; Auto-generated from out/game.map - do not edit
     echo GetStringWidthChinese                   equ %GSW_ADDR%
     echo MapName_DisplayCellLength               equ %MPN_ADDR%
     echo WaitArrow_Prepare                       equ %WTA_ADDR%
     echo UnusedPrintMonName_Hook                 equ %UPMN_ADDR%
+    echo DrawOptionMenuChoice_Hook               equ %DOMC_ADDR%
 )
 
 echo Build OK: %OUT%\game.bin

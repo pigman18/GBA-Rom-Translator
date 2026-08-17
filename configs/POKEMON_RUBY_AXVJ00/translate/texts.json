@@ -219,7 +219,8 @@
         "eos": 0
       },
       "relocate": true,
-      "hook": true
+      "hook": true,
+      "reuse_slot_padding": true
     },
     "图鉴说明": {
       "label": "说明·图鉴说明",

@@ -244,6 +244,7 @@ texts:
         eos: 0x00
       relocate: true
       hook: true
+      reuse_slot_padding: true
     - id: 图鉴说明
       label: 说明·图鉴说明
       group: 说明

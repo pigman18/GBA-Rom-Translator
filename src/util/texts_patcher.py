@@ -3146,6 +3146,7 @@ def sync_texts_json_omit(
             "style",
             "relocate",
             "hook",
+            "reuse_slot_padding",
         ):
             if k in mod:
                 meta[k] = mod[k]
@@ -3306,6 +3307,7 @@ def sync_texts_json_modules_meta(texts_path: Path, cfg: dict) -> int:
             "style",
             "relocate",
             "hook",
+            "reuse_slot_padding",
         ):
             if k in mod:
                 meta[k] = mod[k]

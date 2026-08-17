@@ -365,6 +365,29 @@ def _keep(original_hex: str, reason: str) -> dict:
     return {"type": "keep", "target_hex": original_hex, "reason": reason}
 
 
+def _reuse_slot_capacity(
+    entry: dict, game_id: str, module_id: str | None, fallback: int
+) -> int:
+    """``reuse_slot_padding`` 模块：定长字段可写到声明的槽宽，而非 EOS 截断长。
+
+    槽宽优先读 read.name_stride / read.name_max（struct 字段的声明槽宽）。
+    stride 表的 byte_length 本身就是 stride，无需调整（fallback 已够）。
+    """
+    if not entry.get("is_fixed_table"):
+        return fallback
+    meta = _module_meta(game_id, module_id)
+    if not meta.get("reuse_slot_padding"):
+        return fallback
+    read = meta.get("read") or {}
+    try:
+        cap = int(read.get("name_stride") or read.get("name_max") or 0)
+    except (TypeError, ValueError):
+        return fallback
+    if cap <= 0:
+        return fallback
+    return cap
+
+
 def plan_entry(
     entry: dict,
     charmap: Any,
@@ -389,6 +412,7 @@ def plan_entry(
     byte_length = entry.get("byte_length", 0) or 0
     original_hex = entry.get("original_hex") or ""
     module_id = entry.get("module") or entry.get("_axvj_module") or entry.get("category")
+    slot_cap = _reuse_slot_capacity(entry, game_id, module_id, byte_length)
     allow_reloc = module_allows_relocate(game_id, module_id)
     allow_phrase = module_allows_phrase(game_id, module_id)
     allow_hook = module_allows_hook(game_id, module_id)
@@ -398,6 +422,7 @@ def plan_entry(
     write_addr = _entry_address_off(entry)
     if rebase is not None:
         write_addr, byte_length = rebase
+        slot_cap = _reuse_slot_capacity(entry, game_id, module_id, byte_length)
 
     if usable_ptrs is None:
         usable_ptrs = resolve_usable_pointers(
@@ -426,12 +451,15 @@ def plan_entry(
             plan["fd_rebased"] = True
         return plan
 
-    # 1) F900 原地
-    if len(encoded) <= byte_length:
-        return _with_write_meta({
+    # 1) F900 原地（reuse_slot_padding=true 时按槽宽可写）
+    if len(encoded) <= slot_cap:
+        plan = {
             "type": "in_place",
-            "target_hex": pad_inplace_to_slot(encoded, byte_length).hex(" "),
-        })
+            "target_hex": pad_inplace_to_slot(encoded, slot_cap).hex(" "),
+        }
+        if slot_cap != byte_length:
+            plan["byte_length"] = slot_cap
+        return _with_write_meta(plan)
 
     # 2) relocate
     if allow_reloc and usable_ptrs:
@@ -441,16 +469,19 @@ def plan_entry(
             "pointer_sources": list(usable_ptrs),
         })
 
-    # 3) F980 原地升槽
-    if allow_phrase and byte_length >= 5:
+    # 3) F980 原地升槽（reuse_slot_padding=true 时按槽宽判断）
+    if allow_phrase and slot_cap >= 5:
         code = _ensure_phrase_code(phrase_codes, to_encode)
-        return _with_write_meta({
+        plan = {
             "type": "in_place",
             "target_hex": pad_inplace_to_slot(
-                _encode_phrase_ref(code, channel), byte_length
+                _encode_phrase_ref(code, channel), slot_cap
             ).hex(" "),
             "phrase_code": code,
-        })
+        }
+        if slot_cap != byte_length:
+            plan["byte_length"] = slot_cap
+        return _with_write_meta(plan)
 
     # 4) hook
     if allow_hook and usable_ptrs:

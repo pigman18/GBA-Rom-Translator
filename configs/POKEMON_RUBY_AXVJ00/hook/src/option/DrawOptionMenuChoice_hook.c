@@ -1,15 +1,12 @@
 /* DrawOptionMenuChoice_hook — 设置窗口选项高亮绘制。
  *
- * 原版 JP 文本为 FC 05 <palette> <正文> FF，
- * 函数通过 dst[2]=style 切换调色板（8=选中/15=普通）。
+ * 原版：FC 05 <palette> ，dst[2]=style 切换调色板。
+ * 翻译后：F9 80 hi lo 短语引用，短语流内自带 FC 05 0F，会覆盖外层 style。
  *
- * 汉化后文本变成 F9 80 hi lo FF 短语引用，
- * 短语流内自带 FC 05 0F （普通色）。
- * 若只在外层插 FC 05 <style>，展开短语时
- * 会被短语流的 FC 05 0F 覆盖，导致选中颜色不生效。
- *
- * 修复：打印前把 style 写入 ADDR_OPT_PALETTE_OVERRIDE，
- * chs_update_tilemap 写 tilemap palette 时优先用该值，打印完再清零。
+ * 修复：打印前写入两个预留变量：
+ *   ADDR_OPT_PALETTE_OVERRIDE = style                    强制 tilemap palette
+ *   ADDR_OPT_FG_COLOR = 选中?大红:9 黑        强制 ink 前景色
+ * 打印完清零。颜色可在 game.h OPT_FG_SELECTED/OPT_FG_UNSELECTED 调。
  */
 #include "game.h"
 
@@ -44,6 +41,9 @@ void DrawOptionMenuChoice_hook_C(const uint8_t *text,
     dst[off + i] = 0xFF;
 
     *(volatile uint8_t *)ADDR_OPT_PALETTE_OVERRIDE = (uint8_t)style;
+    *(volatile uint8_t *)ADDR_OPT_FG_COLOR =
+        (style == 0x08u) ? (uint8_t)OPT_FG_SELECTED : (uint8_t)OPT_FG_UNSELECTED;
     ((menu_print_t)(ADDR_MENU_PRINT_TEXT | 1u))(dst, x, y);
     *(volatile uint8_t *)ADDR_OPT_PALETTE_OVERRIDE = 0u;
+    *(volatile uint8_t *)ADDR_OPT_FG_COLOR = 0u;
 }

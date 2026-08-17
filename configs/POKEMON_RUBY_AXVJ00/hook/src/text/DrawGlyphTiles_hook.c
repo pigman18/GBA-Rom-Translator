@@ -270,7 +270,8 @@ static void draw_glyph_tile_12(
     uint8_t *spill_l = (uint8_t *)spill_words;
     unsigned r, c;
     unsigned gw_end = startPixel + width;
-    uint8_t color_c = win_u8(win, WIN_COLOR_C);
+    uint8_t fg_ov = *(volatile uint8_t *)ADDR_OPT_FG_COLOR;
+    uint8_t color_c = (fg_ov != 0u) ? fg_ov : win_u8(win, WIN_COLOR_C);
     uint8_t color_d = win_u8(win, WIN_COLOR_D);
     uint8_t color_e = win_u8(win, WIN_COLOR_E);
     int need_spill = (spill != 0) && (gw_end > 8u);
@@ -352,7 +353,6 @@ void drawGlyph_Adv(TextPrinter *win, const uint8_t *src128, int linear, unsigned
     uint8_t *du, *dl, *du_sp, *dl_sp;
     uint8_t map_tx;
     int spilled;
-
     if (adv_px < 8u)
         adv_px = 8u;
     if (adv_px > 12u)

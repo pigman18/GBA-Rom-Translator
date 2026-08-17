@@ -48,6 +48,14 @@
 #define ADDR_CHINESE_TILE_STATE    0x0203FFF8u
 /* Pitch slot table: ctrl @ FF80 (16B), slots[8] @ FF90 (64B). */
 #define ADDR_CHS_PITCH_CTRL        0x0203FF80u/* DrawOptionMenuChoice 选中调色板覆盖（避开 FFF0/F7F8） */#define ADDR_OPT_PALETTE_OVERRIDE  0x0203FFD0u
+#define ADDR_OPT_FG_COLOR          0x0203FFD1u
+/* 颜色预留可调：选中默认=大红(8)，未选中=黑(0) */
+#ifndef OPT_FG_SELECTED
+#define OPT_FG_SELECTED     8u
+#endif
+#ifndef OPT_FG_UNSELECTED
+#define OPT_FG_UNSELECTED   0u
+#endif
 #define ADDR_CHS_PITCH_SLOTS       0x0203FF90u
 #define CHS_PITCH_SLOT_COUNT       8u
 

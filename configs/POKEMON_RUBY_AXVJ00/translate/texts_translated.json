@@ -41,6 +41,811 @@
   },
   {
     "status": 200,
+    "original": "Academy Ball",
+    "translated": "スクールボール"
+  },
+  {
+    "status": 200,
+    "original": "Academy Bottle",
+    "translated": "スクールボトル"
+  },
+  {
+    "status": 200,
+    "original": "Academy Chairs",
+    "translated": "スクールチェア"
+  },
+  {
+    "status": 200,
+    "original": "Academy Cup",
+    "translated": "スクールカップ"
+  },
+  {
+    "status": 200,
+    "original": "Academy Tablecloth",
+    "translated": "スクールクロス"
+  },
+  {
+    "status": 200,
+    "original": "B&W Grass Chairs",
+    "translated": "くさむらチェア"
+  },
+  {
+    "status": 200,
+    "original": "B&W Grass Tablecloth",
+    "translated": "くさむらモノクロス"
+  },
+  {
+    "status": 200,
+    "original": "Barred Cup",
+    "translated": "よこストライプカップ"
+  },
+  {
+    "status": 200,
+    "original": "Battle Chairs",
+    "translated": "しょうぶチェア"
+  },
+  {
+    "status": 200,
+    "original": "Battle Tablecloth",
+    "translated": "しょうぶクロス"
+  },
+  {
+    "status": 200,
+    "original": "Blue Bottle",
+    "translated": "ブルーボトル"
+  },
+  {
+    "status": 200,
+    "original": "Blue Chairs",
+    "translated": "ブルーチェア"
+  },
+  {
+    "status": 200,
+    "original": "Blue Cup",
+    "translated": "ブルーカップ"
+  },
+  {
+    "status": 200,
+    "original": "Blue Dish",
+    "translated": "ブループレート"
+  },
+  {
+    "status": 200,
+    "original": "Blue Poké Ball Pick",
+    "translated": "あおボールピック"
+  },
+  {
+    "status": 200,
+    "original": "Blue Tablecloth",
+    "translated": "ブルークロス"
+  },
+  {
+    "status": 200,
+    "original": "Blue-Flag Pick",
+    "translated": "あおいはたピック"
+  },
+  {
+    "status": 200,
+    "original": "Blue-Sky Flower Pick",
+    "translated": "あおぞらおはなピック"
+  },
+  {
+    "status": 200,
+    "original": "Blueberry Chairs",
+    "translated": "ブルーベリーチェア"
+  },
+  {
+    "status": 200,
+    "original": "Blueberry Tablecloth",
+    "translated": "ブルーベリークロス"
+  },
+  {
+    "status": 200,
+    "original": "Bluesky Mail",
+    "translated": "あおぞらメール"
+  },
+  {
+    "status": 200,
+    "original": "Bronze Bottle",
+    "translated": "ブロンズチタンボトル"
+  },
+  {
+    "status": 200,
+    "original": "Bronze Cup",
+    "translated": "ブロンズチタンカップ"
+  },
+  {
+    "status": 200,
+    "original": "Cobalion Treat",
+    "translated": "コバルオンのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Cyber Ball",
+    "translated": "ゲーミングボール"
+  },
+  {
+    "status": 200,
+    "original": "Diamond Bottle",
+    "translated": "ダイヤボトル"
+  },
+  {
+    "status": 200,
+    "original": "Diamond Chairs",
+    "translated": "ダイヤチェア"
+  },
+  {
+    "status": 200,
+    "original": "Diamond Pattern Cup",
+    "translated": "ダイヤカップ"
+  },
+  {
+    "status": 200,
+    "original": "Diamond Tablecloth",
+    "translated": "ダイヤクロス"
+  },
+  {
+    "status": 200,
+    "original": "Eevee Cup",
+    "translated": "イーブイカップ"
+  },
+  {
+    "status": 200,
+    "original": "Elevator Key",
+    "translated": "エレベーターのキー"
+  },
+  {
+    "status": 200,
+    "original": "Entei Treat",
+    "translated": "エンテイのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Eon Mail",
+    "translated": "ブイブイメール"
+  },
+  {
+    "status": 200,
+    "original": "Exercise Ball",
+    "translated": "バランスボール"
+  },
+  {
+    "status": 200,
+    "original": "Fiery Pick",
+    "translated": "メラメラピック"
+  },
+  {
+    "status": 200,
+    "original": "Fire Pattern Cup",
+    "translated": "ファイヤーカップ"
+  },
+  {
+    "status": 200,
+    "original": "Flower Mail",
+    "translated": "はながらメール"
+  },
+  {
+    "status": 200,
+    "original": "Flower Pattern Cup",
+    "translated": "フラワーカップ"
+  },
+  {
+    "status": 200,
+    "original": "Gimmighoul Coin",
+    "translated": "コレクレーのコイン"
+  },
+  {
+    "status": 200,
+    "original": "Glastrier Treat",
+    "translated": "ブリザポスのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Gold Bottle",
+    "translated": "ゴールドチタンボトル"
+  },
+  {
+    "status": 200,
+    "original": "Gold Cup",
+    "translated": "ゴールドチタンカップ"
+  },
+  {
+    "status": 200,
+    "original": "Gold Pick",
+    "translated": "ゴールドピック"
+  },
+  {
+    "status": 200,
+    "original": "Gram 2",
+    "translated": "はいたつぶつ２"
+  },
+  {
+    "status": 200,
+    "original": "Gram 3",
+    "translated": "はいたつぶつ３"
+  },
+  {
+    "status": 200,
+    "original": "Green Dish",
+    "translated": "グリーンプレート"
+  },
+  {
+    "status": 200,
+    "original": "Green Poké Ball Pick",
+    "translated": "みどりボールピック"
+  },
+  {
+    "status": 200,
+    "original": "Groudon Treat",
+    "translated": "グラードンのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Heroic Sword Pick",
+    "translated": "ゆうしゃのけんピック"
+  },
+  {
+    "status": 200,
+    "original": "Ho-Oh Treat",
+    "translated": "ホウオウのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Kubfu Treat",
+    "translated": "ダクマのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Kyogre Treat",
+    "translated": "カイオーガのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Kyurem Treat",
+    "translated": "キュレムのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Latias Treat",
+    "translated": "ラティアスのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Latios Treat",
+    "translated": "ラティオスのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Leafy Chairs",
+    "translated": "ネイチャーチェア"
+  },
+  {
+    "status": 200,
+    "original": "Leafy Tablecloth",
+    "translated": "ネイチャークロス"
+  },
+  {
+    "status": 200,
+    "original": "Legendary Clue 2",
+    "translated": "でんせつのメモ2"
+  },
+  {
+    "status": 200,
+    "original": "Legendary Clue 3",
+    "translated": "でんせつのメモ3"
+  },
+  {
+    "status": 200,
+    "original": "Legendary Clue?",
+    "translated": "でんせつのメモ?"
+  },
+  {
+    "status": 200,
+    "original": "Lilac Chairs",
+    "translated": "パープルチェア"
+  },
+  {
+    "status": 200,
+    "original": "Lilac Tablecloth",
+    "translated": "パープルクロス"
+  },
+  {
+    "status": 200,
+    "original": "Litebluemail",
+    "translated": "みずいろメール"
+  },
+  {
+    "status": 200,
+    "original": "Lovely Mail",
+    "translated": "ラブリーメール"
+  },
+  {
+    "status": 200,
+    "original": "Lugia Treat",
+    "translated": "ルギアのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Lunala Treat",
+    "translated": "ルナアーラのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Magical Heart Pick",
+    "translated": "マジカルハートピック"
+  },
+  {
+    "status": 200,
+    "original": "Magical Star Pick",
+    "translated": "マジカルスターピック"
+  },
+  {
+    "status": 200,
+    "original": "Marill Ball",
+    "translated": "マリルボール"
+  },
+  {
+    "status": 200,
+    "original": "Mint Chairs",
+    "translated": "ミントチェア"
+  },
+  {
+    "status": 200,
+    "original": "Mint Tablecloth",
+    "translated": "ミントクロス"
+  },
+  {
+    "status": 200,
+    "original": "Mirage Mail",
+    "translated": "まぼろしメール"
+  },
+  {
+    "status": 200,
+    "original": "Moltres Treat",
+    "translated": "ファイヤーのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Monstrous Chairs",
+    "translated": "かいじゅうチェア"
+  },
+  {
+    "status": 200,
+    "original": "Monstrous Tablecloth",
+    "translated": "かいじゅうクロス"
+  },
+  {
+    "status": 200,
+    "original": "Morph Mail",
+    "translated": "へんしんメール"
+  },
+  {
+    "status": 200,
+    "original": "Music Mail",
+    "translated": "おんぷメール"
+  },
+  {
+    "status": 200,
+    "original": "Necrozma Treat",
+    "translated": "ネクロズマのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Old Verse 10",
+    "translated": "ふるいポエム１０"
+  },
+  {
+    "status": 200,
+    "original": "Old Verse 11",
+    "translated": "ふるいポエム１１"
+  },
+  {
+    "status": 200,
+    "original": "Old Verse 12",
+    "translated": "ふるいポエム１２"
+  },
+  {
+    "status": 200,
+    "original": "Old Verse 13",
+    "translated": "ふるいポエム１３"
+  },
+  {
+    "status": 200,
+    "original": "Old Verse 14",
+    "translated": "ふるいポエム１４"
+  },
+  {
+    "status": 200,
+    "original": "Old Verse 15",
+    "translated": "ふるいポエム１５"
+  },
+  {
+    "status": 200,
+    "original": "Old Verse 16",
+    "translated": "ふるいポエム１６"
+  },
+  {
+    "status": 200,
+    "original": "Old Verse 17",
+    "translated": "ふるいポエム１７"
+  },
+  {
+    "status": 200,
+    "original": "Old Verse 18",
+    "translated": "ふるいポエム１８"
+  },
+  {
+    "status": 200,
+    "original": "Old Verse 19",
+    "translated": "ふるいポエム１９"
+  },
+  {
+    "status": 200,
+    "original": "Old Verse 2",
+    "translated": "ふるいポエム２"
+  },
+  {
+    "status": 200,
+    "original": "Old Verse 20",
+    "translated": "ふるいポエム２０"
+  },
+  {
+    "status": 200,
+    "original": "Old Verse 3",
+    "translated": "ふるいポエム３"
+  },
+  {
+    "status": 200,
+    "original": "Old Verse 4",
+    "translated": "ふるいポエム４"
+  },
+  {
+    "status": 200,
+    "original": "Old Verse 5",
+    "translated": "ふるいポエム５"
+  },
+  {
+    "status": 200,
+    "original": "Old Verse 6",
+    "translated": "ふるいポエム６"
+  },
+  {
+    "status": 200,
+    "original": "Old Verse 7",
+    "translated": "ふるいポエム７"
+  },
+  {
+    "status": 200,
+    "original": "Old Verse 8",
+    "translated": "ふるいポエム８"
+  },
+  {
+    "status": 200,
+    "original": "Old Verse 9",
+    "translated": "ふるいポエム９"
+  },
+  {
+    "status": 200,
+    "original": "Orange Dish",
+    "translated": "オレンジプレート"
+  },
+  {
+    "status": 200,
+    "original": "Parasol Pick",
+    "translated": "パラソルピック"
+  },
+  {
+    "status": 200,
+    "original": "Party Sparkler Pick",
+    "translated": "おいわいはなびピック"
+  },
+  {
+    "status": 200,
+    "original": "Peach Chairs",
+    "translated": "ベージュチェア"
+  },
+  {
+    "status": 200,
+    "original": "Peach Tablecloth",
+    "translated": "ベージュクロス"
+  },
+  {
+    "status": 200,
+    "original": "Pika-Pika Pick",
+    "translated": "ピカピカピック"
+  },
+  {
+    "status": 200,
+    "original": "Pikachu Cup",
+    "translated": "ピカチュウカップ"
+  },
+  {
+    "status": 200,
+    "original": "Pink Bottle",
+    "translated": "ピンクボトル"
+  },
+  {
+    "status": 200,
+    "original": "Pink Chairs",
+    "translated": "ピンクチェア"
+  },
+  {
+    "status": 200,
+    "original": "Pink Cup",
+    "translated": "ピンクカップ"
+  },
+  {
+    "status": 200,
+    "original": "Pink Tablecloth",
+    "translated": "ピンククロス"
+  },
+  {
+    "status": 200,
+    "original": "Plaid Chairs (B)",
+    "translated": "あおチェックチェア"
+  },
+  {
+    "status": 200,
+    "original": "Plaid Chairs (R)",
+    "translated": "あかチェックチェア"
+  },
+  {
+    "status": 200,
+    "original": "Plaid Chairs (Y)",
+    "translated": "きいろチェックチェア"
+  },
+  {
+    "status": 200,
+    "original": "Plaid Tablecloth (B)",
+    "translated": "あおチェッククロス"
+  },
+  {
+    "status": 200,
+    "original": "Plaid Tablecloth (R)",
+    "translated": "あかチェッククロス"
+  },
+  {
+    "status": 200,
+    "original": "Plaid Tablecloth (Y)",
+    "translated": "きいろチェッククロス"
+  },
+  {
+    "status": 200,
+    "original": "Polka-Dot Bottle",
+    "translated": "みずたまボトル"
+  },
+  {
+    "status": 200,
+    "original": "Polka-Dot Chairs",
+    "translated": "みずたまチェア"
+  },
+  {
+    "status": 200,
+    "original": "Polka-Dot Cup",
+    "translated": "みずたまカップ"
+  },
+  {
+    "status": 200,
+    "original": "Polka-Dot Tablecloth",
+    "translated": "みずたまクロス"
+  },
+  {
+    "status": 200,
+    "original": "Portraitmail",
+    "translated": "にがおえメール"
+  },
+  {
+    "status": 200,
+    "original": "Raikou Treat",
+    "translated": "ライコウのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Rayquaza Treat",
+    "translated": "レックウザのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Red Dish",
+    "translated": "レッドプレート"
+  },
+  {
+    "status": 200,
+    "original": "Red Poké Ball Pick",
+    "translated": "あかボールピック"
+  },
+  {
+    "status": 200,
+    "original": "Red-Flag Pick",
+    "translated": "あかいはたピック"
+  },
+  {
+    "status": 200,
+    "original": "Reshiram Treat",
+    "translated": "レシラムのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Silver Bottle",
+    "translated": "シルバーチタンボトル"
+  },
+  {
+    "status": 200,
+    "original": "Silver Cup",
+    "translated": "シルバーチタンカップ"
+  },
+  {
+    "status": 200,
+    "original": "Silver Pick",
+    "translated": "シルバーピック"
+  },
+  {
+    "status": 200,
+    "original": "Simple Chairs",
+    "translated": "シンプルチェア"
+  },
+  {
+    "status": 200,
+    "original": "Slowpoke Cup",
+    "translated": "ヤドンカップ"
+  },
+  {
+    "status": 200,
+    "original": "Smiling Vee Pick",
+    "translated": "ニコブイピック"
+  },
+  {
+    "status": 200,
+    "original": "Solgaleo Treat",
+    "translated": "ソルガレオのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Spectrier Treat",
+    "translated": "レイスポスのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Spooky Chairs",
+    "translated": "うらめしチェア"
+  },
+  {
+    "status": 200,
+    "original": "Spooky Tablecloth",
+    "translated": "うらめしクロス"
+  },
+  {
+    "status": 200,
+    "original": "Steel Bottle (B)",
+    "translated": "Bステンレスボトル"
+  },
+  {
+    "status": 200,
+    "original": "Steel Bottle (R)",
+    "translated": "Rステンレスボトル"
+  },
+  {
+    "status": 200,
+    "original": "Steel Bottle (Y)",
+    "translated": "Yステンレスボトル"
+  },
+  {
+    "status": 200,
+    "original": "Striped Bottle",
+    "translated": "ストライプボトル"
+  },
+  {
+    "status": 200,
+    "original": "Striped Chairs",
+    "translated": "ストライプチェア"
+  },
+  {
+    "status": 200,
+    "original": "Striped Cup",
+    "translated": "たてストライプカップ"
+  },
+  {
+    "status": 200,
+    "original": "Striped Tablecloth",
+    "translated": "ストライプクロス"
+  },
+  {
+    "status": 200,
+    "original": "Suicune Treat",
+    "translated": "スイクンのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Sunrise Flower Pick",
+    "translated": "あさやけおはなピック"
+  },
+  {
+    "status": 200,
+    "original": "Sunset Flower Pick",
+    "translated": "ゆうやけおはなピック"
+  },
+  {
+    "status": 200,
+    "original": "Surf Mail",
+    "translated": "なみのりメール"
+  },
+  {
+    "status": 200,
+    "original": "Terrakion Treat",
+    "translated": "テラキオンのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Vee-Vee Pick",
+    "translated": "ブイブイピック"
+  },
+  {
+    "status": 200,
+    "original": "Virizion Treat",
+    "translated": "ビリジオンのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Whimsical Chairs",
+    "translated": "ファンシーチェア"
+  },
+  {
+    "status": 200,
+    "original": "Whimsical Tablecloth",
+    "translated": "ファンシークロス"
+  },
+  {
+    "status": 200,
+    "original": "White Dish",
+    "translated": "ホワイトプレート"
+  },
+  {
+    "status": 200,
+    "original": "Winking Pika Pick",
+    "translated": "パチピカピック"
+  },
+  {
+    "status": 200,
+    "original": "Yarn Ball",
+    "translated": "けいとボール"
+  },
+  {
+    "status": 200,
+    "original": "Yellow Bottle",
+    "translated": "イエローボトル"
+  },
+  {
+    "status": 200,
+    "original": "Yellow Chairs",
+    "translated": "イエローチェア"
+  },
+  {
+    "status": 200,
+    "original": "Yellow Cup",
+    "translated": "イエローカップ"
+  },
+  {
+    "status": 200,
+    "original": "Yellow Dish",
+    "translated": "イエロープレート"
+  },
+  {
+    "status": 200,
+    "original": "Yellow Tablecloth",
+    "translated": "イエロークロス"
+  },
+  {
+    "status": 200,
+    "original": "Zapdos Treat",
+    "translated": "サンダーのおやつ"
+  },
+  {
+    "status": 200,
+    "original": "Zekrom Treat",
+    "translated": "ゼクロムのおやつ"
+  },
+  {
+    "status": 200,
     "original": "\\01 は\nレポートに しっかり かきのこした！",
     "translated": "\\01\n已牢牢写入记录！"
   },
@@ -54128,8 +54933,28 @@
   },
   {
     "status": 200,
+    "original": "？？？",
+    "translated": "            ？？？？？？？？？？？"
+  },
+  {
+    "status": 200,
+    "original": "？？？？",
+    "translated": "            ？？？？？？？？？？？"
+  },
+  {
+    "status": 200,
+    "original": "？？？？？",
+    "translated": "            ？？？？？？？？？？？"
+  },
+  {
+    "status": 200,
     "original": "？？？？？ポケモン",
-    "translated": "？？？宝可梦"
+    "translated": "？？？？？宝可梦"
+  },
+  {
+    "status": 200,
+    "original": "？？？？？？？？",
+    "translated": "            ？？？？？？？？？？？"
   },
   {
     "status": 200,

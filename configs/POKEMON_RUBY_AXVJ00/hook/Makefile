@@ -62,7 +62,9 @@ $(OUT)/game.bin: $(OUT)/game.elf
 $(OUT)/game_syms.asm: $(OUT)/game.map
 	@GSW=$$(grep -E 'GetStringWidthChinese$$' $(OUT)/game.map | awk '{print $$1}'); \
 	MPN=$$(grep -E 'MapName_DisplayCellLength$$' $(OUT)/game.map | awk '{print $$1}'); \
-	printf '; Auto-generated from out/game.map - do not edit\nGetStringWidthChinese                   equ %s\nMapName_DisplayCellLength               equ %s\n' "$${GSW:-0x08800000}" "$${MPN:-0x08800000}" > $@
+	WTA=$$(grep -E 'WaitArrow_Prepare$$' $(OUT)/game.map | awk '{print $$1}'); \
+	UPMN=$$(grep -E 'UnusedPrintMonName_Hook$$' $(OUT)/game.map | awk '{print $$1}'); \
+	printf '; Auto-generated from out/game.map - do not edit\nGetStringWidthChinese                   equ %s\nMapName_DisplayCellLength               equ %s\nWaitArrow_Prepare                       equ %s\nUnusedPrintMonName_Hook                 equ %s\n' "$${GSW:-0x08800000}" "$${MPN:-0x08800000}" "$${WTA:-0x08800000}" "$${UPMN:-0x08800000}" > $@
 
 clean:
 	rm -rf $(OUT)/obj $(OUT)/game.elf $(OUT)/game.bin $(OUT)/game.map $(OUT)/game_syms.asm

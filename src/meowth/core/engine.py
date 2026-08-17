@@ -530,6 +530,12 @@ class TranslationEngine:
             return False
         if re.search(r"[\u4e00-\u9fff]", translated):
             return True
+        # Placeholder-only originals (？/…/spaces, no kana/kanji) may be
+        # legitimately widened to a different glyph run (e.g. ？？→？？？).
+        # Neither side contains CJK here; accept non-empty differing text.
+        if (not re.search(r"[\u3040-\u30ff\u4e00-\u9fff]", original)
+                and translated.strip()):
+            return True
         # Short menu labels / color-prefixed options
         if translated in {"是", "否"} or "\\CC" in translated:
             return True

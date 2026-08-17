@@ -1,5 +1,5 @@
 @ =============================================================================
-@ game.bin: JP UnusedPrintMonName @ 0x0808D7A0 (name, left, top)
+@ game.bin: JP UnusedPrintMonName @ 0x0808DD60 (name, left, top)
 @ 覆盖整个函数：构造 name+宝可梦 后 Menu_PrintText，左对齐打印。
 @ =============================================================================
 

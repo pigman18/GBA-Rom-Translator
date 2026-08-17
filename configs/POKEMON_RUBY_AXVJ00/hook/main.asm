@@ -41,11 +41,10 @@
 .org 0x081053D0
     mov r2, 0x1D
 
-; 图鉴条目屏分类名行：UnusedPrintMonName 右对齐到占位符宽度（中文 12px vs
-; 问号 8px 覆盖不齐）。改为直接拼接「宝可梦」左对齐打印。
+; 图鉴条目屏分类名行：测试 hook —— 直接拼接占位串 + name，先观察效果。
 .org UnusedPrintMonName
-    ldr r0, =(UnusedPrintMonName_Hook | 1)
-    bx r0
+    ldr r3, =(UnusedPrintMonName_Hook | 1)
+    bx r3
 .pool
 
 ; =============================================================================

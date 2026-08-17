@@ -8,6 +8,7 @@ OBJCOPY  := $(PREFIX)objcopy
 SRC_ROOT := src
 TEXT     := $(SRC_ROOT)/text
 BATTLE   := $(SRC_ROOT)/battle
+POKEDEX  := $(SRC_ROOT)/pokedex
 OUT      := out
 BUILD    := $(OUT)/obj
 
@@ -23,7 +24,9 @@ OBJS := \
 	$(BUILD)/GetStringWidth_hook.o \
 	$(BUILD)/GetGlyphWidth_hook.o \
 	$(BUILD)/UpdateNickInHealthbox_entry.o \
-	$(BUILD)/UpdateNickInHealthbox_hook.o
+	$(BUILD)/UpdateNickInHealthbox_hook.o \
+	$(BUILD)/UnusedPrintMonName_entry.o \
+	$(BUILD)/UnusedPrintMonName_hook.o
 
 .PHONY: all clean
 
@@ -42,6 +45,12 @@ $(BUILD)/%.o: $(BATTLE)/%.s | $(BUILD)
 	$(CC) $(ASFLAGS) $< -o $@
 
 $(BUILD)/%.o: $(BATTLE)/%.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD)/%.o: $(POKEDEX)/%.s | $(BUILD)
+	$(CC) $(ASFLAGS) $< -o $@
+
+$(BUILD)/%.o: $(POKEDEX)/%.c | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@
 
 $(OUT)/game.elf: $(OBJS)

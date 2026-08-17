@@ -35,6 +35,10 @@ StringAppend                           equ 0x08004308
 StringLength                           equ 0x0800436C
 StringExpandPlaceholders               equ 0x08004530
 
+; --- 图鉴分类名行（UnusedPrintMonName，参数 name/left/top）---
+; 美版 0x08091304；日版 0x0808D7A0（r1=CATEGORY_LEFT=13, r2=top=5 一致）
+UnusedPrintMonName                       equ 0x0808DD60
+
 ; --- Menu (shop/bag InitMenu ▶) ---
 Menu_PrintText                         equ 0x0806F16C
 RedrawMenuCursor                       equ 0x0806F41C

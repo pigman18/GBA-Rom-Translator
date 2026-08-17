@@ -2,3 +2,4 @@
 GetStringWidthChinese                   equ 0x08800040
 MapName_DisplayCellLength               equ 0x0880004a
 WaitArrow_Prepare                       equ 0x08800054
+UnusedPrintMonName_Hook                 equ 0x0880007c

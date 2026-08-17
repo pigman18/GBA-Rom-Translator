@@ -252,6 +252,8 @@
           "type": "original_text_filter",
           "filter": false,
           "value": [
+            "\\CC050Fみる",
+            "\\CC050Fみない",
             "はい",
             "の おおきさくらべ",
             "ポケモン",
@@ -597,7 +599,7 @@
       "filters": [
         {
           "id": "story_pointer_filter",
-          "type": "require_pointer_filter",
+          "type": "story_pointer_filter",
           "value": true
         },
         {
@@ -633,7 +635,7 @@
       ]
     }
   },
-  "count": 8497,
+  "count": 8361,
   "entries": [
     {
       "id": "axvj_92f0510597a5",
@@ -43440,6 +43442,38 @@
       ]
     },
     {
+      "id": "axvj_d26e044eaaf1",
+      "module": "UI界面",
+      "address": "0x0837B577",
+      "byte_length": 6,
+      "original": "\\CC050Fみる",
+      "original_hex": "fc 05 0f 20 29 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x08088B34"
+      ],
+      "pointer_addresses": [
+        "0x08088B34"
+      ]
+    },
+    {
+      "id": "axvj_a830c362768e",
+      "module": "UI界面",
+      "address": "0x0837B57D",
+      "byte_length": 7,
+      "original": "\\CC050Fみない",
+      "original_hex": "fc 05 0f 20 15 02 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x08088B38"
+      ],
+      "pointer_addresses": [
+        "0x08088B38"
+      ]
+    },
+    {
       "id": "axvj_32826d089dae",
       "module": "UI界面",
       "address": "0x083508EE",
@@ -50178,22 +50212,6 @@
       ]
     },
     {
-      "id": "axvj_07760916693b",
-      "module": "剧情",
-      "address": "0x08147827",
-      "byte_length": 219,
-      "original": "テッセン『おお \\01\\05\nげんきそうに しておるのう\\lわっはははは！ いいこと じゃよ！\n\nよしっ！ きめた！\n\\01\\05に おねがいを するぞい！\n\nじつは この キンセツには\nニューキンセツ という ちかとしが ある\n\nで \\01\\05 には\nそこの はつでんそうちの スイッチを\\lきってきて ほしいんじゃよ！\n\nさいきん はつでんそうちが\nぼうそうぎみで なにかと あぶないからのう\n\nほら これが ニューキンセツの\nとびらを あける カギじゃ！",
-      "original_hex": "63 a0 5e 7e b1 05 05 00 fd 01 fd 05 fe 3a 2e 07 0f 03 16 00 0c 13 05 29 19 03 fa 2c 50 1a 1a 1a 1a ab 00 02 02 0a 14 00 3d 34 26 ab fb 26 0c 50 ab 00 07 22 10 ab fe fd 01 fd 05 16 00 05 18 37 02 2d 00 0d 29 40 02 ab fb 3d 12 1a 00 0a 19 00 57 7e 5e 62 16 1a fe 66 85 ae 57 7e 5e 62 00 14 02 03 00 11 06 14 0c 37 00 01 29 fb 44 00 fd 01 fd 05 00 16 1a fe 0f 0a 19 00 1a 12 44 2e 0f 03 11 19 00 5d 52 a0 61 2d fa 07 50 13 07 13 00 1e 0c 02 2e 3d 34 26 ab fb 0b 02 07 2e 00 1a 12 44 2e 0f 03 11 37 fe 4a 03 0f 03 38 20 44 00 15 16 06 14 00 01 48 15 02 06 27 19 03 fb 1e 27 00 0a 2a 37 00 66 85 ae 57 7e 5e 62 19 fe 14 47 27 2d 00 01 09 29 00 56 88 3d 34 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08147434"
-      ],
-      "pointer_addresses": [
-        "0x08147434"
-      ]
-    },
-    {
       "id": "axvj_48890732c375",
       "module": "剧情",
       "address": "0x08147902",
@@ -50371,22 +50389,6 @@
       ],
       "pointer_addresses": [
         "0x081471BC"
-      ]
-    },
-    {
-      "id": "axvj_ac6d7100c75e",
-      "module": "剧情",
-      "address": "0x08147B65",
-      "byte_length": 180,
-      "original": "ねえ きみ\nテレビって チェック してるかい？\n\nさいきんに なって おもしろい\nばんぐみが きゅうに ふえたんだぜ！\n\nいいよね テレビって \nいきなり ともだちの ことが\\lしょうかい されたり\n\nしらない うちに じぶんが\nテレビに でていたり するんだよ\n\nこんど ぼくも テレビに \nうつんない かなー\n\nきみも こんどから\nちゃんと チェックを してみなよ！",
-      "original_hex": "18 04 00 07 20 fe 63 7a 97 50 13 00 61 82 a0 58 00 0c 13 29 06 02 ac fb 0b 02 07 2e 16 00 15 50 13 00 05 23 0c 2b 02 fe 46 2e 39 20 37 00 07 35 03 16 00 1c 04 10 2e 41 3f ab fb 02 02 26 18 00 63 7a 97 50 13 00 fe 02 07 15 28 00 14 23 41 11 19 00 0a 14 37 fa 0c 36 03 06 02 00 0b 2a 10 28 fb 0c 27 15 02 00 03 11 16 00 3d 48 2e 37 fe 63 7a 97 16 00 44 13 02 10 28 00 0d 29 2e 41 26 fb 0a 2e 45 00 4a 08 23 00 63 7a 97 16 00 fe 03 12 2e 15 02 00 06 15 ae fb 07 20 23 00 0a 2e 45 06 27 fe 11 34 2e 14 00 61 82 a0 58 2d 00 0c 13 20 15 26 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081471D0"
-      ],
-      "pointer_addresses": [
-        "0x081471D0"
       ]
     },
     {
@@ -51617,22 +51619,6 @@
       ],
       "pointer_addresses": [
         "0x08149FDB"
-      ]
-    },
-    {
-      "id": "axvj_0623465fc38a",
-      "module": "剧情",
-      "address": "0x0814A096",
-      "byte_length": 94,
-      "original": "この トクサネの しゅうへん では\nやせいの ホエルコが けんぶつ できるんだ\n\nそーいうのを えーと‥‥\nなんて いったっけ かな‥‥\n\nホエ ホエ ホエ‥‥\n\nホエルコ ウオッチング だ！",
-      "original_hex": "0a 19 00 64 58 5b 68 19 00 0c 35 03 1d 2e 00 44 1a fe 24 0e 02 19 00 6e 54 79 5a 37 00 09 2e 48 12 00 44 07 29 2e 41 fb 0f ae 02 03 19 2d 00 04 ae 14 b0 b0 fe 15 2e 13 00 02 50 10 50 09 00 06 15 b0 b0 fb 6e 54 00 6e 54 00 6e 54 b0 b0 fb 6e 54 79 5a 00 53 55 a0 61 7e 89 00 41 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08149F28"
-      ],
-      "pointer_addresses": [
-        "0x08149F28"
       ]
     },
     {
@@ -54552,24 +54538,6 @@
       ]
     },
     {
-      "id": "axvj_10862d6c157f",
-      "module": "剧情",
-      "address": "0x0815002E",
-      "byte_length": 285,
-      "original": "おっ！ その じてんしゃ\nミスターカゼノに もらったんだね！\n\nみれば わかるよ\nだって きみの じてんしゃに‥‥\n\nカゼノ カゼノ カゼノ カゼノ カゼノ\nカゼノ カゼノ カゼノ カゼノ カゼノ\n\nカゼノ カゼノ カゼノ カゼノ カゼノ\nカゼノ カゼノ カゼノ カゼノ カゼノ\n\nカゼノ カゼノ カゼノ カゼノ カゼノ\nカゼノ カゼノ カゼノ カゼノ カゼノ\n\nカゼノ カゼノ カゼノ カゼノ カゼノ\nカゼノ カゼノ カゼノ カゼノ カゼノ\n\nカゼノ カゼノ カゼノ カゼノ カゼノ\n‥‥って かいて あるんだもん！\n\nあっちこっち のりまわして\nせんでん してあげると いいね！",
-      "original_hex": "05 50 ab 00 0f 19 00 3d 13 2e 0c 34 fe 70 5d 60 ae 56 8f 69 16 00 23 27 50 10 2e 41 18 ab fb 20 2a 46 00 2c 06 29 26 fe 41 50 13 00 07 20 19 00 3d 13 2e 0c 34 16 b0 b0 fb 56 8f 69 00 56 8f 69 00 56 8f 69 00 56 8f 69 00 56 8f 69 fe 56 8f 69 00 56 8f 69 00 56 8f 69 00 56 8f 69 00 56 8f 69 fb 56 8f 69 00 56 8f 69 00 56 8f 69 00 56 8f 69 00 56 8f 69 fe 56 8f 69 00 56 8f 69 00 56 8f 69 00 56 8f 69 00 56 8f 69 fb 56 8f 69 00 56 8f 69 00 56 8f 69 00 56 8f 69 00 56 8f 69 fe 56 8f 69 00 56 8f 69 00 56 8f 69 00 56 8f 69 00 56 8f 69 fb 56 8f 69 00 56 8f 69 00 56 8f 69 00 56 8f 69 00 56 8f 69 fe 56 8f 69 00 56 8f 69 00 56 8f 69 00 56 8f 69 00 56 8f 69 fb 56 8f 69 00 56 8f 69 00 56 8f 69 00 56 8f 69 00 56 8f 69 fe b0 b0 50 13 00 06 02 13 00 01 29 2e 41 23 2e ab fb 01 50 11 0a 50 11 00 19 28 1f 2c 0c 13 fe 0e 2e 44 2e 00 0c 13 01 3a 29 14 00 02 02 18 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0814F76B",
-        "0x08175062"
-      ],
-      "pointer_addresses": [
-        "0x0814F76B",
-        "0x08175062"
-      ]
-    },
-    {
       "id": "axvj_532099e3f7cc",
       "module": "剧情",
       "address": "0x0815014B",
@@ -54791,22 +54759,6 @@
       ],
       "pointer_addresses": [
         "0x0814F798"
-      ]
-    },
-    {
-      "id": "axvj_e9b38a5e1163",
-      "module": "剧情",
-      "address": "0x08150467",
-      "byte_length": 19,
-      "original": "「シーサイド サイクリング ロード」",
-      "original_hex": "b3 5c ae 5b 52 95 00 5b 52 58 78 7e 89 00 7b ae 95 b4 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0814F7A1"
-      ],
-      "pointer_addresses": [
-        "0x0814F7A1"
       ]
     },
     {
@@ -55159,38 +55111,6 @@
       ],
       "pointer_addresses": [
         "0x08150992"
-      ]
-    },
-    {
-      "id": "axvj_f6315d4350e9",
-      "module": "剧情",
-      "address": "0x08150E1D",
-      "byte_length": 67,
-      "original": "ねっこのカセキを みつけた！\n\nこっちの カセキを とると\nもう ひとつの カセキは しずみそうだ‥‥\n\nねっこのカセキを とりますか？",
-      "original_hex": "18 50 0a 19 56 5e 57 2d 00 20 12 09 10 ab fb 0a 50 11 19 00 56 5e 57 2d 00 14 29 14 fe 23 03 00 1b 14 12 19 00 56 5e 57 1a 00 0c 3e 20 0f 03 41 b0 b0 fb 18 50 0a 19 56 5e 57 2d 00 14 28 1f 0d 06 ac ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0815069A"
-      ],
-      "pointer_addresses": [
-        "0x0815069A"
-      ]
-    },
-    {
-      "id": "axvj_14186461d476",
-      "module": "剧情",
-      "address": "0x08150E79",
-      "byte_length": 65,
-      "original": "ツメのカセキを みつけた！\n\nこっちの カセキを とると\nもう ひとつの カセキは しずみそうだ‥‥\n\nツメのカセキを とりますか？",
-      "original_hex": "62 72 19 56 5e 57 2d 00 20 12 09 10 ab fb 0a 50 11 19 00 56 5e 57 2d 00 14 29 14 fe 23 03 00 1b 14 12 19 00 56 5e 57 1a 00 0c 3e 20 0f 03 41 b0 b0 fb 62 72 19 56 5e 57 2d 00 14 28 1f 0d 06 ac ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081506E0"
-      ],
-      "pointer_addresses": [
-        "0x081506E0"
       ]
     },
     {
@@ -56931,22 +56851,6 @@
       ],
       "pointer_addresses": [
         "0x08184DB8"
-      ]
-    },
-    {
-      "id": "axvj_237f61dc5327",
-      "module": "剧情",
-      "address": "0x08154BDF",
-      "byte_length": 111,
-      "original": "ランニングシューズの\nせつめいしょが ある！\n\n「ランニングシューズは\n ビーボタンを おすことで いままでよりも\\l はやく はしれるように なります！\n\n ランニングシューズを はいて\n おもいっきり そとを はしろう！」",
-      "original_hex": "77 7e 66 7e 89 5c 85 ae 8e 19 fe 0e 12 22 02 0c 36 37 00 01 29 ab fb b3 77 7e 66 7e 89 5c 85 ae 8e 1a fe 00 97 ae 9a 60 7e 2d 00 05 0d 0a 14 44 00 02 1f 1f 44 26 28 23 fa 00 1a 24 08 00 1a 0c 2a 29 26 03 16 00 15 28 1f 0d ab fb 00 77 7e 66 7e 89 5c 85 ae 8e 2d 00 1a 02 13 fe 00 05 23 02 50 07 28 00 0f 14 2d 00 1a 0c 2b 03 ab b4 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0818EB45"
-      ],
-      "pointer_addresses": [
-        "0x0818EB45"
       ]
     },
     {
@@ -58808,22 +58712,6 @@
       ]
     },
     {
-      "id": "axvj_650035739a0a",
-      "module": "剧情",
-      "address": "0x08157F48",
-      "byte_length": 178,
-      "original": "ようこそ ‥‥じゃなくて\n\nよくぞ ここまで きた ものだな！\n\nわたしは ここの ジムリーダーを\nつとめさせて いただく ‥‥じゃなくて\n\nジムリーダーを まかされた アスナだ！\n\nくう‥‥\nジムリーダーに なりたて だからって\\lゆだん など しないことだ！\n\nおじいちゃん ゆずりの さいのうと\nこのとちで みがきあげた ホットな わざ\\lあなたに みせてやる！",
-      "original_hex": "26 03 0a 0f 00 b0 b0 3d 34 15 08 13 fb 26 08 40 00 0a 0a 1f 44 00 07 10 00 23 19 41 15 ab fb 2c 10 0c 1a 00 0a 0a 19 00 8d 71 78 ae 91 ae 2d fe 12 14 22 0b 0e 13 00 02 10 41 08 00 b0 b0 3d 34 15 08 13 fb 8d 71 78 ae 91 ae 2d 00 1f 06 0b 2a 10 00 51 5d 65 41 ab fb 08 03 b0 b0 fe 8d 71 78 ae 91 ae 16 00 15 28 10 13 00 41 06 27 50 13 fa 25 41 2e 00 15 45 00 0c 15 02 0a 14 41 ab fb 05 3d 02 11 34 2e 00 25 3e 28 19 00 0b 02 19 03 14 fe 0a 19 14 11 44 00 20 37 07 01 3a 10 00 6e a0 64 15 00 2c 3c fa 01 15 10 16 00 20 0e 13 24 29 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08157B34"
-      ],
-      "pointer_addresses": [
-        "0x08157B34"
-      ]
-    },
-    {
       "id": "axvj_8f5305d89b50",
       "module": "剧情",
       "address": "0x08157FFA",
@@ -59753,22 +59641,6 @@
       ],
       "pointer_addresses": [
         "0x0815998F"
-      ]
-    },
-    {
-      "id": "axvj_8f1dd73341f3",
-      "module": "剧情",
-      "address": "0x08159B45",
-      "byte_length": 13,
-      "original": "ピカチュウ『ピカピカッ！",
-      "original_hex": "9c 56 61 85 53 b1 9c 56 9c 56 a0 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081599DD"
-      ],
-      "pointer_addresses": [
-        "0x081599DD"
       ]
     },
     {
@@ -61370,54 +61242,6 @@
       ]
     },
     {
-      "id": "axvj_92f99a1c5318",
-      "module": "剧情",
-      "address": "0x0815C913",
-      "byte_length": 63,
-      "original": "たとえば あなたの キモリは\nくさタイプ でしょ\n\nみずタイプや じめんタイプに つよくて\nほのおタイプが にがて なのよね！",
-      "original_hex": "10 14 04 46 00 01 15 10 19 00 57 73 78 1a fe 08 0b 60 52 9d 00 44 0c 36 fb 20 3e 60 52 9d 24 00 3d 22 2e 60 52 9d 16 00 12 26 08 13 fe 1e 19 05 60 52 9d 37 00 16 37 13 00 15 19 26 18 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0815C84E"
-      ],
-      "pointer_addresses": [
-        "0x0815C84E"
-      ]
-    },
-    {
-      "id": "axvj_ae0debe4a583",
-      "module": "剧情",
-      "address": "0x0815C952",
-      "byte_length": 62,
-      "original": "たとえば あなたの\nアチャモは ほのおタイプ でしょ\n\nくさタイプや むしタイプに つよくて\nみずタイプが にがて なんだ！",
-      "original_hex": "10 14 04 46 00 01 15 10 19 fe 51 61 84 73 1a 00 1e 19 05 60 52 9d 00 44 0c 36 fb 08 0b 60 52 9d 24 00 21 0c 60 52 9d 16 00 12 26 08 13 fe 20 3e 60 52 9d 37 00 16 37 13 00 15 2e 41 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0815C857"
-      ],
-      "pointer_addresses": [
-        "0x0815C857"
-      ]
-    },
-    {
-      "id": "axvj_ad682aa16e38",
-      "module": "剧情",
-      "address": "0x0815C990",
-      "byte_length": 62,
-      "original": "たとえば あなたの\nミズゴロウは みずタイプ だよね\n\nほのおタイプに つよくて\nくさタイプや でんきタイプが にがて ね！",
-      "original_hex": "10 14 04 46 00 01 15 10 19 fe 70 8e 8b 7b 53 1a 00 20 3e 60 52 9d 00 41 26 18 fb 1e 19 05 60 52 9d 16 00 12 26 08 13 fe 08 0b 60 52 9d 24 00 44 2e 07 60 52 9d 37 00 16 37 13 00 18 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0815C860"
-      ],
-      "pointer_addresses": [
-        "0x0815C860"
-      ]
-    },
-    {
       "id": "axvj_8a80983f667b",
       "module": "剧情",
       "address": "0x0815CAB3",
@@ -61447,22 +61271,6 @@
       ],
       "pointer_addresses": [
         "0x0815CA72"
-      ]
-    },
-    {
-      "id": "axvj_c941392951b0",
-      "module": "剧情",
-      "address": "0x0815CC3E",
-      "byte_length": 168,
-      "original": "‥‥ん？\n\nぼくは クスノキかんちょう から\nれんらくせんの せっけいを まかされた\\lツガという ものだけど‥‥\n\nあっ！？\nそれは デボンのにもつ！\n\nうーん‥‥\nこまったな‥‥\n\nクスノキかんちょう\nほかにも しごとが あるからって\\lどこかに いっちゃったんだ\n\nわるいけど きみ クスノキかんちょう\nさがして にもつを わたしてあげてよ！",
-      "original_hex": "b0 b0 2e ac fb 4a 08 1a 00 58 5d 69 57 06 2e 11 36 03 00 06 27 fe 2a 2e 27 08 0e 2e 19 00 0e 50 09 02 2d 00 1f 06 0b 2a 10 fa 62 87 14 02 03 00 23 19 41 09 45 b0 b0 fb 01 50 ab ac fe 0f 2a 1a 00 94 9a 7e 19 16 23 12 ab fb 03 ae 2e b0 b0 fe 0a 1f 50 10 15 b0 b0 fb 58 5d 69 57 06 2e 11 36 03 fe 1e 06 16 23 00 0c 3b 14 37 00 01 29 06 27 50 13 fa 45 0a 06 16 00 02 50 11 34 50 10 2e 41 fb 2c 29 02 09 45 00 07 20 00 58 5d 69 57 06 2e 11 36 03 fe 0b 37 0c 13 00 16 23 12 2d 00 2c 10 0c 13 01 3a 13 26 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0815CB6A"
-      ],
-      "pointer_addresses": [
-        "0x0815CB6A"
       ]
     },
     {
@@ -62305,22 +62113,6 @@
       ],
       "pointer_addresses": [
         "0x0815DE7E"
-      ]
-    },
-    {
-      "id": "axvj_4bb0d4ec0672",
-      "module": "剧情",
-      "address": "0x0815E46E",
-      "byte_length": 13,
-      "original": "マリルリ『マリ マリ！？",
-      "original_hex": "6f 78 79 78 b1 6f 78 00 6f 78 ab ac ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0815DE91"
-      ],
-      "pointer_addresses": [
-        "0x0815DE91"
       ]
     },
     {
@@ -63994,22 +63786,6 @@
       ]
     },
     {
-      "id": "axvj_dbf5d4fdee58",
-      "module": "剧情",
-      "address": "0x081614B3",
-      "byte_length": 125,
-      "original": "ダートじてんしゃに のっているとき\nじゅうじボタンと ビーボタンを\\lどうじに おすと ジャンプします！\n\nよこへ おせば よこに ジャンプ！\n\nうしろへ おせば ジャンプしながら\nほうこうを かえることが できます！\n\n‥‥べつの ページを よみますか？",
-      "original_hex": "91 ae 64 3d 13 2e 0c 34 16 00 19 50 13 02 29 14 07 fe 3d 35 03 3d 9a 60 7e 14 00 97 ae 9a 60 7e 2d fa 45 03 3d 16 00 05 0d 14 00 8d 84 7e 9d 0c 1f 0d ab fb 26 0a 1d 00 05 0e 46 00 26 0a 16 00 8d 84 7e 9d ab fb 03 0c 2b 1d 00 05 0e 46 00 8d 84 7e 9d 0c 15 37 27 fe 1e 03 0a 03 2d 00 06 04 29 0a 14 37 00 44 07 1f 0d ab fb b0 b0 49 12 19 00 9e ae 8d 2d 00 26 20 1f 0d 06 ac ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08160DEF"
-      ],
-      "pointer_addresses": [
-        "0x08160DEF"
-      ]
-    },
-    {
       "id": "axvj_e92b82d61e77",
       "module": "剧情",
       "address": "0x0816159F",
@@ -64023,22 +63799,6 @@
       ],
       "pointer_addresses": [
         "0x08161555"
-      ]
-    },
-    {
-      "id": "axvj_f8475ff64fc9",
-      "module": "剧情",
-      "address": "0x08161EBC",
-      "byte_length": 43,
-      "original": "ゲームよう コイン ですね？\n\nあら？ コインを いれる\nコインケースが ありませんよ",
-      "original_hex": "8a ae 71 26 03 00 5a 52 7e 00 44 0d 18 ac fb 01 27 ac 00 5a 52 7e 2d 00 02 2a 29 fe 5a 52 7e 59 ae 5d 37 00 01 28 1f 0e 2e 26 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08161716"
-      ],
-      "pointer_addresses": [
-        "0x08161716"
       ]
     },
     {
@@ -64449,22 +64209,6 @@
       ],
       "pointer_addresses": [
         "0x08161CFB"
-      ]
-    },
-    {
-      "id": "axvj_bd3e9507a4a7",
-      "module": "剧情",
-      "address": "0x081622C5",
-      "byte_length": 158,
-      "original": "スロットの おとくな じょうほう\nあなたに おしえて あげるわね！\n\nイナズマが たくさん たまっているほど\nＢＤタイムの かいすうが ふえやすいの！\n\nさいこう ５かいの ＢＤタイムの ゲームで\nレギュラーボーナスを ４かい あててから\n\nビッグボーナスを あてることが できれば\nコインを ６６０まいも かせげるわ！",
-      "original_hex": "5d 7b a0 64 19 00 05 14 08 15 00 3d 36 03 1e 03 fe 01 15 10 16 00 05 0c 04 13 00 01 3a 29 2c 18 ab fb 52 65 8e 6f 37 00 10 08 0b 2e 00 10 1f 50 13 02 29 1e 45 fe bc be 60 52 71 19 00 06 02 0d 03 37 00 1c 04 24 0d 02 19 ab fb 0b 02 0a 03 00 a6 06 02 19 00 bc be 60 52 71 19 00 8a ae 71 44 fe 7a 88 85 77 ae 9a ae 65 5d 2d 00 a5 06 02 00 01 13 13 06 27 fb 97 a0 89 9a ae 65 5d 2d 00 01 13 29 0a 14 37 00 44 07 2a 46 fe 5a 52 7e 2d 00 a7 a7 a1 1f 02 23 00 06 0e 3a 29 2c ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08161D0B"
-      ],
-      "pointer_addresses": [
-        "0x08161D0B"
       ]
     },
     {
@@ -69966,22 +69710,6 @@
       ]
     },
     {
-      "id": "axvj_18a37fc065bd",
-      "module": "剧情",
-      "address": "0x0816B742",
-      "byte_length": 218,
-      "original": "フウ『へへへ‥‥ ジムリーダーが\n\nラン『ふふふ‥‥ ジムリーダーが\n\nフウ『ふたりも いるんで おどろいた？\nラン『ふたりも いるんで おどろいた？\n\nフウ『ぼくたち ふたご！\nラン『あたしたち ふたご！\n\nフウ『なにも ことばに しなくても\nラン『おたがいの かんがえて いることが\n\nフウ『あたまの なかに うかぶから\nラン『つうじあうことが できるのヨ！\n\nフウ『そんな ぼくたちの コンビネーション\nラン『きみに やぶることが できる？",
-      "original_hex": "6c 53 b1 1d 1d 1d b0 b0 00 8d 71 78 ae 91 ae 37 fb 77 7e b1 1c 1c 1c b0 b0 00 8d 71 78 ae 91 ae 37 fb 6c 53 b1 1c 10 28 23 00 02 29 2e 44 00 05 45 2b 02 10 ac fe 77 7e b1 1c 10 28 23 00 02 29 2e 44 00 05 45 2b 02 10 ac fb 6c 53 b1 4a 08 10 11 00 1c 10 3b ab fe 77 7e b1 01 10 0c 10 11 00 1c 10 3b ab fb 6c 53 b1 15 16 23 00 0a 14 46 16 00 0c 15 08 13 23 fe 77 7e b1 05 10 37 02 19 00 06 2e 37 04 13 00 02 29 0a 14 37 fb 6c 53 b1 01 10 1f 19 00 15 06 16 00 03 06 48 06 27 fe 77 7e b1 12 03 3d 01 03 0a 14 37 00 44 07 29 19 76 ab fb 6c 53 b1 0f 2e 15 00 4a 08 10 11 19 00 5a 7e 97 68 ae 5c 86 7e fe 77 7e b1 07 20 16 00 24 48 29 0a 14 37 00 44 07 29 ac ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0816B092"
-      ],
-      "pointer_addresses": [
-        "0x0816B092"
-      ]
-    },
-    {
       "id": "axvj_7fc32fb0964e",
       "module": "剧情",
       "address": "0x0816B81C",
@@ -70270,22 +69998,6 @@
       ]
     },
     {
-      "id": "axvj_75cecb0228f9",
-      "module": "剧情",
-      "address": "0x0816C10B",
-      "byte_length": 121,
-      "original": "ダイゴ『なみのりを していると\nみずの いろが こい ばしょが ある\n\nそこで ダイビングを つかうと\nうみの そこに もぐれるから\n\nうかびたい ときは\nもういちど ダイビングを つかうんだ\n\nばしょに よっては\nうかべない ばあいも あるけど",
-      "original_hex": "91 52 8b b1 15 20 19 28 2d 00 0c 13 02 29 14 fe 20 3e 19 00 02 2b 37 00 0a 02 00 46 0c 36 37 00 01 29 fb 0f 0a 44 00 91 52 97 7e 89 2d 00 12 06 03 14 fe 03 20 19 00 0f 0a 16 00 23 39 2a 29 06 27 fb 03 06 47 10 02 00 14 07 1a fe 23 03 02 11 45 00 91 52 97 7e 89 2d 00 12 06 03 2e 41 fb 46 0c 36 16 00 26 50 13 1a fe 03 06 49 15 02 00 46 01 02 23 00 01 29 09 45 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0816BFC8"
-      ],
-      "pointer_addresses": [
-        "0x0816BFC8"
-      ]
-    },
-    {
       "id": "axvj_1f434b957c5f",
       "module": "剧情",
       "address": "0x0816C184",
@@ -70443,22 +70155,6 @@
       ],
       "pointer_addresses": [
         "0x0816C57E"
-      ]
-    },
-    {
-      "id": "axvj_2215617cad9c",
-      "module": "剧情",
-      "address": "0x0816C629",
-      "byte_length": 124,
-      "original": "ロケットを はっしゃ するには\n１パーセントの ミスも ゆるされない\n\n９９パーセント だいじょうぶ でも\n１パーセント ダメなら\\lすべてが ダメになる きびしい ものだ\n\nそれでも やりとげようと するのは\nそこに ロマンが つまっている からだな",
-      "original_hex": "7b 59 a0 64 2d 00 1a 50 0c 34 00 0d 29 16 1a fe a2 9b ae 5e 7e 64 19 00 70 5d 23 00 25 29 0b 2a 15 02 fb aa aa 9b ae 5e 7e 64 00 41 02 3d 36 03 48 00 44 23 fe a2 9b ae 5e 7e 64 00 91 72 15 27 fa 0d 49 13 37 00 91 72 16 15 29 00 07 47 0c 02 00 23 19 41 fb 0f 2a 44 23 00 24 28 14 3a 26 03 14 00 0d 29 19 1a fe 0f 0a 16 00 7b 6f 7e 37 00 12 1f 50 13 02 29 00 06 27 41 15 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0816C587"
-      ],
-      "pointer_addresses": [
-        "0x0816C587"
       ]
     },
     {
@@ -74912,24 +74608,6 @@
       ]
     },
     {
-      "id": "axvj_9379f382656c",
-      "module": "剧情",
-      "address": "0x081741B4",
-      "byte_length": 124,
-      "original": "ウヒョヒョ‥‥！\n\nリーダーは どこかの かいていにある\nどうくつへ しゅっぱつ したぜ！\n\nおいかける つもりなら ミナモの さきに\nひろがる でっかい うみを\\lさがしまわって みるが いいぜ！\n\nそれで みつかれば いいけどな‥‥\nウヒョヒョヒョ！",
-      "original_hex": "53 6b 86 6b 86 b0 b0 ab fb 78 ae 91 ae 1a 00 45 0a 06 19 00 06 02 13 02 16 01 29 fe 45 03 08 12 1d 00 0c 35 50 4b 12 00 0c 10 3f ab fb 05 02 06 09 29 00 12 23 28 15 27 00 70 65 73 19 00 0b 07 16 fe 1b 2b 37 29 00 44 50 06 02 00 03 20 2d fa 0b 37 0c 1f 2c 50 13 00 20 29 37 00 02 02 3f ab fb 0f 2a 44 00 20 12 06 2a 46 00 02 02 09 45 15 b0 b0 fe 53 6b 86 6b 86 6b 86 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081740A8",
-        "0x08174053"
-      ],
-      "pointer_addresses": [
-        "0x081740A8",
-        "0x08174053"
-      ]
-    },
-    {
       "id": "axvj_5c15da81b039",
       "module": "剧情",
       "address": "0x08174230",
@@ -78628,22 +78306,6 @@
       ]
     },
     {
-      "id": "axvj_0334ce66a471",
-      "module": "剧情",
-      "address": "0x0817AC1E",
-      "byte_length": 62,
-      "original": "ワガハイ ハ からくりニンギョウ ５ゴウ！\nぷれぜんとヲ ウケトッテ クレナイト\\lダイオウノ アトヲ オッテ イケナイヨ！",
-      "original_hex": "7c 87 6a 52 00 6a 00 06 27 08 28 66 7e 88 86 53 00 a6 8b 53 ab fe 4d 2a 3f 2e 14 7d 00 53 59 64 a0 63 00 58 7a 65 52 64 fa 91 52 55 53 69 00 51 64 7d 00 55 a0 63 00 52 59 65 52 76 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0817A494"
-      ],
-      "pointer_addresses": [
-        "0x0817A494"
-      ]
-    },
-    {
       "id": "axvj_959e12d3415d",
       "module": "剧情",
       "address": "0x0817AC5C",
@@ -79564,22 +79226,6 @@
       ]
     },
     {
-      "id": "axvj_73690e8483cf",
-      "module": "剧情",
-      "address": "0x0817CD91",
-      "byte_length": 84,
-      "original": "カタカタ‥\nワガハイ ハ からくりニンギョウ １ゴウ！\n\nからくりニンギョウ ５ゴウノ トコロマデ\nツヅケテ くいずニ セイカイ スレバ\\lあいことばニ タドリツケルゾ！",
-      "original_hex": "56 60 56 60 b0 fe 7c 87 6a 52 00 6a 00 06 27 08 28 66 7e 88 86 53 00 a2 8b 53 ab fb 06 27 08 28 66 7e 88 86 53 00 a6 8b 53 69 00 64 5a 7b 6f 94 fe 62 93 59 63 00 08 02 3e 66 00 5e 52 56 52 00 5d 7a 96 fa 01 02 0a 14 46 66 00 60 95 78 62 59 79 90 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0817C604"
-      ],
-      "pointer_addresses": [
-        "0x0817C604"
-      ]
-    },
-    {
       "id": "axvj_d2dac035e466",
       "module": "剧情",
       "address": "0x0817CDE5",
@@ -79660,22 +79306,6 @@
       ]
     },
     {
-      "id": "axvj_26be93d5f3ca",
-      "module": "剧情",
-      "address": "0x0817CEA0",
-      "byte_length": 20,
-      "original": "ワハハハハ！ ワハハハハ！ カタカタ！",
-      "original_hex": "7c 6a 6a 6a 6a ab 00 7c 6a 6a 6a 6a ab 00 56 60 56 60 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0817CA42"
-      ],
-      "pointer_addresses": [
-        "0x0817CA42"
-      ]
-    },
-    {
       "id": "axvj_c2c107d08a04",
       "module": "剧情",
       "address": "0x0817CEB4",
@@ -79689,22 +79319,6 @@
       ],
       "pointer_addresses": [
         "0x0817CA4E"
-      ]
-    },
-    {
-      "id": "axvj_4b69b2c696c9",
-      "module": "剧情",
-      "address": "0x0817CEC8",
-      "byte_length": 47,
-      "original": "カタカタ‥\nワガハイ ハ からくりニンギョウ ２ゴウ！\\l１ゴウノ くいずハ ヤサシスギルヨ！",
-      "original_hex": "56 60 56 60 b0 fe 7c 87 6a 52 00 6a 00 06 27 08 28 66 7e 88 86 53 00 a3 8b 53 ab fa a2 8b 53 69 00 08 02 3e 6a 00 74 5b 5c 5d 88 79 76 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0817C678"
-      ],
-      "pointer_addresses": [
-        "0x0817C678"
       ]
     },
     {
@@ -79756,22 +79370,6 @@
       ]
     },
     {
-      "id": "axvj_a52b02574678",
-      "module": "剧情",
-      "address": "0x0817CFB7",
-      "byte_length": 42,
-      "original": "カタカタ‥\nワガハイ ハ からくりニンギョウ ３ゴウ！\\lオカネニハ ウルサイノダ！",
-      "original_hex": "56 60 56 60 b0 fe 7c 87 6a 52 00 6a 00 06 27 08 28 66 7e 88 86 53 00 a4 8b 53 ab fa 55 56 68 66 6a 00 53 79 5b 52 69 91 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0817C6EC"
-      ],
-      "pointer_addresses": [
-        "0x0817C6EC"
-      ]
-    },
-    {
       "id": "axvj_96747f34cd60",
       "module": "剧情",
       "address": "0x0817CFE1",
@@ -79820,22 +79418,6 @@
       ]
     },
     {
-      "id": "axvj_35e5a21d10bf",
-      "module": "剧情",
-      "address": "0x0817D0A7",
-      "byte_length": 46,
-      "original": "カタカタ‥\nからくりニンギョウ ４ゴウ ヨーン！\\lウツクシイ ワタシノ くいず イクワヨ！",
-      "original_hex": "56 60 56 60 b0 fe 06 27 08 28 66 7e 88 86 53 00 a5 8b 53 00 76 ae 7e ab fa 53 62 58 5c 52 00 7c 60 5c 69 00 08 02 3e 00 52 58 7c 76 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0817C760"
-      ],
-      "pointer_addresses": [
-        "0x0817C760"
-      ]
-    },
-    {
       "id": "axvj_391d8b8a9817",
       "module": "剧情",
       "address": "0x0817D0D5",
@@ -79881,22 +79463,6 @@
       ],
       "pointer_addresses": [
         "0x0817C987"
-      ]
-    },
-    {
-      "id": "axvj_2ec5a28a396a",
-      "module": "剧情",
-      "address": "0x0817D1A1",
-      "byte_length": 45,
-      "original": "カタカタ‥\nワガハイ ハ からくりニンギョウ ５ゴウ！\\lダイオウノ サイコウ ケッサク！",
-      "original_hex": "56 60 56 60 b0 fe 7c 87 6a 52 00 6a 00 06 27 08 28 66 7e 88 86 53 00 a6 8b 53 ab fa 91 52 55 53 69 00 5b 52 5a 53 00 59 a0 5b 58 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0817C7D4"
-      ],
-      "pointer_addresses": [
-        "0x0817C7D4"
       ]
     },
     {
@@ -80398,72 +79964,6 @@
       ]
     },
     {
-      "id": "axvj_25c24ff99009",
-      "module": "剧情",
-      "address": "0x0817E0AE",
-      "byte_length": 114,
-      "original": "その ふくろを もって\nはいの つもった ところを あるくと\\lあら ふしぎ！\n\nふくろの なかに かざんばいが\nどんどん たまっていくよ ペコペコ！\n\nかざんばいが たまったと おもったら\nわたしの ところに きなさい ペコペコ！",
-      "original_hex": "0f 19 00 1c 08 2b 2d 00 23 50 13 fe 1a 02 19 00 12 23 50 10 00 14 0a 2b 2d 00 01 29 08 14 fa 01 27 00 1c 0c 38 ab fb 1c 08 2b 19 00 15 06 16 00 06 3c 2e 46 02 37 fe 45 2e 45 2e 00 10 1f 50 13 02 08 26 00 9e 5a 9e 5a ab fb 06 3c 2e 46 02 37 00 10 1f 50 10 14 00 05 23 50 10 27 fe 2c 10 0c 19 00 14 0a 2b 16 00 07 15 0b 02 00 9e 5a 9e 5a ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0817DC0D",
-        "0x0817DC17"
-      ],
-      "pointer_addresses": [
-        "0x0817DC0D",
-        "0x0817DC17"
-      ]
-    },
-    {
-      "id": "axvj_698d0753ae9b",
-      "module": "剧情",
-      "address": "0x0817E120",
-      "byte_length": 36,
-      "original": "かざんばい あるのかね ペコペコ！\nどれどれ みせてごらん ペコポコ！",
-      "original_hex": "06 3c 2e 46 02 00 01 29 19 06 18 00 9e 5a 9e 5a ab fe 45 2a 45 2a 00 20 0e 13 3b 27 2e 00 9e 5a 9f 5a ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0817DC31"
-      ],
-      "pointer_addresses": [
-        "0x0817DC31"
-      ]
-    },
-    {
-      "id": "axvj_9e3f219f321a",
-      "module": "剧情",
-      "address": "0x0817E144",
-      "byte_length": 77,
-      "original": "うーん‥‥\nかざんばいが すくないよ ペコペコ！\\lガラスのどうぐ できないよ ペコペコ！\n\nあと \\02ほ あるけば\nあおいビードロ つくれるよ ペコペコ！",
-      "original_hex": "03 ae 2e b0 b0 fe 06 3c 2e 46 02 37 00 0d 08 15 02 26 00 9e 5a 9e 5a ab fa 87 77 5d 19 45 03 39 00 44 07 15 02 26 00 9e 5a 9e 5a ab fb 01 14 00 fd 02 1e 00 01 29 09 46 fe 01 05 02 97 ae 95 7b 00 12 08 2a 29 26 00 9e 5a 9e 5a ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0817DE92"
-      ],
-      "pointer_addresses": [
-        "0x0817DE92"
-      ]
-    },
-    {
-      "id": "axvj_5a25e683f3b2",
-      "module": "剧情",
-      "address": "0x0817E191",
-      "byte_length": 57,
-      "original": "おほっ\nかざんばい あつまってるよ ペコペコ！\\lガラスのどうぐ つくるよ ペコペコ！\n\nどれが いいかね ペコペコ",
-      "original_hex": "05 1e 50 fe 06 3c 2e 46 02 00 01 12 1f 50 13 29 26 00 9e 5a 9e 5a ab fa 87 77 5d 19 45 03 39 00 12 08 29 26 00 9e 5a 9e 5a ab fb 45 2a 37 00 02 02 06 18 00 9e 5a 9e 5a ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0817DC43"
-      ],
-      "pointer_addresses": [
-        "0x0817DC43"
-      ]
-    },
-    {
       "id": "axvj_1da58eecb157",
       "module": "剧情",
       "address": "0x0817E1EC",
@@ -80511,70 +80011,6 @@
       "pointer_addresses": [
         "0x0817DED0",
         "0x0817E01D"
-      ]
-    },
-    {
-      "id": "axvj_330c63ca0365",
-      "module": "剧情",
-      "address": "0x0817E2D2",
-      "byte_length": 47,
-      "original": "あら？\nそれいじょう もてないよ ペコペコ\n\nあずかって おくから\nこんど きなさい ペコペコ",
-      "original_hex": "01 27 ac fe 0f 2a 02 3d 36 03 00 23 13 15 02 26 00 9e 5a 9e 5a fb 01 3e 06 50 13 00 05 08 06 27 fe 0a 2e 45 00 07 15 0b 02 00 9e 5a 9e 5a ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0817DF25"
-      ],
-      "pointer_addresses": [
-        "0x0817DF25"
-      ]
-    },
-    {
-      "id": "axvj_021cd37a547e",
-      "module": "剧情",
-      "address": "0x0817E301",
-      "byte_length": 48,
-      "original": "あら？\nパソコン いっぱい なのか ペコペコ\n\nあずかって おくから\nこんど きなさい ペコペコ",
-      "original_hex": "01 27 ac fe 9b 5f 5a 7e 00 02 50 4b 02 00 15 19 06 00 9e 5a 9e 5a fb 01 3e 06 50 13 00 05 08 06 27 fe 0a 2e 45 00 07 15 0b 02 00 9e 5a 9e 5a ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0817DF34"
-      ],
-      "pointer_addresses": [
-        "0x0817DF34"
-      ]
-    },
-    {
-      "id": "axvj_25c7b9a61d53",
-      "module": "剧情",
-      "address": "0x0817E331",
-      "byte_length": 51,
-      "original": "あら？\nはいぶくろ もっていないのか ペコペコ\n\nもちあるかないと\nかざんばい たまらないよ ペコペコ",
-      "original_hex": "01 27 ac fe 1a 02 48 08 2b 00 23 50 13 02 15 02 19 06 00 9e 5a 9e 5a fb 23 11 01 29 06 15 02 14 fe 06 3c 2e 46 02 00 10 1f 27 15 02 26 00 9e 5a 9e 5a ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0817DC50"
-      ],
-      "pointer_addresses": [
-        "0x0817DC50"
-      ]
-    },
-    {
-      "id": "axvj_eebb5ae01dab",
-      "module": "剧情",
-      "address": "0x0817E364",
-      "byte_length": 44,
-      "original": "おやかたが はなすのに あわせて\nビードロ ふくと たのしか！\n\nペコペコ！ ペコポコ！",
-      "original_hex": "05 24 06 10 37 00 1a 15 0d 19 16 00 01 2c 0e 13 fe 97 ae 95 7b 00 1c 08 14 00 10 19 0c 06 ab fb 9e 5a 9e 5a ab 00 9e 5a 9f 5a ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0817E042"
-      ],
-      "pointer_addresses": [
-        "0x0817E042"
       ]
     },
     {
@@ -80959,22 +80395,6 @@
       ],
       "pointer_addresses": [
         "0x0817F1B6"
-      ]
-    },
-    {
-      "id": "axvj_0574f224f433",
-      "module": "剧情",
-      "address": "0x0817F347",
-      "byte_length": 168,
-      "original": "ほしいモノ       あげるモノ\n あかいかけら   \\CC0CF9\\CC0CFA ほのおのいし\n\nほしいモノ       あげるモノ\n きいろいかけら  \\CC0CF9\\CC0CFA かみなりのいし\n\nほしいモノ       あげるモノ\n あおいかけら   \\CC0CF9\\CC0CFA みずのいし\n\nほしいモノ       あげるモノ\n みどりのかけら  \\CC0CF9\\CC0CFA リーフのいし",
-      "original_hex": "1e 0c 02 73 69 00 00 00 00 00 00 00 01 3a 29 73 69 fe 00 01 06 02 06 09 27 00 00 00 fc 0c f9 fc 0c fa 00 1e 19 05 19 02 0c fb 1e 0c 02 73 69 00 00 00 00 00 00 00 01 3a 29 73 69 fe 00 07 02 2b 02 06 09 27 00 00 fc 0c f9 fc 0c fa 00 06 20 15 28 19 02 0c fb 1e 0c 02 73 69 00 00 00 00 00 00 00 01 3a 29 73 69 fe 00 01 05 02 06 09 27 00 00 00 fc 0c f9 fc 0c fa 00 20 3e 19 02 0c fb 1e 0c 02 73 69 00 00 00 00 00 00 00 01 3a 29 73 69 fe 00 20 45 28 19 06 09 27 00 00 fc 0c f9 fc 0c fa 00 78 ae 6c 19 02 0c ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0817F1CC"
-      ],
-      "pointer_addresses": [
-        "0x0817F1CC"
       ]
     },
     {
@@ -82554,22 +81974,6 @@
       ]
     },
     {
-      "id": "axvj_15ec98682d94",
-      "module": "剧情",
-      "address": "0x0818188B",
-      "byte_length": 112,
-      "original": "グッズの しゅるいや おきかたを みれば\nそのひとが どんな センスの もちぬしか\\lよーく わかるわね！\n\nわたしの センスは どうかしら？\nうふふっ なにも いえないって かんじね！\n\nしょうぶの センスも ためして みる？",
-      "original_hex": "89 a0 8e 19 00 0c 35 29 02 24 00 05 07 06 10 2d 00 20 2a 46 fe 0f 19 1b 14 37 00 45 2e 15 00 5e 7e 5d 19 00 23 11 17 0c 06 fa 26 ae 08 00 2c 06 29 2c 18 ab fb 2c 10 0c 19 00 5e 7e 5d 1a 00 45 03 06 0c 27 ac fe 03 1c 1c 50 00 15 16 23 00 02 04 15 02 50 13 00 06 2e 3d 18 ab fb 0c 36 03 48 19 00 5e 7e 5d 23 00 10 22 0c 13 00 20 29 ac ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0818220D"
-      ],
-      "pointer_addresses": [
-        "0x0818220D"
-      ]
-    },
-    {
       "id": "axvj_b2c80750c635",
       "module": "剧情",
       "address": "0x081818FB",
@@ -83454,22 +82858,6 @@
       ]
     },
     {
-      "id": "axvj_4b2f0678fd01",
-      "module": "剧情",
-      "address": "0x08184675",
-      "byte_length": 112,
-      "original": "コンテストパスを おもちの かたは\nどなたでも さんか できます！\n\nコンテストパスは シダケタウンに ある\nノーマルランクの コンテスト かいじょうで\\lどなたでも もらえますよ！\n\nパスをもって また いらして くださいね！",
-      "original_hex": "5a 7e 63 5d 64 9b 5d 2d 00 05 23 11 19 00 06 10 1a fe 45 15 10 44 23 00 0b 2e 06 00 44 07 1f 0d ab fb 5a 7e 63 5d 64 9b 5d 1a 00 5c 91 59 60 53 7e 16 00 01 29 fe 69 ae 6f 79 77 7e 58 19 00 5a 7e 63 5d 64 00 06 02 3d 36 03 44 fa 45 15 10 44 23 00 23 27 04 1f 0d 26 ab fb 9b 5d 2d 23 50 13 00 1f 10 00 02 27 0c 13 00 08 41 0b 02 18 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08183445"
-      ],
-      "pointer_addresses": [
-        "0x08183445"
-      ]
-    },
-    {
       "id": "axvj_40041916944f",
       "module": "剧情",
       "address": "0x081846E5",
@@ -83791,24 +83179,6 @@
       "pointer_addresses": [
         "0x08183917",
         "0x0818391F"
-      ]
-    },
-    {
-      "id": "axvj_98ad0f2925a8",
-      "module": "剧情",
-      "address": "0x08184B33",
-      "byte_length": 130,
-      "original": "さあ！\nいま とうひょうが おわりました！\\lしゅうけいを している あいだに\\l２じ しんさに うつりましょう！\n\n２じ しんさは いよいよ\nおまちかねの アピールタイム！\\lわざで アピール しまくりましょうー！\n\nでは はりきって どうぞ！\nレッツ！ アピール！",
-      "original_hex": "0b 01 ab fe 02 1f 00 14 03 1b 36 03 37 00 05 2c 28 1f 0c 10 ab fa 0c 35 03 09 02 2d 00 0c 13 02 29 00 01 02 41 16 fa a3 3d 00 0c 2e 0b 16 00 03 12 28 1f 0c 36 03 ab fb a3 3d 00 0c 2e 0b 1a 00 02 26 02 26 fe 05 1f 11 06 18 19 00 51 9c ae 79 60 52 71 ab fa 2c 3c 44 00 51 9c ae 79 00 0c 1f 08 28 1f 0c 36 03 ae ab fb 44 1a 00 1a 28 07 50 13 00 45 03 40 ab fe 7a a0 62 ab 00 51 9c ae 79 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08183E94",
-        "0x08183E9C"
-      ],
-      "pointer_addresses": [
-        "0x08183E94",
-        "0x08183E9C"
       ]
     },
     {
@@ -85224,22 +84594,6 @@
       ]
     },
     {
-      "id": "axvj_7a94d261ef4c",
-      "module": "剧情",
-      "address": "0x08186802",
-      "byte_length": 81,
-      "original": "この 「\\02」という ニックネームは\nとても かたちの よい\\lニックネーム ですなぁ\n\nニックネームに 「\\03」と 「\\04」が\nはいって いるのが とても よい！",
-      "original_hex": "0a 19 00 b3 fd 02 b4 14 02 03 00 66 a0 58 68 ae 71 1a fe 14 13 23 00 06 10 11 19 00 26 02 fa 66 a0 58 68 ae 71 00 44 0d 15 2f fb 66 a0 58 68 ae 71 16 00 b3 fd 03 b4 14 00 b3 fd 04 b4 37 fe 1a 02 50 13 00 02 29 19 37 00 14 13 23 00 26 02 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6A80"
-      ],
-      "pointer_addresses": [
-        "0x083A6A80"
-      ]
-    },
-    {
       "id": "axvj_dcf54489ac4c",
       "module": "剧情",
       "address": "0x08186853",
@@ -85880,22 +85234,6 @@
       ]
     },
     {
-      "id": "axvj_885c5e1d5be8",
-      "module": "剧情",
-      "address": "0x0818762C",
-      "byte_length": 314,
-      "original": "それでは てんいんさんに\nインタビュー して みましょう\\lどうですか うれて ますか？\n\nてんいん『はい おかげさまで\nうれてうれて こまって ますよ！\n\nこのまえ \\02さん というかたが\n\\03を たくさん かわれまして\n\nみせのなかに \\03が\nなくなって しまいそう だったんですよ！\n\nわたくしも \\03を そんなに\nかう おきゃくさまが いるなんて\\lゆめにも おもいません でした からね！\n\nインタビュアー『と いうことは‥‥\n１００こ とか ２００こ とか ですか？\n\nてんいん『いや もっと でしたよ！\n\nインタビュアー『うひゃー！\n\\02さんって すごい ですね！\n\nてんいん『\\02さんは ほんとうに\nだいじな おきゃくさま ですよ",
-      "original_hex": "0f 2a 44 1a 00 13 2e 02 2e 0b 2e 16 fe 52 7e 60 97 85 ae 00 0c 13 00 20 1f 0c 36 03 fa 45 03 44 0d 06 00 03 2a 13 00 1f 0d 06 ac fb 13 2e 02 2e b1 1a 02 00 05 06 3a 0b 1f 44 fe 03 2a 13 03 2a 13 00 0a 1f 50 13 00 1f 0d 26 ab fb 0a 19 1f 04 00 fd 02 0b 2e 00 14 02 03 06 10 37 fe fd 03 2d 00 10 08 0b 2e 00 06 2c 2a 1f 0c 13 fb 20 0e 19 15 06 16 00 fd 03 37 fe 15 08 15 50 13 00 0c 1f 02 0f 03 00 41 50 10 2e 44 0d 26 ab fb 2c 10 08 0c 23 00 fd 03 2d 00 0f 2e 15 16 fe 06 03 00 05 07 34 08 0b 1f 37 00 02 29 15 2e 13 fa 25 22 16 23 00 05 23 02 1f 0e 2e 00 44 0c 10 00 06 27 18 ab fb 52 7e 60 97 85 51 ae b1 14 00 02 03 0a 14 1a b0 b0 fe a2 a1 a1 0a 00 14 06 00 a3 a1 a1 0a 00 14 06 00 44 0d 06 ac fb 13 2e 02 2e b1 02 24 00 23 50 14 00 44 0c 10 26 ab fb 52 7e 60 97 85 51 ae b1 03 1b 34 ae ab fe fd 02 0b 2e 50 13 00 0d 3b 02 00 44 0d 18 ab fb 13 2e 02 2e b1 fd 02 0b 2e 1a 00 1e 2e 14 03 16 fe 41 02 3d 15 00 05 07 34 08 0b 1f 00 44 0d 26 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A69F0"
-      ],
-      "pointer_addresses": [
-        "0x083A69F0"
-      ]
-    },
-    {
       "id": "axvj_91a295554887",
       "module": "剧情",
       "address": "0x08187766",
@@ -86144,22 +85482,6 @@
       ]
     },
     {
-      "id": "axvj_652f556d38b9",
-      "module": "剧情",
-      "address": "0x08187C27",
-      "byte_length": 115,
-      "original": "マリ『んー！\nさいこうの きめゼリフね\n\nなんか いいテレビばんぐみが\nできそうな よかん！\n\nもしかしたら このことを\nテレビで ほうそうするかも しれないから\\lテレビの チェックを わすれないでね！\n\nそれじゃあ\nまた どこかで！",
-      "original_hex": "6f 78 b1 2e ae ab fe 0b 02 0a 03 19 00 07 22 8f 78 6c 18 fb 15 2e 06 00 02 02 63 7a 97 46 2e 39 20 37 fe 44 07 0f 03 15 00 26 06 2e ab fb 23 0c 06 0c 10 27 00 0a 19 0a 14 2d fe 63 7a 97 44 00 1e 03 0f 03 0d 29 06 23 00 0c 2a 15 02 06 27 fa 63 7a 97 19 00 61 82 a0 58 2d 00 2c 0d 2a 15 02 44 18 ab fb 0f 2a 3d 34 01 fe 1f 10 00 45 0a 06 44 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081892AE"
-      ],
-      "pointer_addresses": [
-        "0x081892AE"
-      ]
-    },
-    {
       "id": "axvj_6b31ac120ac5",
       "module": "剧情",
       "address": "0x08187C9A",
@@ -86399,22 +85721,6 @@
         "0x0818909B",
         "0x081890DB",
         "0x0818911B"
-      ]
-    },
-    {
-      "id": "axvj_cf17b537482b",
-      "module": "剧情",
-      "address": "0x08187E8C",
-      "byte_length": 136,
-      "original": "『トレーナーを もとめて』\n\nマリ『はーい わたしは いま\n\\02に きています！\n\nきょうは ここで あたらしい さいのうを\nはっくつ しようと おもいます！\n\nきょう わたしが ちゅうもく した\nトレーナーは \\01さん！\n\nわたしは この トレーナーに\nなにかを かんじます！",
-      "original_hex": "b1 64 7a ae 65 ae 2d 00 23 14 22 13 b2 fb 6f 78 b1 1a ae 02 00 2c 10 0c 1a 00 02 1f fe fd 02 16 00 07 13 02 1f 0d ab fb 07 36 03 1a 00 0a 0a 44 00 01 10 27 0c 02 00 0b 02 19 03 2d fe 1a 50 08 12 00 0c 26 03 14 00 05 23 02 1f 0d ab fb 07 36 03 00 2c 10 0c 37 00 11 35 03 23 08 00 0c 10 fe 64 7a ae 65 ae 1a 00 fd 01 0b 2e ab fb 2c 10 0c 1a 00 0a 19 00 64 7a ae 65 ae 16 fe 15 16 06 2d 00 06 2e 3d 1f 0d ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6AD4"
-      ],
-      "pointer_addresses": [
-        "0x083A6AD4"
       ]
     },
     {
@@ -89896,22 +89202,6 @@
       ]
     },
     {
-      "id": "axvj_9b04f8f44de3",
-      "module": "剧情",
-      "address": "0x0818E0F7",
-      "byte_length": 182,
-      "original": "ああ なんという ことじゃ‥‥！\n\nあいいろのたま が\nうばわれて しまうとは‥‥\n\nあいいろのたま と べにいろのたま が\nはなればなれに なって しまうなど\\lけっして あっては ならないこと‥‥\n\n‥‥‥ ‥‥‥ ‥‥‥\nううむ‥‥\n\nよし！ おまえさんに のこされた\nべにいろのたまを あずけよう\n\nさっきの おとこを おいかけて\nたまを とりかえして おくれ‥‥！",
-      "original_hex": "01 01 00 15 2e 14 02 03 00 0a 14 3d 34 b0 b0 ab fb 01 02 02 2b 19 10 1f 00 37 fe 03 46 2c 2a 13 00 0c 1f 03 14 1a b0 b0 fb 01 02 02 2b 19 10 1f 00 14 00 49 16 02 2b 19 10 1f 00 37 fe 1a 15 2a 46 15 2a 16 00 15 50 13 00 0c 1f 03 15 45 fa 09 50 0c 13 00 01 50 13 1a 00 15 27 15 02 0a 14 b0 b0 fb b0 b0 b0 00 b0 b0 b0 00 b0 b0 b0 fe 03 03 21 b0 b0 fb 26 0c ab 00 05 1f 04 0b 2e 16 00 19 0a 0b 2a 10 fe 49 16 02 2b 19 10 1f 2d 00 01 3e 09 26 03 fb 0b 50 07 19 00 05 14 0a 2d 00 05 02 06 09 13 fe 10 1f 2d 00 14 28 06 04 0c 13 00 05 08 2a b0 b0 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08173968"
-      ],
-      "pointer_addresses": [
-        "0x08173968"
-      ]
-    },
-    {
       "id": "axvj_845c6a9ff2cb",
       "module": "剧情",
       "address": "0x0818E1AD",
@@ -89925,22 +89215,6 @@
       ],
       "pointer_addresses": [
         "0x08173A47"
-      ]
-    },
-    {
-      "id": "axvj_5d92646cad97",
-      "module": "剧情",
-      "address": "0x0818E1EE",
-      "byte_length": 150,
-      "original": "そうか‥‥\nグラードンが めざめたのか‥‥\n\nかつて グラードンの いかりを\nしずめた ふしぎな たま というのが\\lその べにいろのたま なんじゃ‥‥\n\nそして その たまが ほりだされたのは\nルネにある めざめのほこら‥‥\n\nグラードンと めざめのほこら には\nなにかしら かんけいが あるのかもな‥‥",
-      "original_hex": "0f 03 06 b0 b0 fe 89 77 ae 95 7e 37 00 22 3c 22 10 19 06 b0 b0 fb 06 12 13 00 89 77 ae 95 7e 19 00 02 06 28 2d fe 0c 3e 22 10 00 1c 0c 38 15 00 10 1f 00 14 02 03 19 37 fa 0f 19 00 49 16 02 2b 19 10 1f 00 15 2e 3d 34 b0 b0 fb 0f 0c 13 00 0f 19 00 10 1f 37 00 1e 28 41 0b 2a 10 19 1a fe 79 68 16 01 29 00 22 3c 22 19 1e 0a 27 b0 b0 fb 89 77 ae 95 7e 14 00 22 3c 22 19 1e 0a 27 00 16 1a fe 15 16 06 0c 27 00 06 2e 09 02 37 00 01 29 19 06 23 15 b0 b0 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08173AC1"
-      ],
-      "pointer_addresses": [
-        "0x08173AC1"
       ]
     },
     {
@@ -90983,22 +90257,6 @@
       ],
       "pointer_addresses": [
         "0x0814E2A3"
-      ]
-    },
-    {
-      "id": "axvj_d1c1bc325974",
-      "module": "剧情",
-      "address": "0x0818F808",
-      "byte_length": 25,
-      "original": "ええい はらだたしい‥‥！\nイライライライラ‥‥",
-      "original_hex": "04 04 02 00 1a 27 41 10 0c 02 b0 b0 ab fe 52 77 52 77 52 77 52 77 b0 b0 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0814E2A9"
-      ],
-      "pointer_addresses": [
-        "0x0814E2A9"
       ]
     },
     {
@@ -100364,22 +99622,6 @@
       ]
     },
     {
-      "id": "axvj_a96ad9e3a408",
-      "module": "剧情",
-      "address": "0x0819431E",
-      "byte_length": 18,
-      "original": "ゴボゴボゴボ‥‥\nしずんでいく‥‥",
-      "original_hex": "8b 9a 8b 9a 8b 9a b0 b0 fe 0c 3e 2e 44 02 08 b0 b0 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08153D2D"
-      ],
-      "pointer_addresses": [
-        "0x08153D2D"
-      ]
-    },
-    {
       "id": "axvj_89a183bd5476",
       "module": "剧情",
       "address": "0x08194330",
@@ -102030,22 +101272,6 @@
       ]
     },
     {
-      "id": "axvj_06651e48ee43",
-      "module": "剧情",
-      "address": "0x08195045",
-      "byte_length": 22,
-      "original": "ホラホラ！\nとっとと しょうぶ しようぜ！",
-      "original_hex": "6e 77 6e 77 ab fe 14 50 14 14 00 0c 36 03 48 00 0c 26 03 3f ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08154519"
-      ],
-      "pointer_addresses": [
-        "0x08154519"
-      ]
-    },
-    {
       "id": "axvj_81cbab297c89",
       "module": "剧情",
       "address": "0x0819505B",
@@ -103435,22 +102661,6 @@
       ],
       "pointer_addresses": [
         "0x081709D0"
-      ]
-    },
-    {
-      "id": "axvj_921feb2a3e12",
-      "module": "剧情",
-      "address": "0x08195CA1",
-      "byte_length": 100,
-      "original": "あ！ おきゃくさん\nポロックケースを おもちで ないですね？\n\nサファリゾーンは ポロックを つかうと\nより おたのしみ いただけますので\n\nぜひ ポロックケースを\nおもちに なって おこし ください！",
-      "original_hex": "01 ab 00 05 07 34 08 0b 2e fe 9f 7b a0 58 59 ae 5d 2d 00 05 23 11 44 00 15 02 44 0d 18 ac fb 5b 6c 7f 78 90 ae 7e 1a 00 9f 7b a0 58 2d 00 12 06 03 14 fe 26 28 00 05 10 19 0c 20 00 02 10 41 09 1f 0d 19 44 fb 3f 1b 00 9f 7b a0 58 59 ae 5d 2d fe 05 23 11 16 00 15 50 13 00 05 0a 0c 00 08 41 0b 02 ab ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081709DF"
-      ],
-      "pointer_addresses": [
-        "0x081709DF"
       ]
     },
     {
@@ -106751,22 +105961,6 @@
       ],
       "pointer_addresses": [
         "0x08088AD8"
-      ]
-    },
-    {
-      "id": "axvj_a830c362768e",
-      "module": "剧情",
-      "address": "0x0837B57D",
-      "byte_length": 7,
-      "original": "\\CC050Fみない",
-      "original_hex": "fc 05 0f 20 15 02 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08088B38"
-      ],
-      "pointer_addresses": [
-        "0x08088B38"
       ]
     },
     {
@@ -111514,70 +110708,6 @@
       ]
     },
     {
-      "id": "axvj_72f61538ec45",
-      "module": "剧情",
-      "address": "0x083A592B",
-      "byte_length": 9,
-      "original": "ＤＯＯＲＯーＸ１",
-      "original_hex": "be c9 c9 cc c9 ae d2 a2 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5CAC"
-      ],
-      "pointer_addresses": [
-        "0x083A5CAC"
-      ]
-    },
-    {
-      "id": "axvj_34673e3d489a",
-      "module": "剧情",
-      "address": "0x083A5934",
-      "byte_length": 9,
-      "original": "ＤＯＯＲＯーＸ３",
-      "original_hex": "be c9 c9 cc c9 ae d2 a4 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5CB0"
-      ],
-      "pointer_addresses": [
-        "0x083A5CB0"
-      ]
-    },
-    {
-      "id": "axvj_0bc499980111",
-      "module": "剧情",
-      "address": "0x083A593D",
-      "byte_length": 9,
-      "original": "ＭＡＣＨＩーＳ２",
-      "original_hex": "c7 bb bd c2 c3 ae cd a3 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5CB4"
-      ],
-      "pointer_addresses": [
-        "0x083A5CB4"
-      ]
-    },
-    {
-      "id": "axvj_44926a0d8508",
-      "module": "剧情",
-      "address": "0x083A5946",
-      "byte_length": 9,
-      "original": "ＭＡＣＨＩーＳ４",
-      "original_hex": "c7 bb bd c2 c3 ae cd a5 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5CB8"
-      ],
-      "pointer_addresses": [
-        "0x083A5CB8"
-      ]
-    },
-    {
       "id": "axvj_c9f08348bf4c",
       "module": "剧情",
       "address": "0x083A594F",
@@ -111642,38 +110772,6 @@
       ]
     },
     {
-      "id": "axvj_6d3485237b28",
-      "module": "剧情",
-      "address": "0x083A5969",
-      "byte_length": 7,
-      "original": "ＭＥーＡＳＡ",
-      "original_hex": "c7 bf ae bb cd bb ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5CCC"
-      ],
-      "pointer_addresses": [
-        "0x083A5CCC"
-      ]
-    },
-    {
-      "id": "axvj_aa5d0f30018b",
-      "module": "剧情",
-      "address": "0x083A5970",
-      "byte_length": 9,
-      "original": "ＭＥーＢＡＣＨＩ",
-      "original_hex": "c7 bf ae bc bb bd c2 c3 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5CD0"
-      ],
-      "pointer_addresses": [
-        "0x083A5CD0"
-      ]
-    },
-    {
       "id": "axvj_43f02b5f4046",
       "module": "剧情",
       "address": "0x083A5979",
@@ -111706,22 +110804,6 @@
       ]
     },
     {
-      "id": "axvj_ede369a8c200",
-      "module": "剧情",
-      "address": "0x083A5987",
-      "byte_length": 8,
-      "original": "ＭＥーＷＡＺＡ",
-      "original_hex": "c7 bf ae d1 bb d4 bb ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5CDC"
-      ],
-      "pointer_addresses": [
-        "0x083A5CDC"
-      ]
-    },
-    {
       "id": "axvj_4d5867024891",
       "module": "剧情",
       "address": "0x083A598F",
@@ -111735,38 +110817,6 @@
       ],
       "pointer_addresses": [
         "0x083A5CE0"
-      ]
-    },
-    {
-      "id": "axvj_6398fa7e5019",
-      "module": "剧情",
-      "address": "0x083A5997",
-      "byte_length": 9,
-      "original": "ＤＯＯＲＯーＸ４",
-      "original_hex": "be c9 c9 cc c9 ae d2 a5 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5CE4"
-      ],
-      "pointer_addresses": [
-        "0x083A5CE4"
-      ]
-    },
-    {
-      "id": "axvj_df529c532a88",
-      "module": "剧情",
-      "address": "0x083A59A0",
-      "byte_length": 9,
-      "original": "ＦＵＮＥーＫＡＮ",
-      "original_hex": "c0 cf c8 bf ae c5 bb c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5CE8"
-      ],
-      "pointer_addresses": [
-        "0x083A5CE8"
       ]
     },
     {
@@ -111866,22 +110916,6 @@
       ]
     },
     {
-      "id": "axvj_7efb1752a1bc",
-      "module": "剧情",
-      "address": "0x083A59DB",
-      "byte_length": 9,
-      "original": "ＭＡＣＨＩーＳ３",
-      "original_hex": "c7 bb bd c2 c3 ae cd a4 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5D04"
-      ],
-      "pointer_addresses": [
-        "0x083A5D04"
-      ]
-    },
-    {
       "id": "axvj_1f1018409e7f",
       "module": "剧情",
       "address": "0x083A59E4",
@@ -111895,22 +110929,6 @@
       ],
       "pointer_addresses": [
         "0x083A5D08"
-      ]
-    },
-    {
-      "id": "axvj_25b3f680bd8e",
-      "module": "剧情",
-      "address": "0x083A59EC",
-      "byte_length": 8,
-      "original": "ＢーＴＯＷＥＲ",
-      "original_hex": "bc ae ce c9 d1 bf cc ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5D0C"
-      ],
-      "pointer_addresses": [
-        "0x083A5D0C"
       ]
     },
     {
@@ -111962,38 +110980,6 @@
       ]
     },
     {
-      "id": "axvj_3d6e9d8978eb",
-      "module": "剧情",
-      "address": "0x083A5A0C",
-      "byte_length": 8,
-      "original": "ＭＥーＴＡＭＡ",
-      "original_hex": "c7 bf ae ce bb c7 bb ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5D1C"
-      ],
-      "pointer_addresses": [
-        "0x083A5D1C"
-      ]
-    },
-    {
-      "id": "axvj_bcfcad86a653",
-      "module": "剧情",
-      "address": "0x083A5A14",
-      "byte_length": 9,
-      "original": "ＭＥーＢーＢＩＧ",
-      "original_hex": "c7 bf ae bc ae bc c3 c1 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5D20"
-      ],
-      "pointer_addresses": [
-        "0x083A5D20"
-      ]
-    },
-    {
       "id": "axvj_fb4566242e32",
       "module": "剧情",
       "address": "0x083A5A1D",
@@ -112023,22 +111009,6 @@
       ],
       "pointer_addresses": [
         "0x083A5D28"
-      ]
-    },
-    {
-      "id": "axvj_f0659476ef95",
-      "module": "剧情",
-      "address": "0x083A5A32",
-      "byte_length": 8,
-      "original": "ＢＤーＴＩＭＥ",
-      "original_hex": "bc be ae ce c3 c7 bf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5D2C"
-      ],
-      "pointer_addresses": [
-        "0x083A5D2C"
       ]
     },
     {
@@ -112394,22 +111364,6 @@
       ]
     },
     {
-      "id": "axvj_310d8f177f0b",
-      "module": "剧情",
-      "address": "0x083A5ADB",
-      "byte_length": 9,
-      "original": "ＧＩＲＬーＳＵＰ",
-      "original_hex": "c1 c3 cc c6 ae cd cf ca ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5D88"
-      ],
-      "pointer_addresses": [
-        "0x083A5D88"
-      ]
-    },
-    {
       "id": "axvj_3f4008ee42ca",
       "module": "剧情",
       "address": "0x083A5AE4",
@@ -112458,22 +111412,6 @@
       ]
     },
     {
-      "id": "axvj_e306c90afb1c",
-      "module": "剧情",
-      "address": "0x083A5AFE",
-      "byte_length": 6,
-      "original": "ＡＱＡー０",
-      "original_hex": "bb cb bb ae a1 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5D98"
-      ],
-      "pointer_addresses": [
-        "0x083A5D98"
-      ]
-    },
-    {
       "id": "axvj_1de5dd5cb5ea",
       "module": "剧情",
       "address": "0x083A5B04",
@@ -112487,22 +111425,6 @@
       ],
       "pointer_addresses": [
         "0x083A5D9C"
-      ]
-    },
-    {
-      "id": "axvj_1ddeb574af8e",
-      "module": "剧情",
-      "address": "0x083A5B0D",
-      "byte_length": 8,
-      "original": "ＢＯＹーＳＵＰ",
-      "original_hex": "bc c9 d3 ae cd cf ca ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5DA0"
-      ],
-      "pointer_addresses": [
-        "0x083A5DA0"
       ]
     },
     {
@@ -112618,22 +111540,6 @@
       ]
     },
     {
-      "id": "axvj_1a2bb9c82a4a",
-      "module": "剧情",
-      "address": "0x083A5B4A",
-      "byte_length": 7,
-      "original": "ＣーＲＯＡＤ",
-      "original_hex": "bd ae cc c9 bb be ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5DC0"
-      ],
-      "pointer_addresses": [
-        "0x083A5DC0"
-      ]
-    },
-    {
       "id": "axvj_3a7985e09fe4",
       "module": "剧情",
       "address": "0x083A5B51",
@@ -112647,38 +111553,6 @@
       ],
       "pointer_addresses": [
         "0x083A5DC4"
-      ]
-    },
-    {
-      "id": "axvj_a03cd43e6b79",
-      "module": "剧情",
-      "address": "0x083A5B57",
-      "byte_length": 7,
-      "original": "ＭーＢＯＡＴ",
-      "original_hex": "c7 ae bc c9 bb ce ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5DC8"
-      ],
-      "pointer_addresses": [
-        "0x083A5DC8"
-      ]
-    },
-    {
-      "id": "axvj_386781d1cf20",
-      "module": "剧情",
-      "address": "0x083A5B5E",
-      "byte_length": 9,
-      "original": "ＭーＤＵＮＧＯＮ",
-      "original_hex": "c7 ae be cf c8 c1 c9 c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5DCC"
-      ],
-      "pointer_addresses": [
-        "0x083A5DCC"
       ]
     },
     {
@@ -112711,22 +111585,6 @@
       ],
       "pointer_addresses": [
         "0x083A5DD4"
-      ]
-    },
-    {
-      "id": "axvj_e5e9ae997c67",
-      "module": "剧情",
-      "address": "0x083A5B78",
-      "byte_length": 9,
-      "original": "ＰーＳＣＨＯＯＬ",
-      "original_hex": "ca ae cd bd c2 c9 c9 c6 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5DD8"
-      ],
-      "pointer_addresses": [
-        "0x083A5DD8"
       ]
     },
     {
@@ -112778,22 +111636,6 @@
       ]
     },
     {
-      "id": "axvj_8cf4a79e34a2",
-      "module": "剧情",
-      "address": "0x083A5B9A",
-      "byte_length": 8,
-      "original": "ＣＯＮーＦＡＮ",
-      "original_hex": "bd c9 c8 ae c0 bb c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5DE8"
-      ],
-      "pointer_addresses": [
-        "0x083A5DE8"
-      ]
-    },
-    {
       "id": "axvj_5105e723cd17",
       "module": "剧情",
       "address": "0x083A5BA2",
@@ -112823,22 +111665,6 @@
       ],
       "pointer_addresses": [
         "0x083A5DF0"
-      ]
-    },
-    {
-      "id": "axvj_d55d896433be",
-      "module": "剧情",
-      "address": "0x083A5BB0",
-      "byte_length": 9,
-      "original": "ＴーＢＡＴＴＬＥ",
-      "original_hex": "ce ae bc bb ce ce c6 bf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5DF4"
-      ],
-      "pointer_addresses": [
-        "0x083A5DF4"
       ]
     },
     {
@@ -112890,38 +111716,6 @@
       ]
     },
     {
-      "id": "axvj_4b3f795ec06b",
-      "module": "剧情",
-      "address": "0x083A5BCF",
-      "byte_length": 6,
-      "original": "ＣＯＮーＫ",
-      "original_hex": "bd c9 c8 ae c5 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5E04"
-      ],
-      "pointer_addresses": [
-        "0x083A5E04"
-      ]
-    },
-    {
-      "id": "axvj_8e04f380cfe1",
-      "module": "剧情",
-      "address": "0x083A5BD5",
-      "byte_length": 8,
-      "original": "ＥＩＫＯＵーＲ",
-      "original_hex": "bf c3 c5 c9 cf ae cc ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5E08"
-      ],
-      "pointer_addresses": [
-        "0x083A5E08"
-      ]
-    },
-    {
       "id": "axvj_fbb119cb13b0",
       "module": "剧情",
       "address": "0x083A5BDD",
@@ -112970,22 +111764,6 @@
       ]
     },
     {
-      "id": "axvj_e72c9e2ee94d",
-      "module": "剧情",
-      "address": "0x083A5BF6",
-      "byte_length": 9,
-      "original": "ＹＡＭＡーＥＹＥ",
-      "original_hex": "d3 bb c7 bb ae bf d3 bf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5E18"
-      ],
-      "pointer_addresses": [
-        "0x083A5E18"
-      ]
-    },
-    {
       "id": "axvj_b12540955c0b",
       "module": "剧情",
       "address": "0x083A5BFF",
@@ -112999,22 +111777,6 @@
       ],
       "pointer_addresses": [
         "0x083A5E1C"
-      ]
-    },
-    {
-      "id": "axvj_64d4cf4bb636",
-      "module": "剧情",
-      "address": "0x083A5C08",
-      "byte_length": 8,
-      "original": "ＩＮＴＥＲーＶ",
-      "original_hex": "c3 c8 ce bf cc ae d0 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5E20"
-      ],
-      "pointer_addresses": [
-        "0x083A5E20"
       ]
     },
     {
@@ -113242,54 +112004,6 @@
       ]
     },
     {
-      "id": "axvj_b77f83bd8f7a",
-      "module": "剧情",
-      "address": "0x083A5E65",
-      "byte_length": 9,
-      "original": "ＰＣーＬＯＧＯＮ",
-      "original_hex": "ca bd ae c6 c9 c1 c9 c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6454"
-      ],
-      "pointer_addresses": [
-        "0x083A6454"
-      ]
-    },
-    {
-      "id": "axvj_610b852f4ee9",
-      "module": "剧情",
-      "address": "0x083A5E6E",
-      "byte_length": 7,
-      "original": "ＰＣーＯＦＦ",
-      "original_hex": "ca bd ae c9 c0 c0 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6458"
-      ],
-      "pointer_addresses": [
-        "0x083A6458"
-      ]
-    },
-    {
-      "id": "axvj_6171dc1a6116",
-      "module": "剧情",
-      "address": "0x083A5E75",
-      "byte_length": 6,
-      "original": "ＰＣーＯＮ",
-      "original_hex": "ca bd ae c9 c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A645C"
-      ],
-      "pointer_addresses": [
-        "0x083A645C"
-      ]
-    },
-    {
       "id": "axvj_6732181505ec",
       "module": "剧情",
       "address": "0x083A5E7B",
@@ -113303,38 +112017,6 @@
       ],
       "pointer_addresses": [
         "0x083A6460"
-      ]
-    },
-    {
-      "id": "axvj_0f6f3fca5dc1",
-      "module": "剧情",
-      "address": "0x083A5E82",
-      "byte_length": 9,
-      "original": "ＷＩＮーＯＰＥＮ",
-      "original_hex": "d1 c3 c8 ae c9 ca bf c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6464"
-      ],
-      "pointer_addresses": [
-        "0x083A6464"
-      ]
-    },
-    {
-      "id": "axvj_a11f3002726c",
-      "module": "剧情",
-      "address": "0x083A5E8B",
-      "byte_length": 9,
-      "original": "ＷＡＬＬーＨＩＴ",
-      "original_hex": "d1 bb c6 c6 ae c2 c3 ce ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6468"
-      ],
-      "pointer_addresses": [
-        "0x083A6468"
       ]
     },
     {
@@ -113402,54 +112084,6 @@
       ]
     },
     {
-      "id": "axvj_ec095073f38e",
-      "module": "剧情",
-      "address": "0x083A5EAF",
-      "byte_length": 8,
-      "original": "ＫＯＵＫＡーＬ",
-      "original_hex": "c5 c9 cf c5 bb ae c6 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A647C"
-      ],
-      "pointer_addresses": [
-        "0x083A647C"
-      ]
-    },
-    {
-      "id": "axvj_d3844bd34552",
-      "module": "剧情",
-      "address": "0x083A5EB7",
-      "byte_length": 8,
-      "original": "ＫＯＵＫＡーＭ",
-      "original_hex": "c5 c9 cf c5 bb ae c7 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6480"
-      ],
-      "pointer_addresses": [
-        "0x083A6480"
-      ]
-    },
-    {
-      "id": "axvj_231c215ee7ae",
-      "module": "剧情",
-      "address": "0x083A5EBF",
-      "byte_length": 8,
-      "original": "ＫＯＵＫＡーＨ",
-      "original_hex": "c5 c9 cf c5 bb ae c2 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6484"
-      ],
-      "pointer_addresses": [
-        "0x083A6484"
-      ]
-    },
-    {
       "id": "axvj_717c686907f3",
       "module": "剧情",
       "address": "0x083A5EC7",
@@ -113495,22 +112129,6 @@
       ],
       "pointer_addresses": [
         "0x083A6490"
-      ]
-    },
-    {
-      "id": "axvj_2bcae34e555f",
-      "module": "剧情",
-      "address": "0x083A5EDE",
-      "byte_length": 9,
-      "original": "ＪＩＤＯーＤＯＡ",
-      "original_hex": "c4 c3 be c9 ae be c9 bb ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6494"
-      ],
-      "pointer_addresses": [
-        "0x083A6494"
       ]
     },
     {
@@ -113674,70 +112292,6 @@
       ]
     },
     {
-      "id": "axvj_805ce62bd695",
-      "module": "剧情",
-      "address": "0x083A5F30",
-      "byte_length": 9,
-      "original": "ＭＵーＰＡＣＨＩ",
-      "original_hex": "c7 cf ae ca bb bd c2 c3 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A64D8"
-      ],
-      "pointer_addresses": [
-        "0x083A64D8"
-      ]
-    },
-    {
-      "id": "axvj_f4d94e105ddf",
-      "module": "剧情",
-      "address": "0x083A5F39",
-      "byte_length": 9,
-      "original": "ＴＫーＫＡＳＹＡ",
-      "original_hex": "ce c5 ae c5 bb cd d3 bb ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A64DC"
-      ],
-      "pointer_addresses": [
-        "0x083A64DC"
-      ]
-    },
-    {
-      "id": "axvj_b6d2e59ca6c1",
-      "module": "剧情",
-      "address": "0x083A5F42",
-      "byte_length": 8,
-      "original": "ＦＵーＺＡＫＵ",
-      "original_hex": "c0 cf ae d4 bb c5 cf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A64E0"
-      ],
-      "pointer_addresses": [
-        "0x083A64E0"
-      ]
-    },
-    {
-      "id": "axvj_05a2eb5989ea",
-      "module": "剧情",
-      "address": "0x083A5F4A",
-      "byte_length": 9,
-      "original": "ＦＵーＺＡＫＵ２",
-      "original_hex": "c0 cf ae d4 bb c5 cf a3 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A64E4"
-      ],
-      "pointer_addresses": [
-        "0x083A64E4"
-      ]
-    },
-    {
       "id": "axvj_2cfbb0352314",
       "module": "剧情",
       "address": "0x083A5F53",
@@ -113786,38 +112340,6 @@
       ]
     },
     {
-      "id": "axvj_b5712be96d7c",
-      "module": "剧情",
-      "address": "0x083A5F71",
-      "byte_length": 8,
-      "original": "ＲＵーＢＡＲＩ",
-      "original_hex": "cc cf ae bc bb cc c3 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A64F4"
-      ],
-      "pointer_addresses": [
-        "0x083A64F4"
-      ]
-    },
-    {
-      "id": "axvj_81c014252522",
-      "module": "剧情",
-      "address": "0x083A5F79",
-      "byte_length": 8,
-      "original": "ＲＵーＨＹＵＵ",
-      "original_hex": "cc cf ae c2 d3 cf cf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A64F8"
-      ],
-      "pointer_addresses": [
-        "0x083A64F8"
-      ]
-    },
-    {
       "id": "axvj_b677b5ad16a4",
       "module": "剧情",
       "address": "0x083A5F81",
@@ -113863,38 +112385,6 @@
       ],
       "pointer_addresses": [
         "0x083A6504"
-      ]
-    },
-    {
-      "id": "axvj_771d453d470b",
-      "module": "剧情",
-      "address": "0x083A5FA0",
-      "byte_length": 7,
-      "original": "ＴＵーＳＡＡ",
-      "original_hex": "ce cf ae cd bb bb ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6508"
-      ],
-      "pointer_addresses": [
-        "0x083A6508"
-      ]
-    },
-    {
-      "id": "axvj_c9484b435261",
-      "module": "剧情",
-      "address": "0x083A5FA7",
-      "byte_length": 9,
-      "original": "ＨＩーＴＵＲＵＮ",
-      "original_hex": "c2 c3 ae ce cf cc cf c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A650C"
-      ],
-      "pointer_addresses": [
-        "0x083A650C"
       ]
     },
     {
@@ -114106,134 +112596,6 @@
       ]
     },
     {
-      "id": "axvj_cfd032129c8b",
-      "module": "剧情",
-      "address": "0x083A600E",
-      "byte_length": 6,
-      "original": "ＴＯＹーＣ",
-      "original_hex": "ce c9 d3 ae bd ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6544"
-      ],
-      "pointer_addresses": [
-        "0x083A6544"
-      ]
-    },
-    {
-      "id": "axvj_3c1892598819",
-      "module": "剧情",
-      "address": "0x083A6014",
-      "byte_length": 6,
-      "original": "ＴＯＹーＤ",
-      "original_hex": "ce c9 d3 ae be ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6548"
-      ],
-      "pointer_addresses": [
-        "0x083A6548"
-      ]
-    },
-    {
-      "id": "axvj_196e095d4a39",
-      "module": "剧情",
-      "address": "0x083A601A",
-      "byte_length": 6,
-      "original": "ＴＯＹーＥ",
-      "original_hex": "ce c9 d3 ae bf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A654C"
-      ],
-      "pointer_addresses": [
-        "0x083A654C"
-      ]
-    },
-    {
-      "id": "axvj_d09d99915a76",
-      "module": "剧情",
-      "address": "0x083A6020",
-      "byte_length": 6,
-      "original": "ＴＯＹーＦ",
-      "original_hex": "ce c9 d3 ae c0 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6550"
-      ],
-      "pointer_addresses": [
-        "0x083A6550"
-      ]
-    },
-    {
-      "id": "axvj_dd51779a8364",
-      "module": "剧情",
-      "address": "0x083A6026",
-      "byte_length": 6,
-      "original": "ＴＯＹーＧ",
-      "original_hex": "ce c9 d3 ae c1 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6554"
-      ],
-      "pointer_addresses": [
-        "0x083A6554"
-      ]
-    },
-    {
-      "id": "axvj_c0b77b7a2074",
-      "module": "剧情",
-      "address": "0x083A602C",
-      "byte_length": 6,
-      "original": "ＴＯＹーＡ",
-      "original_hex": "ce c9 d3 ae bb ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6558"
-      ],
-      "pointer_addresses": [
-        "0x083A6558"
-      ]
-    },
-    {
-      "id": "axvj_e6874309f31e",
-      "module": "剧情",
-      "address": "0x083A6032",
-      "byte_length": 6,
-      "original": "ＴＯＹーＢ",
-      "original_hex": "ce c9 d3 ae bc ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A655C"
-      ],
-      "pointer_addresses": [
-        "0x083A655C"
-      ]
-    },
-    {
-      "id": "axvj_7ce6a3dec0d6",
-      "module": "剧情",
-      "address": "0x083A6038",
-      "byte_length": 7,
-      "original": "ＴＯＹーＣ１",
-      "original_hex": "ce c9 d3 ae bd a2 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6560"
-      ],
-      "pointer_addresses": [
-        "0x083A6560"
-      ]
-    },
-    {
       "id": "axvj_b5dd4abf8c91",
       "module": "剧情",
       "address": "0x083A603F",
@@ -114346,22 +112708,6 @@
       ]
     },
     {
-      "id": "axvj_8e2cad626e5c",
-      "module": "剧情",
-      "address": "0x083A606F",
-      "byte_length": 9,
-      "original": "ＴＯＹーＫＡＢＥ",
-      "original_hex": "ce c9 d3 ae c5 bb bc bf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6580"
-      ],
-      "pointer_addresses": [
-        "0x083A6580"
-      ]
-    },
-    {
       "id": "axvj_5b8eb8244bd4",
       "module": "剧情",
       "address": "0x083A6078",
@@ -114410,54 +112756,6 @@
       ]
     },
     {
-      "id": "axvj_88103ee59c43",
-      "module": "剧情",
-      "address": "0x083A608D",
-      "byte_length": 6,
-      "original": "ＴーＡＭＥ",
-      "original_hex": "ce ae bb c7 bf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6590"
-      ],
-      "pointer_addresses": [
-        "0x083A6590"
-      ]
-    },
-    {
-      "id": "axvj_c1dad4010127",
-      "module": "剧情",
-      "address": "0x083A6093",
-      "byte_length": 8,
-      "original": "ＴーＡＭＥーＥ",
-      "original_hex": "ce ae bb c7 bf ae bf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6594"
-      ],
-      "pointer_addresses": [
-        "0x083A6594"
-      ]
-    },
-    {
-      "id": "axvj_dfd0c26c2134",
-      "module": "剧情",
-      "address": "0x083A609B",
-      "byte_length": 8,
-      "original": "ＴーＯＯＡＭＥ",
-      "original_hex": "ce ae c9 c9 bb c7 bf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6598"
-      ],
-      "pointer_addresses": [
-        "0x083A6598"
-      ]
-    },
-    {
       "id": "axvj_f66c1c8a1476",
       "module": "剧情",
       "address": "0x083A60A3",
@@ -114474,22 +112772,6 @@
       ]
     },
     {
-      "id": "axvj_aa86c13b502e",
-      "module": "剧情",
-      "address": "0x083A60AD",
-      "byte_length": 8,
-      "original": "ＴーＫＯＡＭＥ",
-      "original_hex": "ce ae c5 c9 bb c7 bf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A65A0"
-      ],
-      "pointer_addresses": [
-        "0x083A65A0"
-      ]
-    },
-    {
       "id": "axvj_694d04f6491c",
       "module": "剧情",
       "address": "0x083A60B5",
@@ -114503,38 +112785,6 @@
       ],
       "pointer_addresses": [
         "0x083A65A4"
-      ]
-    },
-    {
-      "id": "axvj_e31f52228524",
-      "module": "剧情",
-      "address": "0x083A60BF",
-      "byte_length": 7,
-      "original": "ＴーＫＡＭＩ",
-      "original_hex": "ce ae c5 bb c7 c3 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A65A8"
-      ],
-      "pointer_addresses": [
-        "0x083A65A8"
-      ]
-    },
-    {
-      "id": "axvj_fdb8944197dd",
-      "module": "剧情",
-      "address": "0x083A60C6",
-      "byte_length": 8,
-      "original": "ＴーＫＡＭＩ２",
-      "original_hex": "ce ae c5 bb c7 c3 a3 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A65AC"
-      ],
-      "pointer_addresses": [
-        "0x083A65AC"
       ]
     },
     {
@@ -114650,102 +112900,6 @@
       ]
     },
     {
-      "id": "axvj_ff79a1be52a5",
-      "module": "剧情",
-      "address": "0x083A6105",
-      "byte_length": 7,
-      "original": "ＣーＧＡＪＩ",
-      "original_hex": "bd ae c1 bb c4 c3 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A65CC"
-      ],
-      "pointer_addresses": [
-        "0x083A65CC"
-      ]
-    },
-    {
-      "id": "axvj_5ba6b5c2cb04",
-      "module": "剧情",
-      "address": "0x083A610C",
-      "byte_length": 9,
-      "original": "ＣーＭＡＫＵーＵ",
-      "original_hex": "bd ae c7 bb c5 cf ae cf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A65D0"
-      ],
-      "pointer_addresses": [
-        "0x083A65D0"
-      ]
-    },
-    {
-      "id": "axvj_eb1e49946c04",
-      "module": "剧情",
-      "address": "0x083A6115",
-      "byte_length": 9,
-      "original": "ＣーＭＡＫＵーＤ",
-      "original_hex": "bd ae c7 bb c5 cf ae be ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A65D4"
-      ],
-      "pointer_addresses": [
-        "0x083A65D4"
-      ]
-    },
-    {
-      "id": "axvj_909e97a01d40",
-      "module": "剧情",
-      "address": "0x083A611E",
-      "byte_length": 7,
-      "original": "ＣーＰＡＳＩ",
-      "original_hex": "bd ae ca bb cd c3 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A65D8"
-      ],
-      "pointer_addresses": [
-        "0x083A65D8"
-      ]
-    },
-    {
-      "id": "axvj_8de4ecd87075",
-      "module": "剧情",
-      "address": "0x083A6125",
-      "byte_length": 6,
-      "original": "ＣーＳＹＵ",
-      "original_hex": "bd ae cd d3 cf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A65DC"
-      ],
-      "pointer_addresses": [
-        "0x083A65DC"
-      ]
-    },
-    {
-      "id": "axvj_949e79721569",
-      "module": "剧情",
-      "address": "0x083A612B",
-      "byte_length": 8,
-      "original": "ＣーＰＩＫＯＮ",
-      "original_hex": "bd ae ca c3 c5 c9 c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A65E0"
-      ],
-      "pointer_addresses": [
-        "0x083A65E0"
-      ]
-    },
-    {
       "id": "axvj_01ee887ace24",
       "module": "剧情",
       "address": "0x083A6133",
@@ -114759,38 +112913,6 @@
       ],
       "pointer_addresses": [
         "0x083A65E4"
-      ]
-    },
-    {
-      "id": "axvj_6ad8c6088848",
-      "module": "剧情",
-      "address": "0x083A613B",
-      "byte_length": 9,
-      "original": "ＯＰーＢＡＳＹＵ",
-      "original_hex": "c9 ca ae bc bb cd d3 cf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A65E8"
-      ],
-      "pointer_addresses": [
-        "0x083A65E8"
-      ]
-    },
-    {
-      "id": "axvj_04991efc368a",
-      "module": "剧情",
-      "address": "0x083A6144",
-      "byte_length": 9,
-      "original": "ＢＴーＳＴＡＲＴ",
-      "original_hex": "bc ce ae cd ce bb cc ce ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A65EC"
-      ],
-      "pointer_addresses": [
-        "0x083A65EC"
       ]
     },
     {
@@ -114842,86 +112964,6 @@
       ]
     },
     {
-      "id": "axvj_23b2e2f84c64",
-      "module": "剧情",
-      "address": "0x083A6161",
-      "byte_length": 9,
-      "original": "ＺーＳＣＲＯＬＬ",
-      "original_hex": "d4 ae cd bd cc c9 c6 c6 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A65FC"
-      ],
-      "pointer_addresses": [
-        "0x083A65FC"
-      ]
-    },
-    {
-      "id": "axvj_3115436bce58",
-      "module": "剧情",
-      "address": "0x083A616A",
-      "byte_length": 7,
-      "original": "ＺーＰＡＧＥ",
-      "original_hex": "d4 ae ca bb c1 bf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6600"
-      ],
-      "pointer_addresses": [
-        "0x083A6600"
-      ]
-    },
-    {
-      "id": "axvj_4e837f9e7574",
-      "module": "剧情",
-      "address": "0x083A6171",
-      "byte_length": 6,
-      "original": "ＰＮーＯＮ",
-      "original_hex": "ca c8 ae c9 c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6604"
-      ],
-      "pointer_addresses": [
-        "0x083A6604"
-      ]
-    },
-    {
-      "id": "axvj_51601c746053",
-      "module": "剧情",
-      "address": "0x083A6177",
-      "byte_length": 7,
-      "original": "ＰＮーＯＦＦ",
-      "original_hex": "ca c8 ae c9 c0 c0 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6608"
-      ],
-      "pointer_addresses": [
-        "0x083A6608"
-      ]
-    },
-    {
-      "id": "axvj_c36915177c71",
-      "module": "剧情",
-      "address": "0x083A617E",
-      "byte_length": 9,
-      "original": "ＺーＳＥＡＲＣＨ",
-      "original_hex": "d4 ae cd bf bb cc bd c2 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A660C"
-      ],
-      "pointer_addresses": [
-        "0x083A660C"
-      ]
-    },
-    {
       "id": "axvj_14114ebaa06a",
       "module": "剧情",
       "address": "0x083A6187",
@@ -114935,54 +112977,6 @@
       ],
       "pointer_addresses": [
         "0x083A6610"
-      ]
-    },
-    {
-      "id": "axvj_e23757af30dd",
-      "module": "剧情",
-      "address": "0x083A618E",
-      "byte_length": 9,
-      "original": "ＴＢーＳＴＡＲＴ",
-      "original_hex": "ce bc ae cd ce bb cc ce ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6614"
-      ],
-      "pointer_addresses": [
-        "0x083A6614"
-      ]
-    },
-    {
-      "id": "axvj_23b8812c2e7c",
-      "module": "剧情",
-      "address": "0x083A6197",
-      "byte_length": 7,
-      "original": "ＴＢーＫＯＮ",
-      "original_hex": "ce bc ae c5 c9 c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6618"
-      ],
-      "pointer_addresses": [
-        "0x083A6618"
-      ]
-    },
-    {
-      "id": "axvj_1264e35c69ce",
-      "module": "剧情",
-      "address": "0x083A619E",
-      "byte_length": 8,
-      "original": "ＴＢーＫＡＲＡ",
-      "original_hex": "ce bc ae c5 bb cc bb ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A661C"
-      ],
-      "pointer_addresses": [
-        "0x083A661C"
       ]
     },
     {
@@ -121544,22 +119538,6 @@
       ]
     },
     {
-      "id": "axvj_e521993c85b0",
-      "module": "剧情",
-      "address": "0x083CA03F",
-      "byte_length": 90,
-      "original": "ＢＤタイム\nじっくり ねらえば どんな マークも\nとめられる チャンスゲームだ！\nちゅうせん された かいすうだけ\nＢＤタイムが つづくぞ！\nビッグボーナスがでると しゅうりょう",
-      "original_hex": "bc be 60 52 71 fe 3d 50 08 28 00 18 27 04 46 00 45 2e 15 00 6f ae 58 23 fe 14 22 27 2a 29 00 61 84 7e 5d 8a ae 71 41 ab fe 11 35 03 0e 2e 00 0b 2a 10 00 06 02 0d 03 41 09 fe bc be 60 52 71 37 00 12 43 08 40 ab fe 97 a0 89 9a ae 65 5d 37 44 29 14 00 0c 35 03 28 36 03 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x080FFAD4"
-      ],
-      "pointer_addresses": [
-        "0x080FFAD4"
-      ]
-    },
-    {
       "id": "axvj_436f869ee164",
       "module": "剧情",
       "address": "0x083D3F71",
@@ -126638,134 +124616,6 @@
       ]
     },
     {
-      "id": "axvj_26f5ae8dd431",
-      "module": "剧情",
-      "address": "0x083E9816",
-      "byte_length": 6,
-      "original": "あいうえお",
-      "original_hex": "01 02 03 04 05 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0838839C"
-      ],
-      "pointer_addresses": [
-        "0x0838839C"
-      ]
-    },
-    {
-      "id": "axvj_412585f970f4",
-      "module": "剧情",
-      "address": "0x083E981C",
-      "byte_length": 6,
-      "original": "かきくけこ",
-      "original_hex": "06 07 08 09 0a ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083883A4"
-      ],
-      "pointer_addresses": [
-        "0x083883A4"
-      ]
-    },
-    {
-      "id": "axvj_fe59d9d6c424",
-      "module": "剧情",
-      "address": "0x083E9822",
-      "byte_length": 6,
-      "original": "さしすせそ",
-      "original_hex": "0b 0c 0d 0e 0f ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083883AC"
-      ],
-      "pointer_addresses": [
-        "0x083883AC"
-      ]
-    },
-    {
-      "id": "axvj_688f975e9f2c",
-      "module": "剧情",
-      "address": "0x083E9828",
-      "byte_length": 6,
-      "original": "たちつてと",
-      "original_hex": "10 11 12 13 14 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083883B4"
-      ],
-      "pointer_addresses": [
-        "0x083883B4"
-      ]
-    },
-    {
-      "id": "axvj_db99214d805e",
-      "module": "剧情",
-      "address": "0x083E982E",
-      "byte_length": 6,
-      "original": "なにぬねの",
-      "original_hex": "15 16 17 18 19 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083883BC"
-      ],
-      "pointer_addresses": [
-        "0x083883BC"
-      ]
-    },
-    {
-      "id": "axvj_334fd492b72c",
-      "module": "剧情",
-      "address": "0x083E9834",
-      "byte_length": 6,
-      "original": "はひふへほ",
-      "original_hex": "1a 1b 1c 1d 1e ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083883C4"
-      ],
-      "pointer_addresses": [
-        "0x083883C4"
-      ]
-    },
-    {
-      "id": "axvj_8502bb2d615a",
-      "module": "剧情",
-      "address": "0x083E983A",
-      "byte_length": 6,
-      "original": "まみむめも",
-      "original_hex": "1f 20 21 22 23 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083883CC"
-      ],
-      "pointer_addresses": [
-        "0x083883CC"
-      ]
-    },
-    {
-      "id": "axvj_63dd75cd8910",
-      "module": "剧情",
-      "address": "0x083E9840",
-      "byte_length": 6,
-      "original": "らりるれろ",
-      "original_hex": "27 28 29 2a 2b ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083883D4"
-      ],
-      "pointer_addresses": [
-        "0x083883D4"
-      ]
-    },
-    {
       "id": "axvj_c6893814ba14",
       "module": "剧情",
       "address": "0x083E9846",
@@ -130311,38 +128161,6 @@
       ],
       "pointer_addresses": [
         "0x083D101C"
-      ]
-    },
-    {
-      "id": "axvj_e258151694cc",
-      "module": "剧情",
-      "address": "0x083EAD10",
-      "byte_length": 16,
-      "original": "パワフル マッスル\nハッスル ",
-      "original_hex": "9b 7c 6c 79 00 6f a0 5d 79 fe 6a a0 5d 79 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083D1024"
-      ],
-      "pointer_addresses": [
-        "0x083D1024"
-      ]
-    },
-    {
-      "id": "axvj_fcf9102b897a",
-      "module": "剧情",
-      "address": "0x083EAD21",
-      "byte_length": 22,
-      "original": "ストロング ストロンガー\nストロンゲスト ",
-      "original_hex": "5d 64 7b 7e 89 00 5d 64 7b 7e 87 ae fe 5d 64 7b 7e 8a 5d 64 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083D102C"
-      ],
-      "pointer_addresses": [
-        "0x083D102C"
       ]
     },
     {

@@ -457,6 +457,7 @@ texts:
 | `dialogue_shape_filter` | bool | `value: true`：不像对白则命中；`value: false`：整闸跳过 |
 | `min_byte_length_filter` / `max_byte_length_filter` | int | 字节长度越界 |
 | `require_pointer_filter` | bool | `value: true`：无指针则命中 |
+| `story_pointer_filter` | bool | `value: true`：无指针命中（同 `require_pointer`）；有指针但目标 raw 像原始数据（顺号计数器段如 `15 16 17 18 19 FF`、anim/指针表流、五十音键盘表、垃圾假名解码）也命中——只留「真是剧情指针」的条目 |
 | `garbage_heuristic_filter` | bool | `value: true`：垃圾假名/拉丁混扫则命中（不计 `Ａボタン`） |
 | `anim_cmd_filter` | bool | `value: true`：`raw` 像 Gen3 精灵 anim（连续 ≥2 个 `0x08/09` ROM 指针，或连续 ≥2 个帧字 `xx 0{0,1} 10 00`，或帧字 + `FFFF` / 后随指针）则命中 |
 | `ime_keyboard_filter` | bool | `value: true`：`raw` 像 Gen3 姓名五十音键盘表（RS/FRLG 日版共有页头/`5` 递增假名行；勿 `in_place`）则命中 |

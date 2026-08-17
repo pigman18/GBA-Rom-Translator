@@ -783,6 +783,7 @@ def resolve_filters(cfg: dict, mod: dict) -> list[dict[str, Any]]:
             "anim_cmd_filter",
             "ime_keyboard_filter",
             "require_pointer_filter",
+            "story_pointer_filter",
         }
         base = [
             dict(s)
@@ -952,6 +953,65 @@ class RequirePointerFilter(TextFilter):
         if not bool(self.value):
             return None
         return not bool(ctx.is_pointer_based)
+
+
+class StoryPointerFilter(TextFilter):
+    """剧情指针过滤：在 require_pointer_filter 之上校验「指针目标确实是剧情文本」。
+
+    ``value: true``（默认排除极性）时命中（丢弃）两类候选：
+      1. 无指针——同 require_pointer_filter；
+      2. 有指针但指针目标 raw 像原始数据而非文本——顺号计数器段
+         （``15 16 17 18 19 FF``，如 axvj_db99214d805e 一类数据表伪命中）、
+         anim/指针表流、五十音键盘表、垃圾假名解码。
+    语义：`pointer` 存在只说明「ROM 里有东西指着它」；是不是剧情，还看目标形态。
+    """
+
+    type_name = "story_pointer_filter"
+
+    _COUNTER_LO = 0x00  # 全角字形区起点（假名/标点/空格）
+    _COUNTER_HI = 0xA0  # 全角字形区终点（片假名结束）
+
+    @classmethod
+    def looks_counter_run(cls, raw: bytes | None, *, min_run: int = 5) -> bool:
+        """单调递增/递减 ≥5 的连续全角字节段（表数据/索引计数器特征）。"""
+        body = (raw or b"")
+        if body and body[-1] == 0xFF:
+            body = body[:-1]
+        if len(body) < min_run:
+            return False
+        best_up = best_dn = run_up = run_dn = 1
+        lo, hi = cls._COUNTER_LO, cls._COUNTER_HI
+        for i in range(1, len(body)):
+            prev, cur = body[i - 1], body[i]
+            if lo <= prev <= hi and lo <= cur <= hi and cur == prev + 1:
+                run_up += 1
+                if run_up > best_up:
+                    best_up = run_up
+            else:
+                run_up = 1
+            if lo <= prev <= hi and lo <= cur <= hi and prev == cur + 1:
+                run_dn += 1
+                if run_dn > best_dn:
+                    best_dn = run_dn
+            else:
+                run_dn = 1
+        return best_up >= min_run or best_dn >= min_run
+
+    def hit(self, ctx: FilterContext) -> bool | None:
+        if not bool(self.value):
+            return None
+        if not ctx.is_pointer_based:
+            return True
+        raw = ctx.raw or b""
+        if self.looks_counter_run(raw):
+            return True
+        if AnimCmdFilter.looks_anim_cmd(raw):
+            return True
+        if ImeKeyboardFilter.looks_ime_keyboard(raw, ctx.original or ""):
+            return True
+        if GarbageHeuristicFilter.looks_garbage(ctx.original):
+            return True
+        return False
 
 
 class GarbageHeuristicFilter(TextFilter):
@@ -1558,6 +1618,7 @@ FILTER_TYPES: dict[str, type[TextFilter]] = {
     MinByteLengthFilter.type_name: MinByteLengthFilter,
     MaxByteLengthFilter.type_name: MaxByteLengthFilter,
     RequirePointerFilter.type_name: RequirePointerFilter,
+    StoryPointerFilter.type_name: StoryPointerFilter,
     GarbageHeuristicFilter.type_name: GarbageHeuristicFilter,
     AnimCmdFilter.type_name: AnimCmdFilter,
     ImeKeyboardFilter.type_name: ImeKeyboardFilter,

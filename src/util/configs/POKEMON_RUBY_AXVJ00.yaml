@@ -275,6 +275,8 @@ texts:
           type: original_text_filter
           filter: false
           value:
+            - "\\CC050Fみる"
+            - "\\CC050Fみない"
             # 继续画面「ひき」「こ」由 hook ui/fixed_string 置空，勿进白名单。
             - "はい"  # 是
             - "の おおきさくらべ"  # 比大小
@@ -561,7 +563,7 @@ texts:
       hook: true
       filters:
         - id: story_pointer_filter
-          type: require_pointer_filter
+          type: story_pointer_filter
           value: true
         - id: msg_filter
           type: msg_filter

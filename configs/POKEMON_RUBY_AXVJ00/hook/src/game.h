@@ -47,7 +47,7 @@
 /* Legacy single-slot (unused by hook; kept for docs/config). */
 #define ADDR_CHINESE_TILE_STATE    0x0203FFF8u
 /* Pitch slot table: ctrl @ FF80 (16B), slots[8] @ FF90 (64B). */
-#define ADDR_CHS_PITCH_CTRL        0x0203FF80u
+#define ADDR_CHS_PITCH_CTRL        0x0203FF80u/* DrawOptionMenuChoice 选中调色板覆盖（避开 FFF0/F7F8） */#define ADDR_OPT_PALETTE_OVERRIDE  0x0203FFD0u
 #define ADDR_CHS_PITCH_SLOTS       0x0203FF90u
 #define CHS_PITCH_SLOT_COUNT       8u
 
@@ -239,6 +239,9 @@ typedef void (*chs_fn5)(const void *src, void *dst, uint32_t c, uint32_t e, uint
 
 static inline void chs_update_tilemap(TextPrinter *win, uint16_t upper, uint16_t lower)
 {
+    uint8_t ov = *(volatile uint8_t *)ADDR_OPT_PALETTE_OVERRIDE;
+    if (ov != 0u)
+        win_set_u8(win, WIN_PALETTE, ov);
     ((chs_fn3)(ADDR_UPDATE_TILEMAP | 1u))(win, upper, lower);
 }
 static inline void chs_copy_glyph_2bpp_to_4bpp(

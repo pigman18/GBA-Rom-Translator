@@ -1,34 +1,49 @@
 /* DrawOptionMenuChoice_hook — 设置窗口选项高亮绘制。
  *
- * JP 原版文本为 FC 05 0F <正文>，dst[2] 就是颜色前缀的调色板索引；
- * 函数用 dst[2]=style 切换选中/未选中颜色。
+ * 原版 JP 文本为 FC 05 <palette> <正文> FF，
+ * 函数通过 dst[2]=style 切换调色板（8=选中/15=普通）。
  *
- * 汉化后文本变成 F9 80 hi lo 短语引用，dst[2] 恰是短语码高字节，
- * 再写 style 会指错短语（护符/地图名等）。F9 短语没有颜色前缀，
- * 因此当 dst[0]==0xF9 时跳过 dst[2]=style。
+ * 汉化后文本变成 F9 80 hi lo FF 短语引用，
+ * 短语流内自带 FC 05 0F （普通色）。
+ * 若只在外层插 FC 05 <style>，展开短语时
+ * 会被短语流的 FC 05 0F 覆盖，导致选中颜色不生效。
+ *
+ * 修复：打印前把 style 写入 ADDR_OPT_PALETTE_OVERRIDE，
+ * chs_update_tilemap 写 tilemap palette 时优先用该值，打印完再清零。
  */
 #include "game.h"
 
-#define ADDR_MENU_PRINT_TEXT  0x0806F16Cu
+#define ADDR_MENU_PRINT_TEXT   0x0806F16Cu
+#define EXT_CTRL_CODE_BEGIN    0xFCu
+#define EXT_CTRL_CODE_PALETTE  0x05u
 
 typedef void (*menu_print_t)(const uint8_t *str, uint32_t left, uint32_t top);
 
 void DrawOptionMenuChoice_hook_C(const uint8_t *text,
-                                  uint32_t x, uint32_t y, uint32_t style)
+                                 uint32_t x, uint32_t y, uint32_t style)
 {
-    uint8_t dst[16];
+    uint8_t dst[20];
     unsigned i = 0;
+    unsigned off = 0;
+
+    if (text[0] == 0xF9u) {
+        dst[0] = EXT_CTRL_CODE_BEGIN;
+        dst[1] = EXT_CTRL_CODE_PALETTE;
+        dst[2] = (uint8_t)style;
+        off = 3;
+    }
 
     while (text[i] != 0xFF && i < 15u) {
-        dst[i] = text[i];
+        dst[off + i] = text[i];
         i++;
     }
 
-    /* 原版: dst[2] = style。F9 短语没有 FC 颜色前缀，跳过。 */
-    if (dst[0] != 0xF9u)
+    if (text[0] != 0xF9u)
         dst[2] = (uint8_t)style;
 
-    dst[i] = 0xFF;
+    dst[off + i] = 0xFF;
 
+    *(volatile uint8_t *)ADDR_OPT_PALETTE_OVERRIDE = (uint8_t)style;
     ((menu_print_t)(ADDR_MENU_PRINT_TEXT | 1u))(dst, x, y);
+    *(volatile uint8_t *)ADDR_OPT_PALETTE_OVERRIDE = 0u;
 }

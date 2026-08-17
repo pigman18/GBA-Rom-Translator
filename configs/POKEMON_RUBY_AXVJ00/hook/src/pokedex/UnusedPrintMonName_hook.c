@@ -1,63 +1,92 @@
 /* UnusedPrintMonName_hook — 图鉴分类名行。
  *
- * 原日版逻辑：先把占位串「？？？？？ポケモン」打印到 (13,5)，再把分类名
- * 右对齐塞进 5 字节缓冲覆盖前 5 个问号（日文均为 8px/字）。
- *
- * 汉化后分类名变成 F9 80 hi lo FF 短语引用（12px/字），字节右对齐不再适用，
- * 会出现 2 字残问号 / 4 字吞「宝」。
- *
- * 本 hook：
- *   (1) 打印 10 个空格（每格 8px = 80px）把占位串
- *       「5问号40px + 宝可梦36px = 76px」整行擦掉；
- *   (2) 打印「分类名短语 + 宝可梦短语」，得到 XXX宝可梦。
+ * 不再打印 F9 80 短语引用（连续短语之间会多出空隙），而是把
+ * 「分类名」和「宝可梦」的 PhraseTable 展开流都取出来，拼成一条
+ * 连续的 F9 00 单字侧载流打印。每个汉字 12px 紧密推进，无空格，
+ * 也不走短语重定向的状态机。
  */
 #include "game.h"
 
-#define ADDR_MENU_PRINT_TEXT        0x0806F16Cu  /* Menu_PrintText(str,left,top) */
-#define ADDR_DEX_TEXT_UNKNOWN_POKE  0x083E9688u  /* ？？？？？宝可梦 */
+#define ADDR_MENU_PRINT_TEXT        0x0806F16Cu
+#define ADDR_DEX_TEXT_UNKNOWN_POKE  0x083E9688u  /* ac*5 f9 80 03 fa ff */
 
 typedef void (*menu_print_t)(const uint8_t *str, uint32_t left, uint32_t top);
 
-#define NAME_MAX_BYTES  20u
-#define CLEAR_SPACES    12u
+#define NAME_MAX_BYTES  16u
+#define OUT_MAX         64u
+
+static const uint8_t *phrase_stream_lookup(uint16_t code)
+{
+    const uint32_t *offsets = (const uint32_t *)ADDR_PHRASE_OFFSETS;
+    const uint8_t *table = (const uint8_t *)ADDR_PHRASE_TABLE;
+    uint32_t off = offsets[code];
+
+    if (off >= 0x01000000u)
+        return 0;
+    return table + off;
+}
+
+/* 把一条 PCS 流展开追加到 out：
+ *   F9 00 xx xx     → 原样拷贝 4 字节
+ *   其它字节         → 原样拷贝
+ *   遇 0xFF 结束；遇 0x00（日文空格）结束。
+ * 返回是否追加了内容。 */
+static unsigned append_stream(uint8_t *out, unsigned i,
+                              const uint8_t *stream)
+{
+    while (stream && i + 4u < OUT_MAX) {
+        uint8_t b = *stream;
+
+        if (b == 0xFF || b == 0x00)
+            break;
+        if (b == 0xF9u) {
+            out[i] = stream[0];
+            out[i + 1u] = stream[1];
+            out[i + 2u] = stream[2];
+            out[i + 3u] = stream[3];
+            i += 4u;
+            stream += 4;
+        } else {
+            out[i++] = b;
+            stream++;
+        }
+    }
+    return i;
+}
 
 void UnusedPrintMonName_hook_C(const uint8_t *name,
                                uint32_t left, uint32_t top)
 {
-    uint8_t str[64];
-    uint8_t clear[CLEAR_SPACES + 1u];
+    const uint8_t *cat_stream = 0;
+    const uint8_t *poke_stream = 0;
     const uint8_t *ref = (const uint8_t *)ADDR_DEX_TEXT_UNKNOWN_POKE;
+    uint8_t out[OUT_MAX];
     unsigned i = 0;
-    unsigned j;
 
-    /* (1) 擦掉占位串整行（问号+宝可梦）。12 空格 = 96px ≥ 76px。 */
-    for (j = 0; j < CLEAR_SPACES; j++)
-        clear[j] = 0x00;
-    clear[j] = 0xFF;
-    ((menu_print_t)(ADDR_MENU_PRINT_TEXT | 1u))(clear, left, top);
+    /* 分类名：优先当作 F9 80 短语引用展开；否则当作原文字节流。 */
+    if (name[0] == 0xF9u && name[1] == 0x80u) {
+        uint16_t code = (uint16_t)((name[2] << 8) | name[3]);
+        cat_stream = phrase_stream_lookup(code);
+    } else {
+        cat_stream = name;
+    }
 
-    /* (2) 拷贝分类名：F9 xx xx xx 短语整体 4 字节，遇 FF/00 停。 */
-    while (i < NAME_MAX_BYTES && name[i] != 0xFF && name[i] != 0x00) {
-        if (name[i] == 0xF9u && i + 3u < NAME_MAX_BYTES) {
-            str[i] = name[i];
-            str[i + 1u] = name[i + 1u];
-            str[i + 2u] = name[i + 2u];
-            str[i + 3u] = name[i + 3u];
-            i += 4u;
+    /* 宝可梦：ref 问号之后的 F9 80 03 fa。 */
+    {
+        unsigned j = 0;
+        while (ref[j] == 0xACu)
+            j++;
+        if (ref[j] == 0xF9u && ref[j + 1u] == 0x80u) {
+            uint16_t code = (uint16_t)((ref[j + 2u] << 8) | ref[j + 3u]);
+            poke_stream = phrase_stream_lookup(code);
         } else {
-            str[i] = name[i];
-            i++;
+            poke_stream = ref + j;
         }
     }
 
-    /* (3) 接上占位串问号之后的「宝可梦」（f9 80 03 fa ff）。 */
-    j = 0;
-    while (ref[j] == 0xACu)   /* 跳过 ？？？ */
-        j++;
-    while (ref[j] != 0xFF && i + 1u < sizeof(str)) {
-        str[i++] = ref[j++];
-    }
-    str[i] = 0xFF;
+    i = append_stream(out, i, cat_stream);
+    i = append_stream(out, i, poke_stream);
+    out[i] = 0xFF;
 
-    ((menu_print_t)(ADDR_MENU_PRINT_TEXT | 1u))(str, left, top);
+    ((menu_print_t)(ADDR_MENU_PRINT_TEXT | 1u))(out, left, top);
 }

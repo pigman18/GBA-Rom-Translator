@@ -175,9 +175,9 @@ texts:
       label: 词条·训练家个人名
       group: 词条
       default: true
-      description: 训练家个人名表（0x1C61A0 起 155 条，步长 0x20 名称偏移 0x18；区分于「训练家名」class 表）
-      start: '0x1C61A0'
-      end: '0x1C74E0'
+      description: 训练家个人名表（0x1C5040-0x1CA100，步长 0x20 名称偏移 0x18；区分于「训练家名」class 表与 0x1CA360 起物种名）
+      start: '0x1C5040'
+      end: '0x1CA100'
       type: struct
       read:
         entry_size: 0x20

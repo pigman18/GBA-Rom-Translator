@@ -2071,8 +2071,12 @@ def extract_scan(
         )
 
     if include_items is not None:
-        # 包含模式：无地址绑定时 band 内 find；有地址时只读指定点/带
-        for text, lo, hi in include_items:
+        # 包含模式：只对「有地址绑定」的项做精确定位（单点/窄带 needle）。
+        # 无地址词不在此扫描——回归纯 Boolean，交给下方普通 scan 逐地址走
+        # filter 的整串完全匹配判定，杜绝全 ROM find 子串/尾部拆串越权认领。
+        addr_items = [(t, lo, hi) for t, lo, hi in include_items if lo is not None or hi is not None]
+        has_noaddr = len(addr_items) != len(include_items)
+        for text, lo, hi in addr_items:
             needle = _encode_jp_needle(text)
             needles: list[bytes] = []
             if needle and len(needle) >= 2:
@@ -2107,8 +2111,9 @@ def extract_scan(
                     start = a + 1
                     _try_accept(a, body)
         # 全部为地址钉：合并进常规 scan（msg_filter 等仍扫 band）
-        # 含无地址白名单短词：保持旧行为，仅白名单命中
-        pins_only_fallthrough = all(
+        # 含无地址白名单短词：不提前 return，继续落入下方普通 scan，由 filter
+        # 的整串完全匹配判定无地址词（不再全 ROM needle 拆串）。
+        pins_only_fallthrough = not has_noaddr and all(
             lo is not None and hi is not None for _t, lo, hi in include_items
         )
         if not pins_only_fallthrough:
@@ -2202,7 +2207,9 @@ def extract_scan(
         while a <= hi:
             b = rom[a]
             # 0xFC = 扩展控制码前缀；勿与 F7–FB / FE / FF 一并跳过
-            if b == 0xFF or b == 0x00 or (b >= 0xF7 and b != 0xFC):
+            # 0xFD = \\v 名字/变量占位前缀；放行（以 FD 开头的正文如 \\01\\05 だね？
+            #       也是合法文本，scan 应读到 FF 整段，最终翻译时忽略控制符）
+            if b == 0xFF or b == 0x00 or (b >= 0xF7 and b != 0xFC and b != 0xFD):
                 a += 1
                 continue
             raw = read_pcs(rom, a, pcs_maxlen)

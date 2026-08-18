@@ -748,7 +748,7 @@ texts:
       start: '0x0'
       end: '0xFFFFFF'
       type: scan
-      relocate: true
+      relocate: false
       hook: true
       reader: msg_reader
       reader_value:

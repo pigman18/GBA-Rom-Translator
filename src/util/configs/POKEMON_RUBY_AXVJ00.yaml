@@ -171,6 +171,19 @@ texts:
         - id: name_min_byte_length_filter
           type: min_byte_length_filter
           value: 3
+    - id: 训练家个人名
+      label: 词条·训练家个人名
+      group: 词条
+      default: true
+      description: 训练家个人名表（0x1C61A0 起 155 条，步长 0x20 名称偏移 0x18；区分于「训练家名」class 表）
+      start: '0x1C61A0'
+      end: '0x1C74E0'
+      type: struct
+      read:
+        entry_size: 0x20
+        name_offset: 0x18
+      relocate: true
+      hook: true
     - id: 地点名
       label: 词条·地点
       group: 词条
@@ -183,6 +196,19 @@ texts:
       max_byte_length: 20
       relocate: false
       hook: true
+    - id: 秘密基地装饰名
+      label: 词条·秘密基地装饰
+      group: 词条
+      default: true
+      description: 秘密基地装饰品名表（0x3C2A54 起 120 条，步长 0x1C 名称偏移 13）
+      start: '0x3C2A54'
+      end: '0x3C3773'
+      type: struct
+      read:
+        entry_size: 0x1C
+        name_offset: 13
+      relocate: true
+      hook: true
     - id: 道具名
       label: 词条·道具
       group: 词条
@@ -193,19 +219,6 @@ texts:
       type: struct
       read:
         entry_size: 40
-        desc_ptr_offset: 16
-      relocate: true
-      hook: true
-    - id: 道具名-谜芝果
-      label: 词条·谜芝果
-      group: 词条
-      default: true
-      description: 道具结构内名称字段
-      start: '0x3DC11C'
-      end: '0x3DC120'
-      type: struct
-      read:
-        entry_size: 5
         desc_ptr_offset: 16
       relocate: true
       hook: true

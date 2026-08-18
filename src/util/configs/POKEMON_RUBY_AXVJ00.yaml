@@ -164,7 +164,7 @@ texts:
       min_byte_length: 3
       ranges:
         - start: '0x1C4A10'
-          end: '0x1C4D00'
+          end: '0x1C4C8F'
         - start: '0x3E944C'
           end: '0x3E9453'
       filters:
@@ -737,33 +737,56 @@ texts:
       type: scan
       relocate: true
       hook: true
+      reader: msg_reader
+      reader_value:
+        file: reference_corpus/RubySapphire/ja-Hrkt_msg.txt
+        mapping:
+          "　": " "
+          "\\n": "\n"
+          "\\c": "\n\n"
+          "\\r": "\\l"
+          "\\e": ""
+          "[PLAYER]": "\\01"
+          "[STR_VAR_1]": "\\02"
+          "[STR_VAR_2]": "\\03"
+          "[STR_VAR_3]": "\\04"
+          "[RIVAL]": "\\06"
+          "[KUN]": ""
+          "[RIGHT_ARROW]": "\\CC0CFA"
+          "[LEFT_ARROW]": "\\CC0CFB"
+          "[UP_ARROW]": "\\CC0CFC"
+          "[DOWN_ARROW]": "\\CC0CFD"
+          "[EVIL_TEAM]": "マグマだん"
+          "[GOOD_TEAM]": "アクアだん"
+          "[EVIL_LEADER]": "マツブサ"
+          "[GOOD_LEADER]": "アオヤギ"
       filters:
         - id: story_pointer_filter
           type: story_pointer_filter
           value: true
-        - id: msg_filter
-          type: msg_filter
-          filter: false
-          value:
-            file: reference_corpus/RubySapphire/ja-Hrkt_msg.txt
-            min_plain_chars: 3
-            mapping:
-              "　": " "
-              "\\n": "\n"
-              "\\c": "\n\n"
-              "\\r": "\\l"
-              "\\e": ""
-              "[PLAYER]": "\\01"
-              "[STR_VAR_1]": "\\02"
-              "[STR_VAR_2]": "\\03"
-              "[STR_VAR_3]": "\\04"
-              "[RIVAL]": "\\06"
-              "[KUN]": ""
-              "[RIGHT_ARROW]": "\\CC0CFA"
-              "[LEFT_ARROW]": "\\CC0CFB"
-              "[UP_ARROW]": "\\CC0CFC"
-              "[DOWN_ARROW]": "\\CC0CFD"
-              "[EVIL_TEAM]": "マグマだん"
-              "[GOOD_TEAM]": "アクアだん"
-              "[EVIL_LEADER]": "マツブサ"
-              "[GOOD_LEADER]": "アオヤギ"
+        #- id: msg_filter
+        #  type: msg_filter
+        #  filter: false
+        #  value:
+        #    file: reference_corpus/RubySapphire/ja-Hrkt_msg.txt
+        #    min_plain_chars: 3
+        #    mapping:
+        #      "　": " "
+        #      "\\n": "\n"
+        #      "\\c": "\n\n"
+        #      "\\r": "\\l"
+        #      "\\e": ""
+        #      "[PLAYER]": "\\01"
+        #      "[STR_VAR_1]": "\\02"
+        #      "[STR_VAR_2]": "\\03"
+        #      "[STR_VAR_3]": "\\04"
+        #      "[RIVAL]": "\\06"
+        #      "[KUN]": ""
+        #      "[RIGHT_ARROW]": "\\CC0CFA"
+        #      "[LEFT_ARROW]": "\\CC0CFB"
+        #      "[UP_ARROW]": "\\CC0CFC"
+        #      "[DOWN_ARROW]": "\\CC0CFD"
+        #      "[EVIL_TEAM]": "マグマだん"
+        #      "[GOOD_TEAM]": "アクアだん"
+        #      "[EVIL_LEADER]": "マツブサ"
+        #      "[GOOD_LEADER]": "アオヤギ"

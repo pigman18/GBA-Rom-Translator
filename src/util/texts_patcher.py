@@ -674,6 +674,8 @@ def _msg_soft_key(s: str) -> str:
     t = re.sub(r"^[\u0001-\u0006][はがのもを]?", "", t)
     # 句中仍可能残留的变量字节转义（软匹配用）
     t = re.sub(r"\\0[1-6]", "", t)
+    # 语料侧 mapping 后为真实控制字节 \x01-\x06，句中同样剥掉（与 ROM 转义 `\01` 对称）
+    t = re.sub(r"[\u0001-\u0006]", "", t)
     return _norm_original_key(t)
 
 
@@ -692,30 +694,6 @@ def _has_msg_include_filter(filters: list[dict[str, Any]] | None) -> bool:
         if not isinstance(spec, dict):
             continue
         if str(spec.get("type") or "") != "msg_filter":
-            continue
-        if "filter" in spec and not bool(spec.get("filter")):
-            return True
-    return False
-
-
-def _has_callers_include_filter(filters: list[dict[str, Any]] | None) -> bool:
-    """模块是否有 callers_filter 包含模式（sink callers 白名单）。"""
-    for spec in filters or []:
-        if not isinstance(spec, dict):
-            continue
-        if str(spec.get("type") or "") != "callers_filter":
-            continue
-        if "filter" in spec and not bool(spec.get("filter")):
-            return True
-    return False
-
-
-def _has_execute_include_filter(filters: list[dict[str, Any]] | None) -> bool:
-    """模块是否有 execute_filter 包含模式（消费链白名单）。"""
-    for spec in filters or []:
-        if not isinstance(spec, dict):
-            continue
-        if str(spec.get("type") or "") != "execute_filter":
             continue
         if "filter" in spec and not bool(spec.get("filter")):
             return True
@@ -774,16 +752,13 @@ def resolve_filters(cfg: dict, mod: dict) -> list[dict[str, Any]]:
     has_mod_filters_key = "filters" in mod
     extra = list(mod.get("filters") or []) if has_mod_filters_key else []
 
-    # 语料 / callers / 原文白名单：不叠全局启发式（靠白名单本身）
+    # 语料 / 原文白名单：不叠全局启发式（靠白名单本身）
     if (
         _has_include_original_text_filter(extra)
         or _has_msg_include_filter(extra)
-        or _has_callers_include_filter(extra)
     ):
         keep_types = {
             "msg_filter",
-            "callers_filter",
-            "execute_filter",
             "address_filter",
             "anim_cmd_filter",
             "ime_keyboard_filter",
@@ -1573,88 +1548,6 @@ class ControlOrShortFilter(TextFilter):
         return False
 
 
-class CallersFilter(TextFilter):
-    """callers 可达：候选地址沿「谁 ldr 我 → 我传给谁（BL）→ 被调方闭包」正向爬升，
-    只要经过 value 列表里任一 address，即判命中。不做文本识别，只判可达。
-
-    value 为列表，两种项：
-    - ``{name, address}``：address 是汇点，走正向爬升（正向 BL 闭包）。
-    - ``{name}``（内建 op：message / trainerbattle / …）：脚本操作数，走脚本 walk。
-    filter: false 时作包含闸（命中才留）。
-    """
-
-    type_name = "callers_filter"
-
-    def hit(self, ctx: FilterContext) -> bool | None:
-        val = self.value
-        if not isinstance(val, (dict, list)):
-            return None
-        from util._callers_filter import (
-            ensure_callers_cache,
-            filters_need_callers,
-            get_active_rom,
-        )
-
-        if not filters_need_callers([self.spec]):
-            return None
-        rom = get_active_rom()
-        if rom is None:
-            return False
-        reachable = ensure_callers_cache(rom, [self.spec])
-        if reachable is None:
-            return False
-        return ctx.address in reachable
-
-
-class ExecuteFilter(TextFilter):
-    """execute_filter：候选是否被 value 指定消费函数的调用链消费（自下而上）。
-
-    value: ``[{name, address, depth?}]``。自 address 沿 BL 逆调用图向上 BFS
-    （depth 默认 8），沿途函数体内引用的 ROM 地址计入「被消费」集合；
-    候选地址命中 = 被消费。``filter: false`` 时作包含闸（被消费才留）。
-
-    只追代码调用链；脚本数据（message op 等）里的文本指针不经 BL 传参，
-    不在覆盖内。
-
-    exclude_filters: 其它 execute_filter 的 filter_id 列表，已消费地址从本 filter
-    消费集合中排除（避免上游 filter 已覆盖的地址重复归属）。
-    """
-
-    type_name = "execute_filter"
-
-    def __init__(self, spec: dict[str, Any]) -> None:
-        super().__init__(spec)
-        self._filter_id = str(spec.get("filter_id") or self.id or "")
-        self._exclude_filters: list[str] = list(spec.get("exclude_filters") or [])
-        self._exclude_set: frozenset[int] | None = None
-
-    def set_exclude_set(self, s: frozenset[int] | None) -> None:
-        self._exclude_set = s
-
-    def hit(self, ctx: FilterContext) -> bool | None:
-        val = self.value
-        if not isinstance(val, (dict, list)):
-            return None
-        from util._execute_filter import (
-            filters_need_execute,
-            get_active_rom,
-            is_execute,
-            parse_sink_items,
-        )
-
-        if not filters_need_execute([self.spec]):
-            return None
-        rom = get_active_rom()
-        if rom is None:
-            return False
-        funcs, ops = parse_sink_items(self.spec.get("value"), rom_len=len(rom))
-        sinks = [fo for _, fo, _ in funcs]
-        return is_execute(
-            rom, ctx.address, sinks, script_ops=ops or None,
-            exclude_set=self._exclude_set,
-        )
-
-
 FILTER_TYPES: dict[str, type[TextFilter]] = {
     CharacterFilter.type_name: CharacterFilter,
     DialogueShapeFilter.type_name: DialogueShapeFilter,
@@ -1669,12 +1562,7 @@ FILTER_TYPES: dict[str, type[TextFilter]] = {
     OriginalTextFilter.type_name: OriginalTextFilter,
     MsgFilter.type_name: MsgFilter,
     ControlOrShortFilter.type_name: ControlOrShortFilter,
-    CallersFilter.type_name: CallersFilter,
-    ExecuteFilter.type_name: ExecuteFilter,
 }
-
-# filter_id → spec：供 ExecuteFilter.exclude_filters 反查
-_FILTER_REGISTRY: dict[str, dict[str, Any]] = {}
 
 
 def build_filter(spec: dict[str, Any]) -> TextFilter:
@@ -1682,31 +1570,12 @@ def build_filter(spec: dict[str, Any]) -> TextFilter:
     cls = FILTER_TYPES.get(t)
     if cls is None:
         raise SystemExit(f"未知 filter type: {t!r}")
-    f = cls(spec)
-    # 注册到全局表，供 exclude_filters 反查
-    fid = str(spec.get("filter_id") or spec.get("id") or "")
-    if fid:
-        _FILTER_REGISTRY[fid] = spec
-    return f
+    return cls(spec)
 
 
 def apply_one_filter(ctx: FilterContext, spec: dict[str, Any]) -> bool:
     """True=保留，False=拒绝。"""
-    f = build_filter(spec)
-    # ExecuteFilter 的 exclude_filters 解析：从全局 filter 表查找被排除 filter 的消费集合
-    if isinstance(f, ExecuteFilter) and f._exclude_filters:
-        from util._execute_filter import get_consumed_set, get_active_rom
-
-        rom = get_active_rom()
-        if rom is not None:
-            exclude_specs = [
-                _FILTER_REGISTRY[fid]
-                for fid in f._exclude_filters
-                if fid in _FILTER_REGISTRY
-            ]
-            if exclude_specs:
-                f.set_exclude_set(get_consumed_set(rom, exclude_specs))
-    return f.keep(ctx)
+    return build_filter(spec).keep(ctx)
 
 
 def apply_filters(ctx: FilterContext, filters: list[dict[str, Any]]) -> bool:
@@ -1951,6 +1820,120 @@ def _encode_jp_needle(text: str) -> bytes | None:
     return bytes(out)
 
 
+# msg_reader 语料 needle 缓存：(file, mtime, mapping) → 非空 needle 列表
+_MSG_READER_CACHE: dict[tuple[Any, ...], tuple[bytes, ...]] = {}
+
+
+class ReaderHit(NamedTuple):
+    """reader 修整后的候选内容（address/hex/original/ptrs）。"""
+
+    fo: int
+    raw: bytes
+    original: str
+    ptrs: list[int]
+
+
+class MsgReader:
+    """reader=msg_reader：scan 读取时用语料 needle 在 raw 内定位「垃圾前缀 + msg 文本」
+    的真实正文起点（如「べえねくぽえ…ママ『ほら…」整段垃圾前缀）。
+
+    filter 返回 Boolean 决定是否采用；reader 返回**修整后的内容**（ReaderHit，含
+    address/hex/original），或返回 None 表示不采用。配置样式同 msg_filter：
+    value.file / value.mapping / value.min_plain_chars。
+    """
+
+    type_name = "msg_reader"
+
+    def __init__(self, spec: dict[str, Any]) -> None:
+        self.spec = spec
+        self.value = spec.get("value") or spec.get("reader_value")
+        if not isinstance(self.value, dict):
+            raise SystemExit(
+                f"msg_reader 须提供 value.file/value.mapping id={spec.get('id')!r}"
+            )
+        self.file = str(self.value.get("file") or "")
+        if not self.file:
+            raise SystemExit(f"msg_reader 缺 value.file id={spec.get('id')!r}")
+        raw_map = self.value.get("mapping") or {}
+        if not isinstance(raw_map, dict):
+            raise SystemExit(f"msg_reader.mapping 须为对象 id={spec.get('id')!r}")
+        self.mapping = {str(k): str(v) for k, v in raw_map.items()}
+        self._needles: tuple[bytes, ...] | None = None
+
+    def needles(self) -> tuple[bytes, ...]:
+        """语料行 mapping 后编码为 JP PCS needle（剥尾换行/EOS、跳过全空白）。
+
+        语料每行末尾的 ``\\n`` 在 ROM 里是正文结束的 FF（EOS），不是真实换行，
+        故编码后去掉尾部 0xFE；整体再剥 0xFF，使 needle 可作为正文子串匹配。
+        """
+        if self._needles is not None:
+            return self._needles
+        path = _resolve_msg_filter_file(self.file)
+        map_items = tuple(sorted((str(k), str(v)) for k, v in self.mapping.items()))
+        cache_key = (str(path), path.stat().st_mtime_ns, map_items)
+        hit = _MSG_READER_CACHE.get(cache_key)
+        if hit is not None:
+            self._needles = hit
+            return hit
+        out: list[bytes] = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            mapped = _apply_msg_mapping(line, self.mapping)
+            if not mapped.strip():
+                continue
+            for v in _msg_needle_variants(mapped):
+                if not (plain_original(v) or "").strip(" \t\n"):
+                    continue
+                needle = _encode_jp_needle(v)
+                if needle is None:
+                    continue
+                body = needle.rstrip(b"\xff").rstrip(b"\xfe")
+                if len(body) >= 4 and body not in out:
+                    out.append(body)
+        res = tuple(out)
+        _MSG_READER_CACHE[cache_key] = res
+        self._needles = res
+        return res
+
+    def read(
+        self,
+        rom: bytes,
+        a: int,
+        raw: bytes,
+        ptrs_map: dict[int, list[int]],
+        pcs_maxlen: int = 512,
+    ) -> ReaderHit | None:
+        """在 raw 内定位 msg 语料 needle 的真实起点；命中返回修整内容，否则 None。
+
+        取 raw 内**最早命中**的 needle 偏移 i；正文起点 = a+i。i==0 表示 raw 本就以
+        msg 开头（无垃圾前缀），i>0 表示剥掉垃圾前缀。命中后以起点重新 read_pcs 取
+        到 EOS 的完整正文。若正文剥离控制码后**全为空白**（对齐填充误匹配），返回 None。
+        """
+        best_i = -1
+        for body in self.needles():
+            i = raw.find(body)
+            if i >= 0 and (best_i < 0 or i < best_i):
+                best_i = i
+        if best_i < 0:
+            return None
+        real_a = a + best_i
+        real_raw = read_pcs(rom, real_a, pcs_maxlen)
+        if real_raw is None:
+            return None
+        from meowth.jp_pcs import decode_pcs
+
+        text = decode_pcs(real_raw)
+        if not (plain_original(text) or "").strip(" \t\n"):
+            return None
+        return ReaderHit(
+            fo=real_a,
+            raw=real_raw,
+            original=text,
+            ptrs=list(ptrs_map.get(real_a, [])),
+        )
+
+
 def extract_scan(
     rom: bytes,
     mod: dict,
@@ -1964,44 +1947,18 @@ def extract_scan(
     # 只用 jp_pcs + 本地 read_pcs / SCRIPT_BANK_MIN；禁止 import meowth.extract
     #（extract 会 load_game_config → 读流水线 texts.json，与 util 导出死锁）。
     from meowth.jp_pcs import decode_pcs, looks_like_jp_text
-    from util._callers_filter import (
-        ensure_callers_cache,
-        filters_need_callers,
-        set_active_rom,
-    )
-    from util._execute_filter import (
-        filters_need_execute,
-        get_consumed_set,
-        set_active_rom as set_execute_rom,
-    )
 
-    set_active_rom(rom)
-    set_execute_rom(rom)
     filt = _merge_legacy_length_filters(mod, filters)
-    if filters_need_callers(filt):
-        for spec in filt:
-            if str(spec.get("type") or "") != "callers_filter":
-                continue
-            s = ensure_callers_cache(rom, [spec]) or frozenset()
-            print(
-                f"  [callers] {spec.get('id')}: reachable ×{len(s)} "
-                f"({mod.get('id')})"
-            )
-    if filters_need_execute(filt):
-        for spec in filt:
-            if str(spec.get("type") or "") != "execute_filter":
-                continue
-            s = get_consumed_set(rom, [spec]) or frozenset()
-            print(
-                f"  [execute] {spec.get('id')}: consumed ×{len(s)} "
-                f"({mod.get('id')})"
-            )
-
     mid = mod["id"]
     mtype = str(mod.get("type") or "scan")
     # 模块级开关：默认 false。true 时才在 FF 扫描路径调 looks_like_jp_text 做
     # 形态预校验。该函数误判率高，后续新模块尽量不用（用地址带/语料白名单/结构定址）。
     use_looks_like = bool(mod.get("looks_like_jp_text", False))
+    # reader=msg_reader：scan 读取内容改为用 msg 语料 needle 定位「垃圾前缀 + msg
+    # 文本」的真实起点（如「べえねくぽえ…ママ『ほら…」）。返回修整内容或 None。
+    msg_reader: MsgReader | None = None
+    if str(mod.get("reader") or "") == "msg_reader":
+        msg_reader = MsgReader({"id": "msg_reader", "value": mod.get("reader_value")})
     bands = effective_module_bands(mod, omit_ranges or [])
     if not bands:
         return []
@@ -2157,38 +2114,6 @@ def extract_scan(
         if not pins_only_fallthrough:
             return out
 
-    # callers 包含：只验收预计算可达正文（∩ 模块带），不再全盘 PCS 漫步
-    if _has_callers_include_filter(filt):
-        from util._callers_filter import ensure_callers_cache
-
-        reachable: set[int] = set()
-        for spec in filt:
-            if str(spec.get("type") or "") != "callers_filter":
-                continue
-            if "filter" not in spec or bool(spec.get("filter")):
-                continue
-            reachable |= set(ensure_callers_cache(rom, [spec]) or ())
-        for a in sorted(reachable):
-            if _in_bands(a):
-                _try_accept(a, None)
-        return out
-
-    # execute 包含：只验收预计算「被消费链消费」正文（∩ 模块带）
-    if _has_execute_include_filter(filt):
-        from util._execute_filter import get_consumed_set
-
-        consumed: set[int] = set()
-        for spec in filt:
-            if str(spec.get("type") or "") != "execute_filter":
-                continue
-            if "filter" not in spec or bool(spec.get("filter")):
-                continue
-            consumed |= set(get_consumed_set(rom, [spec]) or ())
-        for a in sorted(consumed):
-            if _in_bands(a):
-                _try_accept(a, None)
-        return out
-
     # msg_filter 白名单：不再「指针优先」——直接落入下方全盘 FF 针扫，
     # 由 msg_filter / dialogue_shape / control_or_short 等闸门逐条判定。
     # （原实现只验收「有 ROM 指针指向」的正文，会漏掉靠偏移索引、无指针的
@@ -2231,11 +2156,15 @@ def extract_scan(
             module_id=str(mid),
             module_type=mtype,
         )
-        if filt and not apply_filters(ctx, filt):
-            return None
         end = a + len(raw) - 1
-        best_a, best_raw, best_text, best_ptrs = a, raw, text, ptrs
-        best_rank = _start_rank(text, ptrs)
+        # 起点通过 filter → best 默认起点；否则置空，仅靠择优内的 valid 起点
+        #（剥掉垃圾前缀 / 句中误切：如「べえねくぽえ…ママ『ほら…」整段垃圾前缀，
+        #  起点被拒，但消息内部含真实对白，应让择优选中它而不是整段丢弃。）
+        best_a, best_raw, best_text, best_ptrs = None, None, None, None
+        best_rank: int | None = None
+        if not filt or apply_filters(ctx, filt):
+            best_a, best_raw, best_text, best_ptrs = a, raw, text, ptrs
+            best_rank = _start_rank(text, ptrs)
         for a2 in range(a + 1, min(end, a + 96) + 1):
             b2 = rom[a2]
             if b2 == 0xFF or b2 == 0x00 or (b2 >= 0xF7 and b2 != 0xFC):
@@ -2260,9 +2189,11 @@ def extract_scan(
             if filt and not apply_filters(ctx2, filt):
                 continue
             rank2 = _start_rank(text2, ptrs2)
-            if rank2 > best_rank:
+            if best_rank is None or rank2 > best_rank:
                 best_a, best_raw, best_text, best_ptrs = a2, raw2, text2, ptrs2
                 best_rank = rank2
+        if best_a is None:
+            return None
         return best_a, best_raw, best_text, best_ptrs
 
     pcs_maxlen = 512
@@ -2282,6 +2213,50 @@ def extract_scan(
                 a = max(a + 1, ff - (pcs_maxlen - 1))
                 continue
             end = a + len(raw) - 1
+            if msg_reader is not None:
+                # reader=msg_reader：用语料 needle 定位真实正文起点；命中返回修整
+                # 内容（ReaderHit），未命中/全空白返回 None。以修整后的 fo/raw 走
+                # 单点 filter 闸门后输出，不做择优（择优会污染 msg 语料锚定）。
+                hit = msg_reader.read(rom, a, raw, ptrs_map, pcs_maxlen)
+                if hit is None:
+                    a = end + 1
+                    continue
+                if _in_exclude(hit.fo, len(hit.raw)):
+                    a = end + 1
+                    continue
+                hctx = make_filter_context(
+                    fo=hit.fo,
+                    raw=hit.raw,
+                    original=hit.original,
+                    ptrs=hit.ptrs,
+                    module_id=str(mid),
+                    module_type=mtype,
+                )
+                if filt and not apply_filters(hctx, filt):
+                    a = end + 1
+                    continue
+                seen.add(hit.fo)
+                out.append(
+                    _stamp(
+                        {
+                            "address": f"0x{BASE + hit.fo:08X}",
+                            "original": hit.original,
+                            "original_hex": hit.raw.hex(" "),
+                            "byte_length": len(hit.raw),
+                            "is_pointer_based": bool(hit.ptrs),
+                            "pointer_sources": [
+                                f"0x{BASE + q:08X}" for q in hit.ptrs
+                            ],
+                            "pointer_addresses": [
+                                f"0x{BASE + q:08X}" for q in hit.ptrs
+                            ],
+                        },
+                        mid=mid,
+                        game_code=game_code,
+                    )
+                )
+                a = end + 1
+                continue
             cand = _scan_candidate(a, raw)
             if cand is None:
                 a = end + 1
@@ -2394,13 +2369,8 @@ def export_texts(
         raise ValueError(f"config missing game_code: {cfg_path}")
 
     rom = rom_path.read_bytes()
-    _FILTER_REGISTRY.clear()
-    from util._callers_filter import set_active_rom
-    from util._execute_filter import set_active_rom as set_execute_rom
     from util._script_walk import set_script_roots
 
-    set_active_rom(rom)
-    set_execute_rom(rom)
     set_script_roots((cfg.get("texts") or {}).get("script_roots") or {})
     rom_code = identify_rom(rom)
     if rom_code.upper() != game_code.upper():

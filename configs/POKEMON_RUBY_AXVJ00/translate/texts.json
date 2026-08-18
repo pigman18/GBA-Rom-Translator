@@ -18,6 +18,20 @@
       "relocate": true,
       "hook": true
     },
+    "属性名-华丽大赛": {
+      "label": "词条·华丽大赛属性",
+      "group": "词条",
+      "default": true,
+      "description": "华丽大赛分类名指针表（4）",
+      "start": "0x39F798",
+      "end": "0x39F7A7",
+      "type": "stride_ptr",
+      "read": {
+        "stride": 4
+      },
+      "relocate": true,
+      "hook": true
+    },
     "性格名": {
       "label": "词条·性格",
       "group": "词条",
@@ -79,6 +93,20 @@
       "type": "stride",
       "read": {
         "stride": 8
+      },
+      "relocate": true,
+      "hook": true
+    },
+    "招式名-华丽大赛": {
+      "label": "词条·华丽大赛招式",
+      "group": "词条",
+      "default": true,
+      "description": "华丽大赛特殊效果招式名指针表（12）",
+      "start": "0x39F748",
+      "end": "0x39F777",
+      "type": "stride_ptr",
+      "read": {
+        "stride": 4
       },
       "relocate": true,
       "hook": true
@@ -179,6 +207,21 @@
       "type": "stride",
       "read": {
         "stride": 56
+      },
+      "relocate": true,
+      "hook": true
+    },
+    "招式说明-华丽大赛": {
+      "label": "说明·华丽大赛招式",
+      "group": "说明",
+      "default": true,
+      "description": "华丽大赛招式效果说明指针表（47）",
+      "start": "0x39F638",
+      "end": "0x39F6F3",
+      "type": "stride_ptr",
+      "read": {
+        "stride": 4,
+        "eos_window": 48
       },
       "relocate": true,
       "hook": true
@@ -775,7 +818,7 @@
       ]
     }
   },
-  "count": 8362,
+  "count": 8353,
   "entries": [
     {
       "id": "axvj_92f0510597a5",
@@ -1046,6 +1089,82 @@
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
+    },
+    {
+      "id": "axvj_b1f75f1388b4",
+      "module": "属性名-华丽大赛",
+      "address": "0x0839F77E",
+      "byte_length": 6,
+      "original": "うつくしい",
+      "original_hex": "03 12 08 0c 02 ff",
+      "translated": "",
+      "table_index": 0,
+      "table_base": "0x0839F798",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F798"
+      ],
+      "pointer_addresses": [
+        "0x0839F798"
+      ]
+    },
+    {
+      "id": "axvj_6ed315c19afa",
+      "module": "属性名-华丽大赛",
+      "address": "0x0839F784",
+      "byte_length": 5,
+      "original": "かわいい",
+      "original_hex": "06 2c 02 02 ff",
+      "translated": "",
+      "table_index": 1,
+      "table_base": "0x0839F798",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F79C"
+      ],
+      "pointer_addresses": [
+        "0x0839F79C"
+      ]
+    },
+    {
+      "id": "axvj_efb5630982f9",
+      "module": "属性名-华丽大赛",
+      "address": "0x0839F789",
+      "byte_length": 5,
+      "original": "かしこい",
+      "original_hex": "06 0c 0a 02 ff",
+      "translated": "",
+      "table_index": 2,
+      "table_base": "0x0839F798",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F7A0"
+      ],
+      "pointer_addresses": [
+        "0x0839F7A0"
+      ]
+    },
+    {
+      "id": "axvj_995b752a84f0",
+      "module": "属性名-华丽大赛",
+      "address": "0x0839F78E",
+      "byte_length": 6,
+      "original": "たくましい",
+      "original_hex": "10 08 1f 0c 02 ff",
+      "translated": "",
+      "table_index": 3,
+      "table_base": "0x0839F798",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F7A4"
+      ],
+      "pointer_addresses": [
+        "0x0839F7A4"
+      ]
     },
     {
       "id": "axvj_154721d17df0",
@@ -14284,6 +14403,234 @@
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
+    },
+    {
+      "id": "axvj_aa1f4094b33f",
+      "module": "招式名-华丽大赛",
+      "address": "0x0839F6F9",
+      "byte_length": 4,
+      "original": "いかり",
+      "original_hex": "02 06 28 ff",
+      "translated": "",
+      "table_index": 0,
+      "table_base": "0x0839F748",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F748"
+      ],
+      "pointer_addresses": [
+        "0x0839F748"
+      ]
+    },
+    {
+      "id": "axvj_acf9dbd62986",
+      "module": "招式名-华丽大赛",
+      "address": "0x0839F6FD",
+      "byte_length": 6,
+      "original": "きあいだめ",
+      "original_hex": "07 01 02 41 22 ff",
+      "translated": "",
+      "table_index": 1,
+      "table_base": "0x0839F748",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F74C"
+      ],
+      "pointer_addresses": [
+        "0x0839F74C"
+      ]
+    },
+    {
+      "id": "axvj_a5b3463718c9",
+      "module": "招式名-华丽大赛",
+      "address": "0x0839F703",
+      "byte_length": 8,
+      "original": "さいみんじゅつ",
+      "original_hex": "0b 02 20 2e 3d 35 12 ff",
+      "translated": "",
+      "table_index": 2,
+      "table_base": "0x0839F748",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F750"
+      ],
+      "pointer_addresses": [
+        "0x0839F750"
+      ]
+    },
+    {
+      "id": "axvj_2efbcf67b204",
+      "module": "招式名-华丽大赛",
+      "address": "0x0839F70B",
+      "byte_length": 6,
+      "original": "タマゴうみ",
+      "original_hex": "60 6f 8b 03 20 ff",
+      "translated": "",
+      "table_index": 3,
+      "table_base": "0x0839F748",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F754"
+      ],
+      "pointer_addresses": [
+        "0x0839F754"
+      ]
+    },
+    {
+      "id": "axvj_c1f5e2a92951",
+      "module": "招式名-华丽大赛",
+      "address": "0x0839F711",
+      "byte_length": 6,
+      "original": "つのでつく",
+      "original_hex": "12 19 44 12 08 ff",
+      "translated": "",
+      "table_index": 4,
+      "table_base": "0x0839F748",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F758"
+      ],
+      "pointer_addresses": [
+        "0x0839F758"
+      ]
+    },
+    {
+      "id": "axvj_f3bb4e3cdb03",
+      "module": "招式名-华丽大赛",
+      "address": "0x0839F717",
+      "byte_length": 7,
+      "original": "つるぎのまい",
+      "original_hex": "12 29 38 19 1f 02 ff",
+      "translated": "",
+      "table_index": 5,
+      "table_base": "0x0839F748",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F75C"
+      ],
+      "pointer_addresses": [
+        "0x0839F75C"
+      ]
+    },
+    {
+      "id": "axvj_f4e3d438e60f",
+      "module": "招式名-华丽大赛",
+      "address": "0x0839F71E",
+      "byte_length": 7,
+      "original": "テクスチャー",
+      "original_hex": "63 58 5d 61 84 ae ff",
+      "translated": "",
+      "table_index": 6,
+      "table_base": "0x0839F748",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F760"
+      ],
+      "pointer_addresses": [
+        "0x0839F760"
+      ]
+    },
+    {
+      "id": "axvj_412431777bb4",
+      "module": "招式名-华丽大赛",
+      "address": "0x0839F725",
+      "byte_length": 6,
+      "original": "にほんばれ",
+      "original_hex": "16 1e 2e 46 2a ff",
+      "translated": "",
+      "table_index": 7,
+      "table_base": "0x0839F748",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F764"
+      ],
+      "pointer_addresses": [
+        "0x0839F764"
+      ]
+    },
+    {
+      "id": "axvj_4b4c3bca611b",
+      "module": "招式名-华丽大赛",
+      "address": "0x0839F72B",
+      "byte_length": 4,
+      "original": "ねむる",
+      "original_hex": "18 21 29 ff",
+      "translated": "",
+      "table_index": 8,
+      "table_base": "0x0839F748",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F768"
+      ],
+      "pointer_addresses": [
+        "0x0839F768"
+      ]
+    },
+    {
+      "id": "axvj_0587b8a2a8f4",
+      "module": "招式名-华丽大赛",
+      "address": "0x0839F72F",
+      "byte_length": 4,
+      "original": "はさむ",
+      "original_hex": "1a 0b 21 ff",
+      "translated": "",
+      "table_index": 9,
+      "table_base": "0x0839F748",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F76C"
+      ],
+      "pointer_addresses": [
+        "0x0839F76C"
+      ]
+    },
+    {
+      "id": "axvj_f961def894e6",
+      "module": "招式名-华丽大赛",
+      "address": "0x0839F733",
+      "byte_length": 6,
+      "original": "まるくなる",
+      "original_hex": "1f 29 08 15 29 ff",
+      "translated": "",
+      "table_index": 10,
+      "table_base": "0x0839F748",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F770"
+      ],
+      "pointer_addresses": [
+        "0x0839F770"
+      ]
+    },
+    {
+      "id": "axvj_e2c23dbb784e",
+      "module": "招式名-华丽大赛",
+      "address": "0x0839F739",
+      "byte_length": 6,
+      "original": "ロックオン",
+      "original_hex": "7b a0 58 55 7e ff",
+      "translated": "",
+      "table_index": 11,
+      "table_base": "0x0839F748",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F774"
+      ],
+      "pointer_addresses": [
+        "0x0839F774"
+      ]
     },
     {
       "id": "axvj_4ba6bae30897",
@@ -30490,6 +30837,899 @@
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
+    },
+    {
+      "id": "axvj_3ca11ba154c1",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F05A",
+      "byte_length": 29,
+      "original": "この アピールの あと\nびっくり しやすく なってしまう",
+      "original_hex": "0a 19 00 51 9c ae 79 19 00 01 14 fe 47 50 08 28 00 0c 24 0d 08 00 15 50 13 0c 1f 03 ff",
+      "translated": "",
+      "table_index": 0,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F638"
+      ],
+      "pointer_addresses": [
+        "0x0839F638"
+      ]
+    },
+    {
+      "id": "axvj_d236c74d8804",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F077",
+      "byte_length": 35,
+      "original": "すごいアピールに なるが このあと\nさいごまで なにも できなくなる",
+      "original_hex": "0d 3b 02 51 9c ae 79 16 00 15 29 37 00 0a 19 01 14 fe 0b 02 3b 1f 44 00 15 16 23 00 44 07 15 08 15 29 ff",
+      "translated": "",
+      "table_index": 1,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F63C"
+      ],
+      "pointer_addresses": [
+        "0x0839F63C"
+      ]
+    },
+    {
+      "id": "axvj_524402f5a7e2",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F09A",
+      "byte_length": 33,
+      "original": "つづけて だしても しんさいんに\nあきられずに アピール できる",
+      "original_hex": "12 43 09 13 00 41 0c 13 23 00 0c 2e 0b 02 2e 16 fe 01 07 27 2a 3e 16 00 51 9c ae 79 00 44 07 29 ff",
+      "translated": "",
+      "table_index": 2,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F640"
+      ],
+      "pointer_addresses": [
+        "0x0839F640"
+      ]
+    },
+    {
+      "id": "axvj_8153718b8a09",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F0BB",
+      "byte_length": 33,
+      "original": "ほかの ポケモンに おどかされても\n１ど くらいは がまんできる",
+      "original_hex": "1e 06 19 00 9f 59 73 7e 16 00 05 45 06 0b 2a 13 23 fe a2 45 00 08 27 02 1a 00 37 1f 2e 44 07 29 ff",
+      "translated": "",
+      "table_index": 3,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F644"
+      ],
+      "pointer_addresses": [
+        "0x0839F644"
+      ]
+    },
+    {
+      "id": "axvj_15d418dbffdb",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F0DC",
+      "byte_length": 25,
+      "original": "ほかの ポケモンに おどかされても\nがまんできる",
+      "original_hex": "1e 06 19 00 9f 59 73 7e 16 00 05 45 06 0b 2a 13 23 fe 37 1f 2e 44 07 29 ff",
+      "translated": "",
+      "table_index": 4,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F648"
+      ],
+      "pointer_addresses": [
+        "0x0839F648"
+      ]
+    },
+    {
+      "id": "axvj_2f7e63753cad",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F0F5",
+      "byte_length": 35,
+      "original": "ほかの ポケモンに おどかされても\nすこし くらいなら がまんできる",
+      "original_hex": "1e 06 19 00 9f 59 73 7e 16 00 05 45 06 0b 2a 13 23 fe 0d 0a 0c 00 08 27 02 15 27 00 37 1f 2e 44 07 29 ff",
+      "translated": "",
+      "table_index": 5,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F64C"
+      ],
+      "pointer_addresses": [
+        "0x0839F64C"
+      ]
+    },
+    {
+      "id": "axvj_2a495af5d066",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F118",
+      "byte_length": 30,
+      "original": "この わざを だした あとは\nあまり びっくり しなくなる",
+      "original_hex": "0a 19 00 2c 3c 2d 00 41 0c 10 00 01 14 1a fe 01 1f 28 00 47 50 08 28 00 0c 15 08 15 29 ff",
+      "translated": "",
+      "table_index": 6,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F650"
+      ],
+      "pointer_addresses": [
+        "0x0839F650"
+      ]
+    },
+    {
+      "id": "axvj_776ba80d3721",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F136",
+      "byte_length": 33,
+      "original": "じぶんの まえに アピールした\nポケモンを ちょっと おどろかす",
+      "original_hex": "3d 48 2e 19 00 1f 04 16 00 51 9c ae 79 0c 10 fe 9f 59 73 7e 2d 00 11 36 50 14 00 05 45 2b 06 0d ff",
+      "translated": "",
+      "table_index": 7,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F654"
+      ],
+      "pointer_addresses": [
+        "0x0839F654"
+      ]
+    },
+    {
+      "id": "axvj_9616ab197006",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F157",
+      "byte_length": 34,
+      "original": "アピールが おわっている ポケモン\nみんなを ちょっと おどろかす",
+      "original_hex": "51 9c ae 79 37 00 05 2c 50 13 02 29 00 9f 59 73 7e fe 20 2e 15 2d 00 11 36 50 14 00 05 45 2b 06 0d ff",
+      "translated": "",
+      "table_index": 8,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F658"
+      ],
+      "pointer_addresses": [
+        "0x0839F658"
+      ]
+    },
+    {
+      "id": "axvj_82df788db15c",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F179",
+      "byte_length": 28,
+      "original": "じぶんの まえに アピールした\nポケモンを おどろかす",
+      "original_hex": "3d 48 2e 19 00 1f 04 16 00 51 9c ae 79 0c 10 fe 9f 59 73 7e 2d 00 05 45 2b 06 0d ff",
+      "translated": "",
+      "table_index": 9,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F65C"
+      ],
+      "pointer_addresses": [
+        "0x0839F65C"
+      ]
+    },
+    {
+      "id": "axvj_760825d88834",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F195",
+      "byte_length": 29,
+      "original": "アピールが おわっている ポケモン\nみんなを おどろかす",
+      "original_hex": "51 9c ae 79 37 00 05 2c 50 13 02 29 00 9f 59 73 7e fe 20 2e 15 2d 00 05 45 2b 06 0d ff",
+      "translated": "",
+      "table_index": 10,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F660"
+      ],
+      "pointer_addresses": [
+        "0x0839F660"
+      ]
+    },
+    {
+      "id": "axvj_8ebdd1f4649c",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F1B2",
+      "byte_length": 32,
+      "original": "じぶんの まえに アピールした\nポケモンを かなり おどろかす",
+      "original_hex": "3d 48 2e 19 00 1f 04 16 00 51 9c ae 79 0c 10 fe 9f 59 73 7e 2d 00 06 15 28 00 05 45 2b 06 0d ff",
+      "translated": "",
+      "table_index": 11,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F664"
+      ],
+      "pointer_addresses": [
+        "0x0839F664"
+      ]
+    },
+    {
+      "id": "axvj_cf8f1025d664",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F1D2",
+      "byte_length": 33,
+      "original": "アピールが おわっている ポケモン\nみんなを かなり おどろかす",
+      "original_hex": "51 9c ae 79 37 00 05 2c 50 13 02 29 00 9f 59 73 7e fe 20 2e 15 2d 00 06 15 28 00 05 45 2b 06 0d ff",
+      "translated": "",
+      "table_index": 12,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F668"
+      ],
+      "pointer_addresses": [
+        "0x0839F668"
+      ]
+    },
+    {
+      "id": "axvj_d3663d5b1893",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F1F3",
+      "byte_length": 28,
+      "original": "じぶんの まえに アピールした\nポケモンを おどろかす",
+      "original_hex": "3d 48 2e 19 00 1f 04 16 00 51 9c ae 79 0c 10 fe 9f 59 73 7e 2d 00 05 45 2b 06 0d ff",
+      "translated": "",
+      "table_index": 13,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F66C"
+      ],
+      "pointer_addresses": [
+        "0x0839F66C"
+      ]
+    },
+    {
+      "id": "axvj_0cbc1993f6d9",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F20F",
+      "byte_length": 29,
+      "original": "アピールが おわっている ポケモン\nみんなを おどろかす",
+      "original_hex": "51 9c ae 79 37 00 05 2c 50 13 02 29 00 9f 59 73 7e fe 20 2e 15 2d 00 05 45 2b 06 0d ff",
+      "translated": "",
+      "table_index": 14,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F670"
+      ],
+      "pointer_addresses": [
+        "0x0839F670"
+      ]
+    },
+    {
+      "id": "axvj_b27c3d54d5a2",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F22C",
+      "byte_length": 36,
+      "original": "しんさいんの ほかの ポケモンへの\nちゅうもくを そらすことが できる",
+      "original_hex": "0c 2e 0b 02 2e 19 00 1e 06 19 00 9f 59 73 7e 1d 19 fe 11 35 03 23 08 2d 00 0f 27 0d 0a 14 37 00 44 07 29 ff",
+      "translated": "",
+      "table_index": 15,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F674"
+      ],
+      "pointer_addresses": [
+        "0x0839F674"
+      ]
+    },
+    {
+      "id": "axvj_65db9294026d",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F250",
+      "byte_length": 35,
+      "original": "しんさいんに ちゅうもく されている\nポケモンを とくに おどろかす",
+      "original_hex": "0c 2e 0b 02 2e 16 00 11 35 03 23 08 00 0b 2a 13 02 29 fe 9f 59 73 7e 2d 00 14 08 16 00 05 45 2b 06 0d ff",
+      "translated": "",
+      "table_index": 16,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F678"
+      ],
+      "pointer_addresses": [
+        "0x0839F678"
+      ]
+    },
+    {
+      "id": "axvj_34345abc5cbf",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F273",
+      "byte_length": 34,
+      "original": "みんなの じゃまを しまくって\nつぎの アピールは さんか しない",
+      "original_hex": "20 2e 15 19 00 3d 34 1f 2d 00 0c 1f 08 50 13 fe 12 38 19 00 51 9c ae 79 1a 00 0b 2e 06 00 0c 15 02 ff",
+      "translated": "",
+      "table_index": 17,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F67C"
+      ],
+      "pointer_addresses": [
+        "0x0839F67C"
+      ]
+    },
+    {
+      "id": "axvj_0e116bae0430",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F295",
+      "byte_length": 34,
+      "original": "おなじ タイプの アピールを した\nポケモンを とくに おどろかす",
+      "original_hex": "05 15 3d 00 60 52 9d 19 00 51 9c ae 79 2d 00 0c 10 fe 9f 59 73 7e 2d 00 14 08 16 00 05 45 2b 06 0d ff",
+      "translated": "",
+      "table_index": 18,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F680"
+      ],
+      "pointer_addresses": [
+        "0x0839F680"
+      ]
+    },
+    {
+      "id": "axvj_b264ec577fdf",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F2B7",
+      "byte_length": 31,
+      "original": "かっこいい アピールを した\nポケモンを かなり おどろかす",
+      "original_hex": "06 50 0a 02 02 00 51 9c ae 79 2d 00 0c 10 fe 9f 59 73 7e 2d 00 06 15 28 00 05 45 2b 06 0d ff",
+      "translated": "",
+      "table_index": 19,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F684"
+      ],
+      "pointer_addresses": [
+        "0x0839F684"
+      ]
+    },
+    {
+      "id": "axvj_fd14c24c8141",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F2D6",
+      "byte_length": 31,
+      "original": "うつくしい アピールを した\nポケモンを かなり おどろかす",
+      "original_hex": "03 12 08 0c 02 00 51 9c ae 79 2d 00 0c 10 fe 9f 59 73 7e 2d 00 06 15 28 00 05 45 2b 06 0d ff",
+      "translated": "",
+      "table_index": 20,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F688"
+      ],
+      "pointer_addresses": [
+        "0x0839F688"
+      ]
+    },
+    {
+      "id": "axvj_2d70c7f53e38",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F2F5",
+      "byte_length": 30,
+      "original": "かわいい アピールを した\nポケモンを かなり おどろかす",
+      "original_hex": "06 2c 02 02 00 51 9c ae 79 2d 00 0c 10 fe 9f 59 73 7e 2d 00 06 15 28 00 05 45 2b 06 0d ff",
+      "translated": "",
+      "table_index": 21,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F68C"
+      ],
+      "pointer_addresses": [
+        "0x0839F68C"
+      ]
+    },
+    {
+      "id": "axvj_d03d3714d8bd",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F313",
+      "byte_length": 30,
+      "original": "かしこい アピールを した\nポケモンを かなり おどろかす",
+      "original_hex": "06 0c 0a 02 00 51 9c ae 79 2d 00 0c 10 fe 9f 59 73 7e 2d 00 06 15 28 00 05 45 2b 06 0d ff",
+      "translated": "",
+      "table_index": 22,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F690"
+      ],
+      "pointer_addresses": [
+        "0x0839F690"
+      ]
+    },
+    {
+      "id": "axvj_563b0384f714",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F331",
+      "byte_length": 31,
+      "original": "たくましい アピールを した\nポケモンを かなり おどろかす",
+      "original_hex": "10 08 1f 0c 02 00 51 9c ae 79 2d 00 0c 10 fe 9f 59 73 7e 2d 00 06 15 28 00 05 45 2b 06 0d ff",
+      "translated": "",
+      "table_index": 23,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F694"
+      ],
+      "pointer_addresses": [
+        "0x0839F694"
+      ]
+    },
+    {
+      "id": "axvj_4c9ac0ce1f41",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F350",
+      "byte_length": 32,
+      "original": "このあと アピールする ポケモン\n１ひきを きんちょう させる",
+      "original_hex": "0a 19 01 14 00 51 9c ae 79 0d 29 00 9f 59 73 7e fe a2 1b 07 2d 00 07 2e 11 36 03 00 0b 0e 29 ff",
+      "translated": "",
+      "table_index": 24,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F698"
+      ],
+      "pointer_addresses": [
+        "0x0839F698"
+      ]
+    },
+    {
+      "id": "axvj_273b4c6d743a",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F370",
+      "byte_length": 32,
+      "original": "このあと アピールする ポケモン\nみんなを きんちょう させる",
+      "original_hex": "0a 19 01 14 00 51 9c ae 79 0d 29 00 9f 59 73 7e fe 20 2e 15 2d 00 07 2e 11 36 03 00 0b 0e 29 ff",
+      "translated": "",
+      "table_index": 25,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F69C"
+      ],
+      "pointer_addresses": [
+        "0x0839F69C"
+      ]
+    },
+    {
+      "id": "axvj_ee192779e64e",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F390",
+      "byte_length": 27,
+      "original": "アピールが おわった ポケモンの\nちょうしを さげる",
+      "original_hex": "51 9c ae 79 37 00 05 2c 50 10 00 9f 59 73 7e 19 fe 11 36 03 0c 2d 00 0b 3a 29 ff",
+      "translated": "",
+      "table_index": 26,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6A0"
+      ],
+      "pointer_addresses": [
+        "0x0839F6A0"
+      ]
+    },
+    {
+      "id": "axvj_bb504b68d2cc",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F3AB",
+      "byte_length": 29,
+      "original": "ちょうしの いい ポケモン\nみんなを かなり おどろかす",
+      "original_hex": "11 36 03 0c 19 00 02 02 00 9f 59 73 7e fe 20 2e 15 2d 00 06 15 28 00 05 45 2b 06 0d ff",
+      "translated": "",
+      "table_index": 27,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6A4"
+      ],
+      "pointer_addresses": [
+        "0x0839F6A4"
+      ]
+    },
+    {
+      "id": "axvj_62dc3e15bd6c",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F3C8",
+      "byte_length": 33,
+      "original": "１ばん はじめに アピールすると\nアピールが すごく うまくいく",
+      "original_hex": "a2 46 2e 00 1a 3d 22 16 00 51 9c ae 79 0d 29 14 fe 51 9c ae 79 37 00 0d 3b 08 00 03 1f 08 02 08 ff",
+      "translated": "",
+      "table_index": 28,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6A8"
+      ],
+      "pointer_addresses": [
+        "0x0839F6A8"
+      ]
+    },
+    {
+      "id": "axvj_04906592a517",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F3E9",
+      "byte_length": 33,
+      "original": "１ばん さいごに アピールすると\nアピールが すごく うまくいく",
+      "original_hex": "a2 46 2e 00 0b 02 3b 16 00 51 9c ae 79 0d 29 14 fe 51 9c ae 79 37 00 0d 3b 08 00 03 1f 08 02 08 ff",
+      "translated": "",
+      "table_index": 29,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6AC"
+      ],
+      "pointer_addresses": [
+        "0x0839F6AC"
+      ]
+    },
+    {
+      "id": "axvj_18a05e994043",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F40A",
+      "byte_length": 36,
+      "original": "それまでの ポケモンの アピールと\nおなじくらいの アピールに みせる",
+      "original_hex": "0f 2a 1f 44 19 00 9f 59 73 7e 19 00 51 9c ae 79 14 fe 05 15 3d 08 27 02 19 00 51 9c ae 79 16 00 20 0e 29 ff",
+      "translated": "",
+      "table_index": 30,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6B0"
+      ],
+      "pointer_addresses": [
+        "0x0839F6B0"
+      ]
+    },
+    {
+      "id": "axvj_51f0e0138b9a",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F42E",
+      "byte_length": 33,
+      "original": "１つまえの ポケモンの アピールと\nおなじくらい うまく できる",
+      "original_hex": "a2 12 1f 04 19 00 9f 59 73 7e 19 00 51 9c ae 79 14 fe 05 15 3d 08 27 02 00 03 1f 08 00 44 07 29 ff",
+      "translated": "",
+      "table_index": 31,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6B4"
+      ],
+      "pointer_addresses": [
+        "0x0839F6B4"
+      ]
+    },
+    {
+      "id": "axvj_a27054b33532",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F44F",
+      "byte_length": 34,
+      "original": "みんなの あとで アピールするほど\nすごい アピールに みせられる",
+      "original_hex": "20 2e 15 19 00 01 14 44 00 51 9c ae 79 0d 29 1e 45 fe 0d 3b 02 00 51 9c ae 79 16 00 20 0e 27 2a 29 ff",
+      "translated": "",
+      "table_index": 32,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6B8"
+      ],
+      "pointer_addresses": [
+        "0x0839F6B8"
+      ]
+    },
+    {
+      "id": "axvj_4efc595c603a",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F471",
+      "byte_length": 33,
+      "original": "だすときに よって アピールの\nできぐあいが いろいろと かわる",
+      "original_hex": "41 0d 14 07 16 00 26 50 13 00 51 9c ae 79 19 fe 44 07 39 01 02 37 00 02 2b 02 2b 14 00 06 2c 29 ff",
+      "translated": "",
+      "table_index": 33,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6BC"
+      ],
+      "pointer_addresses": [
+        "0x0839F6BC"
+      ]
+    },
+    {
+      "id": "axvj_fc35b94f5558",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F492",
+      "byte_length": 36,
+      "original": "１つまえの ポケモンの アピールと\nタイプが おなじなら きにいられる",
+      "original_hex": "a2 12 1f 04 19 00 9f 59 73 7e 19 00 51 9c ae 79 14 fe 60 52 9d 37 00 05 15 3d 15 27 00 07 16 02 27 2a 29 ff",
+      "translated": "",
+      "table_index": 34,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6C0"
+      ],
+      "pointer_addresses": [
+        "0x0839F6C0"
+      ]
+    },
+    {
+      "id": "axvj_4ba0d268ea1c",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F4B6",
+      "byte_length": 36,
+      "original": "１つまえの ポケモンの アピールと\nタイプが ちがうなら きにいられる",
+      "original_hex": "a2 12 1f 04 19 00 9f 59 73 7e 19 00 51 9c ae 79 14 fe 60 52 9d 37 00 11 37 03 15 27 00 07 16 02 27 2a 29 ff",
+      "translated": "",
+      "table_index": 35,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6C4"
+      ],
+      "pointer_addresses": [
+        "0x0839F6C4"
+      ]
+    },
+    {
+      "id": "axvj_698990e6ca6b",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F4DA",
+      "byte_length": 33,
+      "original": "１つまえの ポケモンの アピールの\nうまさに えいきょう される",
+      "original_hex": "a2 12 1f 04 19 00 9f 59 73 7e 19 00 51 9c ae 79 19 fe 03 1f 0b 16 00 04 02 07 36 03 00 0b 2a 29 ff",
+      "translated": "",
+      "table_index": 36,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6C8"
+      ],
+      "pointer_addresses": [
+        "0x0839F6C8"
+      ]
+    },
+    {
+      "id": "axvj_3c93bad6b0bd",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F4FB",
+      "byte_length": 30,
+      "original": "アピールの ちょうしが あがる\nきんちょうも しにくくなる",
+      "original_hex": "51 9c ae 79 19 00 11 36 03 0c 37 00 01 37 29 fe 07 2e 11 36 03 23 00 0c 16 08 08 15 29 ff",
+      "translated": "",
+      "table_index": 37,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6CC"
+      ],
+      "pointer_addresses": [
+        "0x0839F6CC"
+      ]
+    },
+    {
+      "id": "axvj_747d1779f225",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F519",
+      "byte_length": 32,
+      "original": "ちょうしが いいときに だすと\nアピールが とても うまくいく",
+      "original_hex": "11 36 03 0c 37 00 02 02 14 07 16 00 41 0d 14 fe 51 9c ae 79 37 00 14 13 23 00 03 1f 08 02 08 ff",
+      "translated": "",
+      "table_index": 38,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6D0"
+      ],
+      "pointer_addresses": [
+        "0x0839F6D0"
+      ]
+    },
+    {
+      "id": "axvj_786dea7c4ec7",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F539",
+      "byte_length": 31,
+      "original": "このつぎの アピールを\nはじめの ほうに だすことが できる",
+      "original_hex": "0a 19 12 38 19 00 51 9c ae 79 2d fe 1a 3d 22 19 00 1e 03 16 00 41 0d 0a 14 37 00 44 07 29 ff",
+      "translated": "",
+      "table_index": 39,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6D4"
+      ],
+      "pointer_addresses": [
+        "0x0839F6D4"
+      ]
+    },
+    {
+      "id": "axvj_6dd6460f5269",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F558",
+      "byte_length": 31,
+      "original": "このつぎの アピールを\nおわりの ほうに だすことが できる",
+      "original_hex": "0a 19 12 38 19 00 51 9c ae 79 2d fe 05 2c 28 19 00 1e 03 16 00 41 0d 0a 14 37 00 44 07 29 ff",
+      "translated": "",
+      "table_index": 40,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6D8"
+      ],
+      "pointer_addresses": [
+        "0x0839F6D8"
+      ]
+    },
+    {
+      "id": "axvj_e2d87a05b008",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F577",
+      "byte_length": 29,
+      "original": "このつぎの アピールの\nじゅんばんが かわりやすく なる",
+      "original_hex": "0a 19 12 38 19 00 51 9c ae 79 19 fe 3d 35 2e 46 2e 37 00 06 2c 28 24 0d 08 00 15 29 ff",
+      "translated": "",
+      "table_index": 41,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6DC"
+      ],
+      "pointer_addresses": [
+        "0x0839F6DC"
+      ]
+    },
+    {
+      "id": "axvj_e1029ceef223",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F594",
+      "byte_length": 30,
+      "original": "このつぎの アピールの\nじゅんばんを めちゃくちゃに する",
+      "original_hex": "0a 19 12 38 19 00 51 9c ae 79 19 fe 3d 35 2e 46 2e 2d 00 22 11 34 08 11 34 16 00 0d 29 ff",
+      "translated": "",
+      "table_index": 42,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6E0"
+      ],
+      "pointer_addresses": [
+        "0x0839F6E0"
+      ]
+    },
+    {
+      "id": "axvj_08fe226e8ea4",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F5B2",
+      "byte_length": 32,
+      "original": "どの コンテストで みせても\nかならず もりあがる アピール ",
+      "original_hex": "45 19 00 5a 7e 63 5d 64 44 00 20 0e 13 23 fe 06 15 27 3e 00 23 28 01 37 29 00 51 9c ae 79 00 ff",
+      "translated": "",
+      "table_index": 43,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6E4"
+      ],
+      "pointer_addresses": [
+        "0x0839F6E4"
+      ]
+    },
+    {
+      "id": "axvj_8146a54fab4d",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F5D2",
+      "byte_length": 33,
+      "original": "アピールが うまくいった ポケモン\nみんなを かなり おどろかす",
+      "original_hex": "51 9c ae 79 37 00 03 1f 08 02 50 10 00 9f 59 73 7e fe 20 2e 15 2d 00 06 15 28 00 05 45 2b 06 0d ff",
+      "translated": "",
+      "table_index": 44,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6E8"
+      ],
+      "pointer_addresses": [
+        "0x0839F6E8"
+      ]
+    },
+    {
+      "id": "axvj_30d6275f4aa2",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F5F3",
+      "byte_length": 32,
+      "original": "かいじょうが もりあがっている ほど\nアピールが きにいられる",
+      "original_hex": "06 02 3d 36 03 37 00 23 28 01 37 50 13 02 29 00 1e 45 fe 51 9c ae 79 37 00 07 16 02 27 2a 29 ff",
+      "translated": "",
+      "table_index": 45,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6EC"
+      ],
+      "pointer_addresses": [
+        "0x0839F6EC"
+      ]
+    },
+    {
+      "id": "axvj_547442a03318",
+      "module": "招式说明-华丽大赛",
+      "address": "0x0839F613",
+      "byte_length": 33,
+      "original": "このアピールのあと かいじょうが\nしばらく もりあがらなく なる",
+      "original_hex": "0a 19 51 9c ae 79 19 01 14 00 06 02 3d 36 03 37 fe 0c 46 27 08 00 23 28 01 37 27 15 08 00 15 29 ff",
+      "translated": "",
+      "table_index": 46,
+      "table_base": "0x0839F638",
+      "is_fixed_table": false,
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0839F6F0"
+      ],
+      "pointer_addresses": [
+        "0x0839F6F0"
+      ]
     },
     {
       "id": "axvj_7f027df2becc",
@@ -107822,150 +109062,6 @@
       ]
     },
     {
-      "id": "axvj_0b8ac86e940b",
-      "module": "剧情",
-      "address": "0x08397378",
-      "byte_length": 5,
-      "original": "た   ",
-      "original_hex": "10 00 00 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08397428"
-      ],
-      "pointer_addresses": [
-        "0x08397428"
-      ]
-    },
-    {
-      "id": "axvj_b35f3e725eae",
-      "module": "剧情",
-      "address": "0x08397380",
-      "byte_length": 5,
-      "original": "ね   ",
-      "original_hex": "18 00 00 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839742C"
-      ],
-      "pointer_addresses": [
-        "0x0839742C"
-      ]
-    },
-    {
-      "id": "axvj_58a5c48b1b77",
-      "module": "剧情",
-      "address": "0x08397418",
-      "byte_length": 5,
-      "original": "‥   ",
-      "original_hex": "b0 00 00 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08397478"
-      ],
-      "pointer_addresses": [
-        "0x08397478"
-      ]
-    },
-    {
-      "id": "axvj_d801d929de27",
-      "module": "剧情",
-      "address": "0x083974DC",
-      "byte_length": 5,
-      "original": "た   ",
-      "original_hex": "10 00 00 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839751C"
-      ],
-      "pointer_addresses": [
-        "0x0839751C"
-      ]
-    },
-    {
-      "id": "axvj_ba56c1d9846f",
-      "module": "剧情",
-      "address": "0x083974EC",
-      "byte_length": 5,
-      "original": "と   ",
-      "original_hex": "14 00 00 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08397524"
-      ],
-      "pointer_addresses": [
-        "0x08397524"
-      ]
-    },
-    {
-      "id": "axvj_95aa81a73c21",
-      "module": "剧情",
-      "address": "0x083974F4",
-      "byte_length": 5,
-      "original": "ね   ",
-      "original_hex": "18 00 00 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08397528"
-      ],
-      "pointer_addresses": [
-        "0x08397528"
-      ]
-    },
-    {
-      "id": "axvj_280be5db6228",
-      "module": "剧情",
-      "address": "0x08397584",
-      "byte_length": 5,
-      "original": "た   ",
-      "original_hex": "10 00 00 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083975AC"
-      ],
-      "pointer_addresses": [
-        "0x083975AC"
-      ]
-    },
-    {
-      "id": "axvj_5372e137020e",
-      "module": "剧情",
-      "address": "0x0839758C",
-      "byte_length": 5,
-      "original": "と   ",
-      "original_hex": "14 00 00 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083975B0"
-      ],
-      "pointer_addresses": [
-        "0x083975B0"
-      ]
-    },
-    {
-      "id": "axvj_31c68d848e4c",
-      "module": "剧情",
-      "address": "0x08397594",
-      "byte_length": 5,
-      "original": "ね   ",
-      "original_hex": "18 00 00 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083975B4"
-      ],
-      "pointer_addresses": [
-        "0x083975B4"
-      ]
-    },
-    {
       "id": "axvj_813af1cc1375",
       "module": "剧情",
       "address": "0x0839A648",
@@ -108325,1014 +109421,6 @@
       ],
       "pointer_addresses": [
         "0x0839DF44"
-      ]
-    },
-    {
-      "id": "axvj_3ca11ba154c1",
-      "module": "剧情",
-      "address": "0x0839F05A",
-      "byte_length": 29,
-      "original": "この アピールの あと\nびっくり しやすく なってしまう",
-      "original_hex": "0a 19 00 51 9c ae 79 19 00 01 14 fe 47 50 08 28 00 0c 24 0d 08 00 15 50 13 0c 1f 03 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F638"
-      ],
-      "pointer_addresses": [
-        "0x0839F638"
-      ]
-    },
-    {
-      "id": "axvj_d236c74d8804",
-      "module": "剧情",
-      "address": "0x0839F077",
-      "byte_length": 35,
-      "original": "すごいアピールに なるが このあと\nさいごまで なにも できなくなる",
-      "original_hex": "0d 3b 02 51 9c ae 79 16 00 15 29 37 00 0a 19 01 14 fe 0b 02 3b 1f 44 00 15 16 23 00 44 07 15 08 15 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F63C"
-      ],
-      "pointer_addresses": [
-        "0x0839F63C"
-      ]
-    },
-    {
-      "id": "axvj_524402f5a7e2",
-      "module": "剧情",
-      "address": "0x0839F09A",
-      "byte_length": 33,
-      "original": "つづけて だしても しんさいんに\nあきられずに アピール できる",
-      "original_hex": "12 43 09 13 00 41 0c 13 23 00 0c 2e 0b 02 2e 16 fe 01 07 27 2a 3e 16 00 51 9c ae 79 00 44 07 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F640"
-      ],
-      "pointer_addresses": [
-        "0x0839F640"
-      ]
-    },
-    {
-      "id": "axvj_8153718b8a09",
-      "module": "剧情",
-      "address": "0x0839F0BB",
-      "byte_length": 33,
-      "original": "ほかの ポケモンに おどかされても\n１ど くらいは がまんできる",
-      "original_hex": "1e 06 19 00 9f 59 73 7e 16 00 05 45 06 0b 2a 13 23 fe a2 45 00 08 27 02 1a 00 37 1f 2e 44 07 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F644"
-      ],
-      "pointer_addresses": [
-        "0x0839F644"
-      ]
-    },
-    {
-      "id": "axvj_15d418dbffdb",
-      "module": "剧情",
-      "address": "0x0839F0DC",
-      "byte_length": 25,
-      "original": "ほかの ポケモンに おどかされても\nがまんできる",
-      "original_hex": "1e 06 19 00 9f 59 73 7e 16 00 05 45 06 0b 2a 13 23 fe 37 1f 2e 44 07 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F648"
-      ],
-      "pointer_addresses": [
-        "0x0839F648"
-      ]
-    },
-    {
-      "id": "axvj_2f7e63753cad",
-      "module": "剧情",
-      "address": "0x0839F0F5",
-      "byte_length": 35,
-      "original": "ほかの ポケモンに おどかされても\nすこし くらいなら がまんできる",
-      "original_hex": "1e 06 19 00 9f 59 73 7e 16 00 05 45 06 0b 2a 13 23 fe 0d 0a 0c 00 08 27 02 15 27 00 37 1f 2e 44 07 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F64C"
-      ],
-      "pointer_addresses": [
-        "0x0839F64C"
-      ]
-    },
-    {
-      "id": "axvj_2a495af5d066",
-      "module": "剧情",
-      "address": "0x0839F118",
-      "byte_length": 30,
-      "original": "この わざを だした あとは\nあまり びっくり しなくなる",
-      "original_hex": "0a 19 00 2c 3c 2d 00 41 0c 10 00 01 14 1a fe 01 1f 28 00 47 50 08 28 00 0c 15 08 15 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F650"
-      ],
-      "pointer_addresses": [
-        "0x0839F650"
-      ]
-    },
-    {
-      "id": "axvj_776ba80d3721",
-      "module": "剧情",
-      "address": "0x0839F136",
-      "byte_length": 33,
-      "original": "じぶんの まえに アピールした\nポケモンを ちょっと おどろかす",
-      "original_hex": "3d 48 2e 19 00 1f 04 16 00 51 9c ae 79 0c 10 fe 9f 59 73 7e 2d 00 11 36 50 14 00 05 45 2b 06 0d ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F654"
-      ],
-      "pointer_addresses": [
-        "0x0839F654"
-      ]
-    },
-    {
-      "id": "axvj_9616ab197006",
-      "module": "剧情",
-      "address": "0x0839F157",
-      "byte_length": 34,
-      "original": "アピールが おわっている ポケモン\nみんなを ちょっと おどろかす",
-      "original_hex": "51 9c ae 79 37 00 05 2c 50 13 02 29 00 9f 59 73 7e fe 20 2e 15 2d 00 11 36 50 14 00 05 45 2b 06 0d ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F658"
-      ],
-      "pointer_addresses": [
-        "0x0839F658"
-      ]
-    },
-    {
-      "id": "axvj_82df788db15c",
-      "module": "剧情",
-      "address": "0x0839F179",
-      "byte_length": 28,
-      "original": "じぶんの まえに アピールした\nポケモンを おどろかす",
-      "original_hex": "3d 48 2e 19 00 1f 04 16 00 51 9c ae 79 0c 10 fe 9f 59 73 7e 2d 00 05 45 2b 06 0d ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F65C"
-      ],
-      "pointer_addresses": [
-        "0x0839F65C"
-      ]
-    },
-    {
-      "id": "axvj_760825d88834",
-      "module": "剧情",
-      "address": "0x0839F195",
-      "byte_length": 29,
-      "original": "アピールが おわっている ポケモン\nみんなを おどろかす",
-      "original_hex": "51 9c ae 79 37 00 05 2c 50 13 02 29 00 9f 59 73 7e fe 20 2e 15 2d 00 05 45 2b 06 0d ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F660"
-      ],
-      "pointer_addresses": [
-        "0x0839F660"
-      ]
-    },
-    {
-      "id": "axvj_8ebdd1f4649c",
-      "module": "剧情",
-      "address": "0x0839F1B2",
-      "byte_length": 32,
-      "original": "じぶんの まえに アピールした\nポケモンを かなり おどろかす",
-      "original_hex": "3d 48 2e 19 00 1f 04 16 00 51 9c ae 79 0c 10 fe 9f 59 73 7e 2d 00 06 15 28 00 05 45 2b 06 0d ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F664"
-      ],
-      "pointer_addresses": [
-        "0x0839F664"
-      ]
-    },
-    {
-      "id": "axvj_cf8f1025d664",
-      "module": "剧情",
-      "address": "0x0839F1D2",
-      "byte_length": 33,
-      "original": "アピールが おわっている ポケモン\nみんなを かなり おどろかす",
-      "original_hex": "51 9c ae 79 37 00 05 2c 50 13 02 29 00 9f 59 73 7e fe 20 2e 15 2d 00 06 15 28 00 05 45 2b 06 0d ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F668"
-      ],
-      "pointer_addresses": [
-        "0x0839F668"
-      ]
-    },
-    {
-      "id": "axvj_d3663d5b1893",
-      "module": "剧情",
-      "address": "0x0839F1F3",
-      "byte_length": 28,
-      "original": "じぶんの まえに アピールした\nポケモンを おどろかす",
-      "original_hex": "3d 48 2e 19 00 1f 04 16 00 51 9c ae 79 0c 10 fe 9f 59 73 7e 2d 00 05 45 2b 06 0d ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F66C"
-      ],
-      "pointer_addresses": [
-        "0x0839F66C"
-      ]
-    },
-    {
-      "id": "axvj_0cbc1993f6d9",
-      "module": "剧情",
-      "address": "0x0839F20F",
-      "byte_length": 29,
-      "original": "アピールが おわっている ポケモン\nみんなを おどろかす",
-      "original_hex": "51 9c ae 79 37 00 05 2c 50 13 02 29 00 9f 59 73 7e fe 20 2e 15 2d 00 05 45 2b 06 0d ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F670"
-      ],
-      "pointer_addresses": [
-        "0x0839F670"
-      ]
-    },
-    {
-      "id": "axvj_b27c3d54d5a2",
-      "module": "剧情",
-      "address": "0x0839F22C",
-      "byte_length": 36,
-      "original": "しんさいんの ほかの ポケモンへの\nちゅうもくを そらすことが できる",
-      "original_hex": "0c 2e 0b 02 2e 19 00 1e 06 19 00 9f 59 73 7e 1d 19 fe 11 35 03 23 08 2d 00 0f 27 0d 0a 14 37 00 44 07 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F674"
-      ],
-      "pointer_addresses": [
-        "0x0839F674"
-      ]
-    },
-    {
-      "id": "axvj_65db9294026d",
-      "module": "剧情",
-      "address": "0x0839F250",
-      "byte_length": 35,
-      "original": "しんさいんに ちゅうもく されている\nポケモンを とくに おどろかす",
-      "original_hex": "0c 2e 0b 02 2e 16 00 11 35 03 23 08 00 0b 2a 13 02 29 fe 9f 59 73 7e 2d 00 14 08 16 00 05 45 2b 06 0d ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F678"
-      ],
-      "pointer_addresses": [
-        "0x0839F678"
-      ]
-    },
-    {
-      "id": "axvj_34345abc5cbf",
-      "module": "剧情",
-      "address": "0x0839F273",
-      "byte_length": 34,
-      "original": "みんなの じゃまを しまくって\nつぎの アピールは さんか しない",
-      "original_hex": "20 2e 15 19 00 3d 34 1f 2d 00 0c 1f 08 50 13 fe 12 38 19 00 51 9c ae 79 1a 00 0b 2e 06 00 0c 15 02 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F67C"
-      ],
-      "pointer_addresses": [
-        "0x0839F67C"
-      ]
-    },
-    {
-      "id": "axvj_0e116bae0430",
-      "module": "剧情",
-      "address": "0x0839F295",
-      "byte_length": 34,
-      "original": "おなじ タイプの アピールを した\nポケモンを とくに おどろかす",
-      "original_hex": "05 15 3d 00 60 52 9d 19 00 51 9c ae 79 2d 00 0c 10 fe 9f 59 73 7e 2d 00 14 08 16 00 05 45 2b 06 0d ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F680"
-      ],
-      "pointer_addresses": [
-        "0x0839F680"
-      ]
-    },
-    {
-      "id": "axvj_b264ec577fdf",
-      "module": "剧情",
-      "address": "0x0839F2B7",
-      "byte_length": 31,
-      "original": "かっこいい アピールを した\nポケモンを かなり おどろかす",
-      "original_hex": "06 50 0a 02 02 00 51 9c ae 79 2d 00 0c 10 fe 9f 59 73 7e 2d 00 06 15 28 00 05 45 2b 06 0d ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F684"
-      ],
-      "pointer_addresses": [
-        "0x0839F684"
-      ]
-    },
-    {
-      "id": "axvj_fd14c24c8141",
-      "module": "剧情",
-      "address": "0x0839F2D6",
-      "byte_length": 31,
-      "original": "うつくしい アピールを した\nポケモンを かなり おどろかす",
-      "original_hex": "03 12 08 0c 02 00 51 9c ae 79 2d 00 0c 10 fe 9f 59 73 7e 2d 00 06 15 28 00 05 45 2b 06 0d ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F688"
-      ],
-      "pointer_addresses": [
-        "0x0839F688"
-      ]
-    },
-    {
-      "id": "axvj_2d70c7f53e38",
-      "module": "剧情",
-      "address": "0x0839F2F5",
-      "byte_length": 30,
-      "original": "かわいい アピールを した\nポケモンを かなり おどろかす",
-      "original_hex": "06 2c 02 02 00 51 9c ae 79 2d 00 0c 10 fe 9f 59 73 7e 2d 00 06 15 28 00 05 45 2b 06 0d ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F68C"
-      ],
-      "pointer_addresses": [
-        "0x0839F68C"
-      ]
-    },
-    {
-      "id": "axvj_d03d3714d8bd",
-      "module": "剧情",
-      "address": "0x0839F313",
-      "byte_length": 30,
-      "original": "かしこい アピールを した\nポケモンを かなり おどろかす",
-      "original_hex": "06 0c 0a 02 00 51 9c ae 79 2d 00 0c 10 fe 9f 59 73 7e 2d 00 06 15 28 00 05 45 2b 06 0d ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F690"
-      ],
-      "pointer_addresses": [
-        "0x0839F690"
-      ]
-    },
-    {
-      "id": "axvj_563b0384f714",
-      "module": "剧情",
-      "address": "0x0839F331",
-      "byte_length": 31,
-      "original": "たくましい アピールを した\nポケモンを かなり おどろかす",
-      "original_hex": "10 08 1f 0c 02 00 51 9c ae 79 2d 00 0c 10 fe 9f 59 73 7e 2d 00 06 15 28 00 05 45 2b 06 0d ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F694"
-      ],
-      "pointer_addresses": [
-        "0x0839F694"
-      ]
-    },
-    {
-      "id": "axvj_4c9ac0ce1f41",
-      "module": "剧情",
-      "address": "0x0839F350",
-      "byte_length": 32,
-      "original": "このあと アピールする ポケモン\n１ひきを きんちょう させる",
-      "original_hex": "0a 19 01 14 00 51 9c ae 79 0d 29 00 9f 59 73 7e fe a2 1b 07 2d 00 07 2e 11 36 03 00 0b 0e 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F698"
-      ],
-      "pointer_addresses": [
-        "0x0839F698"
-      ]
-    },
-    {
-      "id": "axvj_273b4c6d743a",
-      "module": "剧情",
-      "address": "0x0839F370",
-      "byte_length": 32,
-      "original": "このあと アピールする ポケモン\nみんなを きんちょう させる",
-      "original_hex": "0a 19 01 14 00 51 9c ae 79 0d 29 00 9f 59 73 7e fe 20 2e 15 2d 00 07 2e 11 36 03 00 0b 0e 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F69C"
-      ],
-      "pointer_addresses": [
-        "0x0839F69C"
-      ]
-    },
-    {
-      "id": "axvj_ee192779e64e",
-      "module": "剧情",
-      "address": "0x0839F390",
-      "byte_length": 27,
-      "original": "アピールが おわった ポケモンの\nちょうしを さげる",
-      "original_hex": "51 9c ae 79 37 00 05 2c 50 10 00 9f 59 73 7e 19 fe 11 36 03 0c 2d 00 0b 3a 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6A0"
-      ],
-      "pointer_addresses": [
-        "0x0839F6A0"
-      ]
-    },
-    {
-      "id": "axvj_bb504b68d2cc",
-      "module": "剧情",
-      "address": "0x0839F3AB",
-      "byte_length": 29,
-      "original": "ちょうしの いい ポケモン\nみんなを かなり おどろかす",
-      "original_hex": "11 36 03 0c 19 00 02 02 00 9f 59 73 7e fe 20 2e 15 2d 00 06 15 28 00 05 45 2b 06 0d ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6A4"
-      ],
-      "pointer_addresses": [
-        "0x0839F6A4"
-      ]
-    },
-    {
-      "id": "axvj_62dc3e15bd6c",
-      "module": "剧情",
-      "address": "0x0839F3C8",
-      "byte_length": 33,
-      "original": "１ばん はじめに アピールすると\nアピールが すごく うまくいく",
-      "original_hex": "a2 46 2e 00 1a 3d 22 16 00 51 9c ae 79 0d 29 14 fe 51 9c ae 79 37 00 0d 3b 08 00 03 1f 08 02 08 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6A8"
-      ],
-      "pointer_addresses": [
-        "0x0839F6A8"
-      ]
-    },
-    {
-      "id": "axvj_04906592a517",
-      "module": "剧情",
-      "address": "0x0839F3E9",
-      "byte_length": 33,
-      "original": "１ばん さいごに アピールすると\nアピールが すごく うまくいく",
-      "original_hex": "a2 46 2e 00 0b 02 3b 16 00 51 9c ae 79 0d 29 14 fe 51 9c ae 79 37 00 0d 3b 08 00 03 1f 08 02 08 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6AC"
-      ],
-      "pointer_addresses": [
-        "0x0839F6AC"
-      ]
-    },
-    {
-      "id": "axvj_18a05e994043",
-      "module": "剧情",
-      "address": "0x0839F40A",
-      "byte_length": 36,
-      "original": "それまでの ポケモンの アピールと\nおなじくらいの アピールに みせる",
-      "original_hex": "0f 2a 1f 44 19 00 9f 59 73 7e 19 00 51 9c ae 79 14 fe 05 15 3d 08 27 02 19 00 51 9c ae 79 16 00 20 0e 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6B0"
-      ],
-      "pointer_addresses": [
-        "0x0839F6B0"
-      ]
-    },
-    {
-      "id": "axvj_51f0e0138b9a",
-      "module": "剧情",
-      "address": "0x0839F42E",
-      "byte_length": 33,
-      "original": "１つまえの ポケモンの アピールと\nおなじくらい うまく できる",
-      "original_hex": "a2 12 1f 04 19 00 9f 59 73 7e 19 00 51 9c ae 79 14 fe 05 15 3d 08 27 02 00 03 1f 08 00 44 07 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6B4"
-      ],
-      "pointer_addresses": [
-        "0x0839F6B4"
-      ]
-    },
-    {
-      "id": "axvj_a27054b33532",
-      "module": "剧情",
-      "address": "0x0839F44F",
-      "byte_length": 34,
-      "original": "みんなの あとで アピールするほど\nすごい アピールに みせられる",
-      "original_hex": "20 2e 15 19 00 01 14 44 00 51 9c ae 79 0d 29 1e 45 fe 0d 3b 02 00 51 9c ae 79 16 00 20 0e 27 2a 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6B8"
-      ],
-      "pointer_addresses": [
-        "0x0839F6B8"
-      ]
-    },
-    {
-      "id": "axvj_4efc595c603a",
-      "module": "剧情",
-      "address": "0x0839F471",
-      "byte_length": 33,
-      "original": "だすときに よって アピールの\nできぐあいが いろいろと かわる",
-      "original_hex": "41 0d 14 07 16 00 26 50 13 00 51 9c ae 79 19 fe 44 07 39 01 02 37 00 02 2b 02 2b 14 00 06 2c 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6BC"
-      ],
-      "pointer_addresses": [
-        "0x0839F6BC"
-      ]
-    },
-    {
-      "id": "axvj_fc35b94f5558",
-      "module": "剧情",
-      "address": "0x0839F492",
-      "byte_length": 36,
-      "original": "１つまえの ポケモンの アピールと\nタイプが おなじなら きにいられる",
-      "original_hex": "a2 12 1f 04 19 00 9f 59 73 7e 19 00 51 9c ae 79 14 fe 60 52 9d 37 00 05 15 3d 15 27 00 07 16 02 27 2a 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6C0"
-      ],
-      "pointer_addresses": [
-        "0x0839F6C0"
-      ]
-    },
-    {
-      "id": "axvj_4ba0d268ea1c",
-      "module": "剧情",
-      "address": "0x0839F4B6",
-      "byte_length": 36,
-      "original": "１つまえの ポケモンの アピールと\nタイプが ちがうなら きにいられる",
-      "original_hex": "a2 12 1f 04 19 00 9f 59 73 7e 19 00 51 9c ae 79 14 fe 60 52 9d 37 00 11 37 03 15 27 00 07 16 02 27 2a 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6C4"
-      ],
-      "pointer_addresses": [
-        "0x0839F6C4"
-      ]
-    },
-    {
-      "id": "axvj_698990e6ca6b",
-      "module": "剧情",
-      "address": "0x0839F4DA",
-      "byte_length": 33,
-      "original": "１つまえの ポケモンの アピールの\nうまさに えいきょう される",
-      "original_hex": "a2 12 1f 04 19 00 9f 59 73 7e 19 00 51 9c ae 79 19 fe 03 1f 0b 16 00 04 02 07 36 03 00 0b 2a 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6C8"
-      ],
-      "pointer_addresses": [
-        "0x0839F6C8"
-      ]
-    },
-    {
-      "id": "axvj_3c93bad6b0bd",
-      "module": "剧情",
-      "address": "0x0839F4FB",
-      "byte_length": 30,
-      "original": "アピールの ちょうしが あがる\nきんちょうも しにくくなる",
-      "original_hex": "51 9c ae 79 19 00 11 36 03 0c 37 00 01 37 29 fe 07 2e 11 36 03 23 00 0c 16 08 08 15 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6CC"
-      ],
-      "pointer_addresses": [
-        "0x0839F6CC"
-      ]
-    },
-    {
-      "id": "axvj_747d1779f225",
-      "module": "剧情",
-      "address": "0x0839F519",
-      "byte_length": 32,
-      "original": "ちょうしが いいときに だすと\nアピールが とても うまくいく",
-      "original_hex": "11 36 03 0c 37 00 02 02 14 07 16 00 41 0d 14 fe 51 9c ae 79 37 00 14 13 23 00 03 1f 08 02 08 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6D0"
-      ],
-      "pointer_addresses": [
-        "0x0839F6D0"
-      ]
-    },
-    {
-      "id": "axvj_786dea7c4ec7",
-      "module": "剧情",
-      "address": "0x0839F539",
-      "byte_length": 31,
-      "original": "このつぎの アピールを\nはじめの ほうに だすことが できる",
-      "original_hex": "0a 19 12 38 19 00 51 9c ae 79 2d fe 1a 3d 22 19 00 1e 03 16 00 41 0d 0a 14 37 00 44 07 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6D4"
-      ],
-      "pointer_addresses": [
-        "0x0839F6D4"
-      ]
-    },
-    {
-      "id": "axvj_6dd6460f5269",
-      "module": "剧情",
-      "address": "0x0839F558",
-      "byte_length": 31,
-      "original": "このつぎの アピールを\nおわりの ほうに だすことが できる",
-      "original_hex": "0a 19 12 38 19 00 51 9c ae 79 2d fe 05 2c 28 19 00 1e 03 16 00 41 0d 0a 14 37 00 44 07 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6D8"
-      ],
-      "pointer_addresses": [
-        "0x0839F6D8"
-      ]
-    },
-    {
-      "id": "axvj_e2d87a05b008",
-      "module": "剧情",
-      "address": "0x0839F577",
-      "byte_length": 29,
-      "original": "このつぎの アピールの\nじゅんばんが かわりやすく なる",
-      "original_hex": "0a 19 12 38 19 00 51 9c ae 79 19 fe 3d 35 2e 46 2e 37 00 06 2c 28 24 0d 08 00 15 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6DC"
-      ],
-      "pointer_addresses": [
-        "0x0839F6DC"
-      ]
-    },
-    {
-      "id": "axvj_e1029ceef223",
-      "module": "剧情",
-      "address": "0x0839F594",
-      "byte_length": 30,
-      "original": "このつぎの アピールの\nじゅんばんを めちゃくちゃに する",
-      "original_hex": "0a 19 12 38 19 00 51 9c ae 79 19 fe 3d 35 2e 46 2e 2d 00 22 11 34 08 11 34 16 00 0d 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6E0"
-      ],
-      "pointer_addresses": [
-        "0x0839F6E0"
-      ]
-    },
-    {
-      "id": "axvj_08fe226e8ea4",
-      "module": "剧情",
-      "address": "0x0839F5B2",
-      "byte_length": 32,
-      "original": "どの コンテストで みせても\nかならず もりあがる アピール ",
-      "original_hex": "45 19 00 5a 7e 63 5d 64 44 00 20 0e 13 23 fe 06 15 27 3e 00 23 28 01 37 29 00 51 9c ae 79 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6E4"
-      ],
-      "pointer_addresses": [
-        "0x0839F6E4"
-      ]
-    },
-    {
-      "id": "axvj_8146a54fab4d",
-      "module": "剧情",
-      "address": "0x0839F5D2",
-      "byte_length": 33,
-      "original": "アピールが うまくいった ポケモン\nみんなを かなり おどろかす",
-      "original_hex": "51 9c ae 79 37 00 03 1f 08 02 50 10 00 9f 59 73 7e fe 20 2e 15 2d 00 06 15 28 00 05 45 2b 06 0d ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6E8"
-      ],
-      "pointer_addresses": [
-        "0x0839F6E8"
-      ]
-    },
-    {
-      "id": "axvj_30d6275f4aa2",
-      "module": "剧情",
-      "address": "0x0839F5F3",
-      "byte_length": 32,
-      "original": "かいじょうが もりあがっている ほど\nアピールが きにいられる",
-      "original_hex": "06 02 3d 36 03 37 00 23 28 01 37 50 13 02 29 00 1e 45 fe 51 9c ae 79 37 00 07 16 02 27 2a 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6EC"
-      ],
-      "pointer_addresses": [
-        "0x0839F6EC"
-      ]
-    },
-    {
-      "id": "axvj_547442a03318",
-      "module": "剧情",
-      "address": "0x0839F613",
-      "byte_length": 33,
-      "original": "このアピールのあと かいじょうが\nしばらく もりあがらなく なる",
-      "original_hex": "0a 19 51 9c ae 79 19 01 14 00 06 02 3d 36 03 37 fe 0c 46 27 08 00 23 28 01 37 27 15 08 00 15 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F6F0"
-      ],
-      "pointer_addresses": [
-        "0x0839F6F0"
-      ]
-    },
-    {
-      "id": "axvj_aa1f4094b33f",
-      "module": "剧情",
-      "address": "0x0839F6F9",
-      "byte_length": 4,
-      "original": "いかり",
-      "original_hex": "02 06 28 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F748"
-      ],
-      "pointer_addresses": [
-        "0x0839F748"
-      ]
-    },
-    {
-      "id": "axvj_acf9dbd62986",
-      "module": "剧情",
-      "address": "0x0839F6FD",
-      "byte_length": 6,
-      "original": "きあいだめ",
-      "original_hex": "07 01 02 41 22 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F74C"
-      ],
-      "pointer_addresses": [
-        "0x0839F74C"
-      ]
-    },
-    {
-      "id": "axvj_a5b3463718c9",
-      "module": "剧情",
-      "address": "0x0839F703",
-      "byte_length": 8,
-      "original": "さいみんじゅつ",
-      "original_hex": "0b 02 20 2e 3d 35 12 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F750"
-      ],
-      "pointer_addresses": [
-        "0x0839F750"
-      ]
-    },
-    {
-      "id": "axvj_2efbcf67b204",
-      "module": "剧情",
-      "address": "0x0839F70B",
-      "byte_length": 6,
-      "original": "タマゴうみ",
-      "original_hex": "60 6f 8b 03 20 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F754"
-      ],
-      "pointer_addresses": [
-        "0x0839F754"
-      ]
-    },
-    {
-      "id": "axvj_c1f5e2a92951",
-      "module": "剧情",
-      "address": "0x0839F711",
-      "byte_length": 6,
-      "original": "つのでつく",
-      "original_hex": "12 19 44 12 08 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F758"
-      ],
-      "pointer_addresses": [
-        "0x0839F758"
-      ]
-    },
-    {
-      "id": "axvj_f3bb4e3cdb03",
-      "module": "剧情",
-      "address": "0x0839F717",
-      "byte_length": 7,
-      "original": "つるぎのまい",
-      "original_hex": "12 29 38 19 1f 02 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F75C"
-      ],
-      "pointer_addresses": [
-        "0x0839F75C"
-      ]
-    },
-    {
-      "id": "axvj_f4e3d438e60f",
-      "module": "剧情",
-      "address": "0x0839F71E",
-      "byte_length": 7,
-      "original": "テクスチャー",
-      "original_hex": "63 58 5d 61 84 ae ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F760"
-      ],
-      "pointer_addresses": [
-        "0x0839F760"
-      ]
-    },
-    {
-      "id": "axvj_412431777bb4",
-      "module": "剧情",
-      "address": "0x0839F725",
-      "byte_length": 6,
-      "original": "にほんばれ",
-      "original_hex": "16 1e 2e 46 2a ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F764"
-      ],
-      "pointer_addresses": [
-        "0x0839F764"
-      ]
-    },
-    {
-      "id": "axvj_4b4c3bca611b",
-      "module": "剧情",
-      "address": "0x0839F72B",
-      "byte_length": 4,
-      "original": "ねむる",
-      "original_hex": "18 21 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F768"
-      ],
-      "pointer_addresses": [
-        "0x0839F768"
-      ]
-    },
-    {
-      "id": "axvj_0587b8a2a8f4",
-      "module": "剧情",
-      "address": "0x0839F72F",
-      "byte_length": 4,
-      "original": "はさむ",
-      "original_hex": "1a 0b 21 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F76C"
-      ],
-      "pointer_addresses": [
-        "0x0839F76C"
-      ]
-    },
-    {
-      "id": "axvj_f961def894e6",
-      "module": "剧情",
-      "address": "0x0839F733",
-      "byte_length": 6,
-      "original": "まるくなる",
-      "original_hex": "1f 29 08 15 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F770"
-      ],
-      "pointer_addresses": [
-        "0x0839F770"
-      ]
-    },
-    {
-      "id": "axvj_e2c23dbb784e",
-      "module": "剧情",
-      "address": "0x0839F739",
-      "byte_length": 6,
-      "original": "ロックオン",
-      "original_hex": "7b a0 58 55 7e ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F774"
-      ],
-      "pointer_addresses": [
-        "0x0839F774"
-      ]
-    },
-    {
-      "id": "axvj_b1f75f1388b4",
-      "module": "剧情",
-      "address": "0x0839F77E",
-      "byte_length": 6,
-      "original": "うつくしい",
-      "original_hex": "03 12 08 0c 02 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F798"
-      ],
-      "pointer_addresses": [
-        "0x0839F798"
-      ]
-    },
-    {
-      "id": "axvj_6ed315c19afa",
-      "module": "剧情",
-      "address": "0x0839F784",
-      "byte_length": 5,
-      "original": "かわいい",
-      "original_hex": "06 2c 02 02 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F79C"
-      ],
-      "pointer_addresses": [
-        "0x0839F79C"
-      ]
-    },
-    {
-      "id": "axvj_efb5630982f9",
-      "module": "剧情",
-      "address": "0x0839F789",
-      "byte_length": 5,
-      "original": "かしこい",
-      "original_hex": "06 0c 0a 02 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F7A0"
-      ],
-      "pointer_addresses": [
-        "0x0839F7A0"
-      ]
-    },
-    {
-      "id": "axvj_995b752a84f0",
-      "module": "剧情",
-      "address": "0x0839F78E",
-      "byte_length": 6,
-      "original": "たくましい",
-      "original_hex": "10 08 1f 0c 02 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839F7A4"
-      ],
-      "pointer_addresses": [
-        "0x0839F7A4"
       ]
     },
     {

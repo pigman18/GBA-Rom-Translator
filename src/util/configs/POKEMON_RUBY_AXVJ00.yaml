@@ -73,6 +73,18 @@ texts:
         stride: 5
       relocate: true
       hook: true
+    - id: 属性名-华丽大赛
+      label: 词条·华丽大赛属性
+      group: 词条
+      default: true
+      description: 华丽大赛分类名指针表（4）
+      start: '0x39F798'
+      end: '0x39F7A7'
+      type: stride_ptr
+      read:
+        stride: 4
+      relocate: true
+      hook: true
     - id: 性格名
       label: 词条·性格
       group: 词条
@@ -109,7 +121,6 @@ texts:
         stride: 6
       relocate: true
       hook: true
-      style: 样式1
       filters:
         # 占位名「？？？？？」跳过
         - id: species_skip_qmark
@@ -126,6 +137,18 @@ texts:
       type: stride
       read:
         stride: 8
+      relocate: true
+      hook: true
+    - id: 招式名-华丽大赛
+      label: 词条·华丽大赛招式
+      group: 词条
+      default: true
+      description: 华丽大赛特殊效果招式名指针表（12）
+      start: '0x39F748'
+      end: '0x39F777'
+      type: stride_ptr
+      read:
+        stride: 4
       relocate: true
       hook: true
     - id: 训练家名
@@ -209,6 +232,19 @@ texts:
       type: stride
       read:
         stride: 56
+      relocate: true
+      hook: true
+    - id: 招式说明-华丽大赛
+      label: 说明·华丽大赛招式
+      group: 说明
+      default: true
+      description: 华丽大赛招式效果说明指针表（47）
+      start: '0x39F638'
+      end: '0x39F6F3'
+      type: stride_ptr
+      read:
+        stride: 4
+        eos_window: 48
       relocate: true
       hook: true
     - id: 特性说明

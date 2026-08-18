@@ -486,6 +486,11 @@ def extract_stride_ptr(
     start = parse_addr(mod.get("start"))
     end = parse_addr(mod.get("end"))
     ptr_stride = int((mod.get("read") or {}).get("stride") or 4)
+    # 指针目标 EOS 搜索窗（默认 24，兼容旧模块；长文本指针表可调大）
+    try:
+        eos_window = int((mod.get("read") or {}).get("eos_window") or 24)
+    except (TypeError, ValueError):
+        eos_window = 24
     if end < start:
         return []
     from meowth.jp_pcs import decode_pcs
@@ -497,7 +502,7 @@ def extract_stride_ptr(
         ptr = struct.unpack_from("<I", rom, lit)[0]
         if BASE <= ptr < BASE + len(rom):
             so = ptr - BASE
-            eos = rom.find(b"\xFF", so, so + 24)
+            eos = rom.find(b"\xFF", so, so + eos_window)
             if eos >= 0:
                 raw = rom[so : eos + 1]
                 text = decode_pcs(raw)
@@ -997,21 +1002,59 @@ class StoryPointerFilter(TextFilter):
                 run_dn = 1
         return best_up >= min_run or best_dn >= min_run
 
+    @classmethod
+    def looks_struct_slot(cls, raw: bytes | None) -> bool:
+        """定长结构体槽指纹：``[单字符] + 全零填充``（如 ``10 00 00 00 ff``=た）。
+
+        ``00`` 在真实对白里是合法空格，故不能只看「体内含 00」；判别是
+        **首字节为一个字符、其后全为 00 填充**——精灵图/数据表里被误当文本
+        的定宽槽特征（1 字符 + 零补齐），真实指针型剧情句不会长这样。
+        """
+        body = (raw or b"")
+        if body and body[-1] == 0xFF:
+            body = body[:-1]
+        if len(body) < 2:
+            return False
+        if body[0] == 0x00:
+            return False
+        return all(b == 0x00 for b in body[1:])
+
     def hit(self, ctx: FilterContext) -> bool | None:
         if not bool(self.value):
             return None
         if not ctx.is_pointer_based:
             return True
         raw = ctx.raw or b""
-        if self.looks_counter_run(raw):
-            return True
-        if AnimCmdFilter.looks_anim_cmd(raw):
-            return True
-        if ImeKeyboardFilter.looks_ime_keyboard(raw, ctx.original or ""):
-            return True
-        if GarbageHeuristicFilter.looks_garbage(ctx.original):
-            return True
-        return False
+        # 丢弃签名列表：任一命中即丢（均为非文本/定长槽指纹）
+        return any(
+            signature(ctx, raw)
+            for signature in (
+                self._sig_counter_run,
+                self._sig_anim_cmd,
+                self._sig_ime_keyboard,
+                self._sig_struct_slot,
+                self._sig_garbage,
+            )
+        )
+
+    def _sig_counter_run(self, ctx: FilterContext, raw: bytes) -> bool:
+        del ctx
+        return self.looks_counter_run(raw)
+
+    def _sig_anim_cmd(self, ctx: FilterContext, raw: bytes) -> bool:
+        del ctx
+        return AnimCmdFilter.looks_anim_cmd(raw)
+
+    def _sig_ime_keyboard(self, ctx: FilterContext, raw: bytes) -> bool:
+        return ImeKeyboardFilter.looks_ime_keyboard(raw, ctx.original or "")
+
+    def _sig_struct_slot(self, ctx: FilterContext, raw: bytes) -> bool:
+        del ctx
+        return self.looks_struct_slot(raw)
+
+    def _sig_garbage(self, ctx: FilterContext, raw: bytes) -> bool:
+        del raw
+        return GarbageHeuristicFilter.looks_garbage(ctx.original)
 
 
 class GarbageHeuristicFilter(TextFilter):

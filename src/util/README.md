@@ -323,20 +323,29 @@ python src/util/debug_patcher.py trap 0x5F0A00F9 --any-f9
 # gdb_patcher.py
 
 基于 mGBA GDB stub 的运行时追踪工具（`log` 命令）。每个函数 = 断点地址 + 独立
-handler，`--functions` 选择要监听的函数，未注册的名字跳过并警告。缺省只监听
-`InitTextPrinter`（文本块级，一次解码整段）；逐字符的 `ProcessCurrentChar` 属冗余，
-需显式 `--functions` 才监听。
+handler，`--functions` 按函数名选择要监听的函数，未注册的名字跳过并警告。
+缺省（不带 `--functions`）监听**全部已注册函数**（文本 + 图像），仅排除
+`ProcessCurrentChar`（逐字符输出与 `InitTextPrinter` 块级解码冗余，需显式指定）。
+
+已注册函数（图像加载器全部在日版 AXVJ 上反汇编行为核实）：
+`InitTextPrinter`、`ProcessCurrentChar`、`LZDecompressWram/Vram`、
+`LoadSpriteSheet`、`LoadSpritePalette`、`LoadCompressedObjectPic/Palette`、
+`LoadCompressedPalette`、`LoadPalette`。sheet 类打印 data/size/tag + 数据区域；
+ROM 源额外给出原盘偏移与头字节（LZ77 头标注）。
 
 ```bash
-# 缺省：只监听 InitTextPrinter，并用字库解码中文
+# 缺省：监听全部函数（文本+图像），并用字库解码文本
 python src/util/gdb_patcher.py log --charmap configs/POKEMON_RUBY_AXVJ00/charmap.txt
+# 只追图像加载器（按函数名）
+python src/util/gdb_patcher.py log --functions LoadSpriteSheet,LoadPalette \
+    --charmap configs/POKEMON_RUBY_AXVJ00/charmap.txt
 # 显式逐字符（仅排查单字符问题时用）
 python src/util/gdb_patcher.py log --functions InitTextPrinter,ProcessCurrentChar \
     --charmap configs/POKEMON_RUBY_AXVJ00/charmap.txt
 ```
 
 未指定 `--charmap` 时按原始字节 hex + 可读转义输出。缺省日志 `work/gdb_patcher_log.log`，
-`--log` 可换路径。未来图标类 handler（图块/调色板加载）只需在源码里注册新函数名。
+`--log` 可换路径。新增函数只需 `@register(name, bp, desc)` 注册新 handler。
 
 ---
 

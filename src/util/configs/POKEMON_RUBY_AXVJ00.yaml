@@ -183,8 +183,11 @@ texts:
       read:
         entry_size: 0x20
         name_offset: 0x18
+      write:
+        byte_length: 5
       relocate: true
       hook: true
+      reuse_slot_padding: true
     - id: 地点名
       label: 词条·地点
       group: 词条
@@ -208,8 +211,11 @@ texts:
       read:
         entry_size: 0x1C
         name_offset: 13
+      write:
+        byte_length: 5
       relocate: true
       hook: true
+      reuse_slot_padding: true
     - id: 道具名
       label: 词条·道具
       group: 词条
@@ -296,8 +302,9 @@ texts:
       read:
         entry_size: 0x1C
         name_offset: 6
-        name_max: 6
         eos: 0x00
+      write:
+        byte_length: 5
       relocate: true
       hook: true
       reuse_slot_padding: true

@@ -263,7 +263,6 @@ def _item_rom_name_entries(rom: bytes, item_cfg: dict) -> list[dict]:
     entry_size = item_cfg["entry_size"]
     name_win = int(
         item_cfg.get("name_stride")
-        or item_cfg.get("name_max")
         or item_cfg.get("desc_ptr_offset")
         or entry_size
     )

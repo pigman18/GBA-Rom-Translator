@@ -219,8 +219,8 @@ def _struct_entry_size(read: dict) -> int:
 
 
 def _struct_name_window(read: dict, entry_size: int) -> int:
-    """名称搜索上限：可选 name_max/name_stride/desc_ptr_offset，否则整行。"""
-    for key in ("name_max", "name_stride", "desc_ptr_offset"):
+    """名称搜索上限：可选 name_stride/desc_ptr_offset，否则整行。"""
+    for key in ("name_stride", "desc_ptr_offset"):
         if read.get(key) is not None:
             try:
                 n = int(read[key])

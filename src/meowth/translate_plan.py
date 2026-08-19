@@ -370,7 +370,7 @@ def _reuse_slot_capacity(
 ) -> int:
     """``reuse_slot_padding`` 模块：定长字段可写到声明的槽宽，而非 EOS 截断长。
 
-    槽宽优先读 read.name_stride / read.name_max（struct 字段的声明槽宽）。
+    槽宽读模块 ``write.byte_length``（struct 字段的声明槽宽）。
     stride 表的 byte_length 本身就是 stride，无需调整（fallback 已够）。
     """
     if not entry.get("is_fixed_table"):
@@ -378,9 +378,9 @@ def _reuse_slot_capacity(
     meta = _module_meta(game_id, module_id)
     if not meta.get("reuse_slot_padding"):
         return fallback
-    read = meta.get("read") or {}
+    write = meta.get("write") or {}
     try:
-        cap = int(read.get("name_stride") or read.get("name_max") or 0)
+        cap = int(write.get("byte_length") or 0)
     except (TypeError, ValueError):
         return fallback
     if cap <= 0:

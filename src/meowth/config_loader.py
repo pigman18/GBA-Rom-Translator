@@ -423,8 +423,7 @@ def tables_from_modules_inject(game_id: str = "") -> dict[str, Any]:
                 entry["entry_size"] = unit
             # max name window for legacy readers (optional)
             name_win = (
-                layout.get("name_max")
-                or layout.get("name_stride")
+                layout.get("name_stride")
                 or layout.get("desc_ptr_offset")
                 or unit
             )

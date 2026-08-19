@@ -5,22 +5,27 @@ gdb_patcher.py — 基于 mGBA GDB stub 的运行时追踪工具。
 
 提供 `log` 命令：按「函数」监听指定游戏函数的每次进入，每个函数由
 独立 handler 负责读取寄存器/内存并输出日志。函数通过注册表登记
-（名字 → 断点地址 + handler），'--functions' 选择要监听的函数，
-未注册的名字会被跳过并警告；缺省只监听 InitTextPrinter（文本块级，
-一次解码整段，逐字符 ProcessCurrentChar 属冗余，需显式指定才监听）。
+（名字 → 断点地址 + handler），'--functions' 按函数名选择要监听的
+函数，未注册的名字会被跳过并警告；缺省（不带 --functions）监听全部
+已注册函数（文本 + 图像）。ProcessCurrentChar 逐字符输出与
+InitTextPrinter 块级解码冗余，默认排除、需显式指定。
 
 文本类 handler（InitTextPrinter / ProcessCurrentChar）：
   - 指定 --charmap：查表解码文本（如 CHS 中文 F9 00 lead trail）
   - 未指定：按原始字节 hex + 可读转义原样输出
-未来图标类 handler（图块/调色板加载）只需注册新名字与地址。
+图像类 handler（图块/调色板加载器）：追踪 logo、图标等素材的加载，
+打印 sheet 的 data/size/tag 与数据所在区域（ROM 源给出原盘偏移与头字节）。
+全部地址已在日版 AXVJ 上经反汇编行为核实（见 tools/pokeruby-jp/ADDRS.md）。
 
 用法：
   mGBA 打开 ROM，Tools → Start GDB stub（2345），Pause。
-  python src/util/gdb_patcher.py log
-  python src/util/gdb_patcher.py log --functions InitTextPrinter
+  python src/util/gdb_patcher.py log            # 全部函数（文本+图像）
+  python src/util/gdb_patcher.py log --functions LoadSpriteSheet,LoadPalette
+  python src/util/gdb_patcher.py log --functions InitTextPrinter \
+      --charmap configs/POKEMON_RUBY_AXVJ00/charmap.txt
   python src/util/gdb_patcher.py log --functions InitTextPrinter,ProcessCurrentChar \
       --charmap configs/POKEMON_RUBY_AXVJ00/charmap.txt
-  到目标界面操作，Ctrl-C 结束，分析 work/gdb_patcher_log.log。
+   到目标界面操作，Ctrl-C 结束，分析 work/gdb_patcher_log.log。
 """
 from __future__ import annotations
 
@@ -45,8 +50,27 @@ STR_MAX = 512
 BP_INIT_TEXT = 0x08002C68
 BP_CHAR = 0x0800336E
 
-# 缺省（未传 --functions）监听的函数：文本块级，一次解码整段。
-DEFAULT_FUNCTIONS = ["InitTextPrinter"]
+# 图像加载器断点 —— 全部在日版 AXVJ 上反汇编行为核实（tools/pokeruby-jp/ADDRS.md）：
+BP_LZ_WRAM = 0x0800A764   # LZDecompressWram → 0x081B129C（svc 0x11）
+BP_LZ_VRAM = 0x0800A770   # LZDecompressVram → 0x081B1298（svc 0x12）
+BP_SPRITE_SHEET = 0x080021C4    # LoadSpriteSheet: AllocSpriteTiles(0x08001074)
+                                # + AllocSpriteTileRange(0x08002390) + CpuCopy16→0x06010000
+BP_SPRITE_PALETTE = 0x08002410  # LoadSpritePalette: IndexOfSpritePaletteTag(0x080024D0)
+                                # + CopyPalette(0x08002488)→gPlttBuffer* OBJ 区
+BP_COMPRESSED_PIC = 0x0800A77C  # LoadCompressedObjectPic: LZ77W→0x02000000 + LoadSpriteSheet
+BP_COMPRESSED_PAL = 0x0800A7D0  # LoadCompressedObjectPalette: LZ77W→0x02000000 + LoadSpritePalette
+BP_COMPRESSED_PALETTE = 0x08070A4C  # LoadCompressedPalette: LZ→0x0202F0BC + 2×CpuCopy16
+BP_LOAD_PALETTE = 0x08070A90        # LoadPalette: 2×CpuCopy16→gPlttBufferUnfaded/Faded
+
+# 日版实测（US 假值≠日版，勿用 0x0202EAC8 等）：
+JP_PAL_UNFADED = 0x0202E7E8     # gPlttBufferUnfaded（LoadPalette 目标 1）
+JP_PAL_FADED = 0x0202EBE8       # gPlttBufferFaded（LoadPalette 目标 2）
+JP_PAL_DECOMP_BUF = 0x0202F0BC  # sPaletteDecompressionBuffer（LoadCompressedPalette 中转）
+JP_EWRAM_SCRATCH = 0x02000000   # LoadCompressedObject* 解压目标
+
+# 缺省（未传 --functions）监听全部已注册函数，仅排除 ProcessCurrentChar：
+# 它逐字符输出与 InitTextPrinter 块级解码冗余，需显式指定。
+DEFAULT_EXCLUDE = {"ProcessCurrentChar"}
 
 
 def u16(b: bytes, o: int) -> int:
@@ -258,6 +282,34 @@ def _read_ff_text(gdb: GdbClient, addr: int) -> bytes:
     return data[: end + 1] if end >= 0 else data
 
 
+def _read_mem(gdb: GdbClient, addr: int, n: int) -> bytes:
+    try:
+        return bytes(gdb.read_mem(addr, n))
+    except GdbError:
+        return b""
+
+
+def _read_sheet(gdb: GdbClient, p: int) -> Optional[tuple[int, int, int]]:
+    """读 {u32 data; u16 size; u16 tag}，失败返回 None。"""
+    b = _read_mem(gdb, p, 8)
+    if len(b) < 8:
+        return None
+    return u32(b, 0), u16(b, 4), u16(b, 6)
+
+
+def _rom_head(ctx: Ctx, data: int, size: int) -> str:
+    """ROM 源数据：给出原盘偏移与头字节，LZ77 头（0x10/0x11）标注。"""
+    if region_of(data) != "ROM" or not ctx.origin:
+        return ""
+    fo = data - 0x08000000
+    if not (0 <= fo < len(ctx.origin)):
+        return ""
+    n = min(max(size, 4), 32)
+    h = ctx.origin[fo : fo + n]
+    lz = " LZ77头" if h[:1] in (b"\x10", b"\x11") else ""
+    return f"  原盘源 @0x{fo:08X}: {h.hex(' ')}{lz}"
+
+
 @register("InitTextPrinter", BP_INIT_TEXT, "文本块开始（r0=win, r1=文本指针, r2=tile_base, r3=cur_x）")
 def _on_init_text(gdb: GdbClient, regs: dict, ctx: Ctx) -> None:
     win = regs.get("r0", 0)
@@ -311,11 +363,100 @@ def _on_char(gdb: GdbClient, regs: dict, ctx: Ctx) -> None:
         )
 
 
+def _mk_sheet_hook(name: str, bp: int, desc: str, rn: int = 0) -> None:
+    """sheet 族加载器：r0/rn=&{u32 data; u16 size; u16 tag}，打印 data/size/tag + 区域。"""
+
+    @register(name, bp, desc)
+    def handler(gdb: GdbClient, regs: dict, ctx: Ctx) -> None:
+        p = regs.get(f"r{rn}", 0)
+        f = _read_sheet(gdb, p)
+        if f is None:
+            ctx.log(f"\n[{name}] 读 sheet 指针 0x{p:08X} 失败")
+            return
+        data, size, tag = f
+        if not ctx._hit((name, data, size, tag)):
+            return
+        ctx.log(
+            f"\n[{name}] sheet=0x{p:08X} data=0x{data:08X}({region_of(data)})"
+            f" size=0x{size:04X} tag=0x{tag:04X} LR=0x{(regs.get('r14', 0) & ~1):08X}"
+        )
+        ctx.log(_rom_head(ctx, data, size))
+
+    return handler
+
+
+_mk_sheet_hook("LoadSpriteSheet", BP_SPRITE_SHEET, "图块 sheet → OBJ VRAM", 0)
+_mk_sheet_hook("LoadSpritePalette", BP_SPRITE_PALETTE, "调色板 sheet → gPlttBuffer OBJ 区", 0)
+_mk_sheet_hook("LoadCompressedObjectPic", BP_COMPRESSED_PIC,
+               "LZ77→0x02000000 后 LoadSpriteSheet（r0=&压缩图）", 0)
+_mk_sheet_hook("LoadCompressedObjectPalette", BP_COMPRESSED_PAL,
+               "LZ77→0x02000000 后 LoadSpritePalette（r0=&压缩调色板）", 0)
+
+
+@register("LoadCompressedPalette", BP_COMPRESSED_PALETTE,
+          "压缩调色板：LZ→0x0202F0BC + 2×拷贝→gPlttBuffer*（r0=src, r1=offset, r2=size）")
+def _on_compressed_palette(gdb: GdbClient, regs: dict, ctx: Ctx) -> None:
+    src = regs.get("r0", 0)
+    off = regs.get("r1", 0) & 0xFFFF
+    size = regs.get("r2", 0) & 0xFFFF
+    if not ctx._hit(("LoadCompressedPalette", src, off, size)):
+        return
+    ctx.log(
+        f"\n[LoadCompressedPalette] src=0x{src:08X}({region_of(src)})"
+        f" offset=0x{off:04X} size=0x{size:04X} → 解压@0x{JP_PAL_DECOMP_BUF:08X}"
+        f" → gPlttBuffer+0x{off:04X} LR=0x{(regs.get('r14', 0) & ~1):08X}"
+    )
+    ctx.log(_rom_head(ctx, src, size))
+
+
+@register("LoadPalette", BP_LOAD_PALETTE,
+          "调色板 2×CpuCopy16→gPlttBufferUnfaded/Faded（r0=src, r1=offset, r2=size）")
+def _on_load_palette(gdb: GdbClient, regs: dict, ctx: Ctx) -> None:
+    src = regs.get("r0", 0)
+    off = regs.get("r1", 0) & 0xFFFF
+    size = regs.get("r2", 0) & 0xFFFF
+    if not ctx._hit(("LoadPalette", src, off, size)):
+        return
+    ctx.log(
+        f"\n[LoadPalette] src=0x{src:08X}({region_of(src)})"
+        f" offset=0x{off:04X} size=0x{size:04X} → 0x{JP_PAL_UNFADED + off:08X}"
+        f" LR=0x{(regs.get('r14', 0) & ~1):08X}"
+    )
+    ctx.log(_rom_head(ctx, src, size))
+
+
+@register("LZDecompressWram", BP_LZ_WRAM, "LZ77 解压到 EWRAM（r0=src, r1=dest）")
+def _on_lz_wram(gdb: GdbClient, regs: dict, ctx: Ctx) -> None:
+    src = regs.get("r0", 0)
+    dst = regs.get("r1", 0)
+    if not ctx._hit(("LZ77W", src, dst)):
+        return
+    ctx.log(
+        f"\n[LZDecompressWram] src=0x{src:08X}({region_of(src)})"
+        f" → 0x{dst:08X}({region_of(dst)}) LR=0x{(regs.get('r14', 0) & ~1):08X}"
+    )
+    ctx.log(_rom_head(ctx, src, 4))
+
+
+@register("LZDecompressVram", BP_LZ_VRAM, "LZ77 解压到 VRAM（r0=src, r1=dest）")
+def _on_lz_vram(gdb: GdbClient, regs: dict, ctx: Ctx) -> None:
+    src = regs.get("r0", 0)
+    dst = regs.get("r1", 0)
+    if not ctx._hit(("LZ77V", src, dst)):
+        return
+    ctx.log(
+        f"\n[LZDecompressVram] src=0x{src:08X}({region_of(src)})"
+        f" → 0x{dst:08X}({region_of(dst)}) LR=0x{(regs.get('r14', 0) & ~1):08X}"
+    )
+    ctx.log(_rom_head(ctx, src, 4))
+
+
 def _select_hooks(names: Optional[str]) -> list[Hook]:
-    """--functions 逗号分隔；未注册的跳过并警告。缺省 DEFAULT_FUNCTIONS。"""
+    """--functions 逗号分隔函数名；未注册的跳过并警告。缺省监听全部已注册函数
+    （ProcessCurrentChar 除外，逐字符与 InitTextPrinter 冗余）。"""
     picked = [s.strip() for s in (names or "").split(",") if s.strip()]
     if not picked:
-        return [FUNCTIONS[n] for n in DEFAULT_FUNCTIONS if n in FUNCTIONS]
+        return [FUNCTIONS[n] for n in sorted(FUNCTIONS) if n not in DEFAULT_EXCLUDE]
     hooks: list[Hook] = []
     missing: list[str] = []
     for n in picked:
@@ -436,8 +577,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument(
         "--functions",
         default=None,
-        help="逗号分隔要监听的函数名，如 InitTextPrinter,ProcessCurrentChar；"
-        "缺省只监听 InitTextPrinter",
+        help="逗号分隔要监听的函数名，如 LoadSpriteSheet,LoadPalette / InitTextPrinter,"
+        "ProcessCurrentChar；未指定则监听全部已注册函数（文本+图像，"
+        "ProcessCurrentChar 除外）",
     )
     ap.add_argument(
         "--charmap",

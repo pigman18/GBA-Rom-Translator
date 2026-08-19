@@ -151,8 +151,12 @@
         "entry_size": 32,
         "name_offset": 24
       },
+      "write": {
+        "byte_length": 5
+      },
       "relocate": true,
-      "hook": true
+      "hook": true,
+      "reuse_slot_padding": true
     },
     "地点名": {
       "label": "词条·地点",
@@ -179,8 +183,12 @@
         "entry_size": 28,
         "name_offset": 13
       },
+      "write": {
+        "byte_length": 5
+      },
       "relocate": true,
-      "hook": true
+      "hook": true,
+      "reuse_slot_padding": true
     },
     "道具名": {
       "label": "词条·道具",
@@ -278,8 +286,10 @@
       "read": {
         "entry_size": 28,
         "name_offset": 6,
-        "name_max": 6,
         "eos": 0
+      },
+      "write": {
+        "byte_length": 5
       },
       "relocate": true,
       "hook": true,

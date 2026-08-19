@@ -172,7 +172,7 @@ def _extract_struct_names(rom: bytes, c: dict, mid: str) -> list[dict]:
     table_ptr = BASE_VAL + c["offset"]
     entry_size = int(c["entry_size"])
     name_win = int(
-        c.get("name_stride") or c.get("name_max") or c.get("desc_ptr_offset") or entry_size
+        c.get("name_stride") or c.get("desc_ptr_offset") or entry_size
     )
     for i in range(c["count"]):
         off = c["offset"] + i * entry_size

@@ -102,6 +102,44 @@ StarterPokeCopyLoop:
 StarterPokeCopyDone:
 
 ; =============================================================================
+; 图鉴/徽章文字后缀「ひき」(1B 07 FF) 置空
+; 三处函数都在 ConvertIntToFullwidth 返回后硬编码写入 1B 07 FF。
+; 转换器本身已在末尾写 0xFF(EOS)，所以只需 NOP 掉整组 6 条写入指令即可。
+; 注意：0x08090ECC / 0x08090F18 用 R1，0x08090F70 用 R0。
+; =============================================================================
+; --- 函数1 (0x08090ECC):  MOV R1,#0x1B / STRB / MOV R1,#07 / STRB / MOV R1,#FF / STRB
+.org 0x08090EF0
+    nop  ; 原 MOV R1, #0x1B
+    nop  ; 原 STRB R1, [R0, #0]
+    nop  ; 原 MOV R1, #0x07
+    nop  ; 原 STRB R1, [R0, #1]
+    nop  ; 原 MOV R1, #0xFF
+    nop  ; 原 STRB R1, [R0, #2]
+
+; --- 函数2 (0x08090F18 = GetNationalPokedexCount): 同模式
+.org 0x08090F3C
+    nop
+    nop
+    nop
+    nop
+    nop
+    nop
+
+; --- 函数3 (0x08090F70 = GetHoennPokedexCount): 用 R0 而非 R1
+.org 0x08090FAA
+    nop  ; 原 MOV R0, #0x1B
+    nop  ; 原 STRB R0, [R4, #0]
+    nop  ; 原 MOV R0, #0x07
+    nop  ; 原 STRB R0, [R4, #1]
+    nop  ; 原 MOV R0, #0xFF
+    nop  ; 原 STRB R0, [R4, #2]
+
+; --- 徽章后置空
+.org 0x081BC164
+    .byte 0xFF
+    .byte 0xFF
+
+; =============================================================================
 ; 图鉴列表页：名字列（NoXXX 与宝可梦名间距）。
 ; 唯一来源 DEX_NAME_COLUMN（game_addrs.asm），5 处 movr1 共用；原 0x17=23。
 ; =============================================================================

@@ -1398,14 +1398,67 @@ def _addr_in_item_band(
     return lo <= fo <= hi
 
 
+# original_text_filter 编译缓存：value 签名 → (exact, norms, addr_items)
+# exact: 无语址词条原文集合；norms: 无语址词条 norm 键集合；addr_items: 地址绑定词条
+_ORIG_FILTER_COMPILED: dict[
+    tuple[Any, ...],
+    tuple[frozenset[str], frozenset[str], tuple[tuple[str, int, int], ...]],
+] = {}
+
+
+def _original_filter_value_sig(val: Any) -> tuple[Any, ...]:
+    """original_text_filter.value 缓存签名；file 支路含 mtime，防止语料过期不刷新。"""
+    if isinstance(val, dict) and val.get("file"):
+        path = _resolve_msg_filter_file(str(val["file"]))
+        try:
+            mtime = path.stat().st_mtime_ns
+        except OSError:
+            mtime = 0
+        mapping = tuple(
+            sorted((str(k), str(v)) for k, v in (val.get("mapping") or {}).items())
+        )
+        return ("file", str(path), mtime, mapping)
+    return ("val", json.dumps(val, sort_keys=True, ensure_ascii=False))
+
+
 class OriginalTextFilter(TextFilter):
     type_name = "original_text_filter"
 
+    def __init__(self, spec: dict[str, Any]) -> None:
+        super().__init__(spec)
+        sig = _original_filter_value_sig(self.value)
+        compiled = _ORIG_FILTER_COMPILED.get(sig)
+        if compiled is None:
+            exact: set[str] = set()
+            norms: set[str] = set()
+            addr_items: list[tuple[str, int, int]] = []
+            for key, lo, hi in _parse_original_text_items(self.value):
+                if lo is None and hi is None:
+                    exact.add(key)
+                    nk = _norm_original_key(key)
+                    if nk:
+                        norms.add(nk)
+                else:
+                    addr_items.append((key, lo, hi))  # type: ignore[arg-type]
+            compiled = (frozenset(exact), frozenset(norms), tuple(addr_items))
+            _ORIG_FILTER_COMPILED[sig] = compiled
+        self._compiled = compiled
+
     def hit(self, ctx: FilterContext) -> bool | None:
-        items = _parse_original_text_items(self.value)
-        if not items:
+        exact, norms, addr_items = self._compiled
+        if not exact and not norms and not addr_items:
             return False
-        for key, lo, hi in items:
+        o = ctx.original or ""
+        plain = ctx.original_plain or ""
+        if o in exact or plain in exact:
+            return True
+        ko = _norm_original_key(o)
+        if ko and ko in norms:
+            return True
+        kp = _norm_original_key(plain)
+        if kp and kp in norms:
+            return True
+        for key, lo, hi in addr_items:
             if not _original_text_matches(ctx, key):
                 continue
             if _addr_in_item_band(ctx.address, lo, hi):
@@ -2147,27 +2200,14 @@ def extract_scan(
     # （原实现只验收「有 ROM 指针指向」的正文，会漏掉靠偏移索引、无指针的
     #   定址文本表，如 0x083B29C0 的「ドラゴン」随机词表。）
 
-    def _start_rank(text: str, ptrs: list[int]) -> tuple[int, int]:
-        """同 EOS 多起点时择优：(分, 长度)；分高优先，同分取更长（更早对齐）。"""
-        score = 0
-        if ptrs:
-            score += 100
-        t = (text or "").lstrip("\n")
-        if t.startswith(("ママ『", "パパ『", "『", "「")) or t.startswith("\\"):
-            score += 50
-        elif t and (
-            "\u3040" <= t[0] <= "\u30ff" or "\u4e00" <= t[0] <= "\u9fff"
-        ):
-            score += 20
-        head = t[:12]
-        if head.startswith("とく") or "とくけ" in head:
-            score -= 40
-        return (score, len(text or ""))
-
     def _scan_candidate(
         a: int, raw: bytes
     ) -> tuple[int, bytes, str, list[int]] | None:
-        """a 处候选；同 EOS 内按对白起点质量择优（去掉垃圾前缀 / 句中误切）。"""
+        """a 处候选：整段（上一 FF → 下一 FF）按基准起点过滤，不做段内裁剪。
+
+        需要修整起点（垃圾前缀 / 句中误切）的模块由 reader=msg_reader 完成；
+        主 scan 流程保持「一段一判定」，避免段内 96 个次起点的择优放大。
+        """
         if a < SCRIPT_BANK_MIN or TITLE_LZ_BAND[0] <= a < TITLE_LZ_BAND[1]:
             return None
         if a in seen:
@@ -2184,45 +2224,9 @@ def extract_scan(
             module_id=str(mid),
             module_type=mtype,
         )
-        end = a + len(raw) - 1
-        # 起点通过 filter → best 默认起点；否则置空，仅靠择优内的 valid 起点
-        #（剥掉垃圾前缀 / 句中误切：如「べえねくぽえ…ママ『ほら…」整段垃圾前缀，
-        #  起点被拒，但消息内部含真实对白，应让择优选中它而不是整段丢弃。）
-        best_a, best_raw, best_text, best_ptrs = None, None, None, None
-        best_rank: int | None = None
-        if not filt or apply_filters(ctx, filt):
-            best_a, best_raw, best_text, best_ptrs = a, raw, text, ptrs
-            best_rank = _start_rank(text, ptrs)
-        for a2 in range(a + 1, min(end, a + 96) + 1):
-            b2 = rom[a2]
-            if b2 == 0xFF or b2 == 0x00 or (b2 >= 0xF7 and b2 != 0xFC):
-                continue
-            raw2 = read_pcs(rom, a2, 512)
-            if raw2 is None or a2 + len(raw2) - 1 != end:
-                continue
-            if a2 in seen or (use_looks_like and not looks_like_jp_text(raw2)):
-                continue
-            if a2 < SCRIPT_BANK_MIN or TITLE_LZ_BAND[0] <= a2 < TITLE_LZ_BAND[1]:
-                continue
-            text2 = decode_pcs(raw2)
-            ptrs2 = list(ptrs_map.get(a2, []))
-            ctx2 = make_filter_context(
-                fo=a2,
-                raw=raw2,
-                original=text2,
-                ptrs=ptrs2,
-                module_id=str(mid),
-                module_type=mtype,
-            )
-            if filt and not apply_filters(ctx2, filt):
-                continue
-            rank2 = _start_rank(text2, ptrs2)
-            if best_rank is None or rank2 > best_rank:
-                best_a, best_raw, best_text, best_ptrs = a2, raw2, text2, ptrs2
-                best_rank = rank2
-        if best_a is None:
+        if filt and not apply_filters(ctx, filt):
             return None
-        return best_a, best_raw, best_text, best_ptrs
+        return a, raw, text, ptrs
 
     pcs_maxlen = 512
     _scan_start = time.time()

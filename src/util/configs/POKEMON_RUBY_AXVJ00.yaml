@@ -231,11 +231,11 @@ texts:
       start: '0x3984DC'
       end: '0x39A647'
       type: scan
+      relocate: true
+      hook: true
       word_count: 9
       wrap_pages: false
       max_lines: 3
-      relocate: true
-      hook: true
     - id: 招式说明
       label: 说明·招式
       group: 说明
@@ -248,6 +248,9 @@ texts:
         stride: 56
       relocate: true
       hook: true
+      word_count: 13
+      wrap_pages: false
+      max_lines: 2
     - id: 招式说明-华丽大赛
       label: 说明·华丽大赛招式
       group: 说明
@@ -261,6 +264,9 @@ texts:
         eos_window: 48
       relocate: true
       hook: true
+      word_count: 13
+      wrap_pages: false
+      max_lines: 2
     - id: 特性说明
       label: 说明·特性
       group: 说明
@@ -331,7 +337,7 @@ texts:
       label: 文本·剧情
       group: 文本
       default: true
-      description: 全 ROM；execute_filter（ShowFieldMessage + 脚本 op 
+      description: 全 ROM；execute_filter（ShowFieldMessage + 脚本 op
         message/trainerbattle）
       start: '0x0'
       end: '0xFFFFFF'

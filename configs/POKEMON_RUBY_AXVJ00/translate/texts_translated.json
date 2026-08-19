@@ -20016,6 +20016,11 @@
   },
   {
     "status": 200,
+    "original": "たか さ",
+    "translated": "身高"
+  },
+  {
+    "status": 200,
     "original": "たかい じゅん",
     "translated": "从高到低"
   },
@@ -29363,6 +29368,11 @@
     "status": 200,
     "original": "また たいりょく なくなった！",
     "translated": "又没有体力了！"
+  },
+  {
+    "status": 200,
+    "original": "また どうぞ！",
+    "translated": "欢迎再来！"
   },
   {
     "status": 200,
@@ -50851,6 +50861,16 @@
   },
   {
     "status": 200,
+    "original": "ポケモン\n\n",
+    "translated": "宝可梦\\p"
+  },
+  {
+    "status": 200,
+    "original": "ポケモン ",
+    "translated": "宝可梦"
+  },
+  {
+    "status": 200,
     "original": "ポケモン いっぱい つかまえた！\n\nそら いけ！\nぼくの むしポケモン チーム！",
     "translated": "抓了好多宝可梦！\\p上吧！\\n我的虫属性宝可梦队伍！"
   },
@@ -51681,6 +51701,11 @@
   },
   {
     "status": 200,
+    "original": "ポケモンを\nえらんで ください",
+    "translated": "请选择宝可梦\\n。"
+  },
+  {
+    "status": 200,
     "original": "ポケモンを\nばんごうじゅんで ひょうじ します",
     "translated": "按宝可梦\\n编号顺序显示"
   },
@@ -51698,6 +51723,11 @@
     "status": 200,
     "original": "ポケモンを えらんで ください",
     "translated": "请选择"
+  },
+  {
+    "status": 200,
+    "original": "ポケモンを えらんでください",
+    "translated": "请选择宝可梦。"
   },
   {
     "status": 200,
@@ -57278,6 +57308,18 @@
     "status": 200,
     "original": "ヴェラ火山公園ぬしの間",
     "translated": "维拉火山公园霸主居处"
+  },
+  {
+    "status": 404,
+    "original": "ーーーー"
+  },
+  {
+    "status": 404,
+    "original": "ーーーーー"
+  },
+  {
+    "status": 404,
+    "original": "ーーーーーーー"
   },
   {
     "status": 200,

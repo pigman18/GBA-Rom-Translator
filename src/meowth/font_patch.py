@@ -15,7 +15,6 @@ from .config_loader import (
     get_charmap_path,
     get_game_patch_dir,
     game_config_dir,
-    parse_int_addr,
 )
 
 _GAME_BIN_MAX = 0x10000  # 不得超过 PhraseOffsets @ 0x08810000（StyleLeft 已移除）
@@ -47,45 +46,6 @@ def _verify_game_bin_embedded(rom_path: Path, game_bin: Path, vma: int = _GAME_B
             f"ROM @0x{vma:08X} does not match out/game.bin "
             f"(first diff @+0x{first:X}; refuse stale C / half-new build)"
         )
-
-
-def _generate_addrs_asm(cfg: dict[str, Any], output_path: Path, game_id: str = "") -> None:
-    """由 config 生成 include/axvj_addrs.asm（供部分旧 include；主入口用 game_addrs.asm）。"""
-    addrs = cfg.get("addrs", {})
-    win = cfg.get("win_offsets", {})
-    lines = ["; Auto-generated from config"]
-    lines.append("")
-    if addrs:
-        lines.append("; --- ROM addresses ---")
-        for name in sorted(addrs):
-            lines.append(f"{name:<40s} equ 0x{parse_int_addr(addrs[name]):08X}")
-        lines.append("")
-    slots = _normalize_font_slots(cfg, game_id=game_id)
-    if slots:
-        lines.append("; --- Font slot addresses ---")
-        for slot in slots:
-            label = slot.get("label", "Unknown")
-            addr = slot.get("addr")
-            if addr is not None:
-                lines.append(
-                    f"FontChs{label:<35s} equ 0x{parse_int_addr(addr):08X}"
-                )
-        lines.append("")
-    if win:
-        lines.append("; --- Window struct offsets ---")
-        for name in sorted(win):
-            lines.append(f"{name:<40s} equ 0x{parse_int_addr(win[name]):02X}")
-    if "escape_byte" in cfg:
-        lines.append("")
-        lines.append(
-            f"CHS_ESCAPE{'':37s} equ 0x{parse_int_addr(cfg['escape_byte']):02X}"
-        )
-    else:
-        lines.append("")
-        lines.append(f"CHS_ESCAPE{'':37s} equ 0xF9")
-    lines.append("")
-    output_path.parent.mkdir(parents=True, exist_ok=True)
-    output_path.write_text("\n".join(lines), encoding="utf-8")
 
 
 # AXVJ: Sym punct bank lives after Small (0x09100000+0xE0000). Must match
@@ -193,7 +153,6 @@ def apply_font_patch(
     src_dir = get_game_patch_dir(game_id)
     build_dir = work_dir / "build"
     fonts_src = work_dir / "graphic" / "fonts"
-    include_dir = build_dir / "include"
     graphic_dir = build_dir / "graphic"
     fonts_build_dir = graphic_dir / "fonts"
 
@@ -211,8 +170,6 @@ def apply_font_patch(
     root_tools = game_config_dir(game_id) / "tools"
     if root_tools.is_dir() and not (build_dir / "tools").exists():
         shutil.copytree(root_tools, build_dir / "tools")
-
-    _generate_addrs_asm(font_patch_cfg, include_dir / "axvj_addrs.asm", game_id=game_id)
 
     fonts_build_dir.mkdir(parents=True, exist_ok=True)
     if fonts_src.exists():

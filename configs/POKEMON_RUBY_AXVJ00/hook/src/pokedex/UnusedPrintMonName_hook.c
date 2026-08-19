@@ -7,9 +7,6 @@
  */
 #include "game.h"
 
-#define ADDR_MENU_PRINT_TEXT        0x0806F16Cu
-#define ADDR_DEX_TEXT_UNKNOWN_POKE  0x083E9688u  /* ac*5 f9 80 03 fa ff */
-
 typedef void (*menu_print_t)(const uint8_t *str, uint32_t left, uint32_t top);
 
 #define NAME_MAX_BYTES  16u

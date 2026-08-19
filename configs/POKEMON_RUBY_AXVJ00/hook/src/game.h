@@ -6,15 +6,33 @@
 
 #include <stdint.h>
 
-#define ADDR_CALL_VIA_R2           0x081B12DCu
-#define ADDR_FONT_FUNC_TABLE       0x081BB3ACu
-#define ADDR_COPY_GLYPH_2BPP_4BPP  0x080038A0u
-#define ADDR_COPY_GLYPH_1BPP_4BPP  0x08003830u
-#define ADDR_UPDATE_TILEMAP       0x080036DCu
-#define ADDR_GET_GLYPH_TILE_PTRS   0x08003730u
-#define ADDR_GAME_BIN              0x08800000u
 #define LANGUAGE_JAPANESE          1u
 #define CHS_GLYPH_ADVANCE_JP_PX    8u
+// <<<GEN_ADDR>>>
+/* Auto-generated from game_addrs.asm by scripts/gen_game_h_from_addrs.py.
+ * Do not edit by hand. Change the address in game_addrs.asm; `; C:` marker
+ * on the equ line sets the ADDR_* macro name. */
+#define ADDR_BATTLE_IF_GFX                 0x02020004u
+#define ADDR_CALL_VIA_R2                   0x081B12DCu
+#define ADDR_CHINESE_TILE_STATE            0x0203FFF8u
+#define ADDR_CHS_PITCH_CTRL                0x0203FF80u
+#define ADDR_CHS_PITCH_SLOTS               0x0203FF90u
+#define ADDR_COPY_GLYPH_1BPP_4BPP          0x08003830u
+#define ADDR_COPY_GLYPH_2BPP_4BPP          0x080038A0u
+#define ADDR_DEX_TEXT_UNKNOWN_POKE         0x083E9688u
+#define ADDR_FONT_CHS_NORMAL               0x09000000u
+#define ADDR_FONT_CHS_SYM                  0x091E0000u
+#define ADDR_FONT_FUNC_TABLE               0x081BB3ACu
+#define ADDR_GAME_BIN                      0x08800000u
+#define ADDR_GET_GLYPH_TILE_PTRS           0x08003730u
+#define ADDR_GMENU                         0x03000618u
+#define ADDR_MENU_PRINT_TEXT               0x0806F16Cu
+#define ADDR_OPT_FG_COLOR                  0x0203FFD1u
+#define ADDR_OPT_PALETTE_OVERRIDE          0x0203FFD0u
+#define ADDR_PHRASE_OFFSETS                0x08810000u
+#define ADDR_PHRASE_TABLE                  0x08820000u
+#define ADDR_UPDATE_TILEMAP                0x080036DCu
+// <<<GEN_ADDR_END>>>
 /*
  * 短语表（PhraseTable）—— 固定长度字段突破字符数限制的方案。
  * 日版 Gen3 的招式/特性/物种等字段有 stride 限制（6-8 字节），
@@ -34,29 +52,21 @@
  * Pitch 多槽在 0x0203FF80..FFCF（避开 FFF0）；勿拆回 JP→FontFunc 双路径。
  * 改 phrases 只重生 asm + armips，不必重编 game.bin。
  */
-#define ADDR_PHRASE_OFFSETS        0x08810000u
-#define ADDR_PHRASE_TABLE          0x08820000u
-#define ADDR_FONT_CHS_NORMAL       0x09000000u
 /* Sym punct bank (9×64B), after Small @ 0x09100000+0xE0000.
  * Font3 layout: upper+lower 8×8 @4bpp-index (0/E/F), NOT 16×16 2bpp.
  * Inject hex = JP PCS (00 space, 37。 3A、 3B， 3C！ 3D？ 3E： …);
  * PrintNextChar draw_chs_pcs: Sym/blank/F900/JP-via-CHS → same DrawGlyph. */
-#define ADDR_FONT_CHS_SYM          0x091E0000u
 #define SYM_GLYPH_BASE             0x36u
 #define SYM_GLYPH_COUNT            9u
 /* Legacy single-slot (unused by hook; kept for docs/config). */
-#define ADDR_CHINESE_TILE_STATE    0x0203FFF8u
 /* Pitch slot table: ctrl @ FF80 (16B), slots[8] @ FF90 (64B). */
-#define ADDR_CHS_PITCH_CTRL        0x0203FF80u/* DrawOptionMenuChoice 选中调色板覆盖（避开 FFF0/F7F8） */#define ADDR_OPT_PALETTE_OVERRIDE  0x0203FFD0u
-#define ADDR_OPT_FG_COLOR          0x0203FFD1u
-/* 颜色预留可调：选中默认=大红(8)，未选中=黑(0) */
+/* DrawOptionMenuChoice 选中调色板覆盖（避开 FFF0/F7F8） */
 #ifndef OPT_FG_SELECTED
 #define OPT_FG_SELECTED     8u
 #endif
 #ifndef OPT_FG_UNSELECTED
 #define OPT_FG_UNSELECTED   0u
 #endif
-#define ADDR_CHS_PITCH_SLOTS       0x0203FF90u
 #define CHS_PITCH_SLOT_COUNT       8u
 
 #define WIN_TEMPLATE        0x00
@@ -83,7 +93,6 @@
 #define WIN_TILE_DATA       0x20
 
 /* eBattleInterfaceGfxBuffer (AXVJ literal). Docs/ref only — gate is textMode==2. */
-#define ADDR_BATTLE_IF_GFX  0x02020004u
 #define BATTLE_IF_GFX_SIZE  0x1000u
 
 /* Per-window pitch slot (8B). Table @ ADDR_CHS_PITCH_SLOTS. */
@@ -175,7 +184,6 @@ struct ChsPitchCtrl {
 #define CHS_MODE2_ORIGIN_MENU        0x20
 #define CHS_SHOP_LIST_LEFT           14
 /* AXVJ gMenu @ IWRAM — InitMenu(left, top, n); Redraw prints ▶ */
-#define ADDR_GMENU                   0x03000618u
 #define GMENU_LEFT                   0u
 #define GMENU_TOP                    1u
 #define GMENU_MAX_MINUS_1            4u

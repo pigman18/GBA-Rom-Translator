@@ -10,7 +10,6 @@
  */
 #include "game.h"
 
-#define ADDR_MENU_PRINT_TEXT   0x0806F16Cu
 #define EXT_CTRL_CODE_BEGIN    0xFCu
 #define EXT_CTRL_CODE_PALETTE  0x05u
 

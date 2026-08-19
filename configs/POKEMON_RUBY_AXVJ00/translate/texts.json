@@ -327,6 +327,14 @@
         {
           "start": "0x083E968D",
           "end": "0x083E9691"
+        },
+        {
+          "start": "0x0839724C",
+          "end": "0x0839724D"
+        },
+        {
+          "start": "0x08397255",
+          "end": "0x08397258"
         }
       ]
     },
@@ -398,7 +406,7 @@
       ]
     }
   },
-  "count": 9450,
+  "count": 9453,
   "entries": [
     {
       "id": "axvj_92f0510597a5",
@@ -55813,6 +55821,44 @@
       "pointer_addresses": []
     },
     {
+      "id": "axvj_3f9b0b07a9c4",
+      "module": "主要UI界面",
+      "address": "0x0839724C",
+      "byte_length": 2,
+      "original": "な",
+      "original_hex": "15 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0809D158"
+      ],
+      "pointer_addresses": [
+        "0x0809D158"
+      ]
+    },
+    {
+      "id": "axvj_4add8bb93548",
+      "module": "主要UI界面",
+      "address": "0x08397255",
+      "byte_length": 4,
+      "original": "のとき",
+      "original_hex": "19 14 07 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0809D004",
+        "0x0809D01C",
+        "0x0809D038",
+        "0x0809D164"
+      ],
+      "pointer_addresses": [
+        "0x0809D004",
+        "0x0809D01C",
+        "0x0809D038",
+        "0x0809D164"
+      ]
+    },
+    {
       "id": "axvj_5fd6e03d770e",
       "module": "其他UI界面",
       "address": "0x0814DDC7",
@@ -57398,6 +57444,22 @@
       ],
       "pointer_addresses": [
         "0x0809149C"
+      ]
+    },
+    {
+      "id": "axvj_e3990b257f21",
+      "module": "其他UI界面",
+      "address": "0x0839729A",
+      "byte_length": 17,
+      "original": "\\CC050E\\02\\CC050Fで あったようだ",
+      "original_hex": "fc 05 0e fd 02 fc 05 0f 44 00 01 50 10 26 03 41 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0809D22C"
+      ],
+      "pointer_addresses": [
+        "0x0809D22C"
       ]
     },
     {

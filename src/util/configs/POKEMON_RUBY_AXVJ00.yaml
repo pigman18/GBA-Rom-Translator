@@ -336,7 +336,10 @@ texts:
           end: '0x0350883'
         - start: '0x083E968D'
           end: '0x083E9691'
-
+        - start: '0x0839724C'
+          end: '0x0839724D'
+        - start: '0x08397255'
+          end: '0x08397258'
     # 文本大模块：词条/说明 → 剧情(trainerbattle+message) → UI(菜单/文本打印)
     # 训练家对白已并入剧情（ShowTrainerIntroSpeech → ShowFieldMessage）
     - id: 其他UI界面

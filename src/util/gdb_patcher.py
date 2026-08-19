@@ -11,7 +11,8 @@ gdb_patcher.py — 基于 mGBA GDB stub 的运行时追踪工具。
 InitTextPrinter 块级解码冗余，默认排除、需显式指定。
 
 文本类 handler（InitTextPrinter / ProcessCurrentChar）：
-  - 指定 --charmap：查表解码文本（如 CHS 中文 F9 00 lead trail）
+  - 非 F9 单字节：默认按日文 PCS 假名表解码（ROM 为 AXVJ 日版底包，原日文/未翻译文本）
+  - 指定 --charmap：F9 00 lead trail 汉字 + F9 80 短语流递归 查表
   - 未指定：按原始字节 hex + 可读转义原样输出
 图像类 handler（图块/调色板加载器）：追踪 logo、图标等素材的加载，
 打印 sheet 的 data/size/tag 与数据所在区域（ROM 源给出原盘偏移与头字节）。
@@ -24,7 +25,7 @@ InitTextPrinter 块级解码冗余，默认排除、需显式指定。
   python src/util/gdb_patcher.py log --functions InitTextPrinter \
       --charmap configs/POKEMON_RUBY_AXVJ00/charmap.txt
   python src/util/gdb_patcher.py log --functions InitTextPrinter,ProcessCurrentChar \
-      --charmap configs/POKEMON_RUBY_AXVJ00/charmap.txt
+      --charmap configs/POKEMON_RUBY_AXVJ00/charmap.txt   # 单字节=日文PCS + F900/F980
    到目标界面操作，Ctrl-C 结束，分析 work/gdb_patcher_log.log。
 """
 from __future__ import annotations
@@ -71,6 +72,13 @@ JP_EWRAM_SCRATCH = 0x02000000   # LoadCompressedObject* 解压目标
 # 缺省（未传 --functions）监听全部已注册函数，仅排除 ProcessCurrentChar：
 # 它逐字符输出与 InitTextPrinter 块级解码冗余，需显式指定。
 DEFAULT_EXCLUDE = {"ProcessCurrentChar"}
+
+# F9 通道 / 短语表（hook/src/game.h + PrintNextChar_hook.c）：
+#   F9 00 lead trail   = F900 通道，双字节汉字（查 charmap double）
+#   F9 80 hi lo [FF]   = F980 通道，短语引用，code=(hi<<8)|lo
+F9_PHRASE_DEFAULT = 0x80
+ADDR_PHRASE_OFFSETS = 0x08810000   # u32[code] → 流内偏移（sentinel = total_size）
+ADDR_PHRASE_TABLE = 0x08820000     # 短语流：F9 00×N + PCS 单字节 + 控制符 + FF
 
 
 def u16(b: bytes, o: int) -> int:
@@ -122,8 +130,15 @@ def load_charmap(path: str) -> tuple[dict[int, str], dict[int, str]]:
     return single, double
 
 
-def decode_text(data: bytes, single: dict[int, str], double: dict[int, str]) -> str:
-    """解码 FF 结尾文本：F9 00 lead trail → 查表；控制码 → \\n/\\l/\\CC/\\v。"""
+def decode_text(
+    data: bytes,
+    single: dict[int, str],
+    double: dict[int, str],
+    resolve_phrase: Optional[callable] = None,
+    _depth: int = 0,
+) -> str:
+    """解码 FF 结尾文本：F9 00 lead trail → 查表；F9 80 → 短语流递归；
+    控制码 → \\n/\\l/\\CC/\\v；非 F9 单字节 → 查 single（当前字库）。"""
     out: list[str] = []
     i = 0
     n = len(data)
@@ -135,6 +150,19 @@ def decode_text(data: bytes, single: dict[int, str], double: dict[int, str]) -> 
             if i + 3 < n and data[i + 1] == 0x00:
                 key = (data[i + 2] << 8) | data[i + 3]
                 out.append(double.get(key, f"<F9:{key:04X}>"))
+                i += 4
+                continue
+            if i + 2 < n and resolve_phrase is not None and data[i + 1] == F9_PHRASE_DEFAULT:
+                code = (data[i + 2] << 8) | data[i + 3]
+                if _depth >= 4:
+                    out.append(f"{{F9 80→短语{code:04X}(深度超限)}}")
+                else:
+                    stream = resolve_phrase(code)
+                    if stream:
+                        sub = decode_text(stream, single, double, resolve_phrase, _depth + 1)
+                        out.append(f"{{F9 80→短语{code:04X}:{sub}}}")
+                    else:
+                        out.append(f"{{F9 80→短语{code:04X}:<查表失败>}}")
                 i += 4
                 continue
             if i + 2 < n:
@@ -161,6 +189,13 @@ def decode_text(data: bytes, single: dict[int, str], double: dict[int, str]) -> 
             continue
         if b >= 0xFC:
             if b == 0xFC and i + 1 < n:
+                from meowth.pcs_codes import fc_arg_count
+                cmd = data[i + 1]
+                end = i + 2 + fc_arg_count(cmd)
+                if end <= n:
+                    out.append("\\CC" + "".join(f"{x:02X}" for x in data[i + 1 : end]))
+                    i = end
+                    continue
                 out.append(f"\\CC{data[i + 1]:02X}")
                 i += 2
                 continue
@@ -230,10 +265,25 @@ class Ctx:
         return True
 
     def text_of(self, data: bytes) -> str:
-        """有字库查表，无字库原样字节转义。"""
+        """有字库查表，无字库原样字节转义。F9 80 短语经 GDB 读短语表递归解码。"""
         if self.single or self.double:
-            return decode_text(data, self.single, self.double)
+            return decode_text(data, self.single, self.double, self._resolve_phrase)
         return raw_dump(data)
+
+    def _resolve_phrase(self, code: int) -> Optional[bytes]:
+        """从 GDB 实时 ROM 读短语流：PhraseOffsets[code] → PhraseTable+off → FF 结尾流。"""
+        try:
+            off_b = bytes(self.gdb.read_mem(ADDR_PHRASE_OFFSETS + code * 4, 4))
+            if len(off_b) < 4:
+                return None
+            off = u32(off_b, 0)
+            if off >= 0x01000000:
+                return None
+            stream = bytes(self.gdb.read_mem(ADDR_PHRASE_TABLE + off, STR_MAX))
+        except GdbError:
+            return None
+        end = stream.find(0xFF)
+        return stream[: end + 1] if end >= 0 else stream
 
     def char_of(self, b: int) -> str:
         if self.single:
@@ -320,7 +370,8 @@ def _on_init_text(gdb: GdbClient, regs: dict, ctx: Ctx) -> None:
     data = _read_ff_text(gdb, sp)
     if not ctx._hit((sp, data[:64])):
         return
-    ctx.log(f"\n[InitTextPrinter] win=0x{win:08X} 文本=0x{sp:08X} ({region_of(sp)}) LR=0x{lr:08X}")
+    end = sp + len(data) - 1
+    ctx.log(f"\n[InitTextPrinter] win=0x{win:08X} 文本=0x{sp:08X}~0x{end:08X} ({region_of(sp)}) LR=0x{lr:08X}")
     wb = _read_win(gdb, win)
     if len(wb) >= 0x1E:
         ctx.log(
@@ -486,11 +537,15 @@ def run_log(args: argparse.Namespace) -> int:
         return 2
 
     single, double = {}, {}
+    from meowth.jp_pcs import BYTE_TO_CHAR as JP_BYTE_TO_CHAR
+    single = dict(JP_BYTE_TO_CHAR)  # AXVJ 日版底包：非 F9 单字节一律按日文 PCS（假名）
     if args.charmap:
-        single, double = load_charmap(args.charmap)
-        mode = f"字库解码 {args.charmap}（{len(single)} 单字节 / {len(double)} 双字节）"
+        _, double = load_charmap(args.charmap)
+        mode = f"单字节=日文PCS + F900/F980 字库 {args.charmap}"
     else:
-        mode = "原样输出原始字节（未指定 --charmap）"
+        mode = "单字节=日文PCS（未指定 --charmap 则 F900 双字节/短语不查表）"
+    if args.jp:
+        mode = mode.replace("单字节=日文PCS", "单字节=日文PCS(--jp 显式)")
 
     origin = None
     if os.path.isfile(args.origin):
@@ -586,6 +641,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         default=None,
         help="字库映射路径（如 configs/POKEMON_RUBY_AXVJ00/charmap.txt）；"
         "指定则查表解码文本，未指定按原始字节输出",
+    )
+    ap.add_argument(
+        "--jp",
+        action="store_true",
+        help="(已为默认) 日文 PCS 单字节解码；因 ROM 为 AXVJ 日版底包，非 F9 单字节"
+        "默认即按日文假名表转换，此开关仅为显式标注",
     )
     ap.add_argument("--gdb", default=DEFAULT_GDB, help="host:port（默认 127.0.0.1:2345）")
     ap.add_argument("--limit", type=int, default=3000, help="最多命中次数")

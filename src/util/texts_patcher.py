@@ -32,6 +32,7 @@ import json
 import re
 import struct
 import sys
+import time
 from abc import ABC, abstractmethod
 from pathlib import Path
 from typing import Any, NamedTuple
@@ -1308,7 +1309,26 @@ def _parse_original_text_items(
     - 字符串：任意地址
     - ``{original, address}``：单地址
     - ``{original, start, end}``：闭区间带
+    - ``{file, mapping}``：从语料文件按行加载（每行一词条，字面 ``\\n`` 还原为真换行）
     """
+    if isinstance(val, dict):
+        file_spec = val.get("file")
+        if not file_spec:
+            return []
+        raw_map = val.get("mapping") or {}
+        if not isinstance(raw_map, dict):
+            raise SystemExit(f"original_text_filter.mapping 须为对象 id={val.get('id')!r}")
+        mapping = {str(k): str(v) for k, v in raw_map.items()}
+        path = _resolve_msg_filter_file(str(file_spec))
+        out: list[tuple[str, int | None, int | None]] = []
+        for line in path.read_text(encoding="utf-8").splitlines():
+            if not line.strip():
+                continue
+            mapped = _apply_msg_mapping(line, mapping)
+            s = mapped.replace("\\n", "\n").replace("\\r", "\r")
+            if s:
+                out.append((s, None, None))
+        return out
     if not isinstance(val, (list, tuple)):
         return []
     out: list[tuple[str, int | None, int | None]] = []
@@ -1957,7 +1977,10 @@ def extract_scan(
     # reader=msg_reader：scan 读取内容改为用 msg 语料 needle 定位「垃圾前缀 + msg
     # 文本」的真实起点（如「べえねくぽえ…ママ『ほら…」）。返回修整内容或 None。
     msg_reader: MsgReader | None = None
-    if str(mod.get("reader") or "") == "msg_reader":
+    reader_spec = mod.get("reader")
+    if isinstance(reader_spec, dict) and str(reader_spec.get("type") or "") == "msg_reader":
+        msg_reader = MsgReader(reader_spec)
+    elif str(reader_spec or "") == "msg_reader":
         msg_reader = MsgReader({"id": "msg_reader", "value": mod.get("reader_value")})
     bands = effective_module_bands(mod, omit_ranges or [])
     if not bands:
@@ -2071,9 +2094,9 @@ def extract_scan(
         )
 
     if include_items is not None:
-        # 包含模式：只对「有地址绑定」的项做精确定位（单点/窄带 needle）。
-        # 无地址词不在此扫描——回归纯 Boolean，交给下方普通 scan 逐地址走
-        # filter 的整串完全匹配判定，杜绝全 ROM find 子串/尾部拆串越权认领。
+        # 包含模式：地址钉（有 lo/hi）用 needle 精确定位（单点/窄带，禁止全 ROM
+        # find 短词）；无地址词不在此扫，落入下方普通 scan，从 ROM 逐地址读取
+        # 内容、用 filter 整串完全匹配判定（杜绝 find 子串/尾部拆串越权认领）。
         addr_items = [(t, lo, hi) for t, lo, hi in include_items if lo is not None or hi is not None]
         has_noaddr = len(addr_items) != len(include_items)
         for text, lo, hi in addr_items:
@@ -2110,13 +2133,13 @@ def extract_scan(
                         break
                     start = a + 1
                     _try_accept(a, body)
-        # 全部为地址钉：合并进常规 scan（msg_filter 等仍扫 band）
-        # 含无地址白名单短词：不提前 return，继续落入下方普通 scan，由 filter
-        # 的整串完全匹配判定无地址词（不再全 ROM needle 拆串）。
+        # 全部为地址钉（无无地址词）：已在上方 needle 循环精确收录，提前返回。
+        # 含无地址词：不 return，落入下方普通 scan，从 ROM 逐地址读取、由
+        # filter 整串完全匹配判定无地址词。
         pins_only_fallthrough = not has_noaddr and all(
             lo is not None and hi is not None for _t, lo, hi in include_items
         )
-        if not pins_only_fallthrough:
+        if pins_only_fallthrough:
             return out
 
     # msg_filter 白名单：不再「指针优先」——直接落入下方全盘 FF 针扫，
@@ -2202,9 +2225,20 @@ def extract_scan(
         return best_a, best_raw, best_text, best_ptrs
 
     pcs_maxlen = 512
+    _scan_start = time.time()
+    _last_prog = 0.0
     for lo, hi in band_pairs:
+        band_len = hi - lo + 1
         a = lo
         while a <= hi:
+            now = time.time()
+            if now - _last_prog >= 2.0:
+                pct = (a - lo) * 100 // band_len
+                sys.stderr.write(
+                    f"\r[scan:{mid}] {a:#x}/{hi:#x} ({pct}%) 累计{now - _scan_start:.0f}s"
+                )
+                sys.stderr.flush()
+                _last_prog = now
             b = rom[a]
             # 0xFC = 扩展控制码前缀；勿与 F7–FB / FE / FF 一并跳过
             # 0xFD = \\v 名字/变量占位前缀；放行（以 FD 开头的正文如 \\01\\05 だね？

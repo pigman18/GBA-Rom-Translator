@@ -287,7 +287,7 @@ work/
 
 ---
 
-# gdb_patcher.py
+# debug_patcher.py（原 gdb_patcher.py）
 
 连 mGBA GDB stub，或对成品 ROM 做静态反查，定位「坏地址」从哪来。
 
@@ -298,7 +298,7 @@ work/
 ### A. 崩后还能停在坏 PC
 
 ```bash
-python src/util/gdb_patcher.py 0xD8004286
+python src/util/debug_patcher.py 0xD8004286
 ```
 
 ### B. SoftReset / 进 BIOS → 优先 `romscan`（不必开 GDB）
@@ -306,7 +306,7 @@ python src/util/gdb_patcher.py 0xD8004286
 动画完重启、CallVia trap 一直「非目标」时：坏值往往是 **ROM 里指针表被 in_place 盖成 F9 流**，不经 `CallViaR*`。
 
 ```bash
-python src/util/gdb_patcher.py romscan 0x5F0A00F9
+python src/util/debug_patcher.py romscan 0x5F0A00F9
 ```
 
 对照原盘字 → 成品字，并反查 `translate.build.json` 的误扫条目，再写入 `rejects`。
@@ -314,9 +314,29 @@ python src/util/gdb_patcher.py romscan 0x5F0A00F9
 ### C. `trap`（CallVia + SoftReset 运行时拦）
 
 ```bash
-python src/util/gdb_patcher.py trap 0x5F0A00F9
-python src/util/gdb_patcher.py trap 0x5F0A00F9 --any-f9
+python src/util/debug_patcher.py trap 0x5F0A00F9
+python src/util/debug_patcher.py trap 0x5F0A00F9 --any-f9
 ```
+
+---
+
+# gdb_patcher.py
+
+基于 mGBA GDB stub 的运行时追踪工具（`log` 命令）。每个函数 = 断点地址 + 独立
+handler，`--functions` 选择要监听的函数，未注册的名字跳过并警告。缺省只监听
+`InitTextPrinter`（文本块级，一次解码整段）；逐字符的 `ProcessCurrentChar` 属冗余，
+需显式 `--functions` 才监听。
+
+```bash
+# 缺省：只监听 InitTextPrinter，并用字库解码中文
+python src/util/gdb_patcher.py log --charmap configs/POKEMON_RUBY_AXVJ00/charmap.txt
+# 显式逐字符（仅排查单字符问题时用）
+python src/util/gdb_patcher.py log --functions InitTextPrinter,ProcessCurrentChar \
+    --charmap configs/POKEMON_RUBY_AXVJ00/charmap.txt
+```
+
+未指定 `--charmap` 时按原始字节 hex + 可读转义输出。缺省日志 `work/gdb_patcher_log.log`，
+`--log` 可换路径。未来图标类 handler（图块/调色板加载）只需在源码里注册新函数名。
 
 ---
 

@@ -16,7 +16,7 @@ trace_final.py — 一次抓全崩溃现场关键信息。
 import sys, os, time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-from util.gdb_patcher import GdbClient, GdbError, REG_NAMES
+from util.debug_patcher import GdbClient, GdbError, REG_NAMES
 
 HOST, PORT = "127.0.0.1", 2345
 LOG = os.path.join(os.path.dirname(__file__), "final.log")

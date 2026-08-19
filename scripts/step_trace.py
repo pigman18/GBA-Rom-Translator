@@ -16,7 +16,7 @@ step_trace.py — 单步追踪，抓"选定招式后崩溃"的最后指令轨迹
 import sys, os, time
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-from util.gdb_patcher import GdbClient, GdbError, REG_NAMES
+from util.debug_patcher import GdbClient, GdbError, REG_NAMES
 
 HOST, PORT = "127.0.0.1", 2345
 TRACE_FILE = os.path.join(os.path.dirname(__file__), "trace.log")

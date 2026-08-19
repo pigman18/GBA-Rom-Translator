@@ -29,7 +29,7 @@ map 的 tilemap 列集合」。残留 = 有 tilemap 列只被旧 label 写过、
 import sys, os, time, signal
 
 sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
-from util.gdb_patcher import GdbClient, GdbError
+from util.debug_patcher import GdbClient, GdbError
 
 HOST, PORT = "127.0.0.1", 2345
 LOGDIR = os.path.dirname(os.path.abspath(__file__))

@@ -321,9 +321,25 @@ texts:
       word_count: 16
       wrap_pages: false
       max_lines: 3
+    - id: 主要UI界面
+      label: UI界面
+      group: 文本
+      default: true
+      description: 全 ROM；execute_filter（Menu/Text 打印函数，排除故事已消费）
+      start: '0x0'
+      end: '0xFFFFFF'
+      type: scan
+      relocate: true
+      hook: true
+      ranges:
+        - start: '0x0350864'
+          end: '0x0350883'
+        - start: '0x083E968D'
+          end: '0x083E9691'
+
     # 文本大模块：词条/说明 → 剧情(trainerbattle+message) → UI(菜单/文本打印)
     # 训练家对白已并入剧情（ShowTrainerIntroSpeech → ShowFieldMessage）
-    - id: UI界面
+    - id: 其他UI界面
       label: UI界面
       group: 文本
       default: true

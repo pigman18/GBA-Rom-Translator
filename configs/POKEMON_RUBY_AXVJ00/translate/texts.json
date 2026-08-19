@@ -309,7 +309,28 @@
       "wrap_pages": false,
       "max_lines": 3
     },
-    "UI界面": {
+    "主要UI界面": {
+      "label": "UI界面",
+      "group": "文本",
+      "default": true,
+      "description": "全 ROM；execute_filter（Menu/Text 打印函数，排除故事已消费）",
+      "start": "0x0",
+      "end": "0xFFFFFF",
+      "type": "scan",
+      "relocate": true,
+      "hook": true,
+      "ranges": [
+        {
+          "start": "0x0350864",
+          "end": "0x0350883"
+        },
+        {
+          "start": "0x083E968D",
+          "end": "0x083E9691"
+        }
+      ]
+    },
+    "其他UI界面": {
       "label": "UI界面",
       "group": "文本",
       "default": true,
@@ -377,7 +398,7 @@
       ]
     }
   },
-  "count": 9448,
+  "count": 9450,
   "entries": [
     {
       "id": "axvj_92f0510597a5",
@@ -55650,8 +55671,150 @@
       ]
     },
     {
+      "id": "axvj_4e11990121f3",
+      "module": "主要UI界面",
+      "address": "0x08350864",
+      "byte_length": 4,
+      "original": "ずかん",
+      "original_hex": "3e 06 2e ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x0835089C"
+      ],
+      "pointer_addresses": [
+        "0x0835089C"
+      ]
+    },
+    {
+      "id": "axvj_53d9ec2adb56",
+      "module": "主要UI界面",
+      "address": "0x08350868",
+      "byte_length": 5,
+      "original": "ポケモン",
+      "original_hex": "9f 59 73 7e ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x083508A4"
+      ],
+      "pointer_addresses": [
+        "0x083508A4"
+      ]
+    },
+    {
+      "id": "axvj_d3832d15d3e6",
+      "module": "主要UI界面",
+      "address": "0x0835086D",
+      "byte_length": 4,
+      "original": "バッグ",
+      "original_hex": "96 a0 89 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x083508AC"
+      ],
+      "pointer_addresses": [
+        "0x083508AC"
+      ]
+    },
+    {
+      "id": "axvj_fe67d46bfee6",
+      "module": "主要UI界面",
+      "address": "0x08350871",
+      "byte_length": 5,
+      "original": "ポケナビ",
+      "original_hex": "9f 59 65 97 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x083508B4"
+      ],
+      "pointer_addresses": [
+        "0x083508B4"
+      ]
+    },
+    {
+      "id": "axvj_643c9e4b0b78",
+      "module": "主要UI界面",
+      "address": "0x08350876",
+      "byte_length": 3,
+      "original": "\\01",
+      "original_hex": "fd 01 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x083508BC",
+        "0x083508E4"
+      ],
+      "pointer_addresses": [
+        "0x083508BC",
+        "0x083508E4"
+      ]
+    },
+    {
+      "id": "axvj_baea4e59dec9",
+      "module": "主要UI界面",
+      "address": "0x08350879",
+      "byte_length": 5,
+      "original": "レポート",
+      "original_hex": "7a 9f ae 64 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x083508C4"
+      ],
+      "pointer_addresses": [
+        "0x083508C4"
+      ]
+    },
+    {
+      "id": "axvj_e79443b2c1bd",
+      "module": "主要UI界面",
+      "address": "0x0835087E",
+      "byte_length": 5,
+      "original": "せってい",
+      "original_hex": "0e 50 13 02 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x083508CC"
+      ],
+      "pointer_addresses": [
+        "0x083508CC"
+      ]
+    },
+    {
+      "id": "axvj_8c08f22105a7",
+      "module": "主要UI界面",
+      "address": "0x08350883",
+      "byte_length": 4,
+      "original": "とじる",
+      "original_hex": "14 3d 29 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x083508D4"
+      ],
+      "pointer_addresses": [
+        "0x083508D4"
+      ]
+    },
+    {
+      "id": "axvj_fcc1dc658b0b",
+      "module": "主要UI界面",
+      "address": "0x083E968D",
+      "byte_length": 5,
+      "original": "ポケモン",
+      "original_hex": "9f 59 73 7e ff",
+      "translated": "",
+      "is_pointer_based": false,
+      "pointer_sources": [],
+      "pointer_addresses": []
+    },
+    {
       "id": "axvj_5fd6e03d770e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0814DDC7",
       "byte_length": 25,
       "original": "ここは １０１ばん どうろ\n\\CC0CF7 コトキタウン",
@@ -55667,7 +55830,7 @@
     },
     {
       "id": "axvj_4075a76a9c83",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0814DFB1",
       "byte_length": 25,
       "original": "ここは １０２ばん どうろ\n\\CC0CFA コトキタウン",
@@ -55683,7 +55846,7 @@
     },
     {
       "id": "axvj_9517cb280190",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0814DFCA",
       "byte_length": 25,
       "original": "ここは １０２ばん どうろ\n\\CC0CF9 トウカシティ",
@@ -55699,7 +55862,7 @@
     },
     {
       "id": "axvj_fe6ac61df75b",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0814E593",
       "byte_length": 25,
       "original": "ここは １０３ばん どうろ\n\\CC0CF8 コトキタウン",
@@ -55715,7 +55878,7 @@
     },
     {
       "id": "axvj_7b0906e6971b",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0814EC35",
       "byte_length": 25,
       "original": "ここは １０４ばん どうろ\n\\CC0CFA トウカシティ",
@@ -55731,7 +55894,7 @@
     },
     {
       "id": "axvj_cb4960cf3691",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0814EC4E",
       "byte_length": 26,
       "original": "ここは １０４ばん どうろ\n\\CC0CF7 カナズミシティ",
@@ -55747,7 +55910,7 @@
     },
     {
       "id": "axvj_8fd5a4437965",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0815044E",
       "byte_length": 25,
       "original": "ここは １１０ばん どうろ\n\\CC0CF8 カイナシティ",
@@ -55763,7 +55926,7 @@
     },
     {
       "id": "axvj_8b1d268ac34a",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0815049B",
       "byte_length": 28,
       "original": "ここは １１０ばん どうろ\n\\CC0CF9 １０３ばん どうろ",
@@ -55779,7 +55942,7 @@
     },
     {
       "id": "axvj_b85ad98d1ca7",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081504C5",
       "byte_length": 26,
       "original": "ここは １１０ばん どうろ\n\\CC0CF7 キンセツシティ",
@@ -55795,7 +55958,7 @@
     },
     {
       "id": "axvj_2ad8afe54b54",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0815056F",
       "byte_length": 43,
       "original": "ここより \\CC0CFAへ３ぽ \\CC0CF7へ２ほ ゆけば\nそこは すてきな 「カラクリやしき」！",
@@ -55811,7 +55974,7 @@
     },
     {
       "id": "axvj_e2c9470e4a46",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08150F59",
       "byte_length": 26,
       "original": "ここは １１１ばん どうろ\n\\CC0CF8 キンセツシティ",
@@ -55827,7 +55990,7 @@
     },
     {
       "id": "axvj_edb19d09d535",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08150F96",
       "byte_length": 28,
       "original": "ここは １１１ばん どうろ\n\\CC0CF9 １１２ばん どうろ",
@@ -55843,7 +56006,7 @@
     },
     {
       "id": "axvj_164cbb2b2394",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08150FB2",
       "byte_length": 28,
       "original": "ここは １１１ばん どうろ\n\\CC0CF9 １１３ばん どうろ",
@@ -55859,7 +56022,7 @@
     },
     {
       "id": "axvj_a98fae8f411d",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081511A4",
       "byte_length": 33,
       "original": "「えんとつやま ロープウェイ のりば」\n\\CC0CF7 このさき すぐ！",
@@ -55875,7 +56038,7 @@
     },
     {
       "id": "axvj_d4648fee74bc",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081511F2",
       "byte_length": 25,
       "original": "ここは １１２ばん どうろ\n\\CC0CF9 フエンタウン",
@@ -55891,7 +56054,7 @@
     },
     {
       "id": "axvj_85fcf40eb69e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081513E2",
       "byte_length": 28,
       "original": "ここは １１３ばん どうろ\n\\CC0CFA １１１ばん どうろ",
@@ -55907,7 +56070,7 @@
     },
     {
       "id": "axvj_4c2eda41c820",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081513FE",
       "byte_length": 26,
       "original": "ここは １１３ばん どうろ\n\\CC0CF9 ハジツゲタウン",
@@ -55923,7 +56086,7 @@
     },
     {
       "id": "axvj_dfea96c8a434",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08151884",
       "byte_length": 26,
       "original": "ここは １１５ばん どうろ\n\\CC0CF8 カナズミシティ",
@@ -55939,7 +56102,7 @@
     },
     {
       "id": "axvj_74dcccbc20ef",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08151F90",
       "byte_length": 26,
       "original": "ここは １１６ばん どうろ\n\\CC0CF9 カナズミシティ",
@@ -55955,7 +56118,7 @@
     },
     {
       "id": "axvj_2951b08315f7",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08152308",
       "byte_length": 25,
       "original": "ここは １１７ばん どうろ\n\\CC0CF9 シダケタウン",
@@ -55971,7 +56134,7 @@
     },
     {
       "id": "axvj_b690021c8843",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08152321",
       "byte_length": 26,
       "original": "ここは １１７ばん どうろ\n\\CC0CFA キンセツシティ",
@@ -55987,7 +56150,7 @@
     },
     {
       "id": "axvj_f52e879c5494",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08152767",
       "byte_length": 26,
       "original": "ここは １１８ばん どうろ\n\\CC0CF9 キンセツシティ",
@@ -56003,7 +56166,7 @@
     },
     {
       "id": "axvj_1ccaa34eb673",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08152781",
       "byte_length": 28,
       "original": "ここは １１８ばん どうろ\n\\CC0CF7 １１９ばん どうろ",
@@ -56019,7 +56182,7 @@
     },
     {
       "id": "axvj_91d88a3181a3",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08152FE0",
       "byte_length": 26,
       "original": "ここは １１９ばん どうろ\n\\CC0CFA ヒワマキシティ",
@@ -56035,7 +56198,7 @@
     },
     {
       "id": "axvj_e0e755550484",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081537E0",
       "byte_length": 26,
       "original": "ここは １２０ばん どうろ\n\\CC0CF9 ヒワマキシティ",
@@ -56051,7 +56214,7 @@
     },
     {
       "id": "axvj_1bcc019111c6",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081537FA",
       "byte_length": 28,
       "original": "\\CC0CFA １２１ばん どうろ\n\\CC0CF9 １２０ばん どうろ",
@@ -56067,7 +56230,7 @@
     },
     {
       "id": "axvj_f6ca85d723ac",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08153C3B",
       "byte_length": 28,
       "original": "\\CC0CFA １２３ばん どうろ\n\\CC0CF9 １１８ばん どうろ",
@@ -56083,7 +56246,7 @@
     },
     {
       "id": "axvj_2eb95b48d984",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08153C57",
       "byte_length": 33,
       "original": "\\CC0CF7‥‥ おくりびやま\nこころ よわきもの ちかよる べからず",
@@ -56099,7 +56262,7 @@
     },
     {
       "id": "axvj_59ed79d0fab5",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08155028",
       "byte_length": 21,
       "original": "\\01は パソコンの\nスイッチを いれた！",
@@ -56111,7 +56274,7 @@
     },
     {
       "id": "axvj_d23636d14049",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08161FDE",
       "byte_length": 34,
       "original": "どうも ありがとう！\nじたくの パソコンに おくって おきますね！",
@@ -56131,7 +56294,7 @@
     },
     {
       "id": "axvj_a1abf3c6728e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08172CDF",
       "byte_length": 28,
       "original": "\\CC0CF8 デコボコさんどう\nとおりぬけると フエンタウン",
@@ -56147,7 +56310,7 @@
     },
     {
       "id": "axvj_0574f224f433",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0817F347",
       "byte_length": 168,
       "original": "ほしいモノ       あげるモノ\n あかいかけら   \\CC0CF9\\CC0CFA ほのおのいし\n\nほしいモノ       あげるモノ\n きいろいかけら  \\CC0CF9\\CC0CFA かみなりのいし\n\nほしいモノ       あげるモノ\n あおいかけら   \\CC0CF9\\CC0CFA みずのいし\n\nほしいモノ       あげるモノ\n みどりのかけら  \\CC0CF9\\CC0CFA リーフのいし",
@@ -56163,7 +56326,7 @@
     },
     {
       "id": "axvj_7ced82349788",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08180559",
       "byte_length": 21,
       "original": "\\01は\nパソコンの スイッチを いれた！",
@@ -56179,7 +56342,7 @@
     },
     {
       "id": "axvj_3bdfe7cd31eb",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0818056E",
       "byte_length": 29,
       "original": "どこの パソコンに せつぞく して\nつうしん しますか？",
@@ -56197,7 +56360,7 @@
     },
     {
       "id": "axvj_ac9628d8c061",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0818058B",
       "byte_length": 20,
       "original": "だれかの パソコンに せつぞく した！",
@@ -56213,7 +56376,7 @@
     },
     {
       "id": "axvj_8f47df785170",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081806CB",
       "byte_length": 7,
       "original": "またどうぞ！",
@@ -56297,7 +56460,7 @@
     },
     {
       "id": "axvj_c190cb3eb0a0",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08180977",
       "byte_length": 21,
       "original": "\\01は パソコンの\nスイッチを いれた！",
@@ -56315,7 +56478,7 @@
     },
     {
       "id": "axvj_632150ceab96",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08182581",
       "byte_length": 21,
       "original": "\\01は\nパソコンの スイッチを いれた！",
@@ -56333,7 +56496,7 @@
     },
     {
       "id": "axvj_3fe5448d852c",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08182596",
       "byte_length": 10,
       "original": "なにを しますか？",
@@ -56351,7 +56514,7 @@
     },
     {
       "id": "axvj_848c47e648dc",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081825A0",
       "byte_length": 111,
       "original": "とうろくした ひみつきちは\nあいてが ひっこしを しないかぎり\\lなくなる ことは ありません\n\nとうろく リストから さくじょすると\nほかの ひみつきちに\\lかわることが あります\n\nとうろくは １０かしょ まで できます\\CC09",
@@ -56367,7 +56530,7 @@
     },
     {
       "id": "axvj_000383bf9a21",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08196768",
       "byte_length": 29,
       "original": "では くじを ひいて ください\n‥\\CC0839‥\\CC0839‥\\CC0839",
@@ -56383,7 +56546,7 @@
     },
     {
       "id": "axvj_a53022af2822",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081978E9",
       "byte_length": 31,
       "original": "ここまでの かつやくを\nポケモンレポートに かきこみますか？",
@@ -56399,7 +56562,7 @@
     },
     {
       "id": "axvj_0c477b94b15b",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08197908",
       "byte_length": 32,
       "original": "まえに かかれた レポートに\nうえから かいても いいですか？",
@@ -56415,7 +56578,7 @@
     },
     {
       "id": "axvj_9bb9a5fa2e5c",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08197928",
       "byte_length": 36,
       "original": "ポケモンレポートに かきこんでいます\nでんげんを きらないで ください",
@@ -56431,7 +56594,7 @@
     },
     {
       "id": "axvj_9ef99ffd3417",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0819794C",
       "byte_length": 24,
       "original": "\\01 は\nレポートに しっかり かきのこした！",
@@ -56447,7 +56610,7 @@
     },
     {
       "id": "axvj_c58f19ea6ce8",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08197974",
       "byte_length": 42,
       "original": "べつの ぼうけんの\nレポートが かかれています！\n\nうえから かいても いいですか？",
@@ -56463,7 +56626,7 @@
     },
     {
       "id": "axvj_998a04a0f3d6",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08197B09",
       "byte_length": 19,
       "original": "おとこのこ？\nそれとも おんなのこ？",
@@ -56479,7 +56642,7 @@
     },
     {
       "id": "axvj_35531481c3f7",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08197B1C",
       "byte_length": 17,
       "original": "なまえも おしえて くれるかい！",
@@ -56495,7 +56658,7 @@
     },
     {
       "id": "axvj_0915c245ec0c",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081BBD94",
       "byte_length": 54,
       "original": "\\CC0200\\CC010Fつうしんエラーが はっせいしました\nケーブルを せつぞくして\nでんげんを いれなおしてください",
@@ -56511,7 +56674,7 @@
     },
     {
       "id": "axvj_1a2ecdf9f32d",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081DB8D2",
       "byte_length": 4,
       "original": "やめる",
@@ -56527,7 +56690,7 @@
     },
     {
       "id": "axvj_c502387a0c58",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081DC255",
       "byte_length": 33,
       "original": "\\CC010F\\CC0200\\CC0301うまれた \\02に\nニックネームを つけますか？",
@@ -56543,7 +56706,7 @@
     },
     {
       "id": "axvj_40ebfc837a4a",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081E0198",
       "byte_length": 16,
       "original": "ポケモンを えらんで ください",
@@ -56559,7 +56722,7 @@
     },
     {
       "id": "axvj_e37e852a4513",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081E01A8",
       "byte_length": 7,
       "original": "つよさをみる",
@@ -56575,7 +56738,7 @@
     },
     {
       "id": "axvj_c479b5c20474",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081E0387",
       "byte_length": 33,
       "original": "\\CC0101\\CC020F\\CC0308つうしんたいきちゅう！\nしばらくおまちください",
@@ -56591,7 +56754,7 @@
     },
     {
       "id": "axvj_b4acf8c6adef",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081E03A8",
       "byte_length": 28,
       "original": "\\CC0101\\CC020F\\CC0308こうかんは\nキャンセル されました！",
@@ -56607,7 +56770,7 @@
     },
     {
       "id": "axvj_1a64a1cc06e2",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081E03C4",
       "byte_length": 41,
       "original": "\\CC0101\\CC020F\\CC0308そのポケモンを こうかんすると\nせんとうできなくなっちゃうよ！",
@@ -56623,7 +56786,7 @@
     },
     {
       "id": "axvj_8bc44c7e2020",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081E03ED",
       "byte_length": 41,
       "original": "\\CC0101\\CC020F\\CC0308これでこうかんすると あいてが\nせんとうできなくなっちゃうよ！",
@@ -56639,7 +56802,7 @@
     },
     {
       "id": "axvj_2ab9e802cbb0",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081E0416",
       "byte_length": 32,
       "original": "\\CC0101\\CC020F\\CC0308ともだちの しゅうりょうを\nまっています‥‥",
@@ -56655,7 +56818,7 @@
     },
     {
       "id": "axvj_39accc5a9ec1",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081E0436",
       "byte_length": 36,
       "original": "\\CC0101\\CC020F\\CC0308ともだちは ポケモンの\nこうかんを したいようです！",
@@ -56671,7 +56834,7 @@
     },
     {
       "id": "axvj_e1f4f0f5a9e8",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081E04BF",
       "byte_length": 3,
       "original": "わざ",
@@ -56687,7 +56850,7 @@
     },
     {
       "id": "axvj_bb4433d2ac00",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081EC1DC",
       "byte_length": 6,
       "original": "おとこのこ",
@@ -56699,7 +56862,7 @@
     },
     {
       "id": "axvj_ed65ec7bb5b9",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081EC1E2",
       "byte_length": 6,
       "original": "おんなのこ",
@@ -56711,7 +56874,7 @@
     },
     {
       "id": "axvj_109176b613a8",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x081EC5FF",
       "byte_length": 46,
       "original": "ポケモンレポートに かきこんでいます    \nでんげんを きらないで ください      ",
@@ -56727,7 +56890,7 @@
     },
     {
       "id": "axvj_22ec619a0a03",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x082E8197",
       "byte_length": 12,
       "original": "つれないなあ・・・\\CC09",
@@ -56743,7 +56906,7 @@
     },
     {
       "id": "axvj_53480ea66693",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x082E81A3",
       "byte_length": 16,
       "original": "にげられて しまった・・・\\CC09",
@@ -56759,7 +56922,7 @@
     },
     {
       "id": "axvj_b55239bb63f9",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08350095",
       "byte_length": 5,
       "original": "けってい",
@@ -56774,104 +56937,8 @@
       ]
     },
     {
-      "id": "axvj_53d9ec2adb56",
-      "module": "UI界面",
-      "address": "0x08350868",
-      "byte_length": 5,
-      "original": "ポケモン",
-      "original_hex": "9f 59 73 7e ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083508A4"
-      ],
-      "pointer_addresses": [
-        "0x083508A4"
-      ]
-    },
-    {
-      "id": "axvj_d3832d15d3e6",
-      "module": "UI界面",
-      "address": "0x0835086D",
-      "byte_length": 4,
-      "original": "バッグ",
-      "original_hex": "96 a0 89 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083508AC"
-      ],
-      "pointer_addresses": [
-        "0x083508AC"
-      ]
-    },
-    {
-      "id": "axvj_fe67d46bfee6",
-      "module": "UI界面",
-      "address": "0x08350871",
-      "byte_length": 5,
-      "original": "ポケナビ",
-      "original_hex": "9f 59 65 97 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083508B4"
-      ],
-      "pointer_addresses": [
-        "0x083508B4"
-      ]
-    },
-    {
-      "id": "axvj_baea4e59dec9",
-      "module": "UI界面",
-      "address": "0x08350879",
-      "byte_length": 5,
-      "original": "レポート",
-      "original_hex": "7a 9f ae 64 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083508C4"
-      ],
-      "pointer_addresses": [
-        "0x083508C4"
-      ]
-    },
-    {
-      "id": "axvj_e79443b2c1bd",
-      "module": "UI界面",
-      "address": "0x0835087E",
-      "byte_length": 5,
-      "original": "せってい",
-      "original_hex": "0e 50 13 02 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083508CC"
-      ],
-      "pointer_addresses": [
-        "0x083508CC"
-      ]
-    },
-    {
-      "id": "axvj_8c08f22105a7",
-      "module": "UI界面",
-      "address": "0x08350883",
-      "byte_length": 4,
-      "original": "とじる",
-      "original_hex": "14 3d 29 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083508D4"
-      ],
-      "pointer_addresses": [
-        "0x083508D4"
-      ]
-    },
-    {
       "id": "axvj_d666344e3538",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08350887",
       "byte_length": 5,
       "original": "リタイア",
@@ -56887,7 +56954,7 @@
     },
     {
       "id": "axvj_32826d089dae",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083508EE",
       "byte_length": 3,
       "original": "はい",
@@ -56903,7 +56970,7 @@
     },
     {
       "id": "axvj_30736a58ff3e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083508F1",
       "byte_length": 4,
       "original": "いいえ",
@@ -56919,7 +56986,7 @@
     },
     {
       "id": "axvj_5122c4778a20",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0837B50C",
       "byte_length": 13,
       "original": "\\CC0509せっていを かえる",
@@ -56935,7 +57002,7 @@
     },
     {
       "id": "axvj_fcea5374fd2e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0837B519",
       "byte_length": 12,
       "original": "\\CC0509はなしの はやさ",
@@ -56951,7 +57018,7 @@
     },
     {
       "id": "axvj_58c4cf002f6e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0837B525",
       "byte_length": 13,
       "original": "\\CC0509せんとうエフェクト",
@@ -56967,7 +57034,7 @@
     },
     {
       "id": "axvj_a7b2b0158949",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0837B532",
       "byte_length": 12,
       "original": "\\CC0509しあいの ルール",
@@ -56983,7 +57050,7 @@
     },
     {
       "id": "axvj_8f1a1ce10352",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0837B53E",
       "byte_length": 8,
       "original": "\\CC0509サウンド",
@@ -56999,7 +57066,7 @@
     },
     {
       "id": "axvj_e7d018cf78c6",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0837B546",
       "byte_length": 9,
       "original": "\\CC0509ウインドウ",
@@ -57015,7 +57082,7 @@
     },
     {
       "id": "axvj_e629b35fac1f",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0837B54F",
       "byte_length": 7,
       "original": "\\CC0509おわる",
@@ -57031,7 +57098,7 @@
     },
     {
       "id": "axvj_9a7240611503",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0837B556",
       "byte_length": 12,
       "original": "\\CC0509ボタンの モード",
@@ -57047,7 +57114,7 @@
     },
     {
       "id": "axvj_7ceaf0516a3b",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0837B562",
       "byte_length": 7,
       "original": "\\CC050Fおそい",
@@ -57063,7 +57130,7 @@
     },
     {
       "id": "axvj_74ddb35e2814",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0837B569",
       "byte_length": 7,
       "original": "\\CC050Fふつう",
@@ -57079,7 +57146,7 @@
     },
     {
       "id": "axvj_70c63c802447",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0837B570",
       "byte_length": 7,
       "original": "\\CC050Fはやい",
@@ -57095,7 +57162,7 @@
     },
     {
       "id": "axvj_d26e044eaaf1",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0837B577",
       "byte_length": 6,
       "original": "\\CC050Fみる",
@@ -57111,7 +57178,7 @@
     },
     {
       "id": "axvj_a830c362768e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0837B57D",
       "byte_length": 7,
       "original": "\\CC050Fみない",
@@ -57127,7 +57194,7 @@
     },
     {
       "id": "axvj_1ddd3cb6cf5b",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0837B584",
       "byte_length": 8,
       "original": "\\CC050Fいれかえ",
@@ -57143,7 +57210,7 @@
     },
     {
       "id": "axvj_59cb90579fc8",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0837B58C",
       "byte_length": 8,
       "original": "\\CC050Fかちぬき",
@@ -57159,7 +57226,7 @@
     },
     {
       "id": "axvj_102ed062790e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0837B594",
       "byte_length": 8,
       "original": "\\CC050Fモノラル",
@@ -57175,7 +57242,7 @@
     },
     {
       "id": "axvj_74e14ecf4cdf",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0837B59C",
       "byte_length": 8,
       "original": "\\CC050Fステレオ",
@@ -57191,7 +57258,7 @@
     },
     {
       "id": "axvj_b5fdacceb256",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0837B5A4",
       "byte_length": 7,
       "original": "\\CC050Fタイプ",
@@ -57207,7 +57274,7 @@
     },
     {
       "id": "axvj_e8a8fd963150",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0837B5AF",
       "byte_length": 8,
       "original": "\\CC050Fノーマル",
@@ -57223,7 +57290,7 @@
     },
     {
       "id": "axvj_1266561ba377",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0837B5B7",
       "byte_length": 6,
       "original": "\\CC050FＬＲ",
@@ -57239,7 +57306,7 @@
     },
     {
       "id": "axvj_ac1dbbeb7382",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08389DE0",
       "byte_length": 4,
       "original": "おとこ",
@@ -57255,7 +57322,7 @@
     },
     {
       "id": "axvj_9b1dcac0b6fb",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08389DE4",
       "byte_length": 4,
       "original": "おんな",
@@ -57271,7 +57338,7 @@
     },
     {
       "id": "axvj_ff42cba3b947",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08389DEA",
       "byte_length": 7,
       "original": "しゅじんこう",
@@ -57287,7 +57354,7 @@
     },
     {
       "id": "axvj_d3808d6c57cd",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08389DF1",
       "byte_length": 9,
       "original": "もっているバッジ",
@@ -57303,7 +57370,7 @@
     },
     {
       "id": "axvj_9c41de83c5e7",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08389DFC",
       "byte_length": 8,
       "original": "ポケモンずかん",
@@ -57319,7 +57386,7 @@
     },
     {
       "id": "axvj_19ad4310339f",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x08389E04",
       "byte_length": 7,
       "original": "プレイじかん",
@@ -57335,7 +57402,7 @@
     },
     {
       "id": "axvj_839403d60830",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839DE7F",
       "byte_length": 4,
       "original": "もどる",
@@ -57351,7 +57418,7 @@
     },
     {
       "id": "axvj_bfac93a561dc",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839DE83",
       "byte_length": 7,
       "original": "\\CC0107ＢＰ．",
@@ -57367,7 +57434,7 @@
     },
     {
       "id": "axvj_646646ca5f29",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839F7FC",
       "byte_length": 18,
       "original": "\\02は\nみんなを みていた！\\CC083C",
@@ -57383,7 +57450,7 @@
     },
     {
       "id": "axvj_c30bd8962b87",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839F80E",
       "byte_length": 19,
       "original": "アピールタイム しゅうりょう！\\CC083C",
@@ -57399,7 +57466,7 @@
     },
     {
       "id": "axvj_ffff77b14dac",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839F96C",
       "byte_length": 20,
       "original": "\\02は\nあんまり めだたなかった‥\\CC09",
@@ -57415,7 +57482,7 @@
     },
     {
       "id": "axvj_10eea7dd84a3",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839F980",
       "byte_length": 17,
       "original": "\\02は\nまあまあ めだった！\\CC09",
@@ -57431,7 +57498,7 @@
     },
     {
       "id": "axvj_e89dd4e418b2",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839F991",
       "byte_length": 16,
       "original": "\\02は\nかなり めだった！\\CC09",
@@ -57447,7 +57514,7 @@
     },
     {
       "id": "axvj_eae0ea698736",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839F9A1",
       "byte_length": 18,
       "original": "\\02は\nものすごく めだった！\\CC09",
@@ -57463,7 +57530,7 @@
     },
     {
       "id": "axvj_35240af4cad0",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839F9B3",
       "byte_length": 18,
       "original": "\\02は\nアピール していない！\\CC09",
@@ -57479,7 +57546,7 @@
     },
     {
       "id": "axvj_5ca11f8c0356",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FCC6",
       "byte_length": 27,
       "original": "\\02は このあと\nアピール できなく なった！\\CC083C",
@@ -57495,7 +57562,7 @@
     },
     {
       "id": "axvj_2ee996a0fb5b",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FCE1",
       "byte_length": 23,
       "original": "ちょっと だけ\nきもちが おちついた！\\CC083C",
@@ -57511,7 +57578,7 @@
     },
     {
       "id": "axvj_98a7f85d3b7a",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FCF8",
       "byte_length": 31,
       "original": "ほかの ポケモンが ぜんぜん\nきに ならなく なった！\\CC083C",
@@ -57527,7 +57594,7 @@
     },
     {
       "id": "axvj_52de8fafe602",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FD17",
       "byte_length": 30,
       "original": "ほかの ポケモンが あまり\nきに ならなく なった！\\CC083C",
@@ -57543,7 +57610,7 @@
     },
     {
       "id": "axvj_eb6fae716e6f",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FD35",
       "byte_length": 32,
       "original": "ほかの ポケモンを あまり\nきに しないように なった！\\CC083C",
@@ -57559,7 +57626,7 @@
     },
     {
       "id": "axvj_1ae57c608ee0",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FD55",
       "byte_length": 28,
       "original": "ほかの ポケモンを\nびっくり させようと した！\\CC083C",
@@ -57575,7 +57642,7 @@
     },
     {
       "id": "axvj_8c060ab3a253",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FD71",
       "byte_length": 23,
       "original": "みんなの めを\nくらませようと した！\\CC083C",
@@ -57591,7 +57658,7 @@
     },
     {
       "id": "axvj_62d5ccb185b2",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FD88",
       "byte_length": 29,
       "original": "しんさいんは \\02から\nめを そらして しまった！\\CC083C",
@@ -57607,7 +57674,7 @@
     },
     {
       "id": "axvj_a3fbda49cae2",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FDA5",
       "byte_length": 35,
       "original": "つぎに まっている ポケモンを\nきんちょう させようと した！\\CC083C",
@@ -57623,7 +57690,7 @@
     },
     {
       "id": "axvj_41f2abf5f5fe",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FDC8",
       "byte_length": 21,
       "original": "\\02は\nきんちょう してしまった！\\CC083C",
@@ -57639,7 +57706,7 @@
     },
     {
       "id": "axvj_cbafdcb2f359",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FDDD",
       "byte_length": 35,
       "original": "アピールが まだの ポケモンを\nきんちょう させようと した！\\CC083C",
@@ -57655,7 +57722,7 @@
     },
     {
       "id": "axvj_23b2c1eb6976",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FE00",
       "byte_length": 27,
       "original": "ちょうしが いい ポケモンを\nからかってみた！\\CC083C",
@@ -57671,7 +57738,7 @@
     },
     {
       "id": "axvj_4ba7790e957f",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FE1B",
       "byte_length": 28,
       "original": "\\02の ちょうしが\nもとに もどって しまった！\\CC083C",
@@ -57687,7 +57754,7 @@
     },
     {
       "id": "axvj_304f1f79d1a9",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FE37",
       "byte_length": 32,
       "original": "ちょうしが いい ポケモンの\nじゃまを しようと した！\\CC083C",
@@ -57703,7 +57770,7 @@
     },
     {
       "id": "axvj_a5e35fa188aa",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FE57",
       "byte_length": 25,
       "original": "めだっている \\02は\nさらに はりきった！\\CC083C",
@@ -57719,7 +57786,7 @@
     },
     {
       "id": "axvj_597e1449b9f7",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FE70",
       "byte_length": 25,
       "original": "めだっていない \\02は\nがんばりまくった！\\CC083C",
@@ -57735,7 +57802,7 @@
     },
     {
       "id": "axvj_962f66c9a2c9",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FE89",
       "byte_length": 30,
       "original": "まえの ポケモンたちに\nまけないくらい はりきった！\\CC083C",
@@ -57751,7 +57818,7 @@
     },
     {
       "id": "axvj_cd5098dababa",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FEA7",
       "byte_length": 27,
       "original": "\\02は アピールを\nうまく みせられなかった！\\CC083C",
@@ -57767,7 +57834,7 @@
     },
     {
       "id": "axvj_38c71117acd5",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FEC2",
       "byte_length": 27,
       "original": "まえの ポケモンと\nおなじくらい はりきった！\\CC083C",
@@ -57783,7 +57850,7 @@
     },
     {
       "id": "axvj_366035e11916",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FEDD",
       "byte_length": 27,
       "original": "\\02の アピールは\nうまく みせられなかった！\\CC083C",
@@ -57799,7 +57866,7 @@
     },
     {
       "id": "axvj_6d9c32c1d4f7",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FEF8",
       "byte_length": 27,
       "original": "\\02の アピールは\nうまく みせられなかった！\\CC083C",
@@ -57815,7 +57882,7 @@
     },
     {
       "id": "axvj_a2619b93c6d3",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FF13",
       "byte_length": 26,
       "original": "\\02の アピールは\nすこし うまく いった！\\CC083C",
@@ -57831,7 +57898,7 @@
     },
     {
       "id": "axvj_386609c4f626",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FF2D",
       "byte_length": 27,
       "original": "\\02の アピールは\nまあまあ うまく いった！\\CC083C",
@@ -57847,7 +57914,7 @@
     },
     {
       "id": "axvj_a753d2a8d427",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FF48",
       "byte_length": 26,
       "original": "\\02の アピールは\nとても うまく いった！\\CC083C",
@@ -57863,7 +57930,7 @@
     },
     {
       "id": "axvj_d2f3a37a1ac2",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FF62",
       "byte_length": 27,
       "original": "\\02の アピールは\nしっぱい して しまった！\\CC083C",
@@ -57879,7 +57946,7 @@
     },
     {
       "id": "axvj_7caeb2747168",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FF7D",
       "byte_length": 29,
       "original": "\\02の アピールは\nあまり うまく いかなかった！\\CC083C",
@@ -57895,7 +57962,7 @@
     },
     {
       "id": "axvj_959e5fb690ef",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FF9A",
       "byte_length": 26,
       "original": "\\02の アピールは\nすこし うまく いった！\\CC083C",
@@ -57911,7 +57978,7 @@
     },
     {
       "id": "axvj_faf73d6e5292",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FFB4",
       "byte_length": 27,
       "original": "\\02の アピールは\nまあまあ うまく いった！\\CC083C",
@@ -57927,7 +57994,7 @@
     },
     {
       "id": "axvj_70ff357a2c59",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FFCF",
       "byte_length": 26,
       "original": "\\02の アピールは\nかなり うまく いった！\\CC083C",
@@ -57943,7 +58010,7 @@
     },
     {
       "id": "axvj_4826e2d040f0",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x0839FFE9",
       "byte_length": 26,
       "original": "\\02の アピールは\nとても うまく いった！\\CC083C",
@@ -57959,7 +58026,7 @@
     },
     {
       "id": "axvj_f1acc157c613",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A0003",
       "byte_length": 29,
       "original": "まえの ポケモンと\nおなじタイプで きにいられた！\\CC083C",
@@ -57975,7 +58042,7 @@
     },
     {
       "id": "axvj_39b2bb939dfe",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A0020",
       "byte_length": 29,
       "original": "まえの ポケモンと\nちがうタイプで きにいられた！\\CC083C",
@@ -57991,7 +58058,7 @@
     },
     {
       "id": "axvj_2b45a30afcc8",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A003D",
       "byte_length": 24,
       "original": "まえの ポケモンより\nだいぶ めだった！\\CC083C",
@@ -58007,7 +58074,7 @@
     },
     {
       "id": "axvj_baae7a000254",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A0055",
       "byte_length": 26,
       "original": "まえの ポケモンより\nうまく できなかった！\\CC083C",
@@ -58023,7 +58090,7 @@
     },
     {
       "id": "axvj_8ec4c589c9df",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A006F",
       "byte_length": 25,
       "original": "\\02の ちょうしが\nいつもより あがった！\\CC083C",
@@ -58039,7 +58106,7 @@
     },
     {
       "id": "axvj_23fbe415af61",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A0088",
       "byte_length": 34,
       "original": "\\02は ちょうしが よくて\nぜっこうの アピールに なった！\\CC083C",
@@ -58055,7 +58122,7 @@
     },
     {
       "id": "axvj_654b124ab172",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A00AA",
       "byte_length": 30,
       "original": "つぎの アピールを はやく\nしようと まえに でた！\\CC083C",
@@ -58071,7 +58138,7 @@
     },
     {
       "id": "axvj_2b00fd4e676f",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A00C8",
       "byte_length": 31,
       "original": "つぎの アピールを おそく\nしようと １ぽ さがった！\\CC083C",
@@ -58087,7 +58154,7 @@
     },
     {
       "id": "axvj_6e25f66abf20",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A00E7",
       "byte_length": 28,
       "original": "つぎの ターンの じゅんばんを\nおかしく した！\\CC083C",
@@ -58103,7 +58170,7 @@
     },
     {
       "id": "axvj_7635d8bdb843",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A0103",
       "byte_length": 26,
       "original": "しんさいんが きたいして\n\\02を みつめた！\\CC083C",
@@ -58121,7 +58188,7 @@
     },
     {
       "id": "axvj_69099c0d6117",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A011D",
       "byte_length": 29,
       "original": "アピールの くみあわせが\nきに いって もらえた！\\CC083C",
@@ -58139,7 +58206,7 @@
     },
     {
       "id": "axvj_b6113541f15d",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A013A",
       "byte_length": 29,
       "original": "アピールの くみあわせが\nかなり きに いられた！\\CC083C",
@@ -58157,7 +58224,7 @@
     },
     {
       "id": "axvj_0d66172a2dfb",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A0157",
       "byte_length": 31,
       "original": "アピールの くみあわせが\nものすごく きに いられた！\\CC083C",
@@ -58175,7 +58242,7 @@
     },
     {
       "id": "axvj_75c98824a183",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A0176",
       "byte_length": 21,
       "original": "\\02は なんとか\nめを そらした！\\CC083C",
@@ -58191,7 +58258,7 @@
     },
     {
       "id": "axvj_540a91fa403e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A018B",
       "byte_length": 21,
       "original": "\\02は\nそっちを みずに すんだ！\\CC083C",
@@ -58207,7 +58274,7 @@
     },
     {
       "id": "axvj_1a9893e1ee57",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A01A0",
       "byte_length": 22,
       "original": "\\02は\nこのくらいは へいきだった！\\CC083C",
@@ -58223,7 +58290,7 @@
     },
     {
       "id": "axvj_738a0341487c",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A01B6",
       "byte_length": 26,
       "original": "\\02は ちょっと\nきを とられて しまった！\\CC083C",
@@ -58239,7 +58306,7 @@
     },
     {
       "id": "axvj_99bffc224006",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A01D0",
       "byte_length": 28,
       "original": "ほかの ポケモンを\nびっくり させようと した！\\CC083C",
@@ -58255,7 +58322,7 @@
     },
     {
       "id": "axvj_c7318e45bf6c",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A01EC",
       "byte_length": 29,
       "original": "\\02は きを とられて\nしたを むいて しまった！\\CC083C",
@@ -58271,7 +58338,7 @@
     },
     {
       "id": "axvj_94a3c11c0512",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A0209",
       "byte_length": 28,
       "original": "\\02は きを とられて\nふりかえって しまった！\\CC083C",
@@ -58287,7 +58354,7 @@
     },
     {
       "id": "axvj_09cf0dcf9267",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A0225",
       "byte_length": 26,
       "original": "\\02は おもわず\nこえを あげて しまった！\\CC083C",
@@ -58303,7 +58370,7 @@
     },
     {
       "id": "axvj_217e004f8aff",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A023F",
       "byte_length": 25,
       "original": "\\02は おもわず\nとびあがって しまった！\\CC083C",
@@ -58319,7 +58386,7 @@
     },
     {
       "id": "axvj_94bedf6f2d25",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A0258",
       "byte_length": 31,
       "original": "\\02は きを とられて\nひっくり かえって しまった！\\CC083C",
@@ -58335,7 +58402,7 @@
     },
     {
       "id": "axvj_4a1df2bcbbd4",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A0277",
       "byte_length": 29,
       "original": "\\02は きんちょうして\nアピールが できなかった！\\CC083C",
@@ -58351,7 +58418,7 @@
     },
     {
       "id": "axvj_efbcdb4fb3d2",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A0294",
       "byte_length": 19,
       "original": "でも しっぱい してしまった！\\CC083C",
@@ -58367,7 +58434,7 @@
     },
     {
       "id": "axvj_3b128a5a95c3",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A02A7",
       "byte_length": 22,
       "original": "でも きんちょう\nさせられなかった！\\CC083C",
@@ -58383,7 +58450,7 @@
     },
     {
       "id": "axvj_7f2b0cad8265",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A02BD",
       "byte_length": 23,
       "original": "でも だれも\nきんちょう しなかった！\\CC083C",
@@ -58399,7 +58466,7 @@
     },
     {
       "id": "axvj_ed3e39c9bd75",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A02D4",
       "byte_length": 19,
       "original": "でも むし されて しまった‥\\CC083C",
@@ -58415,7 +58482,7 @@
     },
     {
       "id": "axvj_b905dec32b27",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A02E7",
       "byte_length": 21,
       "original": "でも ちょうしは\nあがらなかった‥\\CC083C",
@@ -58431,7 +58498,7 @@
     },
     {
       "id": "axvj_dc2c771ef78d",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A02FC",
       "byte_length": 32,
       "original": "ちょうしが よく なくて\nあまり うまく できなかった‥\\CC083C",
@@ -58447,7 +58514,7 @@
     },
     {
       "id": "axvj_eb5ce969cdd5",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A031C",
       "byte_length": 16,
       "original": "\\02は\nへいき だった！\\CC083C",
@@ -58463,7 +58530,7 @@
     },
     {
       "id": "axvj_8b7b62c049a2",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A032C",
       "byte_length": 31,
       "original": "\\02は おなじアピールを\nつづけて がっかり された！\\CC083C",
@@ -58479,7 +58546,7 @@
     },
     {
       "id": "axvj_f99f46b2b2b4",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A034B",
       "byte_length": 25,
       "original": "\\02の \\04が\nまわりに とても うけた！\\CC083C",
@@ -58495,7 +58562,7 @@
     },
     {
       "id": "axvj_20103c3d437e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A0364",
       "byte_length": 24,
       "original": "\\02の \\04は\nここでは うけなかった‥\\CC083C",
@@ -58511,7 +58578,7 @@
     },
     {
       "id": "axvj_2ac92d6363ec",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A037C",
       "byte_length": 24,
       "original": "\\02の \\04に\nまわりが もりあがった！\\CC083C",
@@ -58527,7 +58594,7 @@
     },
     {
       "id": "axvj_b3cd676a18e5",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A0394",
       "byte_length": 30,
       "original": "\\02は つぎの アピールに\nさんか できなくなった！\\CC083C",
@@ -58543,7 +58610,7 @@
     },
     {
       "id": "axvj_d5dcf3d10101",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A03B2",
       "byte_length": 23,
       "original": "かんきゃくの\nちゅうもくを あつめた！\\CC083C",
@@ -58559,7 +58626,7 @@
     },
     {
       "id": "axvj_b83c98ecb858",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A03C9",
       "byte_length": 23,
       "original": "かんきゃくは\n\\04を みつづけている！\\CC083C",
@@ -58575,7 +58642,7 @@
     },
     {
       "id": "axvj_e63c9c40ec49",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083A03E0",
       "byte_length": 24,
       "original": "\\02の \\03は\nめを むけられなかった‥\\CC083C",
@@ -58591,7 +58658,7 @@
     },
     {
       "id": "axvj_51eb67a54421",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083B281F",
       "byte_length": 4,
       "original": "ずかん",
@@ -58603,7 +58670,7 @@
     },
     {
       "id": "axvj_1f8c82c99f5c",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083B2836",
       "byte_length": 5,
       "original": "とくせい",
@@ -58615,7 +58682,7 @@
     },
     {
       "id": "axvj_3de9d2f604a4",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083B2847",
       "byte_length": 5,
       "original": "ポケナビ",
@@ -58627,7 +58694,7 @@
     },
     {
       "id": "axvj_4fba899f1626",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083B284C",
       "byte_length": 5,
       "original": "ポケモン",
@@ -58639,7 +58706,7 @@
     },
     {
       "id": "axvj_b5fd9cf5f8b3",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083B2859",
       "byte_length": 8,
       "original": "ポケモンずかん",
@@ -58651,7 +58718,7 @@
     },
     {
       "id": "axvj_875d62d2a586",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083B2B08",
       "byte_length": 5,
       "original": "こうげき",
@@ -58663,7 +58730,7 @@
     },
     {
       "id": "axvj_50935d89a4db",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083B2BD1",
       "byte_length": 3,
       "original": "わざ",
@@ -58675,7 +58742,7 @@
     },
     {
       "id": "axvj_3ae184c694f9",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083B2C24",
       "byte_length": 6,
       "original": "さようなら",
@@ -58687,7 +58754,7 @@
     },
     {
       "id": "axvj_00fa493a564a",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083B2CD9",
       "byte_length": 6,
       "original": "おとこのこ",
@@ -58699,7 +58766,7 @@
     },
     {
       "id": "axvj_2a857f3a744b",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083B2D06",
       "byte_length": 6,
       "original": "おんなのこ",
@@ -58711,7 +58778,7 @@
     },
     {
       "id": "axvj_0bd38a2064fa",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083B2E78",
       "byte_length": 3,
       "original": "はい",
@@ -58723,7 +58790,7 @@
     },
     {
       "id": "axvj_408457e42073",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083B3528",
       "byte_length": 4,
       "original": "どうぐ",
@@ -58735,7 +58802,7 @@
     },
     {
       "id": "axvj_04e05a1024d3",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083B352C",
       "byte_length": 4,
       "original": "なまえ",
@@ -58747,7 +58814,7 @@
     },
     {
       "id": "axvj_8849d3cf8677",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083B3699",
       "byte_length": 4,
       "original": "おわり",
@@ -58759,7 +58826,7 @@
     },
     {
       "id": "axvj_5055b6f81f8a",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083B38FE",
       "byte_length": 4,
       "original": "リボン",
@@ -58771,7 +58838,7 @@
     },
     {
       "id": "axvj_0518ec3f8e32",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083C5EA2",
       "byte_length": 6,
       "original": "え え \\CCFF",
@@ -58787,7 +58854,7 @@
     },
     {
       "id": "axvj_2c934c9da94c",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083D4431",
       "byte_length": 16,
       "original": "\\CC0101\\CC020F\\CC0308はい\nいいえ",
@@ -58803,7 +58870,7 @@
     },
     {
       "id": "axvj_9df61be726ec",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DA586",
       "byte_length": 30,
       "original": "\\CC0820それでは‥‥ \\01を\nおぼえるのを あきらめますか？",
@@ -58819,7 +58886,7 @@
     },
     {
       "id": "axvj_583de8c5ccbc",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DB336",
       "byte_length": 27,
       "original": "ここでは どうぐを つかうことは\nできません！\\CC0840",
@@ -58835,7 +58902,7 @@
     },
     {
       "id": "axvj_b9486c7c1d4b",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DB7AE",
       "byte_length": 37,
       "original": "\\CC0820１ \\CC080F２の \\CC080F‥\\CC080F‥\\CC080F‥ \\CC080F\\CC103800ポカン！\n\n",
@@ -58851,7 +58918,7 @@
     },
     {
       "id": "axvj_c81573bd2707",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DB818",
       "byte_length": 16,
       "original": "\\CC101100うまく にげきれた！\n\n",
@@ -58869,7 +58936,7 @@
     },
     {
       "id": "axvj_87f42f02099a",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DB828",
       "byte_length": 28,
       "original": "\\CC101100\\0Cは もっていた\n\\13を つかって にげた\n\n",
@@ -58885,7 +58952,7 @@
     },
     {
       "id": "axvj_bbf8e979584c",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DB844",
       "byte_length": 22,
       "original": "\\CC101100\\0Cは\n\\15を つかって にげた\n\n",
@@ -58903,7 +58970,7 @@
     },
     {
       "id": "axvj_a60dffdf75d8",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DB85A",
       "byte_length": 20,
       "original": "\\CC101100やせいの \\00は にげだした！",
@@ -58919,7 +58986,7 @@
     },
     {
       "id": "axvj_3e16a62482f6",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DB8DE",
       "byte_length": 15,
       "original": "\\CC101100\\1Dは にげだした！",
@@ -58935,7 +59002,7 @@
     },
     {
       "id": "axvj_5656fe65e57d",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DB8ED",
       "byte_length": 19,
       "original": "\\CC101100\\1Dと \\1Eは\nにげだした！",
@@ -58951,7 +59018,7 @@
     },
     {
       "id": "axvj_89b06a7a7ccb",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DBC75",
       "byte_length": 46,
       "original": "\\CC104900アナウンス『ピンポーン！ サファリボールが\nなくなったので しゅうりょうでーす！\n\n",
@@ -58967,7 +59034,7 @@
     },
     {
       "id": "axvj_b2c82f4ba517",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DBCCD",
       "byte_length": 24,
       "original": "あ！ やせいの\n\\03が とびだしてきた！\\CC087F",
@@ -58983,7 +59050,7 @@
     },
     {
       "id": "axvj_0e5d8dc2153f",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DBEED",
       "byte_length": 6,
       "original": "たいりょく",
@@ -58999,7 +59066,7 @@
     },
     {
       "id": "axvj_4e4f2007fe7c",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DBF03",
       "byte_length": 5,
       "original": "すばやさ",
@@ -59017,7 +59084,7 @@
     },
     {
       "id": "axvj_33b5fea43540",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DBF08",
       "byte_length": 5,
       "original": "とくこう",
@@ -59033,7 +59100,7 @@
     },
     {
       "id": "axvj_2305b938b9ce",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DBF0D",
       "byte_length": 5,
       "original": "とくぼう",
@@ -59049,7 +59116,7 @@
     },
     {
       "id": "axvj_a4284fca608f",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DC056",
       "byte_length": 25,
       "original": "やったー！\n\\03を つかまえたぞ！\\CC0A\\CC0B6001\n\n",
@@ -59065,7 +59132,7 @@
     },
     {
       "id": "axvj_4a9ddf5f4826",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DC06F",
       "byte_length": 27,
       "original": "やったー！\n\\03を つかまえたぞ！\\CC0A\\CC0B6001\\CC087F",
@@ -59081,7 +59148,7 @@
     },
     {
       "id": "axvj_b4064a0b56ab",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DC0C3",
       "byte_length": 34,
       "original": "\\03の データが あたらしく\nポケモンずかんに セーブされます！\n\n",
@@ -59097,7 +59164,7 @@
     },
     {
       "id": "axvj_60b1af9156aa",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DC951",
       "byte_length": 25,
       "original": "おめでとう！ \\02は\n\\03に しんかした！\\CC0A\n\n",
@@ -59115,7 +59182,7 @@
     },
     {
       "id": "axvj_6185e17bdddf",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DC980",
       "byte_length": 10,
       "original": "\\0Fは どうする？",
@@ -59131,7 +59198,7 @@
     },
     {
       "id": "axvj_8a23450c551a",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DC98A",
       "byte_length": 10,
       "original": "\\20は どうする？",
@@ -59147,7 +59214,7 @@
     },
     {
       "id": "axvj_1b9d439736ac",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DC994",
       "byte_length": 11,
       "original": "ミツルは どうする？",
@@ -59163,7 +59230,7 @@
     },
     {
       "id": "axvj_03692d14c41c",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DC99F",
       "byte_length": 16,
       "original": "\\CC0810つうしんたいきちゅう‥‥",
@@ -59179,7 +59246,7 @@
     },
     {
       "id": "axvj_52790c3ad58c",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DC9AF",
       "byte_length": 28,
       "original": "\\CC0505\\CC040D0E0Fたたかう  バッグ\nポケモン  にげる",
@@ -59197,7 +59264,7 @@
     },
     {
       "id": "axvj_3280499f97db",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DC9CB",
       "byte_length": 29,
       "original": "\\CC0505\\CC040D0E0Fボール   ポロック\nちかづく  にげる",
@@ -59213,7 +59280,7 @@
     },
     {
       "id": "axvj_64b916b6e3a4",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DC9E8",
       "byte_length": 18,
       "original": "\\CC0505\\CC040D0E0FＰＰ\nわざタイプ／",
@@ -59233,7 +59300,7 @@
     },
     {
       "id": "axvj_cd55c8f9f043",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DCA03",
       "byte_length": 24,
       "original": "\\CC0505\\CC040D0E0Fどの わざを\nわすれさせたい？",
@@ -59249,7 +59316,7 @@
     },
     {
       "id": "axvj_c4d220e7c460",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DCA1B",
       "byte_length": 15,
       "original": "\\CC0505\\CC040D0E0Fはい\nいいえ",
@@ -59273,7 +59340,7 @@
     },
     {
       "id": "axvj_109b4ef71673",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DCA2A",
       "byte_length": 28,
       "original": "\\CC0505\\CC040D0E0Fいれかえる わざを\nえらんで ください",
@@ -59289,7 +59356,7 @@
     },
     {
       "id": "axvj_b31ad71dda7e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DCA5E",
       "byte_length": 5,
       "original": "こうげき",
@@ -59305,7 +59372,7 @@
     },
     {
       "id": "axvj_6eb94aa00910",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DCA63",
       "byte_length": 5,
       "original": "ぼうぎょ",
@@ -59321,7 +59388,7 @@
     },
     {
       "id": "axvj_7b61d0edeb3f",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DCA68",
       "byte_length": 5,
       "original": "とくこう",
@@ -59337,7 +59404,7 @@
     },
     {
       "id": "axvj_3db0d928f4bd",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DCA6D",
       "byte_length": 5,
       "original": "とくぼう",
@@ -59353,7 +59420,7 @@
     },
     {
       "id": "axvj_34f791dcf54e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DCA97",
       "byte_length": 8,
       "original": "\\CC0202のこり ",
@@ -59369,7 +59436,7 @@
     },
     {
       "id": "axvj_2686bf116686",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DCAE2",
       "byte_length": 8,
       "original": "\\CC0200ひきわけ",
@@ -59385,7 +59452,7 @@
     },
     {
       "id": "axvj_21a01f509a9d",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DE1AF",
       "byte_length": 8,
       "original": "コンテストわざ",
@@ -59401,7 +59468,7 @@
     },
     {
       "id": "axvj_7094f4a8de35",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DE1B7",
       "byte_length": 5,
       "original": "タイプ／",
@@ -59419,7 +59486,7 @@
     },
     {
       "id": "axvj_12b6dcd11693",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DE2CA",
       "byte_length": 37,
       "original": "\\CC0820１ \\CC080F２の \\CC080F‥\\CC080F‥\\CC080F‥ \\CC080F\\CC103800ポカン！\n\n",
@@ -59435,7 +59502,7 @@
     },
     {
       "id": "axvj_7f24bf5562de",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083DE362",
       "byte_length": 4,
       "original": "もどる",
@@ -59451,7 +59518,7 @@
     },
     {
       "id": "axvj_01655d5d355c",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E760C",
       "byte_length": 17,
       "original": "\\CC0509ポケットモンスター ルビー",
@@ -59467,7 +59534,7 @@
     },
     {
       "id": "axvj_2ef1d5dad76b",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E761D",
       "byte_length": 11,
       "original": "\\CC0509スタッフリスト",
@@ -59483,7 +59550,7 @@
     },
     {
       "id": "axvj_425bfaa5f4a6",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E7628",
       "byte_length": 18,
       "original": "\\CC0509エグゼクティブ ディレクター",
@@ -59499,7 +59566,7 @@
     },
     {
       "id": "axvj_0cf03d1164d5",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E763A",
       "byte_length": 10,
       "original": "\\CC0509ディレクター",
@@ -59515,7 +59582,7 @@
     },
     {
       "id": "axvj_272d0347c713",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E7644",
       "byte_length": 14,
       "original": "\\CC0509アート ディレクター",
@@ -59531,7 +59598,7 @@
     },
     {
       "id": "axvj_589341562272",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E7652",
       "byte_length": 14,
       "original": "\\CC0509バトル ディレクター",
@@ -59547,7 +59614,7 @@
     },
     {
       "id": "axvj_1687294ab308",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E7660",
       "byte_length": 13,
       "original": "\\CC0509メイン プログラム",
@@ -59563,7 +59630,7 @@
     },
     {
       "id": "axvj_9ef66a44c7d6",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E766D",
       "byte_length": 18,
       "original": "\\CC0509バトル システム プログラム",
@@ -59579,7 +59646,7 @@
     },
     {
       "id": "axvj_72990151faac",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E767F",
       "byte_length": 20,
       "original": "\\CC0509フィールド システム プログラム",
@@ -59595,7 +59662,7 @@
     },
     {
       "id": "axvj_d10aa2683664",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E7693",
       "byte_length": 9,
       "original": "\\CC0509プログラム",
@@ -59611,7 +59678,7 @@
     },
     {
       "id": "axvj_48b7d4be72e3",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E769C",
       "byte_length": 19,
       "original": "\\CC0509メイン グラフィック デザイン",
@@ -59627,7 +59694,7 @@
     },
     {
       "id": "axvj_092ef8e9f423",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E76AF",
       "byte_length": 24,
       "original": "\\CC0509ポケモン \\CC0CFB グラフィック デザイン",
@@ -59643,7 +59710,7 @@
     },
     {
       "id": "axvj_c4b9735515fc",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E76C7",
       "byte_length": 13,
       "original": "\\CC0509ポケモン デザイン",
@@ -59659,7 +59726,7 @@
     },
     {
       "id": "axvj_ed287f660f74",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E76D4",
       "byte_length": 8,
       "original": "\\CC0509おんがく",
@@ -59675,7 +59742,7 @@
     },
     {
       "id": "axvj_87787544efbe",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E76DC",
       "byte_length": 27,
       "original": "\\CC0509サウンド エフェクト \\CC0CFB ポケモン ボイス",
@@ -59691,7 +59758,7 @@
     },
     {
       "id": "axvj_c05618cd8d1b",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E76F7",
       "byte_length": 12,
       "original": "\\CC0509ゲーム デザイン",
@@ -59707,7 +59774,7 @@
     },
     {
       "id": "axvj_e0c4e5231e51",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E7703",
       "byte_length": 12,
       "original": "\\CC0509シナリオプロット",
@@ -59723,7 +59790,7 @@
     },
     {
       "id": "axvj_a051c82dad24",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E770F",
       "byte_length": 8,
       "original": "\\CC0509シナリオ",
@@ -59739,7 +59806,7 @@
     },
     {
       "id": "axvj_331047c208dd",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E7717",
       "byte_length": 14,
       "original": "\\CC0509スクリプト せってい",
@@ -59755,7 +59822,7 @@
     },
     {
       "id": "axvj_bd9a77d79310",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E7725",
       "byte_length": 12,
       "original": "\\CC0509マップ デザイン",
@@ -59771,7 +59838,7 @@
     },
     {
       "id": "axvj_b7b7c1a357a8",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E7731",
       "byte_length": 15,
       "original": "\\CC0509マップデータ せってい",
@@ -59787,7 +59854,7 @@
     },
     {
       "id": "axvj_39d2966375d8",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E7740",
       "byte_length": 15,
       "original": "\\CC0509パラメーター せってい",
@@ -59803,7 +59870,7 @@
     },
     {
       "id": "axvj_fdb8f4db408a",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E774F",
       "byte_length": 12,
       "original": "\\CC0509ずかん テキスト",
@@ -59819,7 +59886,7 @@
     },
     {
       "id": "axvj_c49643cc57b1",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E775B",
       "byte_length": 23,
       "original": "\\CC0509かんきょう \\CC0CFB ツール プログラム",
@@ -59835,7 +59902,7 @@
     },
     {
       "id": "axvj_382de3b806d2",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E7772",
       "byte_length": 11,
       "original": "\\CC0509デバッグプレイ",
@@ -59851,7 +59918,7 @@
     },
     {
       "id": "axvj_c21aecccc33c",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E777D",
       "byte_length": 13,
       "original": "\\CC0509スペシャルサンクス",
@@ -59867,7 +59934,7 @@
     },
     {
       "id": "axvj_1574719bf1f0",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E778A",
       "byte_length": 12,
       "original": "\\CC0509コーディネーター",
@@ -59883,7 +59950,7 @@
     },
     {
       "id": "axvj_a8224a54c0dd",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E7796",
       "byte_length": 11,
       "original": "\\CC0509プロデューサー",
@@ -59899,7 +59966,7 @@
     },
     {
       "id": "axvj_d522ad11152e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E77A1",
       "byte_length": 19,
       "original": "\\CC0509エグゼクティブ プロデューサー",
@@ -59915,7 +59982,7 @@
     },
     {
       "id": "axvj_b266b672b4e1",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E77B4",
       "byte_length": 13,
       "original": "\\CC0509じょうほう かんり",
@@ -59931,7 +59998,7 @@
     },
     {
       "id": "axvj_b102ca4b793f",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E77C1",
       "byte_length": 18,
       "original": "\\CC0509ファンクション マネージャー",
@@ -59947,7 +60014,7 @@
     },
     {
       "id": "axvj_9288b0c74a83",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E77D3",
       "byte_length": 13,
       "original": "\\CC0509てんじ かんしゅう",
@@ -59963,7 +60030,7 @@
     },
     {
       "id": "axvj_66e8a860c8a2",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E93BB",
       "byte_length": 8,
       "original": "\\CC0200ホウエン",
@@ -59979,7 +60046,7 @@
     },
     {
       "id": "axvj_b660f9836097",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E93C3",
       "byte_length": 8,
       "original": "\\CC0200ぜんこく",
@@ -59995,7 +60062,7 @@
     },
     {
       "id": "axvj_0574391beb34",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E93CB",
       "byte_length": 58,
       "original": "\\CC0200     ポケモンずかんを\nみごと かんせい させた\nいだいなこうせきを たたえ\nここに しょうめい します",
@@ -60011,7 +60078,7 @@
     },
     {
       "id": "axvj_02bb2e3edbaf",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9405",
       "byte_length": 14,
       "original": "\\CC0102\\CC0200ゲームフリーク",
@@ -60027,7 +60094,7 @@
     },
     {
       "id": "axvj_d66320bc8d7f",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9458",
       "byte_length": 5,
       "original": "ポケモン",
@@ -60043,7 +60110,7 @@
     },
     {
       "id": "axvj_6eefcf7fc163",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E945D",
       "byte_length": 12,
       "original": "さいしょから はじめる",
@@ -60063,7 +60130,7 @@
     },
     {
       "id": "axvj_dd6a78a617d8",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9469",
       "byte_length": 11,
       "original": "つづきから はじめる",
@@ -60081,7 +60148,7 @@
     },
     {
       "id": "axvj_149f1e2ef36c",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9474",
       "byte_length": 10,
       "original": "せっていを かえる",
@@ -60101,7 +60168,7 @@
     },
     {
       "id": "axvj_86709bdda9a0",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E947E",
       "byte_length": 10,
       "original": "ふしぎな できごと",
@@ -60117,7 +60184,7 @@
     },
     {
       "id": "axvj_517a6d026691",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E959F",
       "byte_length": 21,
       "original": "レポートの ないようが きえてしまった！",
@@ -60133,7 +60200,7 @@
     },
     {
       "id": "axvj_dcdcdae19dc7",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9611",
       "byte_length": 7,
       "original": "しゅじんこう",
@@ -60149,7 +60216,7 @@
     },
     {
       "id": "axvj_b38f8f660bf8",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9618",
       "byte_length": 8,
       "original": "ポケモンずかん",
@@ -60165,7 +60232,7 @@
     },
     {
       "id": "axvj_42b319709a7e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9620",
       "byte_length": 7,
       "original": "プレイじかん",
@@ -60183,7 +60250,7 @@
     },
     {
       "id": "axvj_8db467e60ec2",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9627",
       "byte_length": 9,
       "original": "もっているバッジ",
@@ -60199,7 +60266,7 @@
     },
     {
       "id": "axvj_839daf070c2f",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9630",
       "byte_length": 4,
       "original": "おとこ",
@@ -60215,7 +60282,7 @@
     },
     {
       "id": "axvj_90b82381c1dd",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9634",
       "byte_length": 4,
       "original": "おんな",
@@ -60231,7 +60298,7 @@
     },
     {
       "id": "axvj_67a600edb66c",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9638",
       "byte_length": 8,
       "original": "じぶんできめる",
@@ -60249,7 +60316,7 @@
     },
     {
       "id": "axvj_10f7154b7afa",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E96A3",
       "byte_length": 5,
       "original": "なきごえ",
@@ -60265,7 +60332,7 @@
     },
     {
       "id": "axvj_eba121aba8bf",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E96AA",
       "byte_length": 10,
       "original": "の おおきさくらべ",
@@ -60281,7 +60348,7 @@
     },
     {
       "id": "axvj_070d21d21747",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E99B7",
       "byte_length": 39,
       "original": "ここまでの レポートを かきしるしています！\nでんげんを きらないでください",
@@ -60297,7 +60364,7 @@
     },
     {
       "id": "axvj_1cf49ac6e7e9",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9A27",
       "byte_length": 4,
       "original": "なまえ",
@@ -60313,7 +60380,7 @@
     },
     {
       "id": "axvj_6eb2dc67226a",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9A31",
       "byte_length": 41,
       "original": "\\CC020F\\CC0101オダマキはかせが ピンチだ！\nポケモンを だして たすけてあげよう！",
@@ -60329,7 +60396,7 @@
     },
     {
       "id": "axvj_75589e817451",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9A5A",
       "byte_length": 19,
       "original": "\\CC020F\\CC0101このポケモンにしますか？",
@@ -60345,7 +60412,7 @@
     },
     {
       "id": "axvj_8f3c213b050e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9A6D",
       "byte_length": 5,
       "original": "ポケモン",
@@ -60361,7 +60428,7 @@
     },
     {
       "id": "axvj_d9bd59643cda",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9ABE",
       "byte_length": 5,
       "original": "けってい",
@@ -60377,7 +60444,7 @@
     },
     {
       "id": "axvj_8628634a4aa5",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9AC7",
       "byte_length": 4,
       "original": "もどる",
@@ -60409,7 +60476,7 @@
     },
     {
       "id": "axvj_24e1e18881f4",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9AD6",
       "byte_length": 5,
       "original": "もちもの",
@@ -60425,7 +60492,7 @@
     },
     {
       "id": "axvj_0d7cc1e3228b",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9B1E",
       "byte_length": 10,
       "original": "なにを しますか？",
@@ -60445,7 +60512,7 @@
     },
     {
       "id": "axvj_a490b226196c",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9B34",
       "byte_length": 8,
       "original": "バッグをとじる",
@@ -60461,7 +60528,7 @@
     },
     {
       "id": "axvj_7c172273f6f2",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9B81",
       "byte_length": 8,
       "original": "どうしますか？",
@@ -60479,7 +60546,7 @@
     },
     {
       "id": "axvj_913b9ea32241",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9B9F",
       "byte_length": 15,
       "original": "ポケモンが いませんよ！\\CC09",
@@ -60497,7 +60564,7 @@
     },
     {
       "id": "axvj_ffd8d2a03234",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9C83",
       "byte_length": 41,
       "original": "おとうさんの ことば‥‥\n\\01！ こういうものには\\lつかいどきが あるんだ！\\CC09",
@@ -60513,7 +60580,7 @@
     },
     {
       "id": "axvj_1aed53fc07b4",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9CAC",
       "byte_length": 15,
       "original": "ここでは おりられない！\\CC09",
@@ -60529,7 +60596,7 @@
     },
     {
       "id": "axvj_3b6a5296f8e9",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9CBB",
       "byte_length": 40,
       "original": "おっ！\nマシンが はんのう しているぞ！\n\nちかくに どうぐが うまってる！\\CC09",
@@ -60545,7 +60612,7 @@
     },
     {
       "id": "axvj_ba35b82be00b",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9CE3",
       "byte_length": 29,
       "original": "マシンが あしもとで\nすごく はんのう しているぞ！\\CC09",
@@ -60561,7 +60628,7 @@
     },
     {
       "id": "axvj_c089c282a7e7",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9D00",
       "byte_length": 29,
       "original": "‥‥ ‥‥ ふう！\n‥‥ なんにも はんのう しない\\CC09",
@@ -60577,7 +60644,7 @@
     },
     {
       "id": "axvj_57d95d012d16",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9D1D",
       "byte_length": 16,
       "original": "あなたの コイン\n\\02まい\\CC09",
@@ -60593,7 +60660,7 @@
     },
     {
       "id": "axvj_e1166aa4dad5",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9D71",
       "byte_length": 16,
       "original": "\\01は\n\\03を つかった！\\CC09",
@@ -60609,7 +60676,7 @@
     },
     {
       "id": "axvj_67136d0b6282",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9D81",
       "byte_length": 33,
       "original": "まだ まえに つかった スプレーの\nこうかが のこってます！\\CC09",
@@ -60625,7 +60692,7 @@
     },
     {
       "id": "axvj_c601323946e0",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9DA2",
       "byte_length": 36,
       "original": "\\01は\n\\03を つかった！\n\nポケモンと\nそうぐう しやすくなった！\\CC09",
@@ -60641,7 +60708,7 @@
     },
     {
       "id": "axvj_90cb27ab9449",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9DC6",
       "byte_length": 36,
       "original": "\\01は\n\\03を つかった！\n\nポケモンと\nそうぐう しにくくなった！\\CC09",
@@ -60657,7 +60724,7 @@
     },
     {
       "id": "axvj_56e72b49840c",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9DEA",
       "byte_length": 17,
       "original": "ボックスが いっぱい です！\\CC09",
@@ -60673,7 +60740,7 @@
     },
     {
       "id": "axvj_5890dc61f176",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9DFB",
       "byte_length": 5,
       "original": "おおきさ",
@@ -60689,7 +60756,7 @@
     },
     {
       "id": "axvj_a4d37b23a560",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9EEF",
       "byte_length": 15,
       "original": "\\02は \\03を\nたべた！\\CC09",
@@ -60705,7 +60772,7 @@
     },
     {
       "id": "axvj_ae0914e0ed58",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9EFE",
       "byte_length": 21,
       "original": "\\02は \\03を\nよろこんで たべた！\\CC09",
@@ -60721,7 +60788,7 @@
     },
     {
       "id": "axvj_8552a3ed6e51",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9F13",
       "byte_length": 21,
       "original": "\\02は \\03を\nいやそうに たべた！\\CC09",
@@ -60737,7 +60804,7 @@
     },
     {
       "id": "axvj_015c9eb3f09f",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9F36",
       "byte_length": 9,
       "original": "なんでもないです",
@@ -60753,7 +60820,7 @@
     },
     {
       "id": "axvj_1d6b01653ec2",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9FB9",
       "byte_length": 34,
       "original": "どうも ありがとう！\nじたくの パソコンに おくって おきますね！",
@@ -60769,7 +60836,7 @@
     },
     {
       "id": "axvj_31e2f652fa6e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083E9FFB",
       "byte_length": 16,
       "original": "おかねが たりないですよ！\\CC09",
@@ -60787,7 +60854,7 @@
     },
     {
       "id": "axvj_40e6c78ae953",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA00B",
       "byte_length": 22,
       "original": "それ いじょう\nもちきれない ですよ！\\CC09",
@@ -60803,7 +60870,7 @@
     },
     {
       "id": "axvj_aa20194b682d",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA021",
       "byte_length": 23,
       "original": "\\02 を\nいれる ばしょが いっぱいです\\CC09",
@@ -60819,7 +60886,7 @@
     },
     {
       "id": "axvj_7765084f76ac",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA070",
       "byte_length": 26,
       "original": "プレミアボール １コ\nおまけ しておきますね！\\CC09",
@@ -60835,7 +60902,7 @@
     },
     {
       "id": "axvj_84d098589562",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA08A",
       "byte_length": 23,
       "original": "\\03 を\nかいとるわけには いきません！\\CC09",
@@ -60851,7 +60918,7 @@
     },
     {
       "id": "axvj_874f0744eef0",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA0E7",
       "byte_length": 6,
       "original": "いれかえる",
@@ -60867,7 +60934,7 @@
     },
     {
       "id": "axvj_af3f68448266",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA0ED",
       "byte_length": 8,
       "original": "せんとうにだす",
@@ -60883,7 +60950,7 @@
     },
     {
       "id": "axvj_09002e0975cd",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA0F5",
       "byte_length": 6,
       "original": "ならびかえ",
@@ -60899,7 +60966,7 @@
     },
     {
       "id": "axvj_899c2360aa02",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA0FB",
       "byte_length": 7,
       "original": "つよさをみる",
@@ -60921,7 +60988,7 @@
     },
     {
       "id": "axvj_fa0a69a9925e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA126",
       "byte_length": 6,
       "original": "たいりょく",
@@ -60937,7 +61004,7 @@
     },
     {
       "id": "axvj_33ba079965ca",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA12C",
       "byte_length": 5,
       "original": "とくこう",
@@ -60953,7 +61020,7 @@
     },
     {
       "id": "axvj_3d4c5f36464b",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA131",
       "byte_length": 5,
       "original": "とくぼう",
@@ -60969,7 +61036,7 @@
     },
     {
       "id": "axvj_6f88611ecaa9",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA136",
       "byte_length": 16,
       "original": "つかっても こうかがないよ\\CC09",
@@ -60999,7 +61066,7 @@
     },
     {
       "id": "axvj_ca257a9a74f6",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA146",
       "byte_length": 19,
       "original": "そのポケモンには\nつかえません！\\CC09",
@@ -61015,7 +61082,7 @@
     },
     {
       "id": "axvj_255aadb695c8",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA159",
       "byte_length": 19,
       "original": "\\02を もどすことが\nできない！\\CC09",
@@ -61031,7 +61098,7 @@
     },
     {
       "id": "axvj_e1a78c4bb09f",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA16C",
       "byte_length": 22,
       "original": "\\02は すでに\nせんとうに でています\\CC09",
@@ -61047,7 +61114,7 @@
     },
     {
       "id": "axvj_27048fe46ad0",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA182",
       "byte_length": 22,
       "original": "\\02は すでに\nせんたく されています\\CC09",
@@ -61063,7 +61130,7 @@
     },
     {
       "id": "axvj_afa108130b53",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA198",
       "byte_length": 29,
       "original": "\\02は たたかうための\nげんきが のこっていません！\\CC09",
@@ -61079,7 +61146,7 @@
     },
     {
       "id": "axvj_6bef8f783304",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA1B5",
       "byte_length": 39,
       "original": "\\02の ポケモンは じぶんの\nポケモンと いれかえることは できません！\\CC09",
@@ -61095,7 +61162,7 @@
     },
     {
       "id": "axvj_ab6b672e917c",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA1DC",
       "byte_length": 26,
       "original": "タマゴを\nせんとうに だすことは できません！\\CC09",
@@ -61111,7 +61178,7 @@
     },
     {
       "id": "axvj_20f17bc36a21",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA244",
       "byte_length": 22,
       "original": "メールを パソコンに\nてんそうしました\\CC09",
@@ -61127,7 +61194,7 @@
     },
     {
       "id": "axvj_880ef68d8d24",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA25A",
       "byte_length": 25,
       "original": "パソコンの メールボックスが\nいっぱいです！\\CC09",
@@ -61143,7 +61210,7 @@
     },
     {
       "id": "axvj_55573148517f",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA296",
       "byte_length": 26,
       "original": "メールを はずさないと\nどうぐは もてません！\\CC09",
@@ -61159,7 +61226,7 @@
     },
     {
       "id": "axvj_887c91d6dfd5",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA2B0",
       "byte_length": 16,
       "original": "\\02に\n\\03を もたせた！\\CC09",
@@ -61175,7 +61242,7 @@
     },
     {
       "id": "axvj_1e52684cc668",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA2E7",
       "byte_length": 25,
       "original": "\\02は なにも\nどうぐを もって いません！\\CC09",
@@ -61191,7 +61258,7 @@
     },
     {
       "id": "axvj_74261622d8b1",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA300",
       "byte_length": 20,
       "original": "\\02から\n\\03を あずかりました！\\CC09",
@@ -61207,7 +61274,7 @@
     },
     {
       "id": "axvj_0f071c950112",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA314",
       "byte_length": 21,
       "original": "ポケモンから メールを\nとりました！\\CC09",
@@ -61223,7 +61290,7 @@
     },
     {
       "id": "axvj_eb107b19978a",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA329",
       "byte_length": 29,
       "original": "\\03を あずかって\nあらたに \\02を もたせました！\\CC09",
@@ -61239,7 +61306,7 @@
     },
     {
       "id": "axvj_8ccd7f48ba0a",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA346",
       "byte_length": 38,
       "original": "すでに どうぐを もっているので\nメールを もたせることが できません\\CC09",
@@ -61255,7 +61322,7 @@
     },
     {
       "id": "axvj_c7871df2ef8f",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA36C",
       "byte_length": 21,
       "original": "ボックスから メールを うつしました\\CC09",
@@ -61271,7 +61338,7 @@
     },
     {
       "id": "axvj_e0d89532cd92",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA381",
       "byte_length": 33,
       "original": "バッグが いっぱいで\nポケモンの どうぐを うけとれません！\\CC09",
@@ -61291,7 +61358,7 @@
     },
     {
       "id": "axvj_65be48e8d976",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA3B6",
       "byte_length": 37,
       "original": "\\02と \\03は\nあいしょうが わるかった！\n\n\\03は おぼえられない！\\CC09",
@@ -61307,7 +61374,7 @@
     },
     {
       "id": "axvj_8c53444d2b96",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA447",
       "byte_length": 22,
       "original": "\\02は \\03を\nおぼえずに おわった！\\CC09",
@@ -61323,7 +61390,7 @@
     },
     {
       "id": "axvj_1cde5bc07c4d",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA45D",
       "byte_length": 18,
       "original": "どの わざを\nわすれさせたい？\\CC09",
@@ -61339,7 +61406,7 @@
     },
     {
       "id": "axvj_642ff8608456",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA46F",
       "byte_length": 71,
       "original": "\\CC0820１ \\CC080F２の \\CC080F‥\\CC080F‥\\CC080F‥ \\CC080F\\CC103800ポカン！\n\n\\02は \\03の\nつかいかたを きれいに わすれた！\n\nそして‥‥！\\CC09",
@@ -61355,7 +61422,7 @@
     },
     {
       "id": "axvj_8d2de08b5774",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA4B6",
       "byte_length": 22,
       "original": "\\02は すでに\n\\03を おぼえています\\CC09",
@@ -61371,7 +61438,7 @@
     },
     {
       "id": "axvj_8d42d50d8ef4",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA4CC",
       "byte_length": 23,
       "original": "\\02の たいりょくが\n\\03 かいふくした\\CC09",
@@ -61387,7 +61454,7 @@
     },
     {
       "id": "axvj_6f12689b5c38",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA4E3",
       "byte_length": 26,
       "original": "\\02の どくは\nきれい さっぱり なくなった！\\CC09",
@@ -61403,7 +61470,7 @@
     },
     {
       "id": "axvj_f731db94b4c8",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA4FD",
       "byte_length": 20,
       "original": "\\02の からだの\nしびれが とれた\\CC09",
@@ -61419,7 +61486,7 @@
     },
     {
       "id": "axvj_bd1a8561f68a",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA511",
       "byte_length": 14,
       "original": "\\02は\nめを さました\\CC09",
@@ -61435,7 +61502,7 @@
     },
     {
       "id": "axvj_23ea4831517f",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA51F",
       "byte_length": 16,
       "original": "\\02の\nやけどが なおった\\CC09",
@@ -61451,7 +61518,7 @@
     },
     {
       "id": "axvj_86969504765e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA52F",
       "byte_length": 20,
       "original": "\\02の からだの\nこおりが とけた\\CC09",
@@ -61467,7 +61534,7 @@
     },
     {
       "id": "axvj_6eb356250426",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA543",
       "byte_length": 18,
       "original": "わざポイントが\nかいふくした！\\CC09",
@@ -61483,7 +61550,7 @@
     },
     {
       "id": "axvj_08bac6a4d74d",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA555",
       "byte_length": 19,
       "original": "\\02は\nげんきを とりもどした！\\CC09",
@@ -61499,7 +61566,7 @@
     },
     {
       "id": "axvj_62b65e8e7e21",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA568",
       "byte_length": 16,
       "original": "\\02は\nけんこうになった！\\CC09",
@@ -61515,7 +61582,7 @@
     },
     {
       "id": "axvj_9c5d73f37687",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA578",
       "byte_length": 19,
       "original": "\\02の\nわざポイントが ふえた！\\CC09",
@@ -61531,7 +61598,7 @@
     },
     {
       "id": "axvj_fd3f40350222",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA59C",
       "byte_length": 25,
       "original": "\\02の \\03の\nきそ ポイントが あがった！\\CC09",
@@ -61547,7 +61614,7 @@
     },
     {
       "id": "axvj_618654eee482",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA5B5",
       "byte_length": 16,
       "original": "\\02の\nこんらんが とけた\\CC09",
@@ -61565,7 +61632,7 @@
     },
     {
       "id": "axvj_5a2653883491",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA5C5",
       "byte_length": 16,
       "original": "\\02の\nメロメロが とけた\\CC09",
@@ -61581,7 +61648,7 @@
     },
     {
       "id": "axvj_578c4fd71274",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA5D5",
       "byte_length": 16,
       "original": "ポケモンを えらんで ください",
@@ -61597,7 +61664,7 @@
     },
     {
       "id": "axvj_c038f48a3ac8",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA622",
       "byte_length": 10,
       "original": "\\02を どうする？",
@@ -61613,7 +61680,7 @@
     },
     {
       "id": "axvj_70b115950db7",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA71D",
       "byte_length": 5,
       "original": "こうげき",
@@ -61633,7 +61700,7 @@
     },
     {
       "id": "axvj_070aacc9c3fe",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA722",
       "byte_length": 5,
       "original": "ぼうぎょ",
@@ -61653,7 +61720,7 @@
     },
     {
       "id": "axvj_d21280b508bb",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA727",
       "byte_length": 5,
       "original": "とくこう",
@@ -61671,7 +61738,7 @@
     },
     {
       "id": "axvj_2d07ea268eb7",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA72C",
       "byte_length": 5,
       "original": "とくぼう",
@@ -61689,7 +61756,7 @@
     },
     {
       "id": "axvj_39c7b0f6da60",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA731",
       "byte_length": 5,
       "original": "すばやさ",
@@ -61709,7 +61776,7 @@
     },
     {
       "id": "axvj_74acdbc13795",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA739",
       "byte_length": 3,
       "original": "あと",
@@ -61725,7 +61792,7 @@
     },
     {
       "id": "axvj_01d7977668e3",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA73C",
       "byte_length": 4,
       "original": "おや／",
@@ -61741,7 +61808,7 @@
     },
     {
       "id": "axvj_c53732960242",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA740",
       "byte_length": 5,
       "original": "タイプ／",
@@ -61757,7 +61824,7 @@
     },
     {
       "id": "axvj_860e2b4d34a5",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA745",
       "byte_length": 5,
       "original": "いりょく",
@@ -61773,7 +61840,7 @@
     },
     {
       "id": "axvj_e5bb59f01a7c",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA74A",
       "byte_length": 6,
       "original": "めいちゅう",
@@ -61789,7 +61856,7 @@
     },
     {
       "id": "axvj_be33324ad754",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA760",
       "byte_length": 11,
       "original": "げんざいのけいけんち",
@@ -61805,7 +61872,7 @@
     },
     {
       "id": "axvj_c1966c397fe1",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA76B",
       "byte_length": 9,
       "original": "レベルアップまで",
@@ -61821,7 +61888,7 @@
     },
     {
       "id": "axvj_98b6608f45da",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA86B",
       "byte_length": 18,
       "original": "とうろくを かいじょ しました\\CC09",
@@ -61837,7 +61904,7 @@
     },
     {
       "id": "axvj_c14c0b3fd127",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA87D",
       "byte_length": 18,
       "original": "とうろく リストは ありません\\CC09",
@@ -61853,7 +61920,7 @@
     },
     {
       "id": "axvj_63da8ea14c20",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EA8F1",
       "byte_length": 14,
       "original": "グッズは ありません！\\CC09",
@@ -61875,7 +61942,7 @@
     },
     {
       "id": "axvj_adb33ad34fa1",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EAA60",
       "byte_length": 18,
       "original": "グッズは おかれて いません！\\CC09",
@@ -61891,7 +61958,7 @@
     },
     {
       "id": "axvj_6d7b76518725",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EAAFE",
       "byte_length": 13,
       "original": "なにも ありません！\\CC09",
@@ -61909,7 +61976,7 @@
     },
     {
       "id": "axvj_82bccaecddce",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EAB59",
       "byte_length": 18,
       "original": "メールは １つうも ありません\\CC09",
@@ -61925,7 +61992,7 @@
     },
     {
       "id": "axvj_ff93aa6da978",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EAB96",
       "byte_length": 15,
       "original": "バッグが いっぱいです！\\CC09",
@@ -61941,7 +62008,7 @@
     },
     {
       "id": "axvj_013a0028fd27",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EABA5",
       "byte_length": 28,
       "original": "ないようを けした メールを\nバッグに いれました\\CC09",
@@ -61957,7 +62024,7 @@
     },
     {
       "id": "axvj_856e52e67cac",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EAE23",
       "byte_length": 3,
       "original": "はい",
@@ -61975,7 +62042,7 @@
     },
     {
       "id": "axvj_72998824e936",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EAE26",
       "byte_length": 4,
       "original": "いいえ",
@@ -61993,7 +62060,7 @@
     },
     {
       "id": "axvj_8b568191bc27",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EAE2A",
       "byte_length": 5,
       "original": "せつめい",
@@ -62005,7 +62072,7 @@
     },
     {
       "id": "axvj_1d9e1a24968e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB11A",
       "byte_length": 4,
       "original": "どうぐ",
@@ -62021,7 +62088,7 @@
     },
     {
       "id": "axvj_93f5a293cb26",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB134",
       "byte_length": 9,
       "original": "だれかのパソコン",
@@ -62039,7 +62106,7 @@
     },
     {
       "id": "axvj_caf3d5388c48",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB13D",
       "byte_length": 9,
       "original": "マユミのパソコン",
@@ -62055,7 +62122,7 @@
     },
     {
       "id": "axvj_485db95c1105",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB146",
       "byte_length": 8,
       "original": "\\01のパソコン",
@@ -62073,7 +62140,7 @@
     },
     {
       "id": "axvj_ef4a9e56c15b",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB155",
       "byte_length": 8,
       "original": "スイッチをきる",
@@ -62091,7 +62158,7 @@
     },
     {
       "id": "axvj_43afb401233f",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB217",
       "byte_length": 4,
       "original": "やめる",
@@ -62107,7 +62174,7 @@
     },
     {
       "id": "axvj_672c36a1f147",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB21B",
       "byte_length": 19,
       "original": "ボックスを しゅうりょうしますか？ ",
@@ -62123,7 +62190,7 @@
     },
     {
       "id": "axvj_dd111edb0d89",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB22E",
       "byte_length": 16,
       "original": "このボックスを どうしますか？",
@@ -62139,7 +62206,7 @@
     },
     {
       "id": "axvj_5d3307613a44",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB259",
       "byte_length": 10,
       "original": "を どうしますか？",
@@ -62155,7 +62222,7 @@
     },
     {
       "id": "axvj_c14877500b60",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB365",
       "byte_length": 7,
       "original": "やめる   ",
@@ -62171,7 +62238,7 @@
     },
     {
       "id": "axvj_271e1bc4c43e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB37A",
       "byte_length": 7,
       "original": "いれかえる ",
@@ -62187,7 +62254,7 @@
     },
     {
       "id": "axvj_dfa2379fa5ab",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB3A4",
       "byte_length": 7,
       "original": "なまえ   ",
@@ -62203,7 +62270,7 @@
     },
     {
       "id": "axvj_e6629540c051",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB412",
       "byte_length": 10,
       "original": "なにを しますか？",
@@ -62215,7 +62282,7 @@
     },
     {
       "id": "axvj_a95bcece9f16",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB41C",
       "byte_length": 12,
       "original": "ポケモンを つれていく",
@@ -62231,7 +62298,7 @@
     },
     {
       "id": "axvj_fc22b8868cf3",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB428",
       "byte_length": 12,
       "original": "ポケモンを あずける ",
@@ -62247,7 +62314,7 @@
     },
     {
       "id": "axvj_9dd7fb3eefe4",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB434",
       "byte_length": 12,
       "original": "ボックスを せいりする",
@@ -62263,7 +62330,7 @@
     },
     {
       "id": "axvj_b0389339fb96",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB440",
       "byte_length": 6,
       "original": "さようなら",
@@ -62279,7 +62346,7 @@
     },
     {
       "id": "axvj_70285e2a4254",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB446",
       "byte_length": 40,
       "original": "ボックスに あずけている ポケモンを \nてもちに くわえる ことが できます ",
@@ -62295,7 +62362,7 @@
     },
     {
       "id": "axvj_635c2cc2ca9e",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB46E",
       "byte_length": 40,
       "original": "てもちの ポケモンを         \nボックスに あずける ことが できます",
@@ -62311,7 +62378,7 @@
     },
     {
       "id": "axvj_ec6e8d48127a",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB496",
       "byte_length": 40,
       "original": "ボックスに あずけている ポケモンや \nてもちの ポケモンを せいり できます",
@@ -62327,7 +62394,7 @@
     },
     {
       "id": "axvj_aa54cb4ef11d",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB6BE",
       "byte_length": 8,
       "original": "\\CC0505さくせん",
@@ -62343,7 +62410,7 @@
     },
     {
       "id": "axvj_d25fdf635117",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB6D3",
       "byte_length": 11,
       "original": "\\CC0505じこしょうかい",
@@ -62359,7 +62426,7 @@
     },
     {
       "id": "axvj_647d3dc9fb9a",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB6DE",
       "byte_length": 6,
       "original": "せいかく／",
@@ -62375,7 +62442,7 @@
     },
     {
       "id": "axvj_635a15b4a389",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB6E4",
       "byte_length": 8,
       "original": "てもちポケモン",
@@ -62391,7 +62458,7 @@
     },
     {
       "id": "axvj_9d7bf7574c45",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EB6F0",
       "byte_length": 4,
       "original": "リボン",
@@ -62407,7 +62474,7 @@
     },
     {
       "id": "axvj_9d9586d8b8aa",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EBB59",
       "byte_length": 71,
       "original": "レポートの かきこみに しっぱいしました\nバックアップカートリッジの けんさをします\nしばらくおまちください\\CC0102『１ふんほど かかります』",
@@ -62425,7 +62492,7 @@
     },
     {
       "id": "axvj_3e52b1354de2",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EBBA0",
       "byte_length": 69,
       "original": "バックアップきのうの こしょう または じゅみょうが\nきました。セーブすることは できませんが このまま\nゲームを あそぶことはできます",
@@ -62443,7 +62510,7 @@
     },
     {
       "id": "axvj_4390fa18c24a",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EBBE5",
       "byte_length": 41,
       "original": "\\CC0102『このまま ぼうけんをつづけることは できません\nタイトルに もどります』",
@@ -62459,7 +62526,7 @@
     },
     {
       "id": "axvj_cc4e9971e48f",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EBC3E",
       "byte_length": 64,
       "original": "レポートの かきこみは しゅうりょうしました\n\\CC0102『このまま ぼうけんをつづけることは できません\nタイトルに もどります』",
@@ -62475,7 +62542,7 @@
     },
     {
       "id": "axvj_b8e9c031a506",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EBC7E",
       "byte_length": 42,
       "original": "レポートの かきこみは しゅうりょうしました\n\\CC0102『Ａボタンを おしてください』",
@@ -62491,7 +62558,7 @@
     },
     {
       "id": "axvj_b62471d73786",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EBCB9",
       "byte_length": 30,
       "original": "ＲＴＣを リセットします\nＡで けってい Ｂで キャンセル",
@@ -62507,7 +62574,7 @@
     },
     {
       "id": "axvj_193c791771bc",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EBCF7",
       "byte_length": 19,
       "original": "じかんを さいせってい してください",
@@ -62523,7 +62590,7 @@
     },
     {
       "id": "axvj_95135c53c707",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EBD0A",
       "byte_length": 39,
       "original": "じかんを さいせってい しました！\nレポートを かいています おまちください",
@@ -62539,7 +62606,7 @@
     },
     {
       "id": "axvj_7b154d1c849f",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EBD31",
       "byte_length": 15,
       "original": "レポートを かきこみました！",
@@ -62555,7 +62622,7 @@
     },
     {
       "id": "axvj_d80b811d83f9",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EBD40",
       "byte_length": 23,
       "original": "レポートの かきこみに\nしっぱい しました‥",
@@ -62571,7 +62638,7 @@
     },
     {
       "id": "axvj_4f7e61b34b42",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EBD57",
       "byte_length": 29,
       "original": "レポートが ないので\nじかんの せっていは できません！",
@@ -62587,7 +62654,7 @@
     },
     {
       "id": "axvj_10e0857fe580",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EBD9B",
       "byte_length": 36,
       "original": "ポケモンレポートに かきこんでいます\nでんげんを きらないで ください",
@@ -62605,7 +62672,7 @@
     },
     {
       "id": "axvj_b88b202832c3",
-      "module": "UI界面",
+      "module": "其他UI界面",
       "address": "0x083EBE2B",
       "byte_length": 38,
       "original": "つうしんケーブルを ぬかないで ください\nでんげんを きらないで ください",
@@ -142627,24 +142694,6 @@
       ],
       "pointer_addresses": [
         "0x080079B8"
-      ]
-    },
-    {
-      "id": "axvj_4ff98d30e3a4",
-      "module": "剧情",
-      "address": "0x083E9688",
-      "byte_length": 10,
-      "original": "？？？？？ポケモン",
-      "original_hex": "ac ac ac ac ac 9f 59 73 7e ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0808C238",
-        "0x0808D5D8"
-      ],
-      "pointer_addresses": [
-        "0x0808C238",
-        "0x0808D5D8"
       ]
     },
     {

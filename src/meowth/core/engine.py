@@ -2327,7 +2327,7 @@ class TranslationEngine:
             rom, all_entries, on_progress=_inject_progress
         )
         self._log("info", Messages.INJECTION_STATS.format(
-            in_place=stats['in_place'],
+            replace=stats['replace'],
             relocated=stats['relocated'],
             skipped=0,
             partial_ptr=stats.get('skipped_partial_ptrs', 0),

@@ -207,14 +207,27 @@ static int draw_jp_via_chs(TextPrinter *win, uint32_t cur_char)
 /**
  * slot_lookup_and_draw — type=slot 运行时查表拦截。
  *
- * SlotTable 格式：jp_len(1B) | jp_bytes(jp_len) | chinese_bytes(... FF)
- * 以 0x00 哨兵结尾。
+ * SlotTable 格式（FNV-1a hash keyed）：
+ *   per_entry: key(4B) | jp_len_le16(2B) | jp_bytes(jp_len) | chinese_bytes(... 0xFF)
+ * 以 key==0 哨兵结尾（4字节全0）。
  *
- * 从 text stream 读出当前 JP 字节序列（最多 SLOT_MAX_JP_LEN 字节），
- * 与表中 jp_bytes 逐条比对。匹配则内联绘制中文 F9 流并推进
- * WIN_TEXT_INDEX 跳过被替换的原始 JP 字节，返回 1。
+ * 从 text stream 读出当前 JP 字节序列，计算 FNV-1a hash，
+ * 在表中查找匹配 key，再逐字节核对 jp_bytes。
+ * 匹配则内联绘制中文 F9 流并推进 WIN_TEXT_INDEX 跳过原始 JP 字节。
+ *
+ * 读 stream 时仅在 0xFF（EOS）停止，不做任何控制符过滤——
+ * original 直入直出。
  */
-#define SLOT_MAX_JP_LEN 7
+static uint32_t fnv1a_hash(const uint8_t *data, unsigned len)
+{
+    uint32_t h = 0x811c9dc5u;
+    unsigned i;
+    for (i = 0; i < len; i++) {
+        h ^= data[i];
+        h *= 0x01000193u;
+    }
+    return h;
+}
 
 static int slot_lookup_and_draw(TextPrinter *win, uint32_t cur_char)
 {
@@ -223,23 +236,20 @@ static int slot_lookup_and_draw(TextPrinter *win, uint32_t cur_char)
         (const uint8_t *)(uintptr_t)win_u32(win, WIN_TEXT_PTR);
     uint16_t index = win_u16(win, WIN_TEXT_INDEX);
     unsigned i = 0;
-    uint8_t stream_buf[SLOT_MAX_JP_LEN];
+    uint8_t stream_buf[256];
     uint8_t stream_len = 0;
     unsigned k;
 
-    /* cur_char 是当前字节；从 text stream 读出连续 JP 字节用于前缀匹配 */
     if (cur_char >= 0x100u)
-        return 0; /* 双字节 PCS 仅 F9 走此路径，slot 不适用 */
+        return 0;
 
-    /* 从当前字节开始，往 stream_buf 塞最多 SLOT_MAX_JP_LEN 个字节
-     * （遇到 0xFF/0xF9/0xFE/0xFB/0xFA 即停，这些是控制符/终止符） */
+    /* 从当前字节开始读，遇到 0xFF 停止，不包含 0xFF */
     {
-        /* cur_char 本身是 index-1 位置的字节（WIN_TEXT_INDEX 已前进） */
         int pos = (int)index - 1;
         uint8_t cnt = 0;
-        while (cnt < SLOT_MAX_JP_LEN) {
+        while (cnt < sizeof(stream_buf)) {
             uint8_t b = (cnt == 0) ? (uint8_t)cur_char : text[pos + cnt];
-            if (b == 0xFF || b == 0xF9 || b == 0xFE || b == 0xFB || b == 0xFA)
+            if (b == 0xFF)
                 break;
             stream_buf[cnt] = b;
             cnt++;
@@ -250,49 +260,55 @@ static int slot_lookup_and_draw(TextPrinter *win, uint32_t cur_char)
     if (stream_len == 0)
         return 0;
 
-    /* 遍历 SlotTable */
-    while (table[i] != 0) {
-        uint8_t entry_len = table[i];
-        i++;
-        if (entry_len <= stream_len && entry_len > 0) {
-            unsigned match = 1;
-            for (k = 0; k < entry_len; k++) {
-                if (table[i + k] != stream_buf[k]) {
-                    match = 0;
-                    break;
-                }
-            }
-            if (match) {
-                /* 匹配！内联绘制 chinese stream（紧跟在 jp_bytes 之后） */
-                const uint8_t *chinese = &table[i + entry_len];
-                unsigned ci = 0;
-                while (chinese[ci] != 0xFF) {
-                    if (chinese[ci] == CHS_ESCAPE && chinese[ci + 1] == 0) {
-                        uint8_t lead = chinese[ci + 2];
-                        uint8_t trail = chinese[ci + 3];
-                        uint16_t gidx;
-                        if (lead_trail_ok(lead, trail)) {
-                            gidx = pack_glyph_index(lead, trail);
-                            if (gidx < CHS_FONT_GLYPH_MAX)
-                                DrawGlyph_Chinese(win, glyph_ptr(gidx));
-                        }
-                        ci += 4;
-                    } else {
-                        draw_chs_pcs(win, chinese[ci]);
-                        ci++;
+    /* 遍历 SlotTable：按 key 匹配，再逐字节核对 */
+    while (table[i] != 0 || table[i + 1] != 0 || table[i + 2] != 0 || table[i + 3] != 0) {
+        uint32_t entry_key;
+        uint16_t entry_len;
+        entry_key = (uint32_t)table[i] | ((uint32_t)table[i + 1] << 8)
+                  | ((uint32_t)table[i + 2] << 16) | ((uint32_t)table[i + 3] << 24);
+        i += 4;
+        entry_len = table[i];
+        i += 1;
+
+        if (entry_len > 0 && entry_len <= stream_len) {
+            uint32_t h = fnv1a_hash(stream_buf, entry_len);
+            if (h == entry_key) {
+                unsigned match = 1;
+                for (k = 0; k < entry_len; k++) {
+                    if (table[i + k] != stream_buf[k]) {
+                        match = 0;
+                        break;
                     }
                 }
-                /* 推进 WIN_TEXT_INDEX 跳过被替换的原始 JP 字节 */
-                win_set_u16(win, WIN_TEXT_INDEX,
-                    (uint16_t)(index - 1 + entry_len));
-                return 1;
+                if (match) {
+                    const uint8_t *chinese = &table[i + entry_len];
+                    unsigned ci = 0;
+                    while (chinese[ci] != 0xFF) {
+                        if (chinese[ci] == CHS_ESCAPE && chinese[ci + 1] == 0) {
+                            uint8_t lead = chinese[ci + 2];
+                            uint8_t trail = chinese[ci + 3];
+                            uint16_t gidx;
+                            if (lead_trail_ok(lead, trail)) {
+                                gidx = pack_glyph_index(lead, trail);
+                                if (gidx < CHS_FONT_GLYPH_MAX)
+                                    DrawGlyph_Chinese(win, glyph_ptr(gidx));
+                            }
+                            ci += 4;
+                        } else {
+                            draw_chs_pcs(win, chinese[ci]);
+                            ci++;
+                        }
+                    }
+                    win_set_u16(win, WIN_TEXT_INDEX,
+                        (uint16_t)(index - 1 + entry_len));
+                    return 1;
+                }
             }
         }
         i += entry_len;
-        /* 跳过 chinese_bytes 直到 0xFF 终止符 */
         while (table[i] != 0xFF)
             i++;
-        i++; /* skip 0xFF */
+        i++;
     }
     return 0;
 }

@@ -1,9 +1,8 @@
 """翻译通路规划：为每条目决策注入 type 并编码 target_hex。
 
 type:
-  in_place — 写入原槽：F900 整串，或越槽时的 F9 80 短语引用（带 ``phrase_code``）
+  replace  — 写入原槽：F900 整串，或越槽时的 F9 80 短语引用（带 ``phrase_code``）
   relocate — 编码超槽位且有可用指针源且模块 ``relocate=true``，写扩展区 + 指针改写
-  hook     — 前序失败且模块 ``hook=true`` 且有可用指针：生成 pointer_redirect.asm
   keep     — 都无法满足，保留原文（ROM 不动）
 
 优先级链（纯 1→4，编排期一次定死）：
@@ -35,8 +34,7 @@ POINTER_OFFSET = 0x08000000
 # 同 id 多 type 冲突时保留优先级更高者（注入去重 / 载入 build 用）
 PLAN_TYPE_RANK: dict[str, int] = {
     "relocate": 50,
-    "hook": 45,
-    "in_place": 30,
+    "replace": 30,
     # legacy aliases (read-only compat with old translate.build.json)
     "upgrade": 30,
     "f980": 30,
@@ -117,19 +115,8 @@ def module_allows_relocate(game_id: str, module_id: str | None) -> bool:
     return True
 
 
-def module_allows_hook(game_id: str, module_id: str | None) -> bool:
-    """该模块是否允许 type=hook（生成 pointer_redirect.asm）。
-
-    默认 false；仅配置显式 ``hook: true`` 时允许。
-    与 relocate 解耦：``stride_ptr`` 等可 ``relocate: false`` 且 ``hook: true``
-    （性格名走 armips 改指针表，不走 Python relocate）。
-    """
-    meta = _module_meta(game_id, module_id)
-    return bool(meta.get("hook"))
-
-
 def module_allows_phrase(game_id: str, module_id: str | None) -> bool:
-    """该模块是否允许 F9 80 短语引用（仍写入原槽，type=in_place）。
+    """该模块是否允许 F9 80 短语引用（仍写入原槽，type=replace）。
 
     ``relocate=false`` 只禁止改指针，**不禁止** F9 80 短语原地。
     """
@@ -416,7 +403,6 @@ def plan_entry(
     slot_cap = _reuse_slot_capacity(entry, game_id, module_id, byte_length)
     allow_reloc = module_allows_relocate(game_id, module_id)
     allow_phrase = module_allows_phrase(game_id, module_id)
-    allow_hook = module_allows_hook(game_id, module_id)
     channel = F9_PHRASE_DEFAULT  # F901/F981 已移除，短语恒 F9 80
 
     rebase = rebase_truncated_fd_slot(rom, entry)
@@ -455,7 +441,7 @@ def plan_entry(
     # 1) F900 原地（reuse_slot_padding=true 时按槽宽可写）
     if len(encoded) <= slot_cap:
         plan = {
-            "type": "in_place",
+            "type": "replace",
             "target_hex": pad_inplace_to_slot(encoded, slot_cap).hex(" "),
         }
         if slot_cap != byte_length:
@@ -474,7 +460,7 @@ def plan_entry(
     if allow_phrase and slot_cap >= 5:
         code = _ensure_phrase_code(phrase_codes, to_encode)
         plan = {
-            "type": "in_place",
+            "type": "replace",
             "target_hex": pad_inplace_to_slot(
                 _encode_phrase_ref(code, channel), slot_cap
             ).hex(" "),
@@ -484,16 +470,7 @@ def plan_entry(
             plan["byte_length"] = slot_cap
         return _with_write_meta(plan)
 
-    # 4) hook
-    if allow_hook and usable_ptrs:
-        return _with_write_meta({
-            "type": "hook",
-            "target_hex": encoded.hex(" "),
-            "pointer_sources": list(usable_ptrs),
-            "reason": "hook 指针重定向 asm",
-        })
-
-    # 5) slot — 超槽位且槽位<5无法F980、无可用指针：运行时查表拦截
+    # 4) slot — 超槽位且槽位<5无法F980、无可用指针：运行时查表拦截
     if allow_phrase and byte_length < 5 and not usable_ptrs:
         return _with_write_meta({
             "type": "slot",
@@ -505,18 +482,18 @@ def plan_entry(
         reason = "无可用指针且无法短语升槽"
     elif not usable_ptrs:
         reason = "超槽位；无可用指针；无法F980升槽"
-    elif not allow_reloc and not allow_hook and not allow_phrase:
-        reason = "模块禁止 relocate/hook/短语，且超槽位"
+    elif not allow_reloc and not allow_phrase:
+        reason = "模块禁止 relocate/短语，且超槽位"
     else:
         reason = "无可用注入路径（超槽位/模块禁路径）"
     return _keep(original_hex, reason)
 
 
 def _plan_ptr_slots(plans: list[dict]) -> set[int]:
-    """relocate/hook 计划的指针站点（文件偏移），供 in_place 避让。"""
+    """relocate 计划的指针站点（文件偏移），供 in_place 避让。"""
     slots: set[int] = set()
     for p in plans:
-        if (p.get("type") or "") not in ("relocate", "hook"):
+        if (p.get("type") or "") != "relocate":
             continue
         for src in p.get("pointer_sources") or []:
             try:
@@ -540,7 +517,7 @@ def finalize_plans_against_ptr_slots(
     entries: list[dict],
     plans: list[dict],
 ) -> list[dict]:
-    """编排期末：in_place 若会盖住 relocate/hook 指针槽 → 降为 keep。
+    """编排期末：in_place 若会盖住 relocate 指针槽 → 降为 keep。
 
     不再在 build 注入时改路径；冲突在 build.json 里就写成 keep。
     """
@@ -549,7 +526,7 @@ def finalize_plans_against_ptr_slots(
         return plans
     out: list[dict] = []
     for e, p in zip(entries, plans):
-        if (p.get("type") or "") != "in_place":
+        if (p.get("type") or "") != "replace":
             out.append(p)
             continue
         try:

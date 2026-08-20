@@ -349,7 +349,7 @@ class RomWriter:
         )
 
         stats = {
-            "in_place": 0, "relocated": 0, "errors": 0,
+            "replace": 0, "relocated": 0, "errors": 0,
             "name_tables": {},
             "skipped_dup_id": 0,
             "skipped_ptr_clobber": 0,
@@ -432,7 +432,7 @@ class RomWriter:
         return rom, stats
 
     def _collect_relocate_pointer_slots(self, entries: list[dict]) -> set[int]:
-        """收集 relocate/hook 计划的 pointer_sources（ROM 文件偏移），供 in_place 避让。
+        """收集 relocate 计划的 pointer_sources（ROM 文件偏移），供 in_place 避让。
 
         丢弃落在语料正文区间内的站点（PCS 巧合假指针）。
         """
@@ -443,7 +443,7 @@ class RomWriter:
         for e in entries:
             plan = e.get("_plan")
             ptrs: list = []
-            if plan and (plan.get("type") or "") in ("relocate", "hook"):
+            if plan and (plan.get("type") or "") == "relocate":
                 ptrs = (
                     plan.get("pointer_sources")
                     or e.get("pointer_addresses")
@@ -487,13 +487,12 @@ class RomWriter:
         in_place     → target_hex 写入原地址（含 F900 整串或 F9 80 短语引用）
         upgrade/f980 → 旧 build 别名，按 in_place 处理
         relocate     → target_hex 写入扩展区并改写 plan.pointer_sources（不再校验/回退）
-        hook         → 跳过（armips pointer_redirect.asm 已写）
         keep         → 保留原文，日志打印
         """
         entry_id = entry.get("id", "?")
         ptype = plan.get("type") or "keep"
         if ptype in ("f980", "upgrade"):
-            ptype = "in_place"
+            ptype = "replace"
         category = plan.get("module") or entry.get("module") or ""
         original = entry.get("original", "")
 
@@ -514,17 +513,12 @@ class RomWriter:
             else (entry.get("byte_length", 0) or 0)
         )
 
-        if ptype == "hook":
-            # armips 已通过 pointer_redirect.asm 写扩展区 + 改指针；避免双写
-            stats["hook_skipped"] = stats.get("hook_skipped", 0) + 1
-            return
-
         if ptype == "slot":
             # translated_slot.asm 由 armips 写入查找表；PrintNextChar 运行时拦截
             stats["slot_skipped"] = stats.get("slot_skipped", 0) + 1
             return
 
-        if ptype == "in_place":
+        if ptype == "replace":
             # translate.build.json 已编排好；此处只按 target_hex 直写。
             # 指针槽避让已在 plan finalize；若仍撞上，属 build.json 过期，记 keep。
             write_len = min(len(target), byte_length) if target else 0
@@ -543,7 +537,7 @@ class RomWriter:
                 return
             if len(target) <= byte_length:
                 self._write_in_place_v2(rom, address, target, byte_length)
-                stats["in_place"] += 1
+                stats["replace"] += 1
             else:
                 print(
                     f"  KEEP {entry_id} @ 0x{address:X} (cat={category}): "
@@ -685,7 +679,7 @@ class RomWriter:
                         f"  SKIP {entry_id} @ 0x{address:X} (cat={category}): "
                         f"slot {original_length}B < 5, auto-F9-80 cannot fit; keeping original"
                     )
-                    stats["in_place"] += 1
+                    stats["replace"] += 1
                     return
                 print(
                     f"  WARN {entry_id} @ 0x{address:X} (cat={category}): "
@@ -705,7 +699,7 @@ class RomWriter:
                 stats["skipped_ptr_clobber"] = stats.get("skipped_ptr_clobber", 0) + 1
                 return
             self._write_in_place_v2(rom, address, encoded, original_length)
-            stats["in_place"] += 1
+            stats["replace"] += 1
             return
 
         # Non-ARMIPS path
@@ -719,7 +713,7 @@ class RomWriter:
                         f"  WRITE {entry_id} @ 0x{address:X} (cat={category}): "
                         f"slot {original_length}B < 5, keeping original"
                     )
-                    stats["in_place"] += 1
+                    stats["replace"] += 1
                     return
                 print(
                     f"  WARN {entry_id} @ 0x{address:X} (cat={category}): "
@@ -739,7 +733,7 @@ class RomWriter:
                 stats["skipped_ptr_clobber"] = stats.get("skipped_ptr_clobber", 0) + 1
                 return
             self._write_in_place_v2(rom, address, encoded, original_length)
-            stats["in_place"] += 1
+            stats["replace"] += 1
         else:
             raise ValueError(
                 f"Entry {entry_id}: cannot write "

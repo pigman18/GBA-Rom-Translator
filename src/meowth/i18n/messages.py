@@ -24,7 +24,7 @@ class Messages:
     FONT_PATCH_APPLIED = "Font patch applied"
     SKIPPING_FONT_PATCH = "Skipping font patch for Latin language ({lang})"
     INJECTING_TEXTS = "Injecting {count} translated texts..."
-    INJECTION_STATS = "Done: {in_place} in-place, {relocated} relocated, {skipped} skipped, {partial_ptr} partial-ptr skipped, {unsafe_ptr} unsafe ptrs filtered"
+    INJECTION_STATS = "Done: {replace} replaced, {relocated} relocated, {skipped} skipped, {partial_ptr} partial-ptr skipped, {unsafe_ptr} unsafe ptrs filtered"
     SAVED_ROM = "Saved: {path}"
     DETECTED_GAME = "Detected game: {game}"
     GAME_DETECTION_FAILED = "Warning: could not detect game from ROM header, using: {game}"

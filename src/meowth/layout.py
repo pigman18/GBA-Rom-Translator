@@ -275,7 +275,7 @@ def layout_texts(
     baseline = bytes(rom) if is_armips else b""
     rom_ba = bytearray(rom)
     total = len(entries)
-    stats = {"in_place": 0, "relocated": 0, "skipped": 0}
+    stats = {"replace": 0, "relocated": 0, "skipped": 0}
 
     for i, entry in enumerate(entries):
         original = entry.get("original", "").strip('"')
@@ -377,7 +377,7 @@ def layout_texts(
                 data=slot,
                 comment=f"inplace_{entry_id}",
             ))
-            stats["in_place"] += 1
+            stats["replace"] += 1
             continue
 
         # ---- non-armips path ----
@@ -423,7 +423,7 @@ def layout_texts(
                 data=slot,
                 comment=f"inplace_{entry_id}",
             ))
-            stats["in_place"] += 1
+            stats["replace"] += 1
         else:
             stats["skipped"] += 1
 
@@ -692,7 +692,7 @@ def run_layout(
 
     print(f"Layout: {bin_path.name} ({len(bin_data):,} bytes)")
     print(f"Layout: {asm_path.name}")
-    print(f"  in-place={result.stats.get('in_place', 0)}, "
+    print(f"  replace={result.stats.get('replace', 0)}, "
           f"relocated={result.stats.get('relocated', 0)}, "
           f"skipped={result.stats.get('skipped', 0)}")
 

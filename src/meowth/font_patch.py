@@ -213,17 +213,6 @@ def apply_font_patch(
     else:
         print(f"[data] warn: no {build_json}; phrases only")
 
-    # type=hook → pointer_redirect.asm（正文池 + 指针槽 .word）；无条目则空桩
-    from .pointer_redirect import write_pointer_redirect_asm
-
-    n_hook = write_pointer_redirect_asm(
-        work_dir / "translate.build.json",
-        build_dir / "gen" / "pointer_redirect.asm",
-        rom_path=build_dir / "baserom.gba",
-    )
-    if n_hook:
-        print(f"[hook] pointer_redirect.asm: {n_hook} type=hook entries")
-
     # type=slot → translated_slot.asm（JP hex → 中文 F9 流查找表）
     from .translated_slot import write_slot_table_asm
 

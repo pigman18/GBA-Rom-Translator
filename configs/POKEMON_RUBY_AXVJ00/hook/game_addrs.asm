@@ -7,9 +7,9 @@
 ; C game.h ADDR_*). Removed addresses → symbols/pokeruby_jp.sym UNVERIFIED.
 
 ; --- Core text printer ---
-; ProcessCurrentChar ≈ pret/pokeruby PrintNextChar (src/text.c)
-ProcessCurrentChar                     equ 0x080032F8
-ProcessCurrentChar_RegularGlyph        equ 0x0800336E
+; PrintNextChar ≈ pret/pokeruby PrintNextChar (src/text.c)
+PrintNextChar                          equ 0x080032F8
+PrintNextChar_RegularGlyph             equ 0x0800336E
 CallViaR2                              equ 0x081B12DC  ; C: ADDR_CALL_VIA_R2
 FontFuncTable                          equ 0x081BB3AC  ; C: ADDR_FONT_FUNC_TABLE
 

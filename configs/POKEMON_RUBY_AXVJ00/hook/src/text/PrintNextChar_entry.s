@@ -1,5 +1,5 @@
 @ =============================================================================
-@ game.bin entry: pokeruby PrintNextChar / AXVJ ProcessCurrentChar RegularGlyph
+@ game.bin entry: pokeruby PrintNextChar / AXVJ PrintNextChar RegularGlyph
 @ In: r3=cur char, r4=TextPrinter; stack has saved r4 + return
 @ =============================================================================
 

@@ -1,5 +1,5 @@
 /* AXVJ patch ??? ? ?? / Win ?? / ?????
- * ProcessCurrentChar ? pokeruby PrintNextChar
+ * PrintNextChar ≈ pokeruby PrintNextChar
  */
 #ifndef GAME_H
 #define GAME_H

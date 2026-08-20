@@ -13,8 +13,8 @@
 .include "./out/game_syms.asm"
 
 ; 常规字形 → PrintNextChar（F9 00 / F9 80 + pokeRS 绘制）
-.org ProcessCurrentChar_RegularGlyph
-    ldr r0, =(PrintNextChar | 1)
+.org PrintNextChar_RegularGlyph
+    ldr r0, =(PrintNextChar_C | 1)
     bx r0
 .pool
 
@@ -188,7 +188,7 @@ StarterPokeCopyDone:
     mov r1, DEX_NAME_COLUMN
 
 .org GameBinAddresses
-PrintNextChar:
+PrintNextChar_C:
 .incbin "out/game.bin"
 
 .include "./graphic/fonts.s"

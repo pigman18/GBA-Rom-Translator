@@ -96,11 +96,13 @@ set MPN_ADDR=0x08800000
 set WTA_ADDR=0x08800000
 set UPMN_ADDR=0x08800000
 set DOMC_ADDR=0x08800000
+set GWH_ADDR=0x08800000
 for /f "tokens=1" %%a in ('findstr /R "GetStringWidthChinese$" %OUT%\game.map') do set GSW_ADDR=%%a
 for /f "tokens=1" %%a in ('findstr /R "MapName_DisplayCellLength$" %OUT%\game.map') do set MPN_ADDR=%%a
 for /f "tokens=1" %%a in ('findstr /R "WaitArrow_Prepare$" %OUT%\game.map') do set WTA_ADDR=%%a
 for /f "tokens=1" %%a in ('findstr /R "UnusedPrintMonName_Hook$" %OUT%\game.map') do set UPMN_ADDR=%%a
 for /f "tokens=1" %%a in ('findstr /R "DrawOptionMenuChoice_Hook$" %OUT%\game.map') do set DOMC_ADDR=%%a
+for /f "tokens=1" %%a in ('findstr /R "GetGlyphWidthHook$" %OUT%\game.map') do set GWH_ADDR=%%a
 > %OUT%\game_syms.asm (
     echo ; Auto-generated from out/game.map - do not edit
     echo GetStringWidthChinese                   equ %GSW_ADDR%
@@ -108,6 +110,7 @@ for /f "tokens=1" %%a in ('findstr /R "DrawOptionMenuChoice_Hook$" %OUT%\game.ma
     echo WaitArrow_Prepare                       equ %WTA_ADDR%
     echo UnusedPrintMonName_Hook                 equ %UPMN_ADDR%
     echo DrawOptionMenuChoice_Hook               equ %DOMC_ADDR%
+    echo GetGlyphWidthHook                       equ %GWH_ADDR%
 )
 
 echo Build OK: %OUT%\game.bin

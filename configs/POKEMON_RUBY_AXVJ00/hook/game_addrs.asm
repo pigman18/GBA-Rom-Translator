@@ -23,6 +23,8 @@ DrawInitialDownArrow                   equ 0x08003F4C
 
 ; --- String util ---
 StringLength                           equ 0x0800436C
+GetGlyphWidth                          equ 0x08004228  ; verified: 6 callers
+GetStringWidth                         equ 0x08004530  ; verified: 125 callers
 
 ; --- 图鉴分类名行（UnusedPrintMonName，参数 name/left/top）---
 UnusedPrintMonName                     equ 0x0808DD60

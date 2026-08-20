@@ -40,6 +40,7 @@ PLAN_TYPE_RANK: dict[str, int] = {
     # legacy aliases (read-only compat with old translate.build.json)
     "upgrade": 30,
     "f980": 30,
+    "slot": 20,
     "keep": 10,
 }
 
@@ -492,9 +493,15 @@ def plan_entry(
             "reason": "hook 指针重定向 asm",
         })
 
+    # 5) slot — 超槽位且槽位<5无法F980、无可用指针：运行时查表拦截
     if allow_phrase and byte_length < 5 and not usable_ptrs:
-        reason = "超槽位；槽位<5无法F980；无可用指针可relocate/hook"
-    elif not usable_ptrs and not allow_phrase:
+        return _with_write_meta({
+            "type": "slot",
+            "target_hex": encoded.hex(" "),
+            "original_hex": original_hex,
+        })
+
+    if not usable_ptrs and not allow_phrase:
         reason = "无可用指针且无法短语升槽"
     elif not usable_ptrs:
         reason = "超槽位；无可用指针；无法F980升槽"

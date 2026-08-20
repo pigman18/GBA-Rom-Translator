@@ -205,6 +205,99 @@ static int draw_jp_via_chs(TextPrinter *win, uint32_t cur_char)
 }
 
 /**
+ * slot_lookup_and_draw — type=slot 运行时查表拦截。
+ *
+ * SlotTable 格式：jp_len(1B) | jp_bytes(jp_len) | chinese_bytes(... FF)
+ * 以 0x00 哨兵结尾。
+ *
+ * 从 text stream 读出当前 JP 字节序列（最多 SLOT_MAX_JP_LEN 字节），
+ * 与表中 jp_bytes 逐条比对。匹配则内联绘制中文 F9 流并推进
+ * WIN_TEXT_INDEX 跳过被替换的原始 JP 字节，返回 1。
+ */
+#define SLOT_MAX_JP_LEN 7
+
+static int slot_lookup_and_draw(TextPrinter *win, uint32_t cur_char)
+{
+    const uint8_t *table = (const uint8_t *)ADDR_SLOT_TABLE;
+    const uint8_t *text =
+        (const uint8_t *)(uintptr_t)win_u32(win, WIN_TEXT_PTR);
+    uint16_t index = win_u16(win, WIN_TEXT_INDEX);
+    unsigned i = 0;
+    uint8_t stream_buf[SLOT_MAX_JP_LEN];
+    uint8_t stream_len = 0;
+    unsigned k;
+
+    /* cur_char 是当前字节；从 text stream 读出连续 JP 字节用于前缀匹配 */
+    if (cur_char >= 0x100u)
+        return 0; /* 双字节 PCS 仅 F9 走此路径，slot 不适用 */
+
+    /* 从当前字节开始，往 stream_buf 塞最多 SLOT_MAX_JP_LEN 个字节
+     * （遇到 0xFF/0xF9/0xFE/0xFB/0xFA 即停，这些是控制符/终止符） */
+    {
+        /* cur_char 本身是 index-1 位置的字节（WIN_TEXT_INDEX 已前进） */
+        int pos = (int)index - 1;
+        uint8_t cnt = 0;
+        while (cnt < SLOT_MAX_JP_LEN) {
+            uint8_t b = (cnt == 0) ? (uint8_t)cur_char : text[pos + cnt];
+            if (b == 0xFF || b == 0xF9 || b == 0xFE || b == 0xFB || b == 0xFA)
+                break;
+            stream_buf[cnt] = b;
+            cnt++;
+        }
+        stream_len = cnt;
+    }
+
+    if (stream_len == 0)
+        return 0;
+
+    /* 遍历 SlotTable */
+    while (table[i] != 0) {
+        uint8_t entry_len = table[i];
+        i++;
+        if (entry_len <= stream_len && entry_len > 0) {
+            unsigned match = 1;
+            for (k = 0; k < entry_len; k++) {
+                if (table[i + k] != stream_buf[k]) {
+                    match = 0;
+                    break;
+                }
+            }
+            if (match) {
+                /* 匹配！内联绘制 chinese stream（紧跟在 jp_bytes 之后） */
+                const uint8_t *chinese = &table[i + entry_len];
+                unsigned ci = 0;
+                while (chinese[ci] != 0xFF) {
+                    if (chinese[ci] == CHS_ESCAPE && chinese[ci + 1] == 0) {
+                        uint8_t lead = chinese[ci + 2];
+                        uint8_t trail = chinese[ci + 3];
+                        uint16_t gidx;
+                        if (lead_trail_ok(lead, trail)) {
+                            gidx = pack_glyph_index(lead, trail);
+                            if (gidx < CHS_FONT_GLYPH_MAX)
+                                DrawGlyph_Chinese(win, glyph_ptr(gidx));
+                        }
+                        ci += 4;
+                    } else {
+                        draw_chs_pcs(win, chinese[ci]);
+                        ci++;
+                    }
+                }
+                /* 推进 WIN_TEXT_INDEX 跳过被替换的原始 JP 字节 */
+                win_set_u16(win, WIN_TEXT_INDEX,
+                    (uint16_t)(index - 1 + entry_len));
+                return 1;
+            }
+        }
+        i += entry_len;
+        /* 跳过 chinese_bytes 直到 0xFF 终止符 */
+        while (table[i] != 0xFF)
+            i++;
+        i++; /* skip 0xFF */
+    }
+    return 0;
+}
+
+/**
  * PrintNextChar_C — F9 优先；可印 JP 必须走 CHS 同池（禁回 FontFunc 双路径）。
  */
 int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
@@ -265,6 +358,10 @@ int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
             return 1;
         }
     }
+
+    /* ---- type=slot: JP hex → 中文替换查找表 ---- */
+    if (slot_lookup_and_draw(win, cur_char))
+        return 1;
 
     /* ---- 普通 JP PCS：同套 CHS 绘制 ---- */
     return draw_chs_pcs(win, cur_char);

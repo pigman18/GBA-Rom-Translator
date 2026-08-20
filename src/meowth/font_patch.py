@@ -224,6 +224,17 @@ def apply_font_patch(
     if n_hook:
         print(f"[hook] pointer_redirect.asm: {n_hook} type=hook entries")
 
+    # type=slot → translated_slot.asm（JP hex → 中文 F9 流查找表）
+    from .translated_slot import write_slot_table_asm
+
+    n_slot = write_slot_table_asm(
+        work_dir / "translate.build.json",
+        build_dir / "gen" / "translated_slot.asm",
+        rom_path=build_dir / "baserom.gba",
+    )
+    if n_slot:
+        print(f"[slot] translated_slot.asm: {n_slot} type=slot entries")
+
     # game.bin：仅当 out/ 缺失时提示；pack 不强制重编（改 phrase 只走 asm）
     game_bin = build_dir / "out" / "game.bin"
 

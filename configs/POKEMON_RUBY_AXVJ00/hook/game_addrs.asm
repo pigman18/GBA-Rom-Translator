@@ -52,6 +52,8 @@ PhraseTableVMA                          equ 0x08820000  ; C: ADDR_PHRASE_TABLE
 FontChsNormal                          equ 0x09000000  ; C: ADDR_FONT_CHS_NORMAL
 ; Sym punct: free ROM after Small; Font3 8x16 4bpp U+L (not 16x16 2bpp)
 PokeRSFontChsSymAddress                equ 0x091E0000  ; C: ADDR_FONT_CHS_SYM
+; SlotTable: type=slot 查找表（JP hex → 中文 F9 流，PrintNextChar 运行时拦截）
+SlotTableVMA                         equ 0x09EA0000  ; C: ADDR_SLOT_TABLE
 ; EWRAM pitch slots (JP+CN share CHS pool; do not dual-path FontFunc):
 ;   ChsPitchCtrl  @ 0x0203FF80 (16B): cur, gen, pad[2], age[8]
 ;   ChineseTileState slots[8] @ 0x0203FF90 (64B)

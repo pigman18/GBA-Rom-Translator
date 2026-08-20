@@ -193,6 +193,9 @@ PrintNextChar_C:
 
 .include "./graphic/fonts.s"
 
+; type=slot：JP hex → 中文 F9 流查找表（PrintNextChar 运行时拦截）
+.include "./gen/translated_slot.asm"
+
 ; type=hook：扩展区正文 + 指针槽重定向（由 meowth.pointer_redirect 生成）
 .include "./gen/pointer_redirect.asm"
 

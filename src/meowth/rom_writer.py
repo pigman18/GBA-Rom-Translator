@@ -519,6 +519,11 @@ class RomWriter:
             stats["hook_skipped"] = stats.get("hook_skipped", 0) + 1
             return
 
+        if ptype == "slot":
+            # translated_slot.asm 由 armips 写入查找表；PrintNextChar 运行时拦截
+            stats["slot_skipped"] = stats.get("slot_skipped", 0) + 1
+            return
+
         if ptype == "in_place":
             # translate.build.json 已编排好；此处只按 target_hex 直写。
             # 指针槽避让已在 plan finalize；若仍撞上，属 build.json 过期，记 keep。

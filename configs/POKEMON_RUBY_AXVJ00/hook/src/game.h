@@ -32,6 +32,7 @@
 #define ADDR_PHRASE_OFFSETS                0x08810000u
 #define ADDR_PHRASE_TABLE                  0x08820000u
 #define ADDR_UPDATE_TILEMAP                0x080036DCu
+#define ADDR_SLOT_TABLE                    0x09EA0000u
 // <<<GEN_ADDR_END>>>
 /*
  * 短语表（PhraseTable）—— 固定长度字段突破字符数限制的方案。

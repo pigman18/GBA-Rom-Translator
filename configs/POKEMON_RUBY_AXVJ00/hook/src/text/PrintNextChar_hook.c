@@ -267,8 +267,8 @@ static int slot_lookup_and_draw(TextPrinter *win, uint32_t cur_char)
         entry_key = (uint32_t)table[i] | ((uint32_t)table[i + 1] << 8)
                   | ((uint32_t)table[i + 2] << 16) | ((uint32_t)table[i + 3] << 24);
         i += 4;
-        entry_len = table[i];
-        i += 1;
+        entry_len = (uint16_t)table[i] | ((uint16_t)table[i + 1] << 8);
+        i += 2;
 
         if (entry_len > 0 && entry_len <= stream_len) {
             uint32_t h = fnv1a_hash(stream_buf, entry_len);

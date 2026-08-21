@@ -405,3 +405,51 @@ texts:
       entry_size: 56
       name_offset: 0
       desc_ptr_offset: 12
+
+# GDB 运行时追踪监听点（python src/util/gdb_patcher.py log）。
+# 加新监控点只需在此追加一条；无 Python handler 时自动打通用日志。
+#   name        监听点名（gdb_patcher 内部可按 name 注册增强 handler）
+#   address     断点地址（"0x…" 字符串或整数）
+#   description 通用日志描述（可选）
+#   default     false = 未传 --functions 时不启用（可选，缺省 true）
+#   cfg         传给该点 handler 的自定义参数（可选，如 charmap）
+gdb:
+  - name: InitTextPrinter
+    address: '0x08002C68'
+    description: '文本块开始（r0=win, r1=文本指针, r2=tile_base, r3=cur_x）'
+    cfg:
+      charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
+  - name: ProcessCurrentChar
+    address: '0x0800336E'
+    description: '逐字符（r4=win, r3=char）；输出量大且与 InitTextPrinter 冗余'
+    default: false
+  - name: PrintNextChar
+    address: '0x080032F8'
+    default: false
+  - name: LoadSpriteSheet
+    address: '0x080021C4'
+    description: '图块 sheet → OBJ VRAM（r0=&sheet{data,size,tag}）'
+  - name: LoadSpritePalette
+    address: '0x08002410'
+    description: '调色板 sheet → gPlttBuffer OBJ 区（r0=&sheet{data,size,tag}）'
+  - name: LoadCompressedObjectPic
+    address: '0x0800A77C'
+    description: 'LZ77→0x02000000 后 LoadSpriteSheet（r0=&压缩图）'
+  - name: LoadCompressedObjectPalette
+    address: '0x0800A7D0'
+    description: 'LZ77→0x02000000 后 LoadSpritePalette（r0=&压缩调色板）'
+  - name: LoadCompressedPalette
+    address: '0x08070A4C'
+    description: '压缩调色板：LZ→0x0202F0BC + 2×拷贝→gPlttBuffer*（r0=src, r1=offset, r2=size）'
+  - name: LoadPalette
+    address: '0x08070A90'
+    description: '调色板 2×CpuCopy16→gPlttBufferUnfaded/Faded（r0=src, r1=offset, r2=size）'
+  - name: LZDecompressWram
+    address: '0x0800A764'
+    description: 'LZ77 解压到 EWRAM（r0=src, r1=dest）'
+  - name: LZDecompressVram
+    address: '0x0800A770'
+    description: 'LZ77 解压到 VRAM（r0=src, r1=dest）'
+  - name: DrawMapNamePopup
+    address: '0x0809F654'
+    description: '地图名弹窗绘制入口（无 handler，仅通用日志）'

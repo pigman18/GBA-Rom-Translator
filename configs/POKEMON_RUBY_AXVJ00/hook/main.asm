@@ -1,6 +1,14 @@
 ; =============================================================================
-; AXVJ 补丁入口：main.asm / game.bin / game_addrs.asm
-; pokeRS 算法 + F900/F980 通道（gcc → out/game.bin）
+; AXVJ 补丁入口：main.asm —— 纯装配骨架
+; -----------------------------------------------------------------------------
+; 结构分层：
+;   [地址] game_addrs.asm            所有 equ 唯一事实来源
+;   [符号] out/game_syms.asm         gcc 符号回填（build.bat / Makefile 生成）
+;   [复杂钩] src/{域}/hooks_origin.s 订址桩；逻辑在 src/{域}/entry.s + *_hook.c
+;                                    （gcc 编入 out/game.bin）
+;   [纯值]   patches/*.asm           就地指令/数据改写，无 C 依赖
+;   [装载]   game.bin @0x08800000 + fonts + slot 表
+; 补丁 ID 索引与逐条说明：docs/PATCHES_INVENTORY.md
 ; =============================================================================
 .gba
 .thumb
@@ -12,200 +20,24 @@
 .include "./game_addrs.asm"
 .include "./out/game_syms.asm"
 
-; 常规字形 → PrintNextChar（F9 00 / F9 80 + pokeRS 绘制）
-.org PrintNextChar_RegularGlyph
-    ldr r0, =(PrintNextChar_C | 1)
-    bx r0
-.pool
+; ---- 复杂钩子订址桩（JMP 类） ----
+.include "./src/text/hooks_origin.s"
+.include "./src/battle/hooks_origin.s"
+.include "./src/pokedex/hooks_origin.s"
+.include "./src/option/hooks_origin.s"
 
-; =============================================================================
-; Hook3: GetGlyphTilePointers —— 订址桩（8B）。
-; bit15 伪 glyph 分发 / r4 保护 / 原函数重定位副本 全部在 text/entry.s
-; （GetGlyphTilePointers_Hook / GetGlyphTilePointers_Orig）。此处只负责
-; far-jump：r4 为唯一可用 scratch（r0-r3 是参数），先 push 保住调用方 r4。
-; =============================================================================
-.org GetGlyphTilePointers
-    push {r4}
-    ldr  r4, =(GetGlyphTilePointers_Hook | 1)
-    bx   r4
-.pool
+; ---- 纯值补丁（INS/DATA/NOP 类） ----
+.include "./patches/ui_starter.asm"
+.include "./patches/ui_pss.asm"
+.include "./patches/ui_dex.asm"
+.include "./patches/clean_suffix.asm"
 
-; 战斗 HP 条昵称：遮罩 tile CpuSet 32B→24B（pokeRS / 增益版）
-.include "./src/battle/UpdateNickInHealthbox_hook_origin.s"
-
-; 地图名弹窗：跳过 StringLength pad + 二次 GetMapName(fill=10)，
-; 直跳 MenuPrint。否则中文 F9 短语被 fill 顶出 → 白空格(Bug1)+重复(Bug2)。
-.org DrawMapNamePopup_StringLength
-    ldr r0, =(MapName_DisplayCellLength | 1)
-    bx r0
-.pool
-
-; 等 A 箭头：FA/FB 不经 PrintNextChar；TILE_OFFSET 与 CURSOR 错位 → 双▼。
-.org DrawInitialDownArrow
-    ldr r3, =(WaitArrow_Prepare | 1)
-    bx r3
-.pool
-
-; 初始宠 label 擦除：日版按假名宽度擦 left+8 列，中文名字(12px)比假名(8px)宽，
-; 超出的右半 tile 没被 erase → 切 label 时残留右半碎字。
-; 把 adds r2,#8（右边界=left+8）改成 movs r2,#29（右边界固定 29=菜单窗口最右列）。
-; 屏上同时只显示一个 label，擦到窗口最右不会误伤其它 label。
-.org 0x081053D0
-    mov r2, 0x1D
-
-; 图鉴条目屏分类名行：测试 hook —— 直接拼接占位串 + name，先观察效果。
-.org UnusedPrintMonName
-    ldr r3, =(UnusedPrintMonName_Hook | 1)
-    bx r3
-.pool
-
-
-; 设置窗口选项高亮：日版文本 FC 05 0F 前缀的 dst[2]=style；
-; 汉化后是 F9 80 短语引用，dst[2] 是短语码高字节，写 style 会指错短语。
-.org DrawOptionMenuChoice
-    push {r3}
-    ldr r3, =(DrawOptionMenuChoice_Hook | 1)
-    bx r3
-.pool
-
-; =============================================================================
-; B06 初始宠 label 第一行「分类+宝可梦」栈溢出 → 宝可梦名重复打印
-; -----------------------------------------------------------------------------
-; CreateStarterPokemonLabel @0x081053A8 栈帧 sub sp,#0x20：
-;   sp[0..15]=第一行 buffer，sp[16..31]=第二行 buffer。
-; 第一行 = 颜色码(5)+分类假名(≤5)+「ポケモン」拷贝(5B)+FF，恰好 16B。
-; 汉化把「ポケモン」→「宝可梦」=F9 00×3+FF=13B（指针 0x08105534 被 pointer_redirect
-; 重定向到扩展区），但该函数是「读指针所指字节直接拷贝」，固定拷 5B：
-;   a) 固定 5B 只拷到 f9 00 01 63 f9，第二组 F9 序列悬空，PrintNextChar 把
-;      缓冲区外的字节当 F9 短语码去查表 → 随机乱码（14~16.png 字符乱飞）。
-;   b) 若改成整串拷入，第一行膨胀到 5+5+13+1=24B，超出 16B 写进第二行 buffer，
-;      打印第一行时吃掉第二行颜色码后把名字打出来 → 名字重复（5~13.png）。
-; 修复：两件事必须同时做——
-;   1) 栈帧 0x20→0x60，第二行 buffer 从 sp+0x10 移到 sp+0x30，两行各 48B 隔离；
-;   2) 「ポケモン」拷贝从固定 5B 改为拷到 0xFF（上限 0x11），整串 F9 序列完整
-;      落入第一行 buffer，其后 FF 让打印干净收尾，无悬空 F9、无溢出。
-; =============================================================================
-.org 0x081053B2
-    sub sp, 0x60
-
-.org 0x08105416
-    add r1, sp, 0x30
-
-.org 0x0810551C
-    add sp, 0x60
-
-; 0x0810544C：ポケモン拷贝循环（原固定 5B：cmp r7,#4 / bls）
-; 替换为「拷到 0xFF，上限 0x11」，字节数与原循环一致（0x1A）。
-.org 0x0810544C
-StarterPokeCopyLoop:
-    mov r0, sp
-    add r1, r0, r4
-    add r0, r7, r2
-    ldrb r0, [r0, #0]
-    strb r0, [r1, #0]
-    cmp r0, #0xFF
-    beq StarterPokeCopyDone
-    add r7, #1
-    add r4, #1
-    cmp r7, #0x11
-    bls StarterPokeCopyLoop
-    nop
-    nop
-StarterPokeCopyDone:
-
-; =============================================================================
-; 图鉴/徽章文字后缀「ひき」(1B 07 FF) 置空
-; 三处函数都在 ConvertIntToFullwidth 返回后硬编码写入 1B 07 FF。
-; 转换器本身已在末尾写 0xFF(EOS)，所以只需 NOP 掉整组 6 条写入指令即可。
-; 注意：0x08090ECC / 0x08090F18 用 R1，0x08090F70 用 R0。
-; =============================================================================
-; --- 函数1 (0x08090ECC):  MOV R1,#0x1B / STRB / MOV R1,#07 / STRB / MOV R1,#FF / STRB
-.org 0x08090EF0
-    nop  ; 原 MOV R1, #0x1B
-    nop  ; 原 STRB R1, [R0, #0]
-    nop  ; 原 MOV R1, #0x07
-    nop  ; 原 STRB R1, [R0, #1]
-    nop  ; 原 MOV R1, #0xFF
-    nop  ; 原 STRB R1, [R0, #2]
-
-; --- 函数2 (0x08090F18 = GetNationalPokedexCount): 同模式
-.org 0x08090F3C
-    nop
-    nop
-    nop
-    nop
-    nop
-    nop
-
-; --- 函数3 (0x08090F70 = GetHoennPokedexCount): 用 R0 而非 R1
-.org 0x08090FAA
-    nop  ; 原 MOV R0, #0x1B
-    nop  ; 原 STRB R0, [R4, #0]
-    nop  ; 原 MOV R0, #0x07
-    nop  ; 原 STRB R0, [R4, #1]
-    nop  ; 原 MOV R0, #0xFF
-    nop  ; 原 STRB R0, [R4, #2]
-
-; --- 徽章后置空
-.org 0x081BC164
-    .byte 0xFF
-    .byte 0xFF
-
-; =============================================================================
-; PSS 右上角图标+文字布局调整
-; =============================================================================
-; 日版 PrintSummaryWindowHeaderText @0x0809D5D4:
-;   PlaceTextTile_White(5, x1, 0) / PlaceTextTile_White(6, x2, 0) 画 B 按钮图标
-;   Menu_PrintText(text, x3, 0) 打印操作文字（取消/替换/Info）
-;
-;   原布局（JP ROM）:
-;     Tile: [0  1  2 ... 23] [24] [25] [26  27  28  29 ...]
-;            ← 左侧标题文字 →  B●  B●  ← 操作文字(取消/替换) →
-;   问题：中文“取消/替换”打印后文字反向增长踩到图标
-;   修复：图标左移一列，文字位置不变
-;
-;   新布局:
-;     Tile: [0  1  2 ... 22] [23] [24] [25  26  27  28  29 ...]
-;            ← 左侧标题文字 →  B●  B●  ← 操作文字(取消/替换) →
-; =============================================================================
-
-; PlaceTextTile_White(5, x, 0): R0=tile5, R1=x, R2=y
-.org 0x0809D60C
-    mov r1, 0x17            ; 原 0x18(tile列24), 左移→tile列23
-
-; PlaceTextTile_White(6, x, 0): R0=tile6, R1=x, R2=y
-.org 0x0809D616
-    mov r1, 0x18            ; 原 0x19(tile列25), 左移→tile列24
-
-; Menu_PrintText(text, x, 0): R1=x (不改，保持原位 tile列26)
-
-; =============================================================================
-; 图鉴列表页：名字列（NoXXX 与宝可梦名间距）。
-; 唯一来源 DEX_NAME_COLUMN（game_addrs.asm），5 处 movr1 共用；原 0x17=23。
-; CreateMonName(0, 0x17, r2 * 2)
-; =============================================================================
-.org 0x0808AA00
-    mov r1, DEX_NAME_COLUMN
-
-.org 0x0808AA24
-    mov r1, DEX_NAME_COLUMN
-
-.org 0x0808AB34
-    mov r1, DEX_NAME_COLUMN
-
-.org 0x0808ABDA
-    mov r1, DEX_NAME_COLUMN
-
-.org 0x0808ABFE
-    mov r1, DEX_NAME_COLUMN
-
+; ---- C 文本引擎 / 字库 / slot 表 ----
 .org GameBinAddresses
 PrintNextChar_C:
 .incbin "out/game.bin"
 
 .include "./graphic/fonts.s"
 
-; type=slot：JP hex → 中文 F9 流查找表（PrintNextChar 运行时拦截）
+; type=slot：JP hex → 中文 F9 流查找表（PrintNextChar 运行时拦截，v2 分桶 'SLT2'）
 .include "./gen/translated_slot.asm"
-
-.close

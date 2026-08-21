@@ -1,8 +1,8 @@
 # AXVJ hook → out/game.bin (VMA 0x08800000)
 # Windows: build.bat
-# WSL:     先跑一次 scripts/wsl-interop-setup.sh（binfmt 注册），然后
+# WSL:     scripts/wsl-interop-setup.sh 一次后
 #          PATH="$REPO/tools/wsl-bin:$PATH" make
-#          （tools/wsl-bin 内是 Windows 工具链的包装器，含 armips）
+#          （tools/wsl-bin 内是 Windows 工具链包装器，含 armips）
 # 注意: out/game.map 由 Windows ld.exe 写出为 CRLF，game_syms 配方已剥 \r。
 
 PREFIX   ?= arm-none-eabi-
@@ -46,7 +46,7 @@ all: $(OUT)/game.bin $(OUT)/game_syms.asm
 $(BUILD):
 	mkdir -p $(BUILD)
 
-# text/entry.s 是跳板合集（PrintNextChar/Hook3 分发等），链接必须排第一：
+# text/entry.s 是跳板合集，链接必须排第一：
 # main.asm 的 PrintNextChar_C 标签 = GameBinAddresses = game.bin 起点。
 $(BUILD)/text_entry.o: $(TEXT)/entry.s | $(BUILD)
 	$(CC) $(ASFLAGS) $< -o $@
@@ -81,6 +81,7 @@ $(OUT)/game.elf: $(OBJS)
 $(OUT)/game.bin: $(OUT)/game.elf
 	$(OBJCOPY) -O binary $< $@
 
+# 与 build.bat 对齐：6 个符号（含 MapName_DisplayCellLength，弹窗旁路跳板）
 $(OUT)/game_syms.asm: $(OUT)/game.map
 	@GSW=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'GetStringWidthChinese$$' | awk '{print $$1}'); \
 	MPN=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'MapName_DisplayCellLength$$' | awk '{print $$1}'); \

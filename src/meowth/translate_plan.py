@@ -371,6 +371,145 @@ def _ensure_phrase_code(phrase_codes: dict[str, int], text: str) -> int:
     return code
 
 
+def _encode_segment_text(charmap: Any, seg: str) -> bytes:
+    """编码纯文本段（不含控制码）为 F9 00 流并以 FF 结尾。"""
+    if not seg:
+        return b""
+    # 直接复用 Charmap.encode 的字符映射逻辑，但避免再次处理控制码
+    # seg 已由上层切分，不含 \ 控制，保持字符级编码即可
+    return bytes(charmap.encode(seg))
+
+
+def _segmented_encode(
+    to_encode: str,
+    charmap: Any,
+    phrase_codes: dict[str, int],
+    *,
+    use_phrase: bool = False,
+    channel: int = F9_PHRASE_DEFAULT,
+) -> bytes:
+    """按控制码切段编码：{F9 xx FF}{FE/FB…}{F9 xx FF}…
+
+    - 文字段：F9 00 流（use_phrase=False）或 F9 80 短语引用（use_phrase=True，统一升级）
+    - 控制码：FE/FB/FD/FC/F8 等原样穿插，文字段自带 FF 终止
+    """
+    from .pcs_codes import BACKSLASH_CODES, BRACKET_MACROS
+
+    result = bytearray()
+    cur = ""
+    n = len(to_encode)
+    i = 0
+
+    def flush_cur() -> None:
+        nonlocal cur
+        if not cur:
+            return
+        if use_phrase:
+            code = _ensure_phrase_code(phrase_codes, cur)
+            result.extend(_encode_phrase_ref(code, channel))
+        else:
+            result.extend(_encode_segment_text(charmap, cur))
+        cur = ""
+
+    while i < n:
+        ch = to_encode[i]
+        if ch == "\n":
+            flush_cur()
+            if i + 1 < n and to_encode[i + 1] == "\n":
+                result.append(0xFB)
+                i += 2
+            else:
+                result.append(0xFE)
+                i += 1
+            continue
+        if ch == "\r":
+            flush_cur()
+            i += 1
+            continue
+        if ch == "[":
+            end = to_encode.find("]", i)
+            if end != -1:
+                token = to_encode[i : end + 1]
+                if token in BRACKET_MACROS:
+                    flush_cur()
+                    result.extend(BRACKET_MACROS[token])
+                    i = end + 1
+                    continue
+        if ch == "\\":
+            matched = False
+            if getattr(charmap, "_escape", False):
+                for token, _nb in (("\\pn", 3), ("\\p", 2), ("\\l", 2)):
+                    if to_encode[i:].startswith(token):
+                        flush_cur()
+                        result.append(0xFB)
+                        i += len(token)
+                        matched = True
+                        break
+            if matched:
+                continue
+            for code_str, code_bytes in BACKSLASH_CODES:
+                if to_encode[i:].startswith(code_str):
+                    flush_cur()
+                    result.extend(code_bytes)
+                    i += len(code_str)
+                    matched = True
+                    break
+            if matched:
+                continue
+            if to_encode[i:].startswith("\\CC"):
+                j = i + 3
+                hex_chars: list[int] = []
+                while j < n and j - (i + 3) < 20:
+                    pair = to_encode[j : j + 2]
+                    if len(pair) == 2 and all(
+                        c in "0123456789ABCDEFabcdef" for c in pair
+                    ):
+                        hex_chars.append(int(pair, 16))
+                        j += 2
+                    else:
+                        break
+                if hex_chars:
+                    flush_cur()
+                    result.append(0xFC)
+                    result.extend(hex_chars)
+                    i = j
+                    continue
+            if to_encode[i:].startswith("\\btn"):
+                pair = to_encode[i + 4 : i + 6]
+                if len(pair) == 2 and all(
+                    c in "0123456789ABCDEFabcdef" for c in pair
+                ):
+                    flush_cur()
+                    result.append(0xF8)
+                    result.append(int(pair, 16))
+                    i += 6
+                    continue
+            if i + 2 < n:
+                pair = to_encode[i + 1 : i + 3]
+                if len(pair) == 2 and all(
+                    c in "0123456789ABCDEFabcdef" for c in pair
+                ):
+                    flush_cur()
+                    result.append(0xFD)
+                    result.append(int(pair, 16))
+                    i += 3
+                    continue
+        if ch == "{" and i + 3 < n and to_encode[i + 3] == "}":
+            hex_str = to_encode[i + 1 : i + 3]
+            if all(c in "0123456789ABCDEFabcdef" for c in hex_str):
+                flush_cur()
+                result.append(int(hex_str, 16))
+                i += 4
+                continue
+        cur += ch
+        i += 1
+
+    flush_cur()
+    if not result or result[-1] != F9_EOS:
+        result.append(F9_EOS)
+    return bytes(result)
+
+
 def _keep(original_hex: str, reason: str) -> dict:
     return {"type": "keep", "target_hex": original_hex, "reason": reason}
 
@@ -464,6 +603,7 @@ def plan_entry(
             plan["fd_rebased"] = True
         return plan
 
+    # 整句编码：charmap 00-FF 已含日版控制码，按整句走 charmap.encode 即可，无需按控制符拆段
     # --- 通路 1: relocate（指针重定向）---
     if allow_reloc and usable_ptrs:
         return _with_write_meta({
@@ -472,9 +612,8 @@ def plan_entry(
             "pointer_sources": list(usable_ptrs),
         })
 
-    # --- 通路 2: replace（原地写入 F900 / F980）---
+    # --- 通路 2: replace（原地写入 F900 / F980）--- 放不下则整句统一升为 F9 80
     if allow_replace:
-        # F900 原地：编码后能塞进槽位
         if len(encoded) <= slot_cap:
             plan = {
                 "type": "replace",
@@ -483,7 +622,6 @@ def plan_entry(
             if slot_cap != byte_length:
                 plan["byte_length"] = slot_cap
             return _with_write_meta(plan)
-        # F980 原地升槽：用短语引用（5字节）替代长文本
         if slot_cap >= 5:
             code = _ensure_phrase_code(phrase_codes, to_encode)
             plan = {

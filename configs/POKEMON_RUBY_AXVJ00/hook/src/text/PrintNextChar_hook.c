@@ -246,15 +246,19 @@ static int slot_lookup_and_draw(TextPrinter *win, uint32_t cur_char)
     /* 从当前字节开始读，遇到 0xFF 停止，不包含 0xFF */
     {
         int pos = (int)index - 1;
-        uint8_t cnt = 0;
-        while (cnt < sizeof(stream_buf)) {
+        int cnt = 0;
+        /* cnt 必须是 int：uint8_t 对 sizeof(256) 比较恒真会被编译器删掉边界，
+         * 流内 255 字节内无 0xFF 时 cnt 回绕 → 死循环（开场白逗号卡死根因）。 */
+        while (cnt < (int)sizeof(stream_buf)) {
             uint8_t b = (cnt == 0) ? (uint8_t)cur_char : text[pos + cnt];
             if (b == 0xFF)
                 break;
             stream_buf[cnt] = b;
             cnt++;
         }
-        stream_len = cnt;
+        if (cnt > 255)
+            cnt = 255;
+        stream_len = (uint8_t)cnt;
     }
 
     if (stream_len == 0)

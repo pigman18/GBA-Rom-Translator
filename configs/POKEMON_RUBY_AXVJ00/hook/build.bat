@@ -34,8 +34,6 @@ echo === Compiling DrawGlyphTiles_hook.c ===
 %CC% %CFLAGS% %TEXT%\DrawGlyphTiles_hook.c -o %BUILD%\DrawGlyphTiles_hook.o
 if errorlevel 1 exit /b 1
 
-echo === Compiling DrawGlyphTiles_scene.c ===
-%CC% %CFLAGS% %TEXT%\DrawGlyphTiles_scene.c -o %BUILD%\DrawGlyphTiles_scene.o
 if errorlevel 1 exit /b 1
 
 echo === Compiling DrawGlyph_CHS_hook.c ===
@@ -93,7 +91,6 @@ echo === Linking game.elf ===
   %BUILD%/text_entry.o ^
   %BUILD%/PrintNextChar_hook.o ^
   %BUILD%/DrawGlyphTiles_hook.o ^
-  %BUILD%/DrawGlyphTiles_scene.o ^
   %BUILD%/DrawGlyph_CHS_hook.o ^
   %BUILD%/DrawInitialDownArrow_hook.o ^
   %BUILD%/DrawMenuCursorEF_hook.o ^

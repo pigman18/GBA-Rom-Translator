@@ -25,7 +25,6 @@ OBJS := \
 	$(BUILD)/text_entry.o \
 	$(BUILD)/PrintNextChar_hook.o \
 	$(BUILD)/DrawGlyphTiles_hook.o \
-	$(BUILD)/DrawGlyphTiles_scene.o \
 	$(BUILD)/DrawGlyph_CHS_hook.o \
 	$(BUILD)/DrawInitialDownArrow_hook.o \
 	$(BUILD)/DrawMenuCursorEF_hook.o \

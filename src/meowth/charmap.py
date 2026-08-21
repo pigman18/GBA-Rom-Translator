@@ -272,6 +272,11 @@ class Charmap:
         # LLM often emits literal "{{\n}}" / "{{\p}}" with braces; normalize.
         text = text.replace("{\\n}", "\n").replace("{\\p}", "\n\n").replace("{\\l}", "\\l")
         text = text.replace("{{\n}}", "\n").replace("{{\\p}}", "\n\n")
+        # Unrestored {Cn} must not be stripped to literal "C6"/"C7" (PCS letters).
+        if re.search(r"\{\{?C\d+", text):
+            raise ValueError(
+                f"unrestored control placeholder in text: {text[:80]!r}"
+            )
         # Drop any remaining lone braces left by bad LLM formatting
         text = text.replace("{", "").replace("}", "")
 

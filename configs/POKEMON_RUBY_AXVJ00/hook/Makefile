@@ -1,5 +1,9 @@
 # AXVJ hook → out/game.bin (VMA 0x08800000)
-# Prefer build.bat on Windows.
+# Windows: build.bat
+# WSL:     先跑一次 scripts/wsl-interop-setup.sh（binfmt 注册），然后
+#          PATH="$REPO/tools/wsl-bin:$PATH" make
+#          （tools/wsl-bin 内是 Windows 工具链的包装器，含 armips）
+# 注意: out/game.map 由 Windows ld.exe 写出为 CRLF，game_syms 配方已剥 \r。
 
 PREFIX   ?= arm-none-eabi-
 CC       := $(PREFIX)gcc
@@ -18,10 +22,14 @@ ASFLAGS := -mthumb -mcpu=arm7tdmi -ffreestanding -x assembler-with-cpp -c
 LDFLAGS := -mthumb -mcpu=arm7tdmi -nostdlib -T link/game.ld -Wl,-Map=$(OUT)/game.map
 
 OBJS := \
-	$(BUILD)/PrintNextChar_entry.o \
+	$(BUILD)/text_entry.o \
 	$(BUILD)/PrintNextChar_hook.o \
 	$(BUILD)/DrawGlyphTiles_hook.o \
 	$(BUILD)/DrawGlyphTiles_scene.o \
+	$(BUILD)/DrawGlyph_CHS_hook.o \
+	$(BUILD)/DrawInitialDownArrow_hook.o \
+	$(BUILD)/DrawMenuCursorEF_hook.o \
+	$(BUILD)/GetGlyphTilePointers_hook.o \
 	$(BUILD)/GetStringWidth_hook.o \
 	$(BUILD)/GetGlyphWidth_hook.o \
 	$(BUILD)/UpdateNickInHealthbox_entry.o \
@@ -37,6 +45,11 @@ all: $(OUT)/game.bin $(OUT)/game_syms.asm
 
 $(BUILD):
 	mkdir -p $(BUILD)
+
+# text/entry.s 是跳板合集（PrintNextChar/Hook3 分发等），链接必须排第一：
+# main.asm 的 PrintNextChar_C 标签 = GameBinAddresses = game.bin 起点。
+$(BUILD)/text_entry.o: $(TEXT)/entry.s | $(BUILD)
+	$(CC) $(ASFLAGS) $< -o $@
 
 $(BUILD)/%.o: $(TEXT)/%.s | $(BUILD)
 	$(CC) $(ASFLAGS) $< -o $@
@@ -69,12 +82,13 @@ $(OUT)/game.bin: $(OUT)/game.elf
 	$(OBJCOPY) -O binary $< $@
 
 $(OUT)/game_syms.asm: $(OUT)/game.map
-	@GSW=$$(grep -E 'GetStringWidthChinese$$' $(OUT)/game.map | awk '{print $$1}'); \
-	MPN=$$(grep -E 'MapName_DisplayCellLength$$' $(OUT)/game.map | awk '{print $$1}'); \
-	WTA=$$(grep -E 'WaitArrow_Prepare$$' $(OUT)/game.map | awk '{print $$1}'); \
-	UPMN=$$(grep -E 'UnusedPrintMonName_Hook$$' $(OUT)/game.map | awk '{print $$1}'); \
-	DOMC=$$(grep -E 'DrawOptionMenuChoice_Hook$$' $(OUT)/game.map | awk '{print $$1}'); \
-	printf '; Auto-generated from out/game.map - do not edit\nGetStringWidthChinese                   equ %s\nMapName_DisplayCellLength               equ %s\nWaitArrow_Prepare                       equ %s\nUnusedPrintMonName_Hook                 equ %s\nDrawOptionMenuChoice_Hook               equ %s\n' "$${GSW:-0x08800000}" "$${MPN:-0x08800000}" "$${WTA:-0x08800000}" "$${UPMN:-0x08800000}" "$${DOMC:-0x08800000}" > $@
+	@GSW=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'GetStringWidthChinese$$' | awk '{print $$1}'); \
+	MPN=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'MapName_DisplayCellLength$$' | awk '{print $$1}'); \
+	WTA=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'WaitArrow_Prepare$$' | awk '{print $$1}'); \
+	UPMN=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'UnusedPrintMonName_Hook$$' | awk '{print $$1}'); \
+	DOMC=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'DrawOptionMenuChoice_Hook$$' | awk '{print $$1}'); \
+	GGTPH=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'GetGlyphTilePointers_Hook$$' | awk '{print $$1}'); \
+	printf '; Auto-generated from out/game.map - do not edit\nGetStringWidthChinese                   equ %s\nMapName_DisplayCellLength               equ %s\nWaitArrow_Prepare                       equ %s\nUnusedPrintMonName_Hook                 equ %s\nDrawOptionMenuChoice_Hook               equ %s\nGetGlyphTilePointers_Hook               equ %s\n' "$${GSW:-0x08800000}" "$${MPN:-0x08800000}" "$${WTA:-0x08800000}" "$${UPMN:-0x08800000}" "$${DOMC:-0x08800000}" "$${GGTPH:-0x08800000}" > $@
 
 clean:
 	rm -rf $(OUT)/obj $(OUT)/game.elf $(OUT)/game.bin $(OUT)/game.map $(OUT)/game_syms.asm

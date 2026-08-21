@@ -112,16 +112,22 @@ static void redirect_phrase_stream(TextPrinter *win, uint16_t code)
 /**
  * slot_lookup_and_draw — type=slot 运行时查表拦截。
  *
- * SlotTable 格式（FNV-1a hash keyed）：
- *   per_entry: key(4B) | jp_len_le16(2B) | jp_bytes(jp_len) | chinese_bytes(... 0xFF)
- * 以 key==0 哨兵结尾（4字节全0）。
+ * SlotTable v2 格式（'SLT2' magic，src/meowth/translated_slot.py 生成）：
+ *   Header (.align 4):
+ *     u32 magic = 0x32544C53 ('SLT2')
+ *     u32 n_buckets(u16 LE) | max_jp_len(u16 LE)
+ *     u32 bucket_offset[n_buckets+1]   （相对 SlotTable 标签的字节偏移）
+ *   Entries 按 jp_bytes[0] 分桶组排放，桶内保持原表顺序：
+ *     key(4B FNV1a(jp)) | jp_len_le16(2B) | jp_bytes | chinese_bytes(... 0xFF)
  *
- * 从 text stream 读出当前 JP 字节序列，计算 FNV-1a hash，
- * 在表中查找匹配 key，再逐字节核对 jp_bytes。
- * 匹配则内联绘制中文 F9 流并推进 WIN_TEXT_INDEX 跳过原始 JP 字节。
+ * 查找：cur_char 即桶号 → 只遍历所在桶（801 条/94 首字节/最大桶 43 条）；
+ * 流窗口以 max_jp_len 封顶（v1 每字符扫到 0xFF 最多拷 255B 是卡顿主因之一）；
+ * 拷贝窗口时增量算 FNV 前缀哈希 ph[len]，条目 key 与 ph[len] 直接比对，
+ * 免去每条目的重复哈希；命中才逐字节核对（防哈希碰撞）。
+ * 匹配语义与 v1 完全一致：jp[0]==cur_char 才可能命中，桶内先到先得。
  *
- * 读 stream 时仅在 0xFF（EOS）停止，不做任何控制符过滤——
- * original 直入直出。
+ * Legacy 平铺格式（key|len|jp|cn … 4x00 哨兵）在 magic 不匹配时走
+ * slot_lookup_legacy 线性查找——行为与旧版逐字节一致，供回滚/旧表兼容。
  */
 static uint32_t fnv1a_hash(const uint8_t *data, unsigned len)
 {
@@ -134,19 +140,117 @@ static uint32_t fnv1a_hash(const uint8_t *data, unsigned len)
     return h;
 }
 
-static int slot_lookup_and_draw(TextPrinter *win, uint32_t cur_char)
+static uint32_t slot_rd_le32(const uint8_t *p)
+{
+    return (uint32_t)p[0] | ((uint32_t)p[1] << 8)
+         | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+}
+
+/* 命中后逐字节绘制中文 F9 流并推进 INDEX（legacy/v2 共用）。 */
+static int slot_draw_chinese(TextPrinter *win, const uint8_t *chinese,
+                             uint16_t next_index)
+{
+    unsigned ci = 0;
+
+    while (chinese[ci] != 0xFF) {
+        if (chinese[ci] == CHS_ESCAPE && chinese[ci + 1] == 0) {
+            uint8_t lead = chinese[ci + 2];
+            uint8_t trail = chinese[ci + 3];
+            uint16_t gidx;
+            if (lead_trail_ok(lead, trail)) {
+                gidx = pack_glyph_index(lead, trail);
+                if (gidx < CHS_FONT_GLYPH_MAX)
+                    PrintGlyph_CHS(win, gidx);
+            }
+            ci += 4;
+        } else {
+            DrawGlyph_CHS(win, chinese[ci]);
+            ci++;
+        }
+    }
+    win_set_u16(win, WIN_TEXT_INDEX, next_index);
+    return 1;
+}
+
+/* v2 分桶查找。入口已保证 magic 匹配、cur_char<0x100。 */
+#define SLOT_TABLE_MAGIC_V2   0x32544C53u  /* 'SLT2' */
+#define SLOT_V2_MAX_WINDOW    32u         /* 窗口硬上限（表头 max_jp_len 再封顶） */
+
+static int slot_lookup_v2(TextPrinter *win, uint32_t cur_char,
+                          const uint8_t *table,
+                          const uint8_t *text, uint16_t index)
+{
+    uint16_t n_buckets = (uint16_t)(table[4] | (table[5] << 8));
+    uint16_t max_jp = (uint16_t)(table[6] | (table[7] << 8));
+    const uint8_t *offs;
+    uint32_t beg, end, i;
+    uint8_t stream_buf[SLOT_V2_MAX_WINDOW];
+    uint32_t ph[SLOT_V2_MAX_WINDOW + 1];
+    unsigned cap;
+    unsigned cnt = 0;
+
+    if (n_buckets == 0 || cur_char >= n_buckets || max_jp == 0)
+        return 0;
+    if (max_jp > SLOT_V2_MAX_WINDOW)
+        max_jp = SLOT_V2_MAX_WINDOW;
+
+    offs = table + 8;
+    beg = slot_rd_le32(offs + (uint32_t)cur_char * 4u);
+    end = slot_rd_le32(offs + (uint32_t)cur_char * 4u + 4u);
+    if (beg >= end)
+        return 0;                       /* 空桶：两次索引读即返回 */
+
+    /* 单次有界扫描：拷贝窗口 + 增量 FNV 前缀哈希（ph[k]=fnv1a(前 k 字节)），
+     * 条目 key 与 ph[len] 直接比对，替代逐条目重哈希。
+     * 上限为编译期常量、cnt 用 unsigned，无回绕风险。 */
+    ph[0] = 0x811c9dc5u;
+    {
+        int pos = (int)index - 1;
+        cap = max_jp;
+        while (cnt < cap) {
+            uint8_t b = (cnt == 0) ? (uint8_t)cur_char : text[pos + cnt];
+            if (b == 0xFF)
+                break;
+            stream_buf[cnt] = b;
+            ph[cnt + 1] = (ph[cnt] ^ b) * 0x01000193u;
+            cnt++;
+        }
+    }
+    if (cnt == 0)
+        return 0;
+
+    for (i = beg; i < end;) {
+        uint16_t len = (uint16_t)(table[i + 4] | (table[i + 5] << 8));
+        if (len >= 1u && len <= cnt && slot_rd_le32(table + i) == ph[len]) {
+            unsigned k, match = 1;
+            for (k = 0; k < len; k++) {
+                if (table[i + 6 + k] != stream_buf[k]) {
+                    match = 0;
+                    break;
+                }
+            }
+            if (match)
+                return slot_draw_chinese(
+                    win, table + i + 6u + len,
+                    (uint16_t)(index - 1 + len));
+        }
+        i += 6u + len;
+        while (i < end && table[i] != 0xFF)
+            i++;
+        i++;
+    }
+    return 0;
+}
+
+/* legacy 平铺表线性查找——与旧版 slot_lookup_and_draw 逐字节一致。 */
+static int slot_lookup_legacy(TextPrinter *win, uint32_t cur_char,
+                              const uint8_t *text, uint16_t index)
 {
     const uint8_t *table = (const uint8_t *)ADDR_SLOT_TABLE;
-    const uint8_t *text =
-        (const uint8_t *)(uintptr_t)win_u32(win, WIN_TEXT_PTR);
-    uint16_t index = win_u16(win, WIN_TEXT_INDEX);
     unsigned i = 0;
     uint8_t stream_buf[256];
     uint8_t stream_len = 0;
     unsigned k;
-
-    if (cur_char >= 0x100u)
-        return 0;
 
     /* 从当前字节开始读，遇到 0xFF 停止，不包含 0xFF。
      * cnt 必须是 int：uint8_t 对 sizeof(256) 比较恒真会被编译器删掉边界，
@@ -189,29 +293,10 @@ static int slot_lookup_and_draw(TextPrinter *win, uint32_t cur_char)
                         break;
                     }
                 }
-                if (match) {
-                    const uint8_t *chinese = &table[i + entry_len];
-                    unsigned ci = 0;
-                    while (chinese[ci] != 0xFF) {
-                        if (chinese[ci] == CHS_ESCAPE && chinese[ci + 1] == 0) {
-                            uint8_t lead = chinese[ci + 2];
-                            uint8_t trail = chinese[ci + 3];
-                            uint16_t gidx;
-                            if (lead_trail_ok(lead, trail)) {
-                                gidx = pack_glyph_index(lead, trail);
-                                if (gidx < CHS_FONT_GLYPH_MAX)
-                                    PrintGlyph_CHS(win, gidx);
-                            }
-                            ci += 4;
-                        } else {
-                            DrawGlyph_CHS(win, chinese[ci]);
-                            ci++;
-                        }
-                    }
-                    win_set_u16(win, WIN_TEXT_INDEX,
+                if (match)
+                    return slot_draw_chinese(
+                        win, &table[i + entry_len],
                         (uint16_t)(index - 1 + entry_len));
-                    return 1;
-                }
             }
         }
         i += entry_len;
@@ -220,6 +305,23 @@ static int slot_lookup_and_draw(TextPrinter *win, uint32_t cur_char)
         i++;
     }
     return 0;
+}
+
+static int slot_lookup_and_draw(TextPrinter *win, uint32_t cur_char)
+{
+    const uint8_t *table = (const uint8_t *)ADDR_SLOT_TABLE;
+    const uint8_t *text =
+        (const uint8_t *)(uintptr_t)win_u32(win, WIN_TEXT_PTR);
+    uint16_t index = win_u16(win, WIN_TEXT_INDEX);
+
+    if (cur_char >= 0x100u)
+        return 0;
+
+    /* v2 分桶表（'SLT2'）：O(桶大小)；旧平铺表自动回退线性。 */
+    if (slot_rd_le32(table) == SLOT_TABLE_MAGIC_V2)
+        return slot_lookup_v2(win, cur_char, table, text, index);
+
+    return slot_lookup_legacy(win, cur_char, text, index);
 }
 
 /**

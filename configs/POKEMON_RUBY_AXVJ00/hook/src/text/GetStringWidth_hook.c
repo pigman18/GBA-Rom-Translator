@@ -100,15 +100,3 @@ uint8_t GetStringWidthChinese_Full(TextPrinter *win, const uint8_t *s)
 {
     return (uint8_t)(string_width_px(s, glyph_px_for_win(win)) & 0xFF);
 }
-
-/*
- * Retired: DrawMapNamePopup still called GetMapName(fill=10) after strlen,
- * so returning 10 only skipped the leading-space loop — trailing 0x00 pad
- * remained. entry.s MapName_DisplayCellLength now jumps to MenuPrint and
- * skips pad + 2nd GetMapName entirely.
- */
-uint8_t MapName_DisplayCellLength_C(const uint8_t *s)
-{
-    (void)s;
-    return 10;
-}

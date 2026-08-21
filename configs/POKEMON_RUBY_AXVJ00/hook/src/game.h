@@ -351,8 +351,6 @@ uint32_t GetGlyphWidth_C(TextPrinter *win, uint32_t glyph);
 int  GetStringWidth_Chinese(TextPrinter *win, const uint8_t *s,
                            uint16_t *index, uint8_t *width);
 uint8_t GetStringWidthChinese_Full(TextPrinter *win, const uint8_t *s);
-/* Kept for link compat; map popup trampoline no longer calls this. */
-uint8_t MapName_DisplayCellLength_C(const uint8_t *s);
 
 int  scene_field_wants_linear(TextPrinter *win);
 int  scene_menu_wants_mode2(TextPrinter *win);

@@ -1,6 +1,7 @@
 # AXVJ main.asm 补丁盘点（POKEMON_RUBY_AXVJ00）
 
 > 快照时间：2026-08-21 23:53（用户回滚后版本）。
+> 目录/命名规则见 `configs/POKEMON_RUBY_AXVJ00/hook/README.md`（新增补丁前必读）。
 > 范围：`configs/POKEMON_RUBY_AXVJ00/hook/main.asm` 全部 `.org` 补丁 + 装配结构。
 > 用途：后续拆分/移除/重构的决策底账。每条补丁有唯一 ID（Pxx），拆分与删除操作以 ID 为单位。
 

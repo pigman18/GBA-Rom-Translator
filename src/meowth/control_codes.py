@@ -181,8 +181,28 @@ def protect(text: str) -> tuple[str, list[tuple[str, str]]]:
     return protected, codes
 
 
+_DOUBLE_BRACE_C = re.compile(r"\{\{C(\d+)\}\}")
+# LLM sometimes mangles newline into the placeholder: {{C7}\n} / {C7\n}
+_MANGLED_C_NL = re.compile(r"\{\{?C(\d+)\}?\\n\}")
+_WRAPPED_CODE = re.compile(r"\{(\\[pln]|\\CC[0-9A-Fa-f]+)\}")
+
+
+def normalize_placeholders(text: str) -> str:
+    """Normalize LLM-mangled placeholder spellings before restore.
+
+    Prompt examples historically used ``{{C0}}`` (double braces); models often
+    emit that form or glue ``\\n`` into the token.  Real control codes wrapped
+    as ``{\\p}`` are unwrapped here too.
+    """
+    text = _MANGLED_C_NL.sub(r"{C\1}\n", text)
+    text = _DOUBLE_BRACE_C.sub(r"{C\1}", text)
+    text = _WRAPPED_CODE.sub(r"\1", text)
+    return text
+
+
 def restore(text: str, codes: list[tuple[str, str]]) -> str:
     """Restore control code placeholders to original codes."""
+    text = normalize_placeholders(text)
     for placeholder, original in codes:
         text = text.replace(placeholder, original)
     return text

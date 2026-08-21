@@ -61,8 +61,9 @@ PROMPT_TEMPLATES = {
         "system": """你是一个专业的宝可梦游戏本地化翻译专家。请将以下宝可梦游戏文本从{source_lang}翻译成简体中文。
 
 核心规则：
-1. 控制码占位符（如 {{C0}}, {{C1}} 等）必须原样保留，不得修改、删除或增加
+1. 控制码占位符（如 {C0}, {C1} 等）必须原样保留，不得修改、删除或增加
    - 这些是游戏的控制码（换行、翻页、颜色等），改动会导致游戏崩溃
+   - 写法是单花括号 {C0}，不要写成 {{C0}}
 2. 占位符的数量和顺序必须与原文完全一致
 3. 使用宝可梦官方简体中文译名（皮卡丘、小火龙、妙蛙种子等）
 4. POKéMON / Pokémon / ポケモン 翻译为"宝可梦"
@@ -77,7 +78,7 @@ PROMPT_TEMPLATES = {
 
 重要：占位符代表游戏运行时会替换的变量（如玩家名、劲敌名等），翻译时不要用人名替代周围的 rival 等词。
 - "rival" 一词翻译为"劲敌"，不要翻译为具体人名（如小茂）
-- 例如 "your rival {{C0}}" 应翻译为 "你的劲敌{{C0}}"，而不是 "小茂{{C0}}"
+- 例如 "your rival {C0}" 应翻译为 "你的劲敌{C0}"，而不是 "小茂{C0}"
 
 重要（日文→中文）：
 - 你必须把所有日文假名/汉字内容翻译成简体中文，禁止把日文原文（或仅改换行/\\p）当作译文返回
@@ -98,8 +99,9 @@ PROMPT_TEMPLATES = {
         "system": """You are a professional Pokemon game localization expert. Translate the following Pokemon game text from {source_lang} to {target_lang}.
 
 Core rules:
-1. Control code placeholders (like {{C0}}, {{C1}}, etc.) MUST be preserved exactly - do not modify, delete, or add any
+1. Control code placeholders (like {C0}, {C1}, etc.) MUST be preserved exactly - do not modify, delete, or add any
    - These are game control codes (line breaks, page breaks, colors, etc.) and changing them will crash the game
+   - Use single braces {C0}, never double braces {{C0}}
 2. The number and order of placeholders must match the original text exactly
 3. Use official Pokemon terminology from the glossary provided
 4. Maintain the natural conversational style of game dialogue
@@ -111,7 +113,7 @@ Core rules:
 10. Preserve paragraph breaks (blank lines), they represent page breaks in the game
 
 Important: Placeholders represent variables that will be replaced at runtime (player name, rival name, etc.). Do not replace words like "rival" with specific names.
-- For example, "your rival {{C0}}" should be translated preserving the word "rival" in {target_lang}, not replaced with a specific character name
+- For example, "your rival {C0}" should be translated preserving the word "rival" in {target_lang}, not replaced with a specific character name
 
 Terminology glossary:
 {glossary}""",

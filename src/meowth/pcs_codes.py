@@ -199,7 +199,9 @@ CONTROL_CODE_PATTERNS: list[tuple[str, str]] = [
     (r"\\F[0-9A-Fa-f]", "fx_code"),
     (r"\\\?[0-9A-Fa-f]{2}", "f7_code"),
     (r"\\v[0-9A-Fa-f]{2}", "variable"),
-    (r"\\\\[0-9A-Fa-f]{2}", "fd_escape"),
+    # Single backslash + 2 hex digits = FD escape (\01, \02, …).
+    # Must be \\ not \\\\ — the latter only matches a literal \\XX.
+    (r"\\[0-9A-Fa-f]{2}", "fd_escape"),
 ]
 
 # Add bracket macro patterns (sorted by length descending for greedy match)

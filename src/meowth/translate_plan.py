@@ -94,10 +94,18 @@ def _module_meta(game_id: str, module_id: str | None) -> dict:
         return {}
 
 
+def _write_switch(meta: dict, key: str, default: bool = True) -> bool:
+    """从 ``meta["write"][key]`` 读取开关；缺省返回 default。"""
+    write = meta.get("write") or {}
+    if isinstance(write, dict) and key in write:
+        return bool(write[key])
+    return default
+
+
 def module_allows_relocate(game_id: str, module_id: str | None) -> bool:
     """该模块是否允许 relocate（Python 改指针 + 扩展区正文）。
 
-    modules.json：``relocate: true/false``（旧 ``no_relocate`` 过渡兼容）。
+    modules.json：``write.relocate: true/false``。
     ``stride``/``struct`` 等定长表类型始终不允许。
     """
     meta = _module_meta(game_id, module_id)
@@ -108,29 +116,43 @@ def module_allows_relocate(game_id: str, module_id: str | None) -> bool:
             return False
     except Exception:
         pass
-    if "relocate" in meta:
-        return bool(meta.get("relocate"))
-    if "no_relocate" in meta:
-        return not bool(meta.get("no_relocate"))
-    return True
+    return _write_switch(meta, "relocate", default=True)
+
+
+def module_allows_replace(game_id: str, module_id: str | None) -> bool:
+    """该模块是否允许 replace（原地写入 F900 / F980 短语引用）。
+
+    默认 True；``write.replace: false`` 禁止原地替换。
+    """
+    meta = _module_meta(game_id, module_id)
+    return _write_switch(meta, "replace", default=True)
+
+
+def module_allows_slot(game_id: str, module_id: str | None) -> bool:
+    """该模块是否允许 slot（slot 注入 / reuse_slot_padding）。
+
+    默认 True；``write.slot: false`` 禁止 slot 注入。
+    """
+    meta = _module_meta(game_id, module_id)
+    return _write_switch(meta, "slot", default=True)
 
 
 def module_allows_phrase(game_id: str, module_id: str | None) -> bool:
     """该模块是否允许 F9 80 短语引用（仍写入原槽，type=replace）。
 
-    ``relocate=false`` 只禁止改指针，**不禁止** F9 80 短语原地。
+    ``write.relocate=false`` 只禁止改指针，**不禁止** F9 80 短语原地。
     """
-    return True
+    return module_allows_replace(game_id, module_id)
 
 
 def module_allows_table_widen(game_id: str, module_id: str | None) -> bool:
     """是否允许 write 扩表（literal_ref_widen / item 等）。
 
     与 ``module_allows_relocate`` 不同：不因 stride/struct 类型恒 false。
-    仅当模块配置显式 ``relocate: true`` 时扩表；``false`` 或未写则否。
+    仅当模块配置显式 ``write.relocate: true`` 时扩表；``false`` 或未写则否。
     """
     meta = _module_meta(game_id, module_id)
-    return bool(meta.get("relocate"))
+    return _write_switch(meta, "relocate", default=False)
 
 
 def module_write_build_meta(game_id: str, module_id: str | None) -> dict | None:
@@ -389,8 +411,11 @@ def plan_entry(
 ) -> dict:
     """决策单个条目的 type + target_hex。不改动 entry。
 
-    纯 1→4：F900 → relocate → F980 → hook → keep。
-    extract 若把地址落在 FD 后的缓冲 id：回退到 FD 起点写 in_place（槽+1）。
+    三条翻译通路，优先级：relocate > replace > slot。
+    - relocate：指针重定向到扩展区（write.relocate 控制）
+    - replace：原地写入 F900 / F980 短语（write.replace 控制）
+    - slot：运行时查表拦截，兜底通路（write.slot 控制）
+    除非 write.slot=false，否则所有翻译内容均可进入通路。
     """
     prepared = _prepare_encoded(entry, charmap, game_id)
     if isinstance(prepared, dict):
@@ -402,7 +427,8 @@ def plan_entry(
     module_id = entry.get("module") or entry.get("_axvj_module") or entry.get("category")
     slot_cap = _reuse_slot_capacity(entry, game_id, module_id, byte_length)
     allow_reloc = module_allows_relocate(game_id, module_id)
-    allow_phrase = module_allows_phrase(game_id, module_id)
+    allow_replace = module_allows_replace(game_id, module_id)
+    allow_slot = module_allows_slot(game_id, module_id)
     channel = F9_PHRASE_DEFAULT  # F901/F981 已移除，短语恒 F9 80
 
     rebase = rebase_truncated_fd_slot(rom, entry)
@@ -438,17 +464,7 @@ def plan_entry(
             plan["fd_rebased"] = True
         return plan
 
-    # 1) F900 原地（reuse_slot_padding=true 时按槽宽可写）
-    if len(encoded) <= slot_cap:
-        plan = {
-            "type": "replace",
-            "target_hex": pad_inplace_to_slot(encoded, slot_cap).hex(" "),
-        }
-        if slot_cap != byte_length:
-            plan["byte_length"] = slot_cap
-        return _with_write_meta(plan)
-
-    # 2) relocate
+    # --- 通路 1: relocate（指针重定向）---
     if allow_reloc and usable_ptrs:
         return _with_write_meta({
             "type": "relocate",
@@ -456,36 +472,46 @@ def plan_entry(
             "pointer_sources": list(usable_ptrs),
         })
 
-    # 3) F980 原地升槽（reuse_slot_padding=true 时按槽宽判断）
-    if allow_phrase and slot_cap >= 5:
-        code = _ensure_phrase_code(phrase_codes, to_encode)
-        plan = {
-            "type": "replace",
-            "target_hex": pad_inplace_to_slot(
-                _encode_phrase_ref(code, channel), slot_cap
-            ).hex(" "),
-            "phrase_code": code,
-        }
-        if slot_cap != byte_length:
-            plan["byte_length"] = slot_cap
-        return _with_write_meta(plan)
+    # --- 通路 2: replace（原地写入 F900 / F980）---
+    if allow_replace:
+        # F900 原地：编码后能塞进槽位
+        if len(encoded) <= slot_cap:
+            plan = {
+                "type": "replace",
+                "target_hex": pad_inplace_to_slot(encoded, slot_cap).hex(" "),
+            }
+            if slot_cap != byte_length:
+                plan["byte_length"] = slot_cap
+            return _with_write_meta(plan)
+        # F980 原地升槽：用短语引用（5字节）替代长文本
+        if slot_cap >= 5:
+            code = _ensure_phrase_code(phrase_codes, to_encode)
+            plan = {
+                "type": "replace",
+                "target_hex": pad_inplace_to_slot(
+                    _encode_phrase_ref(code, channel), slot_cap
+                ).hex(" "),
+                "phrase_code": code,
+            }
+            if slot_cap != byte_length:
+                plan["byte_length"] = slot_cap
+            return _with_write_meta(plan)
 
-    # 4) slot — 超槽位且槽位<5无法F980、无可用指针：运行时查表拦截
-    if allow_phrase and byte_length < 5 and not usable_ptrs:
+    # --- 通路 3: slot（运行时查表拦截，兜底）---
+    if allow_slot:
         return _with_write_meta({
             "type": "slot",
             "target_hex": encoded.hex(" "),
             "original_hex": original_hex,
         })
 
-    if not usable_ptrs and not allow_phrase:
-        reason = "无可用指针且无法短语升槽"
+    # 所有通路均被禁止 → keep
+    if not allow_reloc and not allow_replace and not allow_slot:
+        reason = "模块禁止 relocate/replace/slot 全部通路"
     elif not usable_ptrs:
-        reason = "超槽位；无可用指针；无法F980升槽"
-    elif not allow_reloc and not allow_phrase:
-        reason = "模块禁止 relocate/短语，且超槽位"
+        reason = "无可用指针且禁止 replace/slot"
     else:
-        reason = "无可用注入路径（超槽位/模块禁路径）"
+        reason = "无可用注入路径（模块禁路径）"
     return _keep(original_hex, reason)
 
 

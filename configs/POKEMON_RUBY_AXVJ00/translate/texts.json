@@ -14,9 +14,7 @@
       "type": "stride",
       "read": {
         "stride": 5
-      },
-      "relocate": true,
-      "hook": true
+      }
     },
     "属性名-华丽大赛": {
       "label": "词条·华丽大赛属性",
@@ -28,9 +26,7 @@
       "type": "stride_ptr",
       "read": {
         "stride": 4
-      },
-      "relocate": true,
-      "hook": true
+      }
     },
     "性格名": {
       "label": "词条·性格",
@@ -42,9 +38,7 @@
       "type": "stride_ptr",
       "read": {
         "stride": 4
-      },
-      "relocate": true,
-      "hook": true
+      }
     },
     "特性名": {
       "label": "词条·特性",
@@ -56,9 +50,7 @@
       "type": "stride",
       "read": {
         "stride": 8
-      },
-      "relocate": true,
-      "hook": true
+      }
     },
     "宝可梦名": {
       "label": "词条·宝可梦",
@@ -71,8 +63,6 @@
       "read": {
         "stride": 6
       },
-      "relocate": true,
-      "hook": true,
       "filters": [
         {
           "id": "species_skip_qmark",
@@ -80,7 +70,12 @@
           "value": "？？？？？",
           "filter": true
         }
-      ]
+      ],
+      "write": {
+        "relocate": false,
+        "replace": false,
+        "slot": true
+      }
     },
     "招式名": {
       "label": "词条·招式",
@@ -92,9 +87,7 @@
       "type": "stride",
       "read": {
         "stride": 8
-      },
-      "relocate": true,
-      "hook": true
+      }
     },
     "招式名-华丽大赛": {
       "label": "词条·华丽大赛招式",
@@ -106,9 +99,7 @@
       "type": "stride_ptr",
       "read": {
         "stride": 4
-      },
-      "relocate": true,
-      "hook": true
+      }
     },
     "训练家名": {
       "label": "词条·训练家",
@@ -118,8 +109,6 @@
       "start": "0x1C4A10",
       "end": "0x3E95FF",
       "type": "scan",
-      "relocate": true,
-      "hook": true,
       "min_byte_length": 3,
       "ranges": [
         {
@@ -137,7 +126,12 @@
           "type": "min_byte_length_filter",
           "value": 3
         }
-      ]
+      ],
+      "write": {
+        "relocate": false,
+        "replace": false,
+        "slot": true
+      }
     },
     "训练家个人名": {
       "label": "词条·训练家个人名",
@@ -152,11 +146,10 @@
         "name_offset": 24
       },
       "write": {
-        "byte_length": 5
-      },
-      "relocate": true,
-      "hook": true,
-      "reuse_slot_padding": true
+        "relocate": false,
+        "replace": false,
+        "slot": true
+      }
     },
     "地点名": {
       "label": "词条·地点",
@@ -167,9 +160,7 @@
       "end": "0x3BEF67",
       "type": "scan",
       "min_byte_length": 5,
-      "max_byte_length": 20,
-      "relocate": false,
-      "hook": true
+      "max_byte_length": 20
     },
     "秘密基地装饰名": {
       "label": "词条·秘密基地装饰",
@@ -184,10 +175,11 @@
         "name_offset": 13
       },
       "write": {
-        "byte_length": 5
+        "byte_length": 5,
+        "relocate": true,
+        "replace": true,
+        "slot": true
       },
-      "relocate": true,
-      "hook": true,
       "reuse_slot_padding": true
     },
     "道具名": {
@@ -201,9 +193,7 @@
       "read": {
         "entry_size": 40,
         "desc_ptr_offset": 16
-      },
-      "relocate": true,
-      "hook": true
+      }
     },
     "道具说明": {
       "label": "说明·道具",
@@ -213,8 +203,6 @@
       "start": "0x3984DC",
       "end": "0x39A647",
       "type": "scan",
-      "relocate": true,
-      "hook": true,
       "word_count": 9,
       "wrap_pages": false,
       "max_lines": 3
@@ -230,8 +218,6 @@
       "read": {
         "stride": 56
       },
-      "relocate": true,
-      "hook": true,
       "word_count": 13,
       "wrap_pages": false,
       "max_lines": 2
@@ -248,8 +234,6 @@
         "stride": 4,
         "eos_window": 48
       },
-      "relocate": true,
-      "hook": true,
       "word_count": 13,
       "wrap_pages": false,
       "max_lines": 2
@@ -265,8 +249,6 @@
       "read": {
         "stride": 19
       },
-      "relocate": true,
-      "hook": true,
       "word_count": 12,
       "wrap_pages": false,
       "max_lines": 1,
@@ -289,10 +271,11 @@
         "eos": 0
       },
       "write": {
-        "byte_length": 5
+        "byte_length": 5,
+        "relocate": true,
+        "replace": true,
+        "slot": true
       },
-      "relocate": true,
-      "hook": true,
       "reuse_slot_padding": true
     },
     "图鉴说明": {
@@ -303,8 +286,6 @@
       "start": "0x37DB9C",
       "end": "0x384703",
       "type": "scan",
-      "relocate": true,
-      "hook": true,
       "word_count": 16,
       "wrap_pages": false,
       "max_lines": 3
@@ -317,8 +298,6 @@
       "start": "0x0",
       "end": "0xFFFFFF",
       "type": "scan",
-      "relocate": true,
-      "hook": true,
       "ranges": [
         {
           "start": "0x0350864",
@@ -346,8 +325,6 @@
       "start": "0x0",
       "end": "0xFFFFFF",
       "type": "scan",
-      "relocate": true,
-      "hook": true,
       "filters": [
         {
           "id": "ui_original_text_filter",
@@ -368,8 +345,6 @@
       "start": "0x0",
       "end": "0xFFFFFF",
       "type": "scan",
-      "relocate": false,
-      "hook": true,
       "reader": {
         "type": "msg_reader",
         "value": {

@@ -29,6 +29,7 @@ OBJS := \
 	$(BUILD)/DrawInitialDownArrow_hook.o \
 	$(BUILD)/DrawMenuCursorEF_hook.o \
 	$(BUILD)/GetGlyphTilePointers_hook.o \
+	$(BUILD)/GetStringWidth.o \
 	$(BUILD)/MapNamePopup_hook.o \
 	$(BUILD)/UpdateNickInHealthbox_entry.o \
 	$(BUILD)/UpdateNickInHealthbox_hook.o \

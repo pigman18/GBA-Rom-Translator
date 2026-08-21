@@ -50,6 +50,13 @@
 - 修复：误提取的 9 条「剧情」文本加入 `config.json` reject 后红框正常（用户已实测）。
 - 详情见 `docs/复盘_20260818_红框调试过程与问题.md` 七/八/九节。
 
+## 3.5 改游戏逻辑类任务的固定流程
+
+需要改游戏内行为（渲染/菜单/弹窗/算参数）时，按
+**`docs/HOOK_DEBUG_WORKFLOW.md`** 四步走：静态分析 → gdb_patcher 加监听点 →
+基于日志推算 → 实际应用。写完 hook 立刻跑一遍 build.bat（entry.s 的
+`.incbin ./baserom.gba` 是常驻依赖，缺失立刻暴露）。
+
 ## 4. 两个活生生的反面教材（本仓库真实发生）
 
 1. 用户说「直接搜 ROM」→ 我 grep 符号表找 `gMenuSummaryGfx`、拿超 ROM 范围的地址做

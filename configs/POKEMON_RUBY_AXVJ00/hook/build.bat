@@ -56,6 +56,10 @@ echo === Compiling MapNamePopup_hook.c ===
 %CC% %CFLAGS% %TEXT%\MapNamePopup_hook.c -o %BUILD%\MapNamePopup_hook.o
 if errorlevel 1 exit /b 1
 
+echo === Compiling GetStringWidth.c ===
+%CC% %CFLAGS% %TEXT%\GetStringWidth.c -o %BUILD%\GetStringWidth.o
+if errorlevel 1 exit /b 1
+
 echo === Assembling UpdateNickInHealthbox_entry.s ===
 %CC% %ASFLAGS% %BATTLE%\UpdateNickInHealthbox_entry.s -o %BUILD%\UpdateNickInHealthbox_entry.o
 if errorlevel 1 exit /b 1
@@ -91,6 +95,7 @@ echo === Linking game.elf ===
   %BUILD%/DrawInitialDownArrow_hook.o ^
   %BUILD%/DrawMenuCursorEF_hook.o ^
   %BUILD%/GetGlyphTilePointers_hook.o ^
+  %BUILD%/GetStringWidth.o ^
   %BUILD%/MapNamePopup_hook.o ^
   %BUILD%/UpdateNickInHealthbox_entry.o ^
   %BUILD%/UpdateNickInHealthbox_hook.o ^

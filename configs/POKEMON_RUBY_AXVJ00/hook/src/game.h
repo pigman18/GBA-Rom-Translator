@@ -352,6 +352,10 @@ int  DrawGlyph_ShouldUseLinear(TextPrinter *win, uint8_t write_op);
  * （四舍五入，残差 ≤4px），0=维持原生位置。只读缓冲区，不改写。
  * ROM 补丁严禁占 r0（native mov r0,sp 的缓冲区指针必须原样进 C）。 */
 uint32_t MapNamePopup_CalcLeftPx(const uint8_t *buf);
+/* CHS 文本流像素宽度（GetStringWidth.c；纯工具无 hook）：遍历到 0xFF 或
+ * max_bytes，字面量/空白 8px、F9 00 内联汉字 12px、F9 80 短语查表逐字累加、
+ * FA~FE 控制码 0px。供地名弹窗等需要真实渲染宽度的场景复用。 */
+uint32_t GetStringWidth_PCS(const uint8_t *buf, uint32_t max_bytes);
 
 int  scene_field_wants_linear(TextPrinter *win);
 int  scene_menu_wants_mode2(TextPrinter *win);

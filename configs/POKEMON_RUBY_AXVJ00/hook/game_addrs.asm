@@ -23,8 +23,12 @@ DrawInitialDownArrow                   equ 0x08003F4C
 
 ; --- String util ---
 StringLength                           equ 0x0800436C
-GetGlyphWidth                          equ 0x08004228  ; verified: 6 callers
-GetStringWidth                         equ 0x08004530  ; verified: 125 callers
+; GetGlyphWidth/GetStringWidth：AXVJ 无原生函数，勿再订址（2026-08-22 反汇编定论）
+; - 0x08004228 实为 {u32,u32} 表查映射（表@0x081BB8D4，6 callers），非宽度；
+; - 0x08004530 实为 FA~FF 控制码字符串展开复制（125 callers），非宽度；
+; - 日版打印步进由 FontFuncTable 各处理器硬编码（FontFunc[0]@0x08003568 画后 [win+0x18]+=2）；
+; - 全 ROM 无 FC 控制码 switch 比较链、无 cmp#0x16 的 GetExtCtrlCodeLength 特征；
+; - 美版才有（US=0x080048E8/0x08004BCC，pokeRS 挂 +2/+0x100）；中文宽度由 PrintNextChar_C 自管。
 
 ; --- 图鉴分类名行（UnusedPrintMonName，参数 name/left/top）---
 UnusedPrintMonName                     equ 0x0808DD60
@@ -39,7 +43,7 @@ DrawOptionMenuChoice                   equ 0x080889F0  ; 设置窗口选项绘�
 DEX_NAME_COLUMN                        equ 0x16
 
 ; --- Width / map-name popup ---
-; GetGlyphWidth/GetStringWidth @ 0x4B1C/0x4CC0 曾为 proximity 错猜（无调用方）；勿再整函数替换。
+; 宽度函数定论见上方 String util 节注释（0x4B1C/0x4CC0 亦为 proximity 错猜）。
 ; 日版 DrawMapNamePopup：StringLength 后仍 GetMapName(fill=10) 填 0x00；
 ; 钩 StringLength 位点并跳过 pad+二次 GetMapName → MenuPrint。
 DrawMapNamePopup                       equ 0x0809F654

@@ -426,6 +426,21 @@ gdb:
   - name: PrintNextChar
     address: '0x080032F8'
     default: false
+  - name: MapNamePopupX
+    address: '0x0809F6D0'
+    description: '地名弹窗 MenuPrint 调用点（r0=buf, r1=注入的 x 留白px, r2=y）；配 InitTextPrinter 看 win+0x1A curX'
+    cfg:
+      charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
+  - name: MapNameHookRet
+    address: '0x0880014A'
+    description: '居中钩跳板 C 返回点（r0=C 计算的留白px，v3 预期 未白镇=62 / 101号道路=50）'
+    default: false
+  - name: PopupStepTrace
+    address: '0x08800146'
+    description: '跳板入口（push lr 后）：指令级单步跟踪整个居中钩子，前 3 次命中'
+    default: false
+    cfg:
+      charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
   - name: LoadSpriteSheet
     address: '0x080021C4'
     description: '图块 sheet → OBJ VRAM（r0=&sheet{data,size,tag}）'

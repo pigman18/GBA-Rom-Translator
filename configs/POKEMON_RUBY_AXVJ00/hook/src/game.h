@@ -346,11 +346,12 @@ void DrawGlyphTile_CHS(TextPrinter *win, struct GlyphTileInfo *info,
 /* Clear ChineseTileState pitch after FE/FB/FA (optional asm hook). */
 void Chinese_PitchReset(TextPrinter *win);
 int  DrawGlyph_ShouldUseLinear(TextPrinter *win, uint8_t write_op);
-/* GetGlyphWidth 钩 C 实现（未订 ROM 地址，见 hook.c 头注）。 */
-uint32_t GetGlyphWidth_C(TextPrinter *win, uint32_t glyph);
-int  GetStringWidth_Chinese(TextPrinter *win, const uint8_t *s,
-                           uint16_t *index, uint8_t *width);
-uint8_t GetStringWidthChinese_Full(TextPrinter *win, const uint8_t *s);
+/* 地名弹窗居中（MapNamePopup_hook.c；P04 挂 0x0809F67E）：按本引擎真实步进
+ * （空白/字面量 8px、汉字 12px）算居中起点。MenuPrint 的 left 是**格数**
+ * （8px/格，Text_InitWindow 内 win->left = 8*left）；返回居中追加格数
+ * （四舍五入，残差 ≤4px），0=维持原生位置。只读缓冲区，不改写。
+ * ROM 补丁严禁占 r0（native mov r0,sp 的缓冲区指针必须原样进 C）。 */
+uint32_t MapNamePopup_CalcLeftPx(const uint8_t *buf);
 
 int  scene_field_wants_linear(TextPrinter *win);
 int  scene_menu_wants_mode2(TextPrinter *win);

@@ -41,7 +41,8 @@ Q1 需要用 C 写逻辑吗？（查表 / 协议解析 / 寄存器编组 / 超�
  │
  └─ 否 → 再问：是跳到某个已存在符号吗？
           ├─ 是 →【JMP 桩】src/{域}/hooks_origin.s 里加订址桩即可
-          │   例：P04 地图名弹窗旁路（跳板 MapName_DisplayCellLength 也放 entry.s）
+          │   例：P04 地名弹窗居中（跳板 MapName_DisplayCellLength 也放 entry.s，
+          │       C 逻辑 MapNamePopup_hook.c 按引擎步进算留白、加大 MenuPrint x 起点）
           └─ 否 →【纯值】patches/{域名}.asm 里就地改写指令/数据
               例：P06 mov r2,#0x1D、P13~P15 NOP 组、P16 数据 FF
 ```
@@ -95,7 +96,14 @@ Q1 需要用 C 写逻辑吗？（查表 / 协议解析 / 寄存器编组 / 超�
    禁止裸写十六进制（历史遗留除外，重构时顺手收编）；
 2. 需要从 C 回填给 armips 的符号，必须同时在两处登记提取规则：
    `build.bat`（findstr + echo）和 `Makefile`（grep + printf），两边列表保持一致；
-3. `out/game_syms.asm` 是生成物，勿手改。
+3. `out/game_syms.asm` 是生成物，勿手改；
+4. **美版符号 ≠ 日版存在**：proximity 换算（含 jp.sym 的 UNVERIFIED 链）必须
+   反汇编验证行为后才可订址。案例（2026-08-22）：GetGlyphWidth/GetStringWidth
+   在 AXVJ 根本未编译——打印步进由 FontFuncTable 各处理器硬编码、全 ROM 无
+   FC 控制码 switch / cmp#0x16 特征；game_addrs 曾错标 0x08004228（实为
+   {u32,u32} 表查映射）与 0x08004530（实为 FA~FF 字符串展开复制）。两个宽度钩
+   （GetGlyphWidthHook / GetStringWidthChinese）已随死代码移除（2026-08-22），
+   中文宽度由 PrintNextChar_C 自管，详见 game_addrs.asm「String util」节注释。
 
 ## 7. 构建顺序与联动
 

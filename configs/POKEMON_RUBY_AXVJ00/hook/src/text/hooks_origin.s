@@ -20,14 +20,16 @@
     bx   r4
 .pool
 
-; --- [P04] 地图名弹窗旁路：StringLength 位点直跳 MenuPrint(0x0809F6CA) ---
-; 跳过 右对齐 pad + 二次 GetMapName(fill=10)。
-; ⚠️ 内联 F9 地名 >10B 时原版 10-len 下溢 -> sp+0xFFFE 野写（crash 飞PC 根因）。
-; 该路径按字节长度右对齐，与 GetStringWidth 像素宽度无关，勿用宽度钩替代。
-; pokeruby: src/map_name_popup.c DrawMapNamePopup()
+; --- [P04] 地名弹窗居中：StringLength 位点(0x0809F67E)接管 → MapNamePopup_CalcLeftPx ---
+; 原生按字节数在 10 格字段居中，内联 F9 地名 >10B 时 10-len 下溢 ->
+; sp+0xFFFE 野写（历史 crash 飞PC 根因）；旧方案直跳 MenuPrint 止血但居左。
+; 现 C 钩按本引擎真实步进（空白/字面量 8px、汉字 12px）算留白并加大
+; MenuPrint 的 x 起点（8px/格，不动 20B 缓冲区）；越界返回 0 维持原位。
+; 落点 0x0809F6CE（跳过 movs r1,#1）。pokeruby 参照: Text_InitWindow_Centered。
 .org DrawMapNamePopup_StringLength
-    ldr r0, =(MapName_DisplayCellLength | 1)
-    bx r0
+; 只用 r3 转跳：native 0809F67C `mov r0,sp` 的缓冲区指针必须原样进钩子
+    ldr r3, =(MapName_DisplayCellLength | 1)
+    bx r3
 .pool
 
 ; --- [P05] 等 A 箭头：CHS 相位前置同步后回落原版主体 0x08003DAD ---

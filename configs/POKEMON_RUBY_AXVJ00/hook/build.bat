@@ -52,12 +52,8 @@ echo === Compiling GetGlyphTilePointers_hook.c ===
 %CC% %CFLAGS% %TEXT%\GetGlyphTilePointers_hook.c -o %BUILD%\GetGlyphTilePointers_hook.o
 if errorlevel 1 exit /b 1
 
-echo === Compiling GetStringWidth_hook.c ===
-%CC% %CFLAGS% %TEXT%\GetStringWidth_hook.c -o %BUILD%\GetStringWidth_hook.o
-if errorlevel 1 exit /b 1
-
-echo === Compiling GetGlyphWidth_hook.c ===
-%CC% %CFLAGS% %TEXT%\GetGlyphWidth_hook.c -o %BUILD%\GetGlyphWidth_hook.o
+echo === Compiling MapNamePopup_hook.c ===
+%CC% %CFLAGS% %TEXT%\MapNamePopup_hook.c -o %BUILD%\MapNamePopup_hook.o
 if errorlevel 1 exit /b 1
 
 echo === Assembling UpdateNickInHealthbox_entry.s ===
@@ -95,8 +91,7 @@ echo === Linking game.elf ===
   %BUILD%/DrawInitialDownArrow_hook.o ^
   %BUILD%/DrawMenuCursorEF_hook.o ^
   %BUILD%/GetGlyphTilePointers_hook.o ^
-  %BUILD%/GetStringWidth_hook.o ^
-  %BUILD%/GetGlyphWidth_hook.o ^
+  %BUILD%/MapNamePopup_hook.o ^
   %BUILD%/UpdateNickInHealthbox_entry.o ^
   %BUILD%/UpdateNickInHealthbox_hook.o ^
   %BUILD%/UnusedPrintMonName_entry.o ^
@@ -110,13 +105,11 @@ echo === Generating game.bin ===
 if errorlevel 1 exit /b 1
 
 echo === Generating game_syms.asm ===
-set GSW_ADDR=0x08800000
 set MPN_ADDR=0x08800000
 set WTA_ADDR=0x08800000
 set UPMN_ADDR=0x08800000
 set DOMC_ADDR=0x08800000
 set GGTPH_ADDR=0x08800000
-for /f "tokens=1" %%a in ('findstr /R "GetStringWidthChinese$" %OUT%\game.map') do set GSW_ADDR=%%a
 for /f "tokens=1" %%a in ('findstr /R "MapName_DisplayCellLength$" %OUT%\game.map') do set MPN_ADDR=%%a
 for /f "tokens=1" %%a in ('findstr /R "WaitArrow_Prepare$" %OUT%\game.map') do set WTA_ADDR=%%a
 for /f "tokens=1" %%a in ('findstr /R "UnusedPrintMonName_Hook$" %OUT%\game.map') do set UPMN_ADDR=%%a
@@ -124,7 +117,6 @@ for /f "tokens=1" %%a in ('findstr /R "DrawOptionMenuChoice_Hook$" %OUT%\game.ma
 for /f "tokens=1" %%a in ('findstr /R "GetGlyphTilePointers_Hook$" %OUT%\game.map') do set GGTPH_ADDR=%%a
 > %OUT%\game_syms.asm (
     echo ; Auto-generated from out/game.map - do not edit
-    echo GetStringWidthChinese                   equ %GSW_ADDR%
     echo MapName_DisplayCellLength               equ %MPN_ADDR%
     echo WaitArrow_Prepare                       equ %WTA_ADDR%
     echo UnusedPrintMonName_Hook                 equ %UPMN_ADDR%

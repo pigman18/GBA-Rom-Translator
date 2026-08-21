@@ -29,8 +29,7 @@ OBJS := \
 	$(BUILD)/DrawInitialDownArrow_hook.o \
 	$(BUILD)/DrawMenuCursorEF_hook.o \
 	$(BUILD)/GetGlyphTilePointers_hook.o \
-	$(BUILD)/GetStringWidth_hook.o \
-	$(BUILD)/GetGlyphWidth_hook.o \
+	$(BUILD)/MapNamePopup_hook.o \
 	$(BUILD)/UpdateNickInHealthbox_entry.o \
 	$(BUILD)/UpdateNickInHealthbox_hook.o \
 	$(BUILD)/UnusedPrintMonName_entry.o \
@@ -80,15 +79,14 @@ $(OUT)/game.elf: $(OBJS)
 $(OUT)/game.bin: $(OUT)/game.elf
 	$(OBJCOPY) -O binary $< $@
 
-# 与 build.bat 对齐：6 个符号（含 MapName_DisplayCellLength，弹窗旁路跳板）
+# 与 build.bat 对齐：5 个符号（含 MapName_DisplayCellLength，地名居中钩跳板）
 $(OUT)/game_syms.asm: $(OUT)/game.map
-	@GSW=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'GetStringWidthChinese$$' | awk '{print $$1}'); \
-	MPN=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'MapName_DisplayCellLength$$' | awk '{print $$1}'); \
+	@MPN=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'MapName_DisplayCellLength$$' | awk '{print $$1}'); \
 	WTA=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'WaitArrow_Prepare$$' | awk '{print $$1}'); \
 	UPMN=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'UnusedPrintMonName_Hook$$' | awk '{print $$1}'); \
 	DOMC=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'DrawOptionMenuChoice_Hook$$' | awk '{print $$1}'); \
 	GGTPH=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'GetGlyphTilePointers_Hook$$' | awk '{print $$1}'); \
-	printf '; Auto-generated from out/game.map - do not edit\nGetStringWidthChinese                   equ %s\nMapName_DisplayCellLength               equ %s\nWaitArrow_Prepare                       equ %s\nUnusedPrintMonName_Hook                 equ %s\nDrawOptionMenuChoice_Hook               equ %s\nGetGlyphTilePointers_Hook               equ %s\n' "$${GSW:-0x08800000}" "$${MPN:-0x08800000}" "$${WTA:-0x08800000}" "$${UPMN:-0x08800000}" "$${DOMC:-0x08800000}" "$${GGTPH:-0x08800000}" > $@
+	printf '; Auto-generated from out/game.map - do not edit\nMapName_DisplayCellLength               equ %s\nWaitArrow_Prepare                       equ %s\nUnusedPrintMonName_Hook                 equ %s\nDrawOptionMenuChoice_Hook               equ %s\nGetGlyphTilePointers_Hook               equ %s\n' "$${MPN:-0x08800000}" "$${WTA:-0x08800000}" "$${UPMN:-0x08800000}" "$${DOMC:-0x08800000}" "$${GGTPH:-0x08800000}" > $@
 
 clean:
 	rm -rf $(OUT)/obj $(OUT)/game.elf $(OUT)/game.bin $(OUT)/game.map $(OUT)/game_syms.asm

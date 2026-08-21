@@ -172,10 +172,10 @@ texts:
     label: 词条·训练家个人名
     group: 词条
     default: true
-    description: 训练家个人名表（0x1C5040-0x1CA100，步长 0x20 名称偏移 0x18；区分于「训练家名」class 表与 0x1CA360
-      起物种名）
+    description: 训练家个人名表（0x1C5040-0x1CA340，步长 0x20 名称偏移 0x18；区分于「训练家名」class 表与
+      0x1CA354 起物种名）；2026-08 复核：原 end 截短尾部（ユカリ/ナナとネネ等双人组合名至マサシ），实测终点 0x1CA340
     start: '0x1C5040'
-    end: '0x1CA100'
+    end: '0x1CA340'
     type: struct
     read:
       entry_size: 32
@@ -316,24 +316,6 @@ texts:
     wrap_pages: false
     max_lines: 3
 
-  - id: 主要UI界面
-    label: UI界面
-    group: 文本
-    default: true
-    description: 全 ROM；execute_filter（Menu/Text 打印函数，排除故事已消费）
-    start: '0x0'
-    end: '0xFFFFFF'
-    type: scan
-    ranges:
-    - start: '0x0350864'
-      end: '0x0350883'
-    - start: '0x083E968D'
-      end: '0x083E9691'
-    - start: '0x0839724C'
-      end: '0x0839724D'
-    - start: '0x08397255'
-      end: '0x08397258'
-
   - id: 其他UI界面
     label: UI界面
     group: 文本
@@ -374,15 +356,52 @@ texts:
           "[STR_VAR_3]": "\\04"
           '[KUN]': \05
           '[RIVAL]': \06
+          # 方向箭头/阵营占位符均为 ROM 实测字节（2026-08 探针）：
+          # UP=FC0CF7 DOWN=FC0CF8 LEFT=FC0CF9 RIGHT=FC0CFA
+          # EVIL_TEAM=FD08 GOOD_TEAM=FD09 EVIL_LEADER=FD0A GOOD_LEADER=FD0B
           '[RIGHT_ARROW]': \CC0CFA
-          '[LEFT_ARROW]': \CC0CFB
-          '[UP_ARROW]': \CC0CFC
-          '[DOWN_ARROW]': \CC0CFD
-          '[EVIL_TEAM]': マグマだん
-          '[GOOD_TEAM]': アクアだん
-          '[EVIL_LEADER]': マツブサ
-          '[GOOD_LEADER]': アオヤギ
+          '[LEFT_ARROW]': \CC0CF9
+          '[UP_ARROW]': \CC0CF7
+          '[DOWN_ARROW]': \CC0CF8
+          '[EVIL_TEAM]': \08
+          '[GOOD_TEAM]': \09
+          '[EVIL_LEADER]': \0A
+          '[GOOD_LEADER]': \0B
+          # 战斗引擎占位符（ROM 实证：WinningPrize/PickedUpYen/たおれた 等）
+          '[B_PLAYER_NAME]': \20
+          '[B_BUFF1]': \00
+          '[B_BUFF2]': \01
+          '[B_ATK_NAME_WITH_PREFIX]': \0C
+          '[B_DEF_NAME_WITH_PREFIX]': \0D
     filters:
     - id: story_pointer_filter
       type: story_pointer_filter
       value: true
+    # 启发式兜底通道：msg_reader 未命中的整段候选改走此闸（单模块双通道），
+    # 收指针索引型台词；伪命中由 mark-404/remove 链路兜底。
+    fallback_filters:
+    - id: fb_require_pointer
+      type: require_pointer_filter
+      value: true
+    - id: fb_dialogue_shape
+      type: dialogue_shape_filter
+      value:
+        enabled: true
+        pointer_ok: false
+    - id: fb_garbage
+      type: garbage_heuristic_filter
+      value: true
+
+  - id: 树果名
+    label: 词条·树果名
+    group: 词条
+    default: true
+    description: 树果数据表（クラボ..ナゾ）；name@0，desc_ptr@12 指向说明池
+      （说明池由 剧情 语料通道收录，故不设独立说明模块）
+    start: '0x3A1050'
+    end: '0x3A14E8'
+    type: struct
+    read:
+      entry_size: 56
+      name_offset: 0
+      desc_ptr_offset: 12

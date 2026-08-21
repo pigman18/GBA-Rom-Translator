@@ -70,11 +70,37 @@
 #endif
 #define CHS_PITCH_SLOT_COUNT       8u
 
+/* ---- pokeruby text.c 对齐的类型（字段名与官方一致）----
+ * 官方 DrawGlyphTile_UnshadowedFont/ShadowedFont(struct GlyphTileInfo *)；
+ * CHS 路径 colors 未用（重映射走官方 CopyGlyph*To4bpp），保留字段对齐。 */
+struct GlyphTileInfo {
+    uint8_t textMode;      /* 官方 win->textMode；CHS 路径未用 */
+    uint8_t startPixel;    /* (left+cursorX)&7 相位 */
+    uint8_t width;         /* 本趟列宽（8 或 4）*/
+    uint8_t *src;          /* 32B tile 数据（upper 或 lower）*/
+    uint32_t *dest;        /* VRAM tile 目的 */
+    uint32_t *colors;      /* 官方 sGlyphBuffer.colors；CHS 未用 */
+};
+
+struct GlyphBuffer {
+    uint32_t pixelRows[16]; /* 0-7 左 tile，8-15 右 tile（spill）*/
+    uint32_t background;
+    uint32_t colors[16];
+};
+
+/* Hook3 伪 glyph 编码：bit15=右半(TR/BR)，bits0-14=gidx。
+ * 官方调用方字形均 ≤0xFF，bit15 门控零冲突（全 ROM 仅 FontFunc[1]/[2] 两调用方）。 */
+#define CHS_GLYPH_HALF_BIT   0x8000u
+#define CHS_GLYPH_IDX_MASK   0x7FFFu
+
 #define WIN_TEMPLATE        0x00
 #define WIN_STATE           0x04
-/* AXVJ TextPrinter: +0x0A = textMode (FontFuncTable index in entry.s);
- * +0x0B = fontNum (GetGlyphTilePointers). Colors are C/D/E only — do NOT
- * alias fontNum as COLOR_B (that caused dual-path / wrong glyph fetches). */
+/* AXVJ TextPrinter 布局（偏移固定于 ROM；括号内为 pokeruby struct Window 语义名）：
+ * +0x0A textMode(FontFuncTable 索引)  +0x0B fontNum  +0x10 text  +0x14 textIndex
+ * +0x16 tileDataStartOffset(TILE_BASE)  +0x18 tileDataOffset(TILE_OFFSET)
+ * +0x1A cursorX  +0x1B cursorTileX(AXVJ 特有 tile 列游标)  +0x1C cursorY  +0x1D cursorTileY
+ * Colors are C/D/E only — do NOT alias fontNum as COLOR_B (that caused
+ * dual-path / wrong glyph fetches). */
 #define WIN_TEXTMODE        0x0A
 #define WIN_FONTNUM         0x0A  /* legacy alias = textMode */
 #define WIN_FONTNUM_REAL    0x0B
@@ -293,14 +319,35 @@ static inline uint16_t chs_pitch_key(TextPrinter *win)
 
 int PrintNextChar_C(TextPrinter *win, uint32_t cur_char);
 
-void DrawGlyph_Chinese(TextPrinter *win, const uint8_t *glyph_src);
-void DrawGlyph_Chinese_Adv(TextPrinter *win, const uint8_t *glyph_src, unsigned adv_px);
+/* Hook3：CHS 字模取址（官方 GetGlyphTilePointers 的伪 glyph 分支）。
+ * glyph bit15=右半 → upperTilePtr/lowerTilePtr 写入 FontChsNormal 内 TL/TR 与 BL/BR。
+ * 订址：main.asm 8B 桩 → entry.s GetGlyphTilePointers_Hook → 本类 _C 分发器。 */
+void GetGlyphTilePointers_CHS(uint32_t fontNum, uint32_t glyph,
+                              uint8_t **upperTilePtr, uint8_t **lowerTilePtr);
+void GetGlyphTilePointers_C(uint32_t fontNum, uint32_t glyph,
+                            uint8_t **upperTilePtr, uint8_t **lowerTilePtr);
+void GetGlyphTilePointers_Hook(uint32_t fontNum, uint32_t glyph,
+                               uint8_t **upperTilePtr, uint8_t **lowerTilePtr);
+void GetGlyphTilePointers_Orig(uint32_t fontNum, uint32_t glyph,
+                               uint8_t **upperTilePtr, uint8_t **lowerTilePtr);
+
+/* 官方 PrintGlyph_TextMode* 家族的 CHS 版：gidx 经 Hook3 解析字模。 */
+void PrintGlyph_CHS(TextPrinter *win, uint32_t gidx);
+void PrintGlyph_CHS_Adv(TextPrinter *win, uint32_t gidx, unsigned glyphWidth);
+/* Sym 标点 / JP 组合缓冲（128B TL,BL,TR,BR 连续）入口。 */
+void PrintGlyph_Tiles_CHS_Adv(TextPrinter *win, const uint8_t *tiles128,
+                              unsigned glyphWidth);
+/* 单字节可印字符（Sym/空白/JP PCS）→ CHS 同池绘制（DrawGlyph_CHS_hook.c）。 */
+int  DrawGlyph_CHS(TextPrinter *win, uint32_t cur_char);
+/* 绘制引擎内部件（DrawGlyphTiles_hook.c；供 EF 光标等钩复用）。 */
+uint8_t *vram_tile(TextPrinter *win, uint16_t tile);
+void DrawGlyphTile_CHS(TextPrinter *win, struct GlyphTileInfo *info,
+                       uint8_t *spillTile);
 /* Clear ChineseTileState pitch after FE/FB/FA (optional asm hook). */
 void Chinese_PitchReset(TextPrinter *win);
 int  DrawGlyph_ShouldUseLinear(TextPrinter *win, uint8_t write_op);
-uint8_t GetGlyphWidth_Chinese(TextPrinter *win, uint32_t glyph);
-void drawGlyph12(TextPrinter *win, const uint8_t *src18, int linear);
-void drawGlyph_Adv(TextPrinter *win, const uint8_t *src128, int linear, unsigned adv_px);
+/* GetGlyphWidth 钩 C 实现（未订 ROM 地址，见 hook.c 头注）。 */
+uint32_t GetGlyphWidth_C(TextPrinter *win, uint32_t glyph);
 int  GetStringWidth_Chinese(TextPrinter *win, const uint8_t *s,
                            uint16_t *index, uint8_t *width);
 uint8_t GetStringWidthChinese_Full(TextPrinter *win, const uint8_t *s);

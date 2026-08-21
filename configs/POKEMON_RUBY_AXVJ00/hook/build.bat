@@ -22,8 +22,8 @@ set LDFLAGS=-mthumb -mcpu=arm7tdmi -nostdlib -T %LINK_DIR%/game.ld -Wl,-Map=%OUT
 
 if not exist %BUILD% mkdir %BUILD%
 
-echo === Assembling PrintNextChar_entry.s ===
-%CC% %ASFLAGS% %TEXT%\PrintNextChar_entry.s -o %BUILD%\PrintNextChar_entry.o
+echo === Assembling text/entry.s ===
+%CC% %ASFLAGS% %TEXT%\entry.s -o %BUILD%\text_entry.o
 if errorlevel 1 exit /b 1
 
 echo === Compiling PrintNextChar_hook.c ===
@@ -36,6 +36,22 @@ if errorlevel 1 exit /b 1
 
 echo === Compiling DrawGlyphTiles_scene.c ===
 %CC% %CFLAGS% %TEXT%\DrawGlyphTiles_scene.c -o %BUILD%\DrawGlyphTiles_scene.o
+if errorlevel 1 exit /b 1
+
+echo === Compiling DrawGlyph_CHS_hook.c ===
+%CC% %CFLAGS% %TEXT%\DrawGlyph_CHS_hook.c -o %BUILD%\DrawGlyph_CHS_hook.o
+if errorlevel 1 exit /b 1
+
+echo === Compiling DrawInitialDownArrow_hook.c ===
+%CC% %CFLAGS% %TEXT%\DrawInitialDownArrow_hook.c -o %BUILD%\DrawInitialDownArrow_hook.o
+if errorlevel 1 exit /b 1
+
+echo === Compiling DrawMenuCursorEF_hook.c ===
+%CC% %CFLAGS% %TEXT%\DrawMenuCursorEF_hook.c -o %BUILD%\DrawMenuCursorEF_hook.o
+if errorlevel 1 exit /b 1
+
+echo === Compiling GetGlyphTilePointers_hook.c ===
+%CC% %CFLAGS% %TEXT%\GetGlyphTilePointers_hook.c -o %BUILD%\GetGlyphTilePointers_hook.o
 if errorlevel 1 exit /b 1
 
 echo === Compiling GetStringWidth_hook.c ===
@@ -71,11 +87,17 @@ echo === Compiling DrawOptionMenuChoice_hook.c ===
 if errorlevel 1 exit /b 1
 
 echo === Linking game.elf ===
+@rem text/entry.o 必须第一个：main.asm 的 PrintNextChar_C 标签 = GameBinAddresses
+@rem = game.bin 起点 = PrintNextChar 跳板（r4/r3→r0/r1 编组 + FontFunc 回落）。
 %CC% %LDFLAGS% -o %OUT%/game.elf ^
-  %BUILD%/PrintNextChar_entry.o ^
+  %BUILD%/text_entry.o ^
   %BUILD%/PrintNextChar_hook.o ^
   %BUILD%/DrawGlyphTiles_hook.o ^
   %BUILD%/DrawGlyphTiles_scene.o ^
+  %BUILD%/DrawGlyph_CHS_hook.o ^
+  %BUILD%/DrawInitialDownArrow_hook.o ^
+  %BUILD%/DrawMenuCursorEF_hook.o ^
+  %BUILD%/GetGlyphTilePointers_hook.o ^
   %BUILD%/GetStringWidth_hook.o ^
   %BUILD%/GetGlyphWidth_hook.o ^
   %BUILD%/UpdateNickInHealthbox_entry.o ^
@@ -96,13 +118,13 @@ set MPN_ADDR=0x08800000
 set WTA_ADDR=0x08800000
 set UPMN_ADDR=0x08800000
 set DOMC_ADDR=0x08800000
-set GWH_ADDR=0x08800000
+set GGTPH_ADDR=0x08800000
 for /f "tokens=1" %%a in ('findstr /R "GetStringWidthChinese$" %OUT%\game.map') do set GSW_ADDR=%%a
 for /f "tokens=1" %%a in ('findstr /R "MapName_DisplayCellLength$" %OUT%\game.map') do set MPN_ADDR=%%a
 for /f "tokens=1" %%a in ('findstr /R "WaitArrow_Prepare$" %OUT%\game.map') do set WTA_ADDR=%%a
 for /f "tokens=1" %%a in ('findstr /R "UnusedPrintMonName_Hook$" %OUT%\game.map') do set UPMN_ADDR=%%a
 for /f "tokens=1" %%a in ('findstr /R "DrawOptionMenuChoice_Hook$" %OUT%\game.map') do set DOMC_ADDR=%%a
-for /f "tokens=1" %%a in ('findstr /R "GetGlyphWidthHook$" %OUT%\game.map') do set GWH_ADDR=%%a
+for /f "tokens=1" %%a in ('findstr /R "GetGlyphTilePointers_Hook$" %OUT%\game.map') do set GGTPH_ADDR=%%a
 > %OUT%\game_syms.asm (
     echo ; Auto-generated from out/game.map - do not edit
     echo GetStringWidthChinese                   equ %GSW_ADDR%
@@ -110,7 +132,7 @@ for /f "tokens=1" %%a in ('findstr /R "GetGlyphWidthHook$" %OUT%\game.map') do s
     echo WaitArrow_Prepare                       equ %WTA_ADDR%
     echo UnusedPrintMonName_Hook                 equ %UPMN_ADDR%
     echo DrawOptionMenuChoice_Hook               equ %DOMC_ADDR%
-    echo GetGlyphWidthHook                       equ %GWH_ADDR%
+    echo GetGlyphTilePointers_Hook               equ %GGTPH_ADDR%
 )
 
 echo Build OK: %OUT%\game.bin

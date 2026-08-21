@@ -1969,6 +1969,30 @@ class MsgReader:
         self._needles = res
         return res
 
+    def exact_hit(self, original: str) -> bool:
+        """原文与语料行全等（exact/norm/soft 任一）→ 语料锚定可信。
+
+        语料整句命中即视为真台词：调用方可据此豁免 story_pointer_filter
+        （指针硬闸 + garbage/counter_run 等签名）与 anim_cmd_filter 形态
+        误杀，并允许无直接指针的定址文本通过。
+        """
+        try:
+            exact, norms, softs, _mapped = _load_msg_filter_sets(
+                self.file, self.mapping
+            )
+        except SystemExit:
+            return False
+        o = original or ""
+        plain = plain_original(o)
+        if o in exact or plain in exact:
+            return True
+        for cand in (o, plain):
+            nk = _norm_original_key(cand)
+            if nk and nk in norms:
+                return True
+        sk = _msg_soft_key(o)
+        return bool(sk) and sk in softs
+
     def read(
         self,
         rom: bytes,
@@ -2016,6 +2040,7 @@ def extract_scan(
     omit_ranges: list[tuple[int, int]] | None = None,
     exclude_ranges: list[tuple[int, int]] | None = None,
     filters: list[dict[str, Any]] | None = None,
+    fallback_filters: list[dict[str, Any]] | None = None,
 ) -> list[dict]:
     # 只用 jp_pcs + 本地 read_pcs / SCRIPT_BANK_MIN；禁止 import meowth.extract
     #（extract 会 load_game_config → 读流水线 texts.json，与 util 导出死锁）。
@@ -2264,6 +2289,45 @@ def extract_scan(
                 # 单点 filter 闸门后输出，不做择优（择优会污染 msg 语料锚定）。
                 hit = msg_reader.read(rom, a, raw, ptrs_map, pcs_maxlen)
                 if hit is None:
+                    # 启发式兜底通道：语料 needle 未命中的整段候选，改走
+                    # fallback_filters（如 有指针+对白形态+垃圾过滤）判定；
+                    # 收「指针索引型台词」（战斗消息等无逐条指针锚的文本）。
+                    if fallback_filters and not _in_exclude(a, len(raw)):
+                        fb_text = decode_pcs(raw)
+                        if (plain_original(fb_text) or "").strip(" \t\n"):
+                            fb_ptrs = list(ptrs_map.get(a, []))
+                            fbctx = make_filter_context(
+                                fo=a,
+                                raw=raw,
+                                original=fb_text,
+                                ptrs=fb_ptrs,
+                                module_id=str(mid),
+                                module_type=mtype,
+                            )
+                            if apply_filters(fbctx, fallback_filters):
+                                seen.add(a)
+                                out.append(
+                                    _stamp(
+                                        {
+                                            "address": f"0x{BASE + a:08X}",
+                                            "original": fb_text,
+                                            "original_hex": raw.hex(" "),
+                                            "byte_length": len(raw),
+                                            "is_pointer_based": bool(fb_ptrs),
+                                            "pointer_sources": [
+                                                f"0x{BASE + q:08X}"
+                                                for q in fb_ptrs
+                                            ],
+                                            "pointer_addresses": [
+                                                f"0x{BASE + q:08X}"
+                                                for q in fb_ptrs
+                                            ],
+                                            "fallback": True,
+                                        },
+                                        mid=mid,
+                                        game_code=game_code,
+                                    )
+                                )
                     a = end + 1
                     continue
                 if _in_exclude(hit.fo, len(hit.raw)):
@@ -2277,7 +2341,18 @@ def extract_scan(
                     module_id=str(mid),
                     module_type=mtype,
                 )
-                if filt and not apply_filters(hctx, filt):
+                # 语料整句锚定豁免：exact_hit 时剔除 story_pointer_filter
+                # （无指针不再一票否决，garbage/counter_run 等签名不再误杀）
+                # 与 anim_cmd_filter（真台词 anim 形态误杀）；ime/地址带保留。
+                use_filt = filt
+                if use_filt and msg_reader.exact_hit(hit.original):
+                    use_filt = [
+                        f
+                        for f in use_filt
+                        if str(f.get("type") or "")
+                        not in ("story_pointer_filter", "anim_cmd_filter")
+                    ]
+                if use_filt and not apply_filters(hctx, use_filt):
                     a = end + 1
                     continue
                 seen.add(hit.fo)
@@ -2352,6 +2427,7 @@ def extract_module(
     if rtype in ("stride_ptr", "ptr_stride"):
         return extract_stride_ptr(rom, mod, game_code, filters=filters)
     if rtype in ("scan", "addr_bands"):
+        fb_spec = mod.get("fallback_filters")
         return extract_scan(
             rom,
             mod,
@@ -2360,6 +2436,7 @@ def extract_module(
             omit_ranges=omit_ranges,
             exclude_ranges=exclude_ranges,
             filters=filters,
+            fallback_filters=fb_spec if isinstance(fb_spec, list) else None,
         )
     # needle/prefix/pointer: corpus already in texts.json; no Meowth re-scan
     return []

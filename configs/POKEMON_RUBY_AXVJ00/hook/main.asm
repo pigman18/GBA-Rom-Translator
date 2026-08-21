@@ -18,6 +18,18 @@
     bx r0
 .pool
 
+; =============================================================================
+; Hook3: GetGlyphTilePointers —— 订址桩（8B）。
+; bit15 伪 glyph 分发 / r4 保护 / 原函数重定位副本 全部在 text/entry.s
+; （GetGlyphTilePointers_Hook / GetGlyphTilePointers_Orig）。此处只负责
+; far-jump：r4 为唯一可用 scratch（r0-r3 是参数），先 push 保住调用方 r4。
+; =============================================================================
+.org GetGlyphTilePointers
+    push {r4}
+    ldr  r4, =(GetGlyphTilePointers_Hook | 1)
+    bx   r4
+.pool
+
 ; 战斗 HP 条昵称：遮罩 tile CpuSet 32B→24B（pokeRS / 增益版）
 .include "./src/battle/UpdateNickInHealthbox_hook_origin.s"
 

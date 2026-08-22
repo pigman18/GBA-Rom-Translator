@@ -368,6 +368,8 @@ int  DrawMenuCursorEF(TextPrinter *win);
 void WaitArrow_Prepare_C(TextPrinter *win);
 int  scene_jp_via_chs(TextPrinter *win);
 int  scene_is_battle_interface_dest(TextPrinter *win);
+/* 缓冲型打印机（dest=win[0x20]）：血条 textMode2 + RenderTextHandleBold textMode1+font4 */
+int  scene_is_buffer_printer(TextPrinter *win);
 int  scene_is_battle_text_window(TextPrinter *win);
 void scene_mode2_apply(TextPrinter *win, int *x, int *y, int *band, int *origin);
 int  scene_battle_force_linear(TextPrinter *win);

@@ -753,6 +753,26 @@ int scene_is_battle_interface_dest(TextPrinter *win)
     return win_u8(win, WIN_TEXTMODE) == 2u;
 }
 
+/*
+ * 缓冲型打印机（dest=win[0x20] 调用方 RAM 缓冲，之后 CpuSet 刷走，
+ * 不碰 BG VRAM/tilemap）——CHS 引擎（template+0x0C 寻址 + UpdateTileMap）
+ * 对它们全是错误语义，必须整体回官方 FontFunc：
+ * - textMode==2: TextPrintBattleInterface 血条缓冲。
+ * - textMode==1 && fontNum==4: RenderTextHandleBold（JP 0x08002CC0）
+ *   共享静态窗 0x03004170（pokeruby gWindowTemplate_81E6C74:
+ *   tilemap=NULL, font=4）——战斗队伍名称/概览列表实测路径
+ *   （2026-08-22 gdb 日志：'ＭＥＷ'=c7bfd1 → 血条显示 '/AP'）。
+ *   漏拦时字模写不进 win[0x20]，缓冲残留旧 tile → CpuSet 刷出固定乱码，
+ *   且真 VRAM/tilemap 被顺带写花。
+ */
+int scene_is_buffer_printer(TextPrinter *win)
+{
+    if (scene_is_battle_interface_dest(win))
+        return 1;
+    return win_u8(win, WIN_TEXTMODE) == 1u
+        && win_u8(win, WIN_FONTNUM_REAL) == 4u;
+}
+
 int scene_jp_via_chs(TextPrinter *win)
 {
     return !scene_is_battle_interface_dest(win);

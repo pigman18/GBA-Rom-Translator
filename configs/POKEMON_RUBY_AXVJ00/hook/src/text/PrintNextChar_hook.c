@@ -329,8 +329,9 @@ static int slot_lookup_and_draw(TextPrinter *win, uint32_t cur_char)
  */
 int PrintNextChar_C(TextPrinter *win, uint32_t cur_char)
 {
-    /* textMode 2 / 血条缓冲：交原版 FontFunc[2] */
-    if (scene_is_battle_interface_dest(win))
+    /* 缓冲型打印机（血条 textMode2 / RenderTextHandleBold textMode1+font4）：
+     * dest=win[0x20]，CHS 引擎不适用，整体交原版 FontFunc */
+    if (scene_is_buffer_printer(win))
         return 0;
 
     if (cur_char == 0xEFu) {

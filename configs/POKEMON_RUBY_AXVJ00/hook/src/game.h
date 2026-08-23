@@ -21,8 +21,11 @@
 #define ADDR_DEX_TEXT_UNKNOWN_POKE         0x083E9688u
 #define ADDR_DRAW_INITIAL_DOWN_ARROW       0x08003F4Cu
 #define ADDR_FONT_CHS_NORMAL               0x09000000u
+#define ADDR_FONT_CHS_SMALL                0x09100000u
 #define ADDR_FONT_CHS_SYM                  0x091E0000u
 #define ADDR_FONT_FUNC_TABLE               0x081BB3ACu
+#define ADDR_FONT_SUBTABLE                 0x081BB3BCu
+#define ADDR_FONT_TYPE1_MAP                0x081B34A8u
 #define ADDR_GAME_BIN                      0x08800000u
 #define ADDR_GET_GLYPH_TILE_PTRS           0x08003730u
 #define ADDR_GLYPH_ALLOC_NEXT              0x0203FFF8u
@@ -159,7 +162,12 @@ struct ChsPitchCtrl {
  * Hardware glyph container stays 8x16 (two 8x8 tiles) / 16x16 slot — do not change.
  * See docs/FONT_12PX_DRAW.md and .cursor/rules/axvj-font-12px-only.mdc.
  */
-#define CHS_GLYPH_ADVANCE_PX 12
+/* 全局 8px 小字（2026-08-24）：汉字切 FontChsSmall(0x09100000) 8px 点阵，
+ * 与 font4 半角小字同节奏；12px FontChsNormal 保留在 ROM 可随时切回。
+ * 旧 12px 双趟 drawGlyph12 说明（历史）：
+ * Hardware glyph container stays 8x16 (two 8x8 tiles) / 16x16 slot — do not change.
+ * See docs/FONT_12PX_DRAW.md and .cursor/rules/axvj-font-12px-only.mdc. */
+#define CHS_GLYPH_ADVANCE_PX 8
 #define CHS_CHAR_HEIGHT_PX   12
 #define CHS_LINE_FEED_PX     14
 #define CHS_CELL_BYTES       128

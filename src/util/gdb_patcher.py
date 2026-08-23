@@ -1,4 +1,4 @@
-#!/usr/bin/env python3
+﻿#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 gdb_patcher.py — 基于 mGBA GDB stub 的运行时追踪工具（yaml 配置驱动）。
@@ -372,6 +372,35 @@ def _win_fields(wb: bytes) -> str:
     )
 
 
+def _read_win_us(gdb: GdbClient, win: int) -> bytes:
+    """美版 pokeruby struct Window（0x30 字节）。"""
+    try:
+        b = bytes(gdb.read_mem(win, 0x30))
+    except GdbError:
+        return b""
+    return b[:0x30]
+
+
+def _win_fields_us(wb: bytes) -> str:
+    """pokeruby struct Window 字段摘要（include/text.h 布局）。"""
+    if len(wb) < 0x2C:
+        return f"（win 读取失败 len={len(wb)}）"
+    return (
+        f"state={u16(wb, 0x16)} textMode={wb[0x00]} fontNum={wb[0x01]} lang={wb[0x02]}"
+        f" 色fg/bg/sh={wb[0x03]}/{wb[0x04]}/{wb[0x05]} pal={wb[0x06]}"
+        f" startOff=0x{u16(wb, 0x1A):04X} tileOff=0x{u16(wb, 0x1C):04X}"
+        f" curX={wb[0x10]} curY={wb[0x11]} left={wb[0x12]} top={u16(wb, 0x14)}"
+        f" index={u16(wb, 0x1E)}"
+    )
+
+
+def _win_dump_str(gdb: GdbClient, win: int, layout: str) -> str:
+    """按布局读取窗口并返回摘要行。"""
+    wb = _read_win_us(gdb, win) if layout == "us" else _read_win(gdb, win)
+    head = _win_fields_us(wb) if layout == "us" else _win_fields(wb)
+    return head
+
+
 def _read_ff_text(gdb: GdbClient, addr: int) -> bytes:
     try:
         data = bytes(gdb.read_mem(addr, STR_MAX))
@@ -483,10 +512,44 @@ def _on_init_text(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> 
         return
     end = sp + len(data) - 1
     ctx.log(f"\n[InitTextPrinter] win=0x{win:08X} 文本=0x{sp:08X}~0x{end:08X} ({region_of(sp)}) LR=0x{lr:08X}")
+    if cfg.get("layout") == "us":
+        wb = _read_win_us(gdb, win)
+        if len(wb) >= 0x2C:
+            ctx.log(f"  r2.startOff=0x{tb:04X} r3.left={cx}")
+            ctx.log(f"  {_win_fields_us(wb)}")
+            tpl = u32(wb, 0x2C)
+            tplt = _read_mem(gdb, tpl, 0x18) if tpl else b""
+            if len(tplt) >= 0x18:
+                ctx.log(
+                    f"  模板@0x{tpl:08X}: charBase={tplt[1]} screenBase={tplt[2]}"
+                    f" fg/bg/sh={tplt[5]}/{tplt[6]}/{tplt[7]} pal={tplt[4]}"
+                    f" font={tplt[8]} textMode={tplt[9]} spacing={tplt[10]}"
+                    f" tileData=0x{u32(tplt, 0x10):08X} tilemap=0x{u32(tplt, 0x14):08X}"
+                )
+        return
     wb = _read_win(gdb, win)
     if len(wb) >= 0x1E:
         ctx.log(f"  r2.tile_base=0x{tb:04X} r3.cur_x={cx}")
         ctx.log(f"  {_win_fields(wb)}")
+        tpl = u32(wb, 0x00)
+        tplt = _read_mem(gdb, tpl, 0x14) if tpl else b""
+        if len(tplt) == 0x14:
+            ctx.log(
+                f"  模板@0x{tpl:08X}: charBase={tplt[1]} pal={tplt[4]}"
+                f" C/D/E={tplt[5]}/{tplt[6]}/{tplt[7]}"
+                f" font={tplt[8]} textMode={tplt[9]} spacing={tplt[10]}"
+                f" tileData=0x{u32(tplt, 0x0C):08X} tilemap=0x{u32(tplt, 0x10):08X}"
+            )
+        # 模板全量：本次打印真正会生效的 textMode/fontNum/颜色/tileData/tilemap
+        tpl = u32(wb, 0x00)
+        tplt = _read_mem(gdb, tpl, 0x14) if tpl else b""
+        if len(tplt) == 0x14:
+            ctx.log(
+                f"  模板@0x{tpl:08X}: charBase={tplt[1]} pal={tplt[4]}"
+                f" C/D/E={tplt[5]}/{tplt[6]}/{tplt[7]}"
+                f" font={tplt[8]} textMode={tplt[9]} spacing={tplt[10]}"
+                f" tileData=0x{u32(tplt, 0x0C):08X} tilemap=0x{u32(tplt, 0x10):08X}"
+            )
     ctx.log(f"  原始字节: {data[:64].hex(' ')}")
     ctx.log(f"  内容: {ctx.text_of(data)!r}")
     if b"\xff" not in data:
@@ -520,15 +583,19 @@ def _on_char(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
 
 @handler("PrintNextChar")
 def _on_pnc_entry(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
-    """字符处理器入口（0x080032F8）：此刻 index 未推进，text[index] 即即将处理的
-    字符。FA..FF 控制码只在入口可见（RegularGlyph 分支之前是唯一观测点）。"""
+    """字符处理器入口：此刻 index 未推进，text[index] 即即将处理的字符。
+    FA..FF 控制码只在入口可见。JP：r0=win, index@+0x14 text@+0x10；
+    US：r0=win, index@+0x1E text@+0x20。"""
+    us = cfg.get("layout") == "us"
     win = regs.get("r0", 0)
-    wb = _read_win(gdb, win)
-    if len(wb) >= 0x16:
-        tptr = u32(wb, 0x10)
-        index = u16(wb, 0x14)
+    wb = _read_win_us(gdb, win) if us else _read_win(gdb, win)
+    isz, tsz = (0x1E, 0x20) if us else (0x14, 0x10)
+    if len(wb) >= tsz + 4:
+        index = u16(wb, isz)
+        tptr = u32(wb, tsz)
         cur = (tptr + index) & 0xFFFFFFFF
     else:
+        index = 0
         cur = 0
     if not ctx._hit((win, cur)):
         return
@@ -536,44 +603,157 @@ def _on_pnc_entry(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> 
     lr = regs.get("r14", 0) & ~1
     ctx.log(
         f"\n[PncEntry] win=0x{win:08X} LR=0x{lr:08X}"
-        f" 即将处理@0x{cur:08X}({region_of(cur)}) index={u16(wb, 0x14)}"
+        f" 即将处理@0x{cur:08X}({region_of(cur)}) index={index}"
     )
-    ctx.log(f"  {_win_fields(wb)}")
+    ctx.log(f"  {_win_fields_us(wb) if us else _win_fields(wb)}")
     ctx.log(f"  字节流: {data.hex(' ')}")
 
 
 @handler("WinDump")
 def _on_win_dump(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
     """通用窗口现场（控制码跳表处理器/箭头/清屏共用）。
-    cfg.winreg 指定存 win 的寄存器：跳表处理器=r4，箭头/清屏=r0。"""
+    cfg.winreg 指定存 win 的寄存器；layout=us 走 pokeruby struct Window。"""
     wr = str(cfg.get("winreg") or "r4")
     win = regs.get(wr, 0)
     ch = regs.get("r3", 0) & 0xFF
-    wb = _read_win(gdb, win)
+    us = cfg.get("layout") == "us"
+    wb = _read_win_us(gdb, win) if us else _read_win(gdb, win)
     pc = (regs.get("r15", 0) & ~1) & 0xFFFFFFFF
     ctx.log(f"\n[WinDump] PC=0x{pc:08X} {wr}=win@0x{win:08X} r3=0x{ch:02X}")
-    ctx.log(f"  {_win_fields(wb)}")
+    ctx.log(f"  {_win_fields_us(wb) if us else _win_fields(wb)}")
+
+
+@handler("UpdateTilemap")
+def _on_update_tilemap(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """BG 表项写入总入口。JP：r0=win, r1=upperTile, r2=lowerTile；
+    US：r0=win, r1=tilesWidth（pokeruby UpdateTilemap(win, tilesWidth)）。
+    记录目标格/写入前现值——定位乱码格来源。"""
+    us = cfg.get("layout") == "us"
+    wr = str(cfg.get("winreg") or "r0")
+    win = regs.get(wr, 0)
+    lr = regs.get("r14", 0) & ~1
+    who = "C引擎" if 0x08800000 <= lr < 0x09000000 else "原生ROM"
+    if us:
+        wb = _read_win_us(gdb, win)
+        if len(wb) < 0x2C:
+            return
+        width = regs.get("r1", 0) & 0xFFFF
+        tmap = u32(wb, 0x28)
+        cx = wb[0x12] + wb[0x10]          # left + cursorX（像素）
+        cy = u16(wb, 0x14) + wb[0x11]     # top + cursorY
+        cell = (cy >> 3) * 32 + (cx >> 3)
+        key = (win, cell, width)
+        if not ctx._hit(key):
+            return
+        entry = (tmap + cell * 2) if tmap else 0
+        curv = _read_mem(gdb, entry, 2) if entry else b""
+        ctx.log(
+            f"\n[UTM-US] win=0x{win:08X} tilesWidth={width} 调用方={who} LR=0x{lr:08X}"
+            f" 格=({cx},{cy})->#{cell} pal={wb[0x06]}"
+        )
+        ctx.log(f"  tilemap@0x{tmap:08X} entry@0x{entry:08X} 写前现值={curv.hex(' ')}")
+        return
+    up = regs.get("r1", 0) & 0xFFFF
+    lo = regs.get("r2", 0) & 0xFFFF
+    wb = _read_win(gdb, win)
+    if len(wb) < 0x1E:
+        return
+    tpl = u32(wb, 0x00)
+    tb = _read_mem(gdb, tpl + 0x10, 4) if tpl else b""
+    tbase = u32(tb, 0) if len(tb) == 4 else 0
+    cx, tx = wb[0x1A], wb[0x1B]
+    cy, ty = wb[0x1C], wb[0x1D]
+    cell = (cy + ty) * 32 + (cx + tx)
+    key = (win, cell, up, lo)
+    if not ctx._hit(key):
+        return
+    entry_addr = (tbase + cell * 2) if tbase else 0
+    curv = _read_mem(gdb, entry_addr, 2) if entry_addr else b""
+    tdata = _read_mem(gdb, tpl + 0x0C, 4) if tpl else b""
+    tdata_base = u32(tdata, 0) if len(tdata) == 4 else 0
+    ctx.log(
+        f"\n[UTM] win=0x{win:08X} u=0x{up:04X} l=0x{lo:04X}"
+        f" 格=({cx}+{tx},{cy}+{ty})->#{cell} pal=0x{wb[0x0F]:X} 调用方={who} LR=0x{lr:08X}"
+    )
+    ctx.log(
+        f"  tilemap@0x{tbase:08X} entry@0x{entry_addr:08X} 写前现值={curv.hex(' ')}"
+        f" tileData@0x{tdata_base:08X} 像素落点=0x{tdata_base + up * 32:08X}"
+    )
+    ctx.log(
+        f"  tilemap@0x{tbase:08X} entry@0x{entry_addr:08X} 写前现值={curv.hex(' ')}"
+        f" tileData@0x{tdata_base:08X} 像素落点=0x{tdata_base + up * 32:08X}"
+    )
+
+
+@handler("RenderTextHandleBold")
+def _on_render_bold(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """美版 RenderTextHandleBold 链（Text_InitWindow8004E3C）：
+    r0=winTemplate, r1=tileData(dest), r2=text。详情页/血条缓冲观测。"""
+    tpl = regs.get("r0", 0)
+    dst = regs.get("r1", 0)
+    text = regs.get("r2", 0)
+    data = _read_ff_text(gdb, text)
+    tplt = _read_mem(gdb, tpl, 0x18) if tpl else b""
+    lr = regs.get("r14", 0) & ~1
+    if not ctx._hit((dst, data[:32])):
+        return
+    ctx.log(f"\n[RenderBold] dest=0x{dst:08X} text=0x{text:08X} LR=0x{lr:08X}")
+    if len(tplt) >= 0x18:
+        ctx.log(
+            f"  模板@0x{tpl:08X}: charBase={tplt[1]} font={tplt[8]} textMode={tplt[9]}"
+            f" fg/bg/sh={tplt[5]}/{tplt[6]}/{tplt[7]} pal={tplt[4]}"
+            f" tileData=0x{u32(tplt, 0x10):08X} tilemap=0x{u32(tplt, 0x14):08X}"
+        )
+    ctx.log(f"  文本: {data[:48].hex(' ')} 内容={ctx.text_of(data)[:40]!r}")
+
+
+@handler("GetGlyphTilePointers")
+def _on_ggtp(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """美版 GetGlyphTilePointers(fontNum, language, glyph, &upper, &lower)。"""
+    fn_ = regs.get("r0", 0) & 0xFFFF
+    lang = regs.get("r1", 0) & 0xFFFF
+    gl = regs.get("r2", 0) & 0xFFFF
+    if not ctx._hit((fn_, lang, gl)):
+        return
+    ctx.log(f"\n[GGTP] fontNum={fn_} language={lang} glyph=0x{gl:02X}")
+
+
+@handler("Text_UpdateWindow")
+def _on_tuw(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """美版帧驱动 Text_UpdateWindow(r0=win)：state 机观测。"""
+    win = regs.get("r0", 0)
+    wb = _read_win_us(gdb, win)
+    if len(wb) < 0x2C:
+        return
+    if not ctx._hit((win, u16(wb, 0x16))):
+        return
+    ctx.log(f"\n[TUW] win=0x{win:08X} {_win_fields_us(wb)}")
 
 
 @handler("BattleBufferGlyph")
 def _on_buf_glyph(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
-    """FontFunc[2] 血条缓冲字形：观察缓冲指针字段与 win[0x20] 头部随命中推进。
-    连续命中对比 +16/+18 与缓冲头部字节即可反推写入语义（R2）。"""
+    """我方 TextMode2 缓冲写入观测：r0=win, r1=&ChsGlyphTiles, r2=width。
+    记录 win[0x20] 目标指针、写入前缓冲头 16B、tiles->tl 源头 16B——
+    用于定位血条 Lv/HP 行闪烁残片的落点错位。"""
     wr = str(cfg.get("winreg") or "r0")
     win = regs.get(wr, 0)
-    ch = regs.get("r1", 0) & 0xFF
+    tiles = regs.get("r1", 0)
+    w = regs.get("r2", 0) & 0xFFFF
     wb = _read_win(gdb, win)
-    buf = _read_mem(gdb, (win + 0x20) & 0xFFFFFFFF, 32)
-    off18 = u16(wb, 0x18) if len(wb) >= 0x1A else 0
-    off16 = u16(wb, 0x16) if len(wb) >= 0x18 else 0
-    if not ctx._hit((win, ch, off16, off18)):
+    dst = u32(wb, 0x20) if len(wb) >= 0x24 else 0
+    tl_ptr_b = _read_mem(gdb, tiles, 4) if tiles else b""
+    tl = u32(tl_ptr_b, 0) if len(tl_ptr_b) == 4 else 0
+    dst_head = _read_mem(gdb, dst, 16) if dst else b""
+    src_head = _read_mem(gdb, tl, 16) if tl else b""
+    lr = regs.get("r14", 0) & ~1
+    if not ctx._hit((win, dst)):
         return
     ctx.log(
-        f"\n[BufGlyph] char=0x{ch:02X}→'{ctx.char_of(ch)}' win=0x{win:08X}"
-        f" +16=0x{off16:04X} +18=0x{off18:04X}"
+        f"\n[Buf2] win=0x{win:08X} w={w} dst=0x{dst:08X} LR=0x{lr:08X}"
+        f" textMode={wb[0x0A] if len(wb)>0x0A else '?'} fontNum={wb[0x0B] if len(wb)>0x0B else '?'}"
     )
-    ctx.log(f"  {_win_fields(wb)}")
-    ctx.log(f"  win[0x20]头32B: {buf.hex(' ')}")
+    ctx.log(f"  写前dst头16B: {dst_head.hex(' ')}")
+    ctx.log(f"  源tl头16B:    {src_head.hex(' ')}")
 
 
 _TILES_HARVESTER: Optional["TilesHarvester"] = None  # run_log 构造后由 handler 运行时读取
@@ -1062,7 +1242,8 @@ def _pick_charmap(args: argparse.Namespace, points: list[GdbPoint]) -> str:
 
 
 def run_log(args: argparse.Namespace) -> int:
-    logpath = args.log or str(DEFAULT_LOG)
+    # 日志按游戏分目录：src/util/work/{gameId}/gdb_patcher_log.log
+    logpath = args.log or str(REPO_ROOT / "src" / "util" / "work" / args.game / "gdb_patcher_log.log")
     Path(logpath).parent.mkdir(parents=True, exist_ok=True)
 
     points = load_gdb_points(args.game)
@@ -1071,16 +1252,21 @@ def run_log(args: argparse.Namespace) -> int:
         print("没有可监听的监听点（--functions 全部未在 yaml 定义？）。", file=sys.stderr)
         return 2
 
-    from meowth.jp_pcs import BYTE_TO_CHAR as JP_BYTE_TO_CHAR
+    if args.game == DEFAULT_GAME:
+        from meowth.jp_pcs import BYTE_TO_CHAR as JP_BYTE_TO_CHAR
 
-    single = dict(JP_BYTE_TO_CHAR)  # AXVJ 日版底包：非 F9 单字节一律按日文 PCS（假名）
+        single = dict(JP_BYTE_TO_CHAR)  # AXVJ 日版底包：非 F9 单字节按日文 PCS
+        decode_mode = "日文PCS"
+    else:
+        single = {}                     # 非日版：原样字节，不做假名解码
+        decode_mode = "原始字节（非日版不解码）"
     charmap_src = _pick_charmap(args, points)
     double: dict[int, str] = {}
     if charmap_src:
         _, double = load_charmap(charmap_src)
-        mode = f"单字节=日文PCS + F900/F980 字库 {charmap_src}"
+        mode = f"{decode_mode} + F900/F980 字库 {charmap_src}"
     else:
-        mode = "单字节=日文PCS（无 charmap 则 F900 双字节/F980 短语不查表）"
+        mode = decode_mode
 
     origin = None
     if os.path.isfile(args.origin):
@@ -1210,8 +1396,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         action="store_true",
         help="关闭 tiles 实时采集（默认开：sheet→OAM 配对→导 PNG+追加 tiles.presets）",
     )
-    ap.add_argument("--log", default=None, help=f"日志文件路径（缺省 {DEFAULT_LOG}）")
-    ap.add_argument("--origin", default=str(DEFAULT_ORIGIN), help="原盘 ROM 路径（同址对照用）")
+    ap.add_argument("--log", default=None,
+                    help=r"日志文件路径；缺省 src\util\work\{gameId}\gdb_patcher_log.log（按游戏分目录）")
+    ap.add_argument("--origin", default=str(DEFAULT_ORIGIN), help="原盘 ROM 路径（同址对照用；美版请传美版 ROM 路径）")
     args = ap.parse_args(argv)
 
     try:

@@ -679,9 +679,10 @@ static void DrawGlyphTiles_CHS_Core(
 
 static int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128)
 {
-    /* ---- CHS 汉库 ---- */
+    /* ---- CHS 汉库（全局 8px 小字：FontChsSmall 与 Normal 同 128B 容器，
+     *      仅切换基址；字形沉底配比与原生 font4 节奏一致） ---- */
     if (code & GLYPH_SRC_CHS) {
-        const uint8_t *base = (const uint8_t *)ADDR_FONT_CHS_NORMAL
+        const uint8_t *base = (const uint8_t *)ADDR_FONT_CHS_SMALL
             + ((uint32_t)(code & CHS_GLYPH_IDX_MASK) << 7);
         unsigned x, y;
         copy_tile32(out128 + 0x00, base + 0x00);

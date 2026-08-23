@@ -470,8 +470,8 @@ gdb:
     cfg:
       winreg: r4
   - name: BattleBufferGlyph
-    address: '0x0800338C'
-    description: 'FontFunc[2] 血条缓冲字形入口（表值 0x0800338D 含 thumb 位；r0=win, r1=char）。观察 win[0x16]/[0x18] 与 win[0x20] 缓冲推进'
+    address: '0x0880040C'
+    description: '我方 TextMode2 缓冲写入（r0=win, r1=tiles*, r2=width）；观测 win[0x20] 指针与写入内容'
     default: false
     cfg:
       winreg: r0
@@ -484,6 +484,12 @@ gdb:
   - name: TextClearWindow
     address: '0x08003BA8'
     description: '清屏入口（r0=win）'
+    default: false
+    cfg:
+      winreg: r0
+  - name: UpdateTilemap
+    address: '0x080036DC'
+    description: 'BG 表项写入总入口（r0=win, r1=upperTile, r2=lowerTile）；定位血条区乱码：谁在哪个格写了什么 tile'
     default: false
     cfg:
       winreg: r0

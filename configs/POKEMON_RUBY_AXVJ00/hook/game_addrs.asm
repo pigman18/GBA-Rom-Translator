@@ -60,6 +60,11 @@ GameBinAddresses                       equ 0x08800000  ; C: ADDR_GAME_BIN
 PhraseOffsetsVMA                        equ 0x08810000  ; C: ADDR_PHRASE_OFFSETS
 PhraseTableVMA                          equ 0x08820000  ; C: ADDR_PHRASE_TABLE
 FontChsNormal                          equ 0x09000000  ; C: ADDR_FONT_CHS_NORMAL
+; 8px 小汉库（meowth 管线生成，与 Normal 同 128B/字 容器；队伍名等小字窗使用）
+FontChsSmall                           equ 0x09100000  ; C: ADDR_FONT_CHS_SMALL
+; FontFunc[1] 二级分发表 / font1/4 配对表（文档参考）
+FontSubTable                           equ 0x081BB3BC  ; C: ADDR_FONT_SUBTABLE
+FontType1Map                           equ 0x081B34A8  ; C: ADDR_FONT_TYPE1_MAP
 ; Sym punct: free ROM after Small; Font3 8x16 4bpp U+L (not 16x16 2bpp)
 PokeRSFontChsSymAddress                equ 0x091E0000  ; C: ADDR_FONT_CHS_SYM
 ; SlotTable: type=slot 查找表（JP hex → 中文 F9 流，PrintNextChar 运行时拦截）

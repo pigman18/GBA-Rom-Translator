@@ -23,14 +23,7 @@ LDFLAGS := -mthumb -mcpu=arm7tdmi -nostdlib -T link/game.ld -Wl,-Map=$(OUT)/game
 
 OBJS := \
 	$(BUILD)/text_entry.o \
-	$(BUILD)/PrintNextChar_hook.o \
-	$(BUILD)/DrawGlyphTiles_hook.o \
-	$(BUILD)/DrawGlyph_CHS_hook.o \
-	$(BUILD)/DrawInitialDownArrow_hook.o \
-	$(BUILD)/DrawMenuCursorEF_hook.o \
-	$(BUILD)/GetGlyphTilePointers_hook.o \
-	$(BUILD)/GetStringWidth.o \
-	$(BUILD)/MapNamePopup_hook.o \
+	$(BUILD)/text_jp2chs.o \
 	$(BUILD)/UpdateNickInHealthbox_entry.o \
 	$(BUILD)/UpdateNickInHealthbox_hook.o \
 	$(BUILD)/UnusedPrintMonName_entry.o \
@@ -46,9 +39,12 @@ $(BUILD):
 	mkdir -p $(BUILD)
 
 # text/entry.s 是跳板合集，链接必须排第一：
-# main.asm 的 PrintNextChar_C 标签 = GameBinAddresses = game.bin 起点。
+# main.asm 的 JP2CHS_Entry 标签 = GameBinAddresses = game.bin 起点（EngineEntry）。
 $(BUILD)/text_entry.o: $(TEXT)/entry.s | $(BUILD)
 	$(CC) $(ASFLAGS) $< -o $@
+
+$(BUILD)/text_jp2chs.o: $(SRC_ROOT)/text_jp2chs.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD)/%.o: $(TEXT)/%.s | $(BUILD)
 	$(CC) $(ASFLAGS) $< -o $@

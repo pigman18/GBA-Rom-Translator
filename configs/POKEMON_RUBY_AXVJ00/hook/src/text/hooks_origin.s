@@ -5,11 +5,13 @@
 ; IDs: P01 P02 P04 P05（docs/PATCHES_INVENTORY.md）
 ; =============================================================================
 
-; --- [P01] 可印字符 -> CHS 引擎；不命中回落官方 FontFuncTable ---
-; pokeruby: src/text.c PrintNextChar() 常规字形分支
-.org PrintNextChar_RegularGlyph
-    ldr r0, =(PrintNextChar_C | 1)
-    bx r0
+; --- [P01] 全面接管：原生 PrintNextChar 整函数替换（零回落，Phase C 换装） ---
+; pokeruby: src/text.c PrintNextChar()；AXVJ @0x080032F8（含 FA-FF 控制码跳表）。
+; r0=win 按 AAPCS 原样进 C；r1 为 caller-saved 可作转跳暂存。
+; 引擎返回值契约：可印=1 / FF=0 / FA·FB·FD·FE=2 / FC=子结果（docs/ruby_jp_text.md）。
+.org PrintNextChar
+    ldr r1, =(JP2CHS_Entry | 1)
+    bx r1
 .pool
 
 ; --- [P02] Hook3: 字库取址分发（bit15=1 CHS / 0 原函数重定位副本） ---

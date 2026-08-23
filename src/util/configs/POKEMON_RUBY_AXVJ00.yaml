@@ -425,7 +425,68 @@ gdb:
     default: false
   - name: PrintNextChar
     address: '0x080032F8'
+    description: '字符处理器入口（r0=win）；入口处未取字符，handler 按 text[index] 读即将处理的字节流——FA..FF 控制码也在此可见'
     default: false
+  - name: CtrlHnd_A
+    address: '0x08003324'
+    description: '控制码跳表处理器之一（静态表项共 7 个，与 FA..FF 的映射待运行时确认；r4=win）'
+    default: false
+    cfg:
+      winreg: r4
+  - name: CtrlHnd_B
+    address: '0x0800333C'
+    description: '控制码跳表处理器之二'
+    default: false
+    cfg:
+      winreg: r4
+  - name: CtrlHnd_C
+    address: '0x08003342'
+    description: '控制码跳表处理器之三'
+    default: false
+    cfg:
+      winreg: r4
+  - name: CtrlHnd_D
+    address: '0x08003346'
+    description: '控制码跳表处理器之四'
+    default: false
+    cfg:
+      winreg: r4
+  - name: CtrlHnd_E
+    address: '0x0800334A'
+    description: '控制码跳表处理器之五'
+    default: false
+    cfg:
+      winreg: r4
+  - name: CtrlHnd_F
+    address: '0x08003354'
+    description: '控制码跳表处理器之六'
+    default: false
+    cfg:
+      winreg: r4
+  - name: CtrlHnd_G
+    address: '0x08003362'
+    description: '控制码跳表处理器之七'
+    default: false
+    cfg:
+      winreg: r4
+  - name: BattleBufferGlyph
+    address: '0x0800338C'
+    description: 'FontFunc[2] 血条缓冲字形入口（表值 0x0800338D 含 thumb 位；r0=win, r1=char）。观察 win[0x16]/[0x18] 与 win[0x20] 缓冲推进'
+    default: false
+    cfg:
+      winreg: r0
+  - name: DrawInitialDownArrow
+    address: '0x08003F4C'
+    description: '等 A 下箭头绘制入口（r0=win）；与 CtrlHnd 命中序列对照可定位触发它的控制码'
+    default: false
+    cfg:
+      winreg: r0
+  - name: TextClearWindow
+    address: '0x08003BA8'
+    description: '清屏入口（r0=win）'
+    default: false
+    cfg:
+      winreg: r0
   - name: MapNamePopupX
     address: '0x0809F6D0'
     description: '地名弹窗 MenuPrint 调用点（r0=buf, r1=注入的 x 留白px, r2=y）；配 InitTextPrinter 看 win+0x1A curX'

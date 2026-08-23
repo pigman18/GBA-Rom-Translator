@@ -26,77 +26,16 @@ echo === Assembling text/entry.s ===
 %CC% %ASFLAGS% %TEXT%\entry.s -o %BUILD%\text_entry.o
 if errorlevel 1 exit /b 1
 
-echo === Compiling PrintNextChar_hook.c ===
-%CC% %CFLAGS% %TEXT%\PrintNextChar_hook.c -o %BUILD%\PrintNextChar_hook.o
-if errorlevel 1 exit /b 1
-
-echo === Compiling DrawGlyphTiles_hook.c ===
-%CC% %CFLAGS% %TEXT%\DrawGlyphTiles_hook.c -o %BUILD%\DrawGlyphTiles_hook.o
-if errorlevel 1 exit /b 1
-
-if errorlevel 1 exit /b 1
-
-echo === Compiling DrawGlyph_CHS_hook.c ===
-%CC% %CFLAGS% %TEXT%\DrawGlyph_CHS_hook.c -o %BUILD%\DrawGlyph_CHS_hook.o
-if errorlevel 1 exit /b 1
-
-echo === Compiling DrawInitialDownArrow_hook.c ===
-%CC% %CFLAGS% %TEXT%\DrawInitialDownArrow_hook.c -o %BUILD%\DrawInitialDownArrow_hook.o
-if errorlevel 1 exit /b 1
-
-echo === Compiling DrawMenuCursorEF_hook.c ===
-%CC% %CFLAGS% %TEXT%\DrawMenuCursorEF_hook.c -o %BUILD%\DrawMenuCursorEF_hook.o
-if errorlevel 1 exit /b 1
-
-echo === Compiling GetGlyphTilePointers_hook.c ===
-%CC% %CFLAGS% %TEXT%\GetGlyphTilePointers_hook.c -o %BUILD%\GetGlyphTilePointers_hook.o
-if errorlevel 1 exit /b 1
-
-echo === Compiling MapNamePopup_hook.c ===
-%CC% %CFLAGS% %TEXT%\MapNamePopup_hook.c -o %BUILD%\MapNamePopup_hook.o
-if errorlevel 1 exit /b 1
-
-echo === Compiling GetStringWidth.c ===
-%CC% %CFLAGS% %TEXT%\GetStringWidth.c -o %BUILD%\GetStringWidth.o
-if errorlevel 1 exit /b 1
-
-echo === Assembling UpdateNickInHealthbox_entry.s ===
-%CC% %ASFLAGS% %BATTLE%\UpdateNickInHealthbox_entry.s -o %BUILD%\UpdateNickInHealthbox_entry.o
-if errorlevel 1 exit /b 1
-
-echo === Compiling UpdateNickInHealthbox_hook.c ===
-%CC% %CFLAGS% %BATTLE%\UpdateNickInHealthbox_hook.c -o %BUILD%\UpdateNickInHealthbox_hook.o
-if errorlevel 1 exit /b 1
-
-echo === Assembling UnusedPrintMonName_entry.s ===
-%CC% %ASFLAGS% %POKEDEX%\UnusedPrintMonName_entry.s -o %BUILD%\UnusedPrintMonName_entry.o
-if errorlevel 1 exit /b 1
-
-echo === Compiling UnusedPrintMonName_hook.c ===
-%CC% %CFLAGS% %POKEDEX%\UnusedPrintMonName_hook.c -o %BUILD%\UnusedPrintMonName_hook.o
-if errorlevel 1 exit /b 1
-
-echo === Assembling DrawOptionMenuChoice_entry.s ===
-%CC% %ASFLAGS% %OPTION%\DrawOptionMenuChoice_entry.s -o %BUILD%\DrawOptionMenuChoice_entry.o
-if errorlevel 1 exit /b 1
-
-echo === Compiling DrawOptionMenuChoice_hook.c ===
-%CC% %CFLAGS% %OPTION%\DrawOptionMenuChoice_hook.c -o %BUILD%\DrawOptionMenuChoice_hook.o
+echo === Compiling text_jp2chs.c (jp2chs 全面接管引擎) ===
+%CC% %CFLAGS% %SRC_ROOT%\text_jp2chs.c -o %BUILD%\text_jp2chs.o
 if errorlevel 1 exit /b 1
 
 echo === Linking game.elf ===
-@rem text/entry.o 必须第一个：main.asm 的 PrintNextChar_C 标签 = GameBinAddresses
-@rem = game.bin 起点 = PrintNextChar 跳板（r4/r3→r0/r1 编组 + FontFunc 回落）。
+@rem text/entry.o 必须第一个：main.asm 的 JP2CHS_Entry 标签 = GameBinAddresses
+@rem = game.bin 起点 = EngineEntry 跳板（r0=win 直进 ProcessCurrentChar_C）。
 %CC% %LDFLAGS% -o %OUT%/game.elf ^
   %BUILD%/text_entry.o ^
-  %BUILD%/PrintNextChar_hook.o ^
-  %BUILD%/DrawGlyphTiles_hook.o ^
-  %BUILD%/DrawGlyph_CHS_hook.o ^
-  %BUILD%/DrawInitialDownArrow_hook.o ^
-  %BUILD%/DrawMenuCursorEF_hook.o ^
-  %BUILD%/GetGlyphTilePointers_hook.o ^
-  %BUILD%/GetStringWidth.o ^
-  %BUILD%/MapNamePopup_hook.o ^
+  %BUILD%/text_jp2chs.o ^
   %BUILD%/UpdateNickInHealthbox_entry.o ^
   %BUILD%/UpdateNickInHealthbox_hook.o ^
   %BUILD%/UnusedPrintMonName_entry.o ^

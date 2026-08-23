@@ -32,9 +32,9 @@
 .include "./patches/ui_dex.asm"
 .include "./patches/clean_suffix.asm"
 
-; ---- C 文本引擎 / 字库 / slot 表 ----
+; ---- C 文本引擎（jp2chs 全面接管）/ 字库 / slot 表 ----
 .org GameBinAddresses
-PrintNextChar_C:
+JP2CHS_Entry:               ; = text/entry.s EngineEntry = 引擎入口跳板
 .incbin "out/game.bin"
 
 .include "./graphic/fonts.s"

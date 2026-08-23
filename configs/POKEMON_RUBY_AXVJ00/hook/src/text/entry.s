@@ -2,12 +2,13 @@
 @ text/entry.s — text 类全部地址订钉跳板（.c 只写逻辑，寄存器/lr 约定在这里）。
 @ 由 gcc 编入 game.bin；main.asm 仅做 `.org 官方地址 → ldr/bx 符号` 的订址。
 @
-@ 跳板清单：
-@   PrintNextChar                — RegularGlyph 分流（r4=win, r3=char）
+@ 跳板清单（2026-08-23 Phase C 换装后）：
+@   EngineEntry                  — 引擎入口（= game.bin 起点，r0=win 直进 C）
 @   GetGlyphTilePointers_Hook    — Hook3 分发（栈顶=调用方 r4，lr=官方返回址）
 @   GetGlyphTilePointers_Orig    — 原函数整体重定位副本（含字面量池）
 @   MapName_DisplayCellLength    — 地名弹窗居中钩（MapNamePopup_hook.c，容量10格）
 @   WaitArrow_Prepare            — FA/FB 等 A 箭头前置同步
+@ （旧 PrintNextChar r4/r3→r0/r1 编组 + FontFunc 回落跳板已随全面接管移除。）
 @ =============================================================================
     .cpu arm7tdmi
     .text
@@ -15,9 +16,9 @@
     .thumb
     .syntax unified
 
-    .global PrintNextChar
+    .global EngineEntry
     .thumb_func
-    .type PrintNextChar, %function
+    .type EngineEntry, %function
     .global FarBxR3
     .thumb_func
     .global MapName_DisplayCellLength
@@ -30,42 +31,20 @@
     .thumb_func
     .type GetGlyphTilePointers_Hook, %function
     .global GetGlyphTilePointers_Orig
-    .extern PrintNextChar_C
+    .extern ProcessCurrentChar_C
     .extern GetGlyphTilePointers_C
     .extern MapNamePopup_CalcLeftPx
     .extern WaitArrow_Prepare_C
 
 @ -----------------------------------------------------------------------------
-@ PrintNextChar：官方 ProcessCurrentChar 常规字形分流点。
-@ 入口 r4=win, r3=cur_char, r0 空闲；PrintNextChar_C 返回非 0 表示已消费。
+@ EngineEntry：原生帧驱动 call PrintNextChar@0x080032F8（r0=win）直进的引擎入口。
+@ main.asm 在 GameBinAddresses 处贴标签 JP2CHS_Entry 并把 P01 订到此。
+@ 尾跳 C：ProcessCurrentChar_C 自管 push {lr}；返回值契约见 text_jp2chs.c 头注。
 @ -----------------------------------------------------------------------------
-PrintNextChar:
-    adds r0, r4, #0
-    adds r1, r3, #0
-    push {r3, r4}
-    bl PrintNextChar_C
-    pop {r3, r4}
-    cmp r0, #0
-    beq Pnc_original
-    movs r0, #1
-    pop {r4}
-    pop {r1}
-    bx r1
-
-Pnc_original:
-    ldr r0, =0x081BB3AC          @ FontFuncTable
-    ldrb r1, [r4, #0x0A]
-    lsls r1, r1, #2
-    adds r1, r1, r0
-    ldr r2, [r1]
-    adds r0, r4, #0
-    adds r1, r3, #0
-    ldr r3, =0x081B12DD          @ CallViaR2 | 1
-    bl FarBxR3
-    movs r0, #1
-    pop {r4}
-    pop {r1}
-    bx r1
+EngineEntry:
+    ldr r1, =ProcessCurrentChar_C
+    bx  r1
+    .pool
 
 FarBxR3:
     bx r3

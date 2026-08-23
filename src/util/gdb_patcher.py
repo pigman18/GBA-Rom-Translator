@@ -359,6 +359,19 @@ def _read_win(gdb: GdbClient, win: int) -> bytes:
     return b[:0x20]
 
 
+def _win_fields(wb: bytes) -> str:
+    """TextPrinter 关键字段一行摘要（AXVJ 布局，偏移同 hook/src/game.h）。"""
+    if len(wb) < 0x1E:
+        return f"（win 读取失败 len={len(wb)}）"
+    return (
+        f"state={u16(wb, 0x04)} textMode={wb[0x0A]} fontNum={wb[0x0B]}"
+        f" 色C/D/E={wb[0x0C]}/{wb[0x0D]}/{wb[0x0E]} pal={wb[0x0F]}"
+        f" TILE_BASE=0x{u16(wb, 0x16):04X} TILE_OFF=0x{u16(wb, 0x18):04X}"
+        f" curX={wb[0x1A]} curTX={wb[0x1B]} curY={wb[0x1C]} curTY={wb[0x1D]}"
+        f" index={u16(wb, 0x14)}"
+    )
+
+
 def _read_ff_text(gdb: GdbClient, addr: int) -> bytes:
     try:
         data = bytes(gdb.read_mem(addr, STR_MAX))
@@ -472,11 +485,8 @@ def _on_init_text(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> 
     ctx.log(f"\n[InitTextPrinter] win=0x{win:08X} 文本=0x{sp:08X}~0x{end:08X} ({region_of(sp)}) LR=0x{lr:08X}")
     wb = _read_win(gdb, win)
     if len(wb) >= 0x1E:
-        ctx.log(
-            f"  TILE_BASE=0x{tb:04X} TILE_OFF=0x{u16(wb, 0x18):04X}"
-            f" curX={cx} curTX={wb[0x1B]} curY={wb[0x1C]} curTY={wb[0x1D]}"
-            f" textMode={wb[0x0A]} fontNum={wb[0x0B]}"
-        )
+        ctx.log(f"  r2.tile_base=0x{tb:04X} r3.cur_x={cx}")
+        ctx.log(f"  {_win_fields(wb)}")
     ctx.log(f"  原始字节: {data[:64].hex(' ')}")
     ctx.log(f"  内容: {ctx.text_of(data)!r}")
     if b"\xff" not in data:
@@ -505,11 +515,65 @@ def _on_char(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
         f"\n[char] win=0x{win:08X} 字符=0x{ch:02X} → {ctx.char_of(ch)!r}"
         f" 位置=0x{cur:08X}({region_of(cur)}) index={index}"
     )
-    if len(wb) >= 0x1E:
-        ctx.log(
-            f"  curX={wb[0x1A]} curTX={wb[0x1B]} curY={wb[0x1C]} curTY={wb[0x1D]}"
-            f" textMode={wb[0x0A]} fontNum={wb[0x0B]}"
-        )
+    ctx.log(f"  {_win_fields(wb)}")
+
+
+@handler("PrintNextChar")
+def _on_pnc_entry(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """字符处理器入口（0x080032F8）：此刻 index 未推进，text[index] 即即将处理的
+    字符。FA..FF 控制码只在入口可见（RegularGlyph 分支之前是唯一观测点）。"""
+    win = regs.get("r0", 0)
+    wb = _read_win(gdb, win)
+    if len(wb) >= 0x16:
+        tptr = u32(wb, 0x10)
+        index = u16(wb, 0x14)
+        cur = (tptr + index) & 0xFFFFFFFF
+    else:
+        cur = 0
+    if not ctx._hit((win, cur)):
+        return
+    data = _read_mem(gdb, cur, 24) if cur else b""
+    lr = regs.get("r14", 0) & ~1
+    ctx.log(
+        f"\n[PncEntry] win=0x{win:08X} LR=0x{lr:08X}"
+        f" 即将处理@0x{cur:08X}({region_of(cur)}) index={u16(wb, 0x14)}"
+    )
+    ctx.log(f"  {_win_fields(wb)}")
+    ctx.log(f"  字节流: {data.hex(' ')}")
+
+
+@handler("WinDump")
+def _on_win_dump(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """通用窗口现场（控制码跳表处理器/箭头/清屏共用）。
+    cfg.winreg 指定存 win 的寄存器：跳表处理器=r4，箭头/清屏=r0。"""
+    wr = str(cfg.get("winreg") or "r4")
+    win = regs.get(wr, 0)
+    ch = regs.get("r3", 0) & 0xFF
+    wb = _read_win(gdb, win)
+    pc = (regs.get("r15", 0) & ~1) & 0xFFFFFFFF
+    ctx.log(f"\n[WinDump] PC=0x{pc:08X} {wr}=win@0x{win:08X} r3=0x{ch:02X}")
+    ctx.log(f"  {_win_fields(wb)}")
+
+
+@handler("BattleBufferGlyph")
+def _on_buf_glyph(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """FontFunc[2] 血条缓冲字形：观察缓冲指针字段与 win[0x20] 头部随命中推进。
+    连续命中对比 +16/+18 与缓冲头部字节即可反推写入语义（R2）。"""
+    wr = str(cfg.get("winreg") or "r0")
+    win = regs.get(wr, 0)
+    ch = regs.get("r1", 0) & 0xFF
+    wb = _read_win(gdb, win)
+    buf = _read_mem(gdb, (win + 0x20) & 0xFFFFFFFF, 32)
+    off18 = u16(wb, 0x18) if len(wb) >= 0x1A else 0
+    off16 = u16(wb, 0x16) if len(wb) >= 0x18 else 0
+    if not ctx._hit((win, ch, off16, off18)):
+        return
+    ctx.log(
+        f"\n[BufGlyph] char=0x{ch:02X}→'{ctx.char_of(ch)}' win=0x{win:08X}"
+        f" +16=0x{off16:04X} +18=0x{off18:04X}"
+    )
+    ctx.log(f"  {_win_fields(wb)}")
+    ctx.log(f"  win[0x20]头32B: {buf.hex(' ')}")
 
 
 _TILES_HARVESTER: Optional["TilesHarvester"] = None  # run_log 构造后由 handler 运行时读取

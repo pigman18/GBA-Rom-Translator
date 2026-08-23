@@ -7,9 +7,8 @@
 ; C game.h ADDR_*). Removed addresses → symbols/pokeruby_jp.sym UNVERIFIED.
 
 ; --- Core text printer ---
-; PrintNextChar ≈ pret/pokeruby PrintNextChar (src/text.c)
+; PrintNextChar ≈ pret/pokeruby PrintNextChar (src/text.c)；P01 订其入口整函数替换
 PrintNextChar                          equ 0x080032F8
-PrintNextChar_RegularGlyph             equ 0x0800336E
 CallViaR2                              equ 0x081B12DC  ; C: ADDR_CALL_VIA_R2
 FontFuncTable                          equ 0x081BB3AC  ; C: ADDR_FONT_FUNC_TABLE
 
@@ -19,7 +18,12 @@ CopyGlyph2bppTo4bpp                    equ 0x080038A0  ; C: ADDR_COPY_GLYPH_2BPP
 GetGlyphTilePointers                   equ 0x08003730  ; C: ADDR_GET_GLYPH_TILE_PTRS
 UpdateTilemap                          equ 0x080036DC  ; C: ADDR_UPDATE_TILEMAP
 ; FA/FB → DrawInitialDownArrow：画等 A 的 ▼（再进 state 8/9）
-DrawInitialDownArrow                   equ 0x08003F4C
+DrawInitialDownArrow                   equ 0x08003F4C  ; C: ADDR_DRAW_INITIAL_DOWN_ARROW
+
+; --- text_jp2chs.c 全面接管所需的其余原生态（2026-08-23 反汇编定案） ---
+Text_ClearWindow                       equ 0x08003BA8  ; C: ADDR_TEXT_CLEAR_WINDOW
+PlayBGM                                equ 0x080724AC  ; C: ADDR_PLAY_BGM
+PlaySE                                 equ 0x080724CC  ; C: ADDR_PLAY_SE
 
 ; --- String util ---
 StringLength                           equ 0x0800436C

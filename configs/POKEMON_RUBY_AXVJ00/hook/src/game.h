@@ -20,6 +20,7 @@
 #define ADDR_COPY_GLYPH_1BPP_4BPP          0x08003830u
 #define ADDR_COPY_GLYPH_2BPP_4BPP          0x080038A0u
 #define ADDR_DEX_TEXT_UNKNOWN_POKE         0x083E9688u
+#define ADDR_DRAW_INITIAL_DOWN_ARROW       0x08003F4Cu
 #define ADDR_FONT_CHS_NORMAL               0x09000000u
 #define ADDR_FONT_CHS_SYM                  0x091E0000u
 #define ADDR_FONT_FUNC_TABLE               0x081BB3ACu
@@ -31,8 +32,11 @@
 #define ADDR_OPT_PALETTE_OVERRIDE          0x0203FFD0u
 #define ADDR_PHRASE_OFFSETS                0x08810000u
 #define ADDR_PHRASE_TABLE                  0x08820000u
-#define ADDR_UPDATE_TILEMAP                0x080036DCu
+#define ADDR_PLAY_BGM                      0x080724ACu
+#define ADDR_PLAY_SE                       0x080724CCu
 #define ADDR_SLOT_TABLE                    0x09EA0000u
+#define ADDR_TEXT_CLEAR_WINDOW             0x08003BA8u
+#define ADDR_UPDATE_TILEMAP                0x080036DCu
 // <<<GEN_ADDR_END>>>
 /*
  * 短语表（PhraseTable）—— 固定长度字段突破字符数限制的方案。
@@ -104,6 +108,7 @@ struct GlyphBuffer {
 #define WIN_TEXTMODE        0x0A
 #define WIN_FONTNUM         0x0A  /* legacy alias = textMode */
 #define WIN_FONTNUM_REAL    0x0B
+#define WIN_DELAY           0x09  /* FC 08 Pause 的节拍计数（sub_8003110 反汇编定案） */
 #define WIN_COLOR_C         0x0C
 #define WIN_COLOR_D         0x0D
 #define WIN_COLOR_E         0x0E

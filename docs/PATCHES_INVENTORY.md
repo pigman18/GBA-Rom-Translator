@@ -27,7 +27,7 @@
 
 | ID | 地址 | 改动 | 类型 | 目的 | pokeruby 对应 |
 |---|---|---|---|---|---|
-| P01 | `0x0800336E` | `ldr r0,=(PrintNextChar_C\|1); bx r0`（6B+pool） | JMP | 可印字符统一进 CHS 引擎（F9 协议/slot/JP 同池），不命中回落官方 FontFuncTable | `src/text.c` `PrintNextChar()` 常规字形分支（查 FontFuncTable 之前的位置，AXVJ 符号 PrintNextChar_RegularGlyph） |
+| P01 | `0x080032F8` | `ldr r1,=(JP2CHS_Entry\|1); bx r1`（6B+pool，r0=win 原样进 C） | JMP | **全面接管**（Phase C 换装）：原生 PrintNextChar 整函数替换——FA-FF 控制码 + FC 子类型 1-16 + EF/F9/slot/可印字形全由引擎消化，零回落 FontFunc；返回值契约 docs/ruby_jp_text.md §六A | `src/text.c` `PrintNextChar()`（AXVJ 同名函数入口；引擎=`hook/src/text_jp2chs.c` ProcessCurrentChar_C） |
 | P02 | `0x08003730` | `push {r4}; ldr r4,=(GetGlyphTilePointers_Hook\|1); bx r4`（6B+pool） | JMP | 字库取址分发：bit15=1 走 CHS 伪 glyph，否则重定位副本走原函数 | `src/text.c` `GetGlyphTilePointers()`（美版多 language 参数，日版 4 参） |
 | P05 | `0x08003F4C` | `ldr r3,=(WaitArrow_Prepare\|1); bx r3`（4B+pool） | JMP | 等 A 箭头前置同步 CHS 相位（防双▼），随后回落原版主体 `0x08003DAD` | `src/text.c` FA/FB 等 A 箭头绘制段（DrawInitialDownArrow，AXVJ 命名） |
 

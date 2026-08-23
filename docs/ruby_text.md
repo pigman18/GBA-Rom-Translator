@@ -178,3 +178,52 @@ PrintNextChar_C(win, cur_char)
 ```
 
 要点：汉化引擎是**在 P01 单点截获全部常规字形**，textMode 只用来识别并放行两类缓冲型打印机；fontNum 决定日文字模的取址/展开方式与部分场景的 tile 编号公式；中文一律走自绘 CHS 引擎（12px 双趟 8+4 spill），原版函数仅在回落与重定位副本中被复用。
+
+---
+
+# 三、字形尺寸控制机制（text.c 无缩放代码的真相）
+
+> 结论：text.c 不存在任何放大/缩小运算（ShiftGlyphTile_* 仅水平移位）。"字大字小"
+> 由三个正交机制的静态组合决定。
+
+## 机制一：字模数据固有尺寸（struct Font.glyphSize）
+
+| fontNum | glyphSize | 形状 | 说明 |
+|---|---|---|---|
+| 0 | 16B | 1bpp 8×16 整高 | 对话主字体 |
+| 1/2 | 8B | 1bpp 8×8 | 小字/变体 |
+| 3 | 64B | 4bpp 8×16 大字（带阴影） | 战斗台词 |
+| 4/5 | 32B | 4bpp **8×8 单 tile** | 血条/队伍名"小字"数据源 |
+| 6 | 8B | 1bpp 8×8 | 盲文 |
+
+## 机制二：上下 tile 配对＝视觉高度的另一半
+
+打印层永远写两个表项拼 8×16 格（WriteGlyphTilemap: buffer[0]=upper、buffer[32]=lower）。
+GetGlyphTilePointers 五种 type 决定配对：
+
+- type0：lower=upper+lowerTileOffset（同记录拆半）
+- type1（font1/2/4/5）：sFontType1Map[2g]/[2g+1] 任选两块
+- type2（font2）：upper 固定第 212 项（全块规范空白槽）、lower 为字形
+
+铁证：GetBlankTileNum 给 font∈{1,2,4,5} 统一返回 startOffset+212。
+**日版实测**（SubTable[4] 映射表 @0x081B34A8，步长 4B/字符）：char0=双 212（空格）；
+其余「上格恒 212 空白、下格=递增 tile 号」→ 墨水只占格内下半 8px，基线对齐式小字。
+
+## 机制三：水平步进
+
+- mode0/2：spacing 覆盖 > 各字体宽度表（font1/2/4/5 经 sFontType1Map[2g+1] 二次
+  索引——map 第二槽兼任宽度等级选择子）> 默认 8
+- mode1：恒 cursorX+=8
+- FC 0x14 可流内改 spacing
+
+## 「队伍名比别处小」成因链
+
+美版：RenderTextHandleBold→font4（8×8 数据）+sFont4Widths 变宽，像素直绘缓冲；
+日版：mode1+font4→上格配 212 空白→墨水仅下半 8px＋等宽 8px。
+
+## 对 CHS 引擎的扩展点（已预留，未启用）
+
+1. 字库源：GetGlyphTilePointers_CHS 可按 fontNum 分支到小号汉卡 bank
+2. 步进/高度：CHS_GLYPH_ADVANCE_PX 可按分发行查表（mode1→小号值）
+3. 绘制趟数：高度≤8px 时单趟（省 BL）；宽度>8 仍保留右溢出
+当前所有 BG 文本统一 12px 高，在 mode1 小字窗不串行（16px 格）但风格偏大、基线不齐。

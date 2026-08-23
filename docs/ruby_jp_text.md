@@ -192,3 +192,31 @@ RegularGlyph 尾：FontFunc[textMode](win,char) 后 `return 1`。
   （仅 r0-r3，r4 不显），靠「PncEntry 字节流首字节 → 下一个 CtrlHnd 命中」的时序对照
   补齐了映射；后续复采时应把 handler 名直接命名为 `CtrlHnd_A..G` 或统一改挂。
 - 日志字节流为小写 hex；分析脚本正则须 `[0-9A-Fa-f]`。
+
+---
+
+## 七、修正记录：队伍名空白 bug（2026-08-23）
+
+**误判纠正**：textMode==1&&fontNum==4（队伍名列表）不是 win+0x20 缓冲。RE 定案：
+
+- FontFunc[1] @0x0800360C：按 fontNum 查二级子表 @0x081BB3BC →
+  SubTable[4]=0x080035A0：upper=TILE_BASE+map[2g]、lower=TILE_BASE+map[2g+1]
+  （map=sFontType1Map@0x081B34A8）→ 直接 UpdateTilemap(0x036DC) 写表项；
+  尾部统一 cursorTileX++。＝美版 WriteGlyphTilemap_Font1_Font4 原生同构，
+  纯 BG 表项驱动（256-tile 预渲染块由场景初始化装载，实测 TILE_BASE=1 起）。
+- 日版两条独立包装：@0x02CC0 RenderTextHandleBold——Init 后强制 textMode←2
+  并写 win[0x20]=dest（这才是缓冲路径）；@0x02CFC 通用打印包装——保留模板
+  mode1/font4（队伍名列表走此条，对应日志 LR=0x02D14）。
+- 另证：InitTextPrinter 每次调用重置全部游标字段（日志"残留值"是断点在函数体
+  执行前读到的上一轮末态），行间无累计依赖。
+
+**结构修正（对齐 pokeruby 分发模式）**：
+
+- 删除 is_buffer_printer() 全局风控；改为 sChsPrintGlyphFuncs[8] 表驱动
+  （索引=win->textMode）：{Field,Field,Buffer,Field,×4预留}，越界回落 Field 行。
+- 全面接管后原生 FontFuncTable 不再被查询，此表即唯一打印分发器；扩展新
+  textMode（含自定义 ≥4 值）＝表尾追加一行，未来可为专属 CHS 模式订新值到场景模板。
+- mode1 窗口改走 Field 行＝Linear 动态 tile 上载 + 原生 UpdateTilemap 写表项，
+  与原生 SubTable[4] 语义同构（tile 来源不同：动态合成 vs 256 预渲染）。
+
+重建出包后字节验证 P01 落位正常（00 49 08 47 | 01 00 80 08）。

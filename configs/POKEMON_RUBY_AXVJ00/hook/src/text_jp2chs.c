@@ -16,9 +16,11 @@
  *   返回值：可印=1；FF=0 且 state←0；FA/FB/FD/FE=2；FC=子处理器返回值(1/2)。
  *   state 枚举与 pokeruby 同号：0=END 1=BEGIN 2=NORMAL 3=CHAR_DELAY 4=PAUSE
  *   5=WAIT_BUTTON 6=NEWLINE 7=PLACEHOLDER 8=WAIT_CLEAR 9=WAIT_SCROLL 10=WAIT_SOUND。
- *   缓冲模式（textMode==2 血条；textMode==1&&fontNum==4 加粗）：字形 upper/lower 写入
- *   [win+0x20] 指向处，指针 +=0x40；textMode==1 时 cursorTileX(+0x1B) 额外 +1。
- *   已知限制：缓冲模式下 F9 汉字仅落左半（TL/BL），右半溢出不支持（血条槽宽 0x40 所限）。
+ *   缓冲行（仅 textMode==2）：当前为占位空实现（消费不绘制）；待完整实现
+ *   win+0x20 指针缓冲语义（FontFunc[2]/RenderTextHandleBold@0x02CC0 定案：
+ *   upper/lower 写指向处、步进 0x40）并解决 F9 汉字右半溢出后再纳入绘制。
+ *   textMode==1（等宽表项驱动，如队伍名列表 FontFunc[1]+font4）走 Linear 两趟路径：
+ *   动态上载 tile + 原生 UpdateTilemap 写表项，与原生 SubTable[4]@0x080035A0 同构。
  *
  * 订钉（Phase C，另改 main.asm）：P01 由 0x0800336E 上移至 0x080032F8 → 入口 ProcessCurrentChar_C；
  *   P02(Hook3)/P05(箭头相位同步)/P04(地名居中) 维持不变。
@@ -357,6 +359,8 @@ void DrawGlyphTile_CHS(
     uint8_t color_e = win_u8(win, WIN_COLOR_E);
     int need_spill = (spillTile != 0) && (gw_end > 8u);
 
+    /* 着色在渲染层（对齐 pokeruby ApplyColors 位于渲染侧）：
+     * CopyGlyph(C,E,D): 15→ink, 14→shadow, 0→bg */
     chs_copy_glyph_2bpp_to_4bpp(src32, temp, color_c, color_e, color_d);
 
     if (spillTile == 0 && startPixel == 0u && width == 8u) {
@@ -657,27 +661,143 @@ static void DrawGlyphTiles_CHS_Core(
 }
 
 /* =====================================================================
- * §9 打印家族 [text.c L2571-2663 PrintGlyph_* 对应；缓冲模式在此分流]
+ * §8b GetGlyph —— 字形源统一解析（「下标查字库瓦片」的唯一入口）
+ * 职责边界：只负责取址与【格式归一】，不做着色/不读窗口颜色——
+ * 着色（C/E/D + OPT_FG_COLOR）属渲染层（对齐 pokeruby：ApplyColors 在
+ * DrawGlyphTile 渲染侧）。输出为归一化的 128B（TL,BL,TR,BR）：
+ *   统一 4bpp 索引布局、墨水/阴影/背景落在 15/14/0 标准索引位；
+ *   CHS 右半列 ≥CHS_GLYPH_ADVANCE_PX 处清零（步进规格化）。
+ * 来源（分支序即优先级）：
+ *   GLYPH_SRC_CHS|gidx → CHS 汉库 FontChsNormal（128B/字）
+ *   0x00               → 空白格（全零）
+ *   0x36..0x3E         → Sym 标点带（64B/字：上排+下排，右列置空）
+ *   其余可印 PCS       → 日文 fontNum 字库（官方 GetGlyphTilePointers；
+ *                        3/4/5 原样 4bpp，0/1/2/6 以 fg15/bg0 展开）
+ * 返回 0=该码不可绘制。
  * ===================================================================== */
+#define GLYPH_SRC_CHS 0x01000000u
 
-/* 缓冲型窗口判定 ＝ 原 scene_is_buffer_printer：
- * textMode==2 血条缓冲；textMode==1&&fontNum==4 RenderTextHandleBold。 */
-static int is_buffer_printer(TextPrinter *win)
+static int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128)
 {
-    if (win_u8(win, WIN_TEXTMODE) == 2u)
+    /* ---- CHS 汉库 ---- */
+    if (code & GLYPH_SRC_CHS) {
+        const uint8_t *base = (const uint8_t *)ADDR_FONT_CHS_NORMAL
+            + ((uint32_t)(code & CHS_GLYPH_IDX_MASK) << 7);
+        unsigned x, y;
+        copy_tile32(out128 + 0x00, base + 0x00);
+        copy_tile32(out128 + 0x20, base + 0x20);
+        copy_tile32(out128 + 0x40, base + 0x40);
+        copy_tile32(out128 + 0x60, base + 0x60);
+        /* 步进规格化：12px 之外的列清到索引 0（背景位） */
+        for (y = 0; y < 8u; y++)
+            for (x = CHS_GLYPH_ADVANCE_PX - 8u; x < 8u; x++) {
+                put_px(out128 + 0x40, x, y, 0);
+                put_px(out128 + 0x60, x, y, 0);
+            }
         return 1;
-    return win_u8(win, WIN_TEXTMODE) == 1u
-        && win_u8(win, WIN_FONTNUM_REAL) == 4u;
+    }
+
+    /* ---- 空白 ---- */
+    if (code == 0) {
+        unsigned i;
+        for (i = 0; i < 128u; i++)
+            out128[i] = 0;
+        return 1;
+    }
+
+    /* ---- Sym 标点带 ---- */
+    if (code >= SYM_GLYPH_BASE && code < SYM_GLYPH_BASE + SYM_GLYPH_COUNT) {
+        const uint8_t *src = (const uint8_t *)(ADDR_FONT_CHS_SYM
+                                               + (code - SYM_GLYPH_BASE) * 64u);
+        unsigned i;
+        for (i = 0; i < 32u; i++) {
+            out128[0x00 + i] = src[i];
+            out128[0x20 + i] = src[32u + i];
+        }
+        for (i = 0; i < 64u; i++)
+            out128[0x40 + i] = 0;
+        return 1;
+    }
+
+    /* ---- 日文 fontNum 字库 ---- */
+    {
+        uint8_t *upper = 0;
+        uint8_t *lower = 0;
+        uint8_t font;
+
+        if (code >= 0xF7)
+            return 0;
+        font = win_u8(win, WIN_FONTNUM_REAL);
+        if (font > 6u)
+            font = FONT_NORMAL_SHADOWED;
+        chs_get_glyph_tile_pointers(font, (uint16_t)code, &upper, &lower);
+        if (!upper || !lower)
+            return 0;
+
+        for (unsigned i = 0; i < 64u; i++)
+            out128[0x40 + i] = 0;
+        if (chs_font_is_shadowed(font)) {
+            copy_tile32(out128 + 0x00, upper);
+            copy_tile32(out128 + 0x20, lower);
+        } else {
+            chs_copy_glyph_1bpp_to_4bpp(upper, (uint32_t *)(uintptr_t)(out128 + 0x00), 0xFu, 0x0u);
+            chs_copy_glyph_1bpp_to_4bpp(lower, (uint32_t *)(uintptr_t)(out128 + 0x20), 0xFu, 0x0u);
+        }
+        return 1;
+    }
 }
 
+/* =====================================================================
+ * §9 打印家族 [text.c L357/L368 分发结构原样保留]
+ *   sPrintGlyphFuncs[win->textMode]        ← 打印方式分发（text.c:359）
+ *   sWriteGlyphTilemapFuncs[win->fontNum]  ← 表项写入分发（text.c:368，mode1 用）
+ * 全面接管后原生 FontFuncTable 不再被查询，这两张表即唯一分发器。
+ * 行为差异对照：AXVJ 的 FontFuncTable(0..6) 按 textMode 索引，其中 [2]=缓冲、
+ * [1]=等宽（内部再按 fontNum 查 SubTable）——语义并入下表对应行；pokeruby 的
+ * mode2(UNKNOWN2 连续变宽) 在日版由 mode0/3 承担，故本表 3+ 行复用 TextMode0。
+ * ===================================================================== */
+
+typedef void (*PrintGlyphFunc)(
+    TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth);
+
+static void PrintGlyph_TextMode0(
+    TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth);
+static void PrintGlyph_TextMode1(
+    TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth);
+static void PrintGlyph_TextMode2(
+    TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth);
+
+/* 打印方式表（索引=win->textMode；越界回落 TextMode0＝对话主路径） */
+static const PrintGlyphFunc sPrintGlyphFuncs[8] = {
+    PrintGlyph_TextMode0,   /* 0：变宽像素直绘 */
+    PrintGlyph_TextMode1,   /* 1：等宽表项驱动（MONOSPACE） */
+    PrintGlyph_TextMode2,   /* 2：win+0x20 指针缓冲（AXVJ 血条/加粗） */
+    PrintGlyph_TextMode0,   /* 3：对话主窗（埋点分布最高） */
+    PrintGlyph_TextMode0,   /* 4+：预留——新组合直接在此挂函数/追加行 */
+    PrintGlyph_TextMode0,   /* 5 */
+    PrintGlyph_TextMode0,   /* 6 */
+    PrintGlyph_TextMode0,   /* 7 */
+};
+#define PRINT_GLYPH_MODES 8u
+
+/* 表项写入表（索引=win->fontNum）。当前各字体共用通用写法（CHS 动态槽位，
+ * upper/lower 由调用方算好）；保留按 fontNum 分叉的扩展位——对齐 pokeruby
+ * WriteGlyphTilemap_Font0_Font3/_Font1_Font4/_Font2_Font5/Font6 的分叉点。 */
+typedef void (*WriteGlyphTilemapFunc)(TextPrinter *, uint16_t, uint16_t);
+static const WriteGlyphTilemapFunc sWriteGlyphTilemapFuncs[8] = {
+    chs_update_tilemap, chs_update_tilemap,
+    chs_update_tilemap, chs_update_tilemap,
+    chs_update_tilemap, chs_update_tilemap,
+    chs_update_tilemap, chs_update_tilemap,
+};
+
 /*
- * PrintGlyph_Common_CHS — 官方 PrintGlyph_TextMode 系公共体：
- * 相位槽绑定、FE 后重置、TILE_OFFSET 补偿，然后进两趟核心；
- * 缓冲型窗口在此整体分流（FontFunc[2]/[1] 定案语义：写 [win+0x20]、步进 0x40、
- * textMode==1 另加 cursorTileX+1）。
- * 已知限制：缓冲槽 0x40 只容纳左半（TL/BL），F9 汉字右半丢弃。
+ * PrintGlyph_TextMode0 — 官方 PrintGlyph_TextMode0/3 系合流：
+ * 相位槽绑定、FE 后重置、TILE_OFFSET 补偿，然后进两趟核心
+ * （Linear 动态 tile + 原生 UpdateTilemap 写表项；
+ *  Linear/Mode2 公式选择内联于下方条件链，对应各场景模板差异）。
  */
-static void PrintGlyph_Common_CHS(
+static void PrintGlyph_TextMode0(
     TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth)
 {
     int slot_new = 0;
@@ -686,18 +806,6 @@ static void PrintGlyph_Common_CHS(
     unsigned last;
     int linear;
     int newline_reset = 0;
-
-    /* ---- 缓冲模式分流（不碰相位槽/BG tile）---- */
-    if (is_buffer_printer(win)) {
-        uint8_t *dst = (uint8_t *)(uintptr_t)win_u32(win, WIN_BUFFER_PTR);
-        copy_tile32(dst, tiles->tl);
-        copy_tile32(dst + 0x20, tiles->bl);
-        win_set_u32(win, WIN_BUFFER_PTR, win_u32(win, WIN_BUFFER_PTR) + 0x40u);
-        if (win_u8(win, WIN_TEXTMODE) == 1u)
-            win_set_u8(win, WIN_CURSOR_TILE_X,
-                       (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
-        return;
-    }
 
     st = chs_bind_pitch_slot(win, &slot_new);
     cur_tx = win_u8(win, WIN_CURSOR_TILE_X);
@@ -747,15 +855,109 @@ static void PrintGlyph_Common_CHS(
     DrawGlyphTiles_CHS_Core(win, tiles, linear, glyphWidth);
 }
 
-/* F9 汉字：gidx 经 Hook3（GetGlyphTilePointers_CHS）解析左右半字模。 */
+/*
+ * 动态槽位分配（mode1 用）。原生 font4 的字形像素来自场景初始化预渲染的
+ * 静态块 [TILE_BASE .. TILE_BASE+255]，打印只查 sFontType1Map 写表项；
+ * CHS 字形无法预渲染，改为占用块尾之后的空闲区。分配游标用引擎静态量而非
+ * WIN_TILE_OFFSET——InitTextPrinter 每次调用清零 TILE_OFFSET，共享静态窗
+ * 逐行复用时若用它分配会导致各行互相覆盖（实测六行同名＋首字缺左半）。
+ */
+/* 分配游标存固定 EWRAM（ADDR_GLYPH_ALLOC_NEXT=0x0203FFF8，遗留单槽位）。
+ * ⚠️ 不能用 C 静态变量：game.bin 无运行时加载器，静态变量落 BSS——写 ROM 被
+ * 忽略、读为垃圾（实测症状：每字形都分配到同一对 tile → 全屏显示最后字形）。 */
+#define MONO_TILE_NEXT  (*(volatile uint16_t *)ADDR_GLYPH_ALLOC_NEXT)
+
+static uint16_t AllocGlyphTiles(uint16_t base, unsigned n)
+{
+    uint16_t lo = (uint16_t)(base + 0x100u);            /* 跳过预渲染块 */
+    if (MONO_TILE_NEXT < lo || MONO_TILE_NEXT > (uint16_t)(base + 0x200u - n))
+        MONO_TILE_NEXT = lo;
+    {
+        uint16_t ret = MONO_TILE_NEXT;
+        MONO_TILE_NEXT = (uint16_t)(MONO_TILE_NEXT + n);
+        return ret;
+    }
+}
+
+/*
+ * PrintGlyph_TextMode1 — 等宽表项驱动（MONOSPACE）。
+ * 对齐 pokeruby PrintGlyph_TextMode1（text.c:2586）：字形上载后经
+ * sWriteGlyphTilemapFuncs[fontNum] 写表项；尾部游标推进对齐原生
+ * FontFunc[1]（cursorTileX++，位置由 cursor 字段进 UpdateTilemap）。
+ * 宽字形（12px 汉字）占两列：先右移一列写第二对表项再回推，与原生逐格步进自洽。
+ */
+static void PrintGlyph_TextMode1(
+    TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth)
+{
+    uint16_t base = win_u16(win, WIN_TILE_BASE);
+    uint8_t fontNum = win_u8(win, WIN_FONTNUM_REAL) & 7u;
+    unsigned two_col = (glyphWidth > 8u);
+    uint16_t t = AllocGlyphTiles(base, two_col ? 4u : 2u);
+    struct GlyphTileInfo info;
+
+    /* 着色在渲染层：DrawGlyphTile_CHS 按窗口 C/E/D 重映射后写入 VRAM。
+     * 宽字形第二列的 TR/BR 已由 GetGlyph 规格化（≥advance 列清零），整 tile
+     * 按 8px 渲染即可得到「墨+背景」的正确列。 */
+    info.textMode = 0;
+    info.colors = 0;
+    info.startPixel = 0;
+    info.width = 8;
+
+    info.src = tiles->tl;
+    info.dest = (uint32_t *)(uintptr_t)vram_tile(win, t);
+    DrawGlyphTile_CHS(win, &info, 0);
+    info.src = tiles->bl;
+    info.dest = (uint32_t *)(uintptr_t)vram_tile(win, t + 1);
+    DrawGlyphTile_CHS(win, &info, 0);
+    if (two_col) {
+        info.src = tiles->tr;
+        info.dest = (uint32_t *)(uintptr_t)vram_tile(win, t + 2);
+        DrawGlyphTile_CHS(win, &info, 0);
+        info.src = tiles->br;
+        info.dest = (uint32_t *)(uintptr_t)vram_tile(win, t + 3);
+        DrawGlyphTile_CHS(win, &info, 0);
+    }
+
+    sWriteGlyphTilemapFuncs[fontNum](win, t, (uint16_t)(t + 1));
+    if (two_col) {
+        win_set_u8(win, WIN_CURSOR_TILE_X,
+                   (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
+        sWriteGlyphTilemapFuncs[fontNum](win, (uint16_t)(t + 2), (uint16_t)(t + 3));
+    }
+    win_set_u8(win, WIN_CURSOR_TILE_X,
+               (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
+}
+
+/* 缓冲行（textMode==2）：当前为占位空实现——正常进入分发、消费字符但不绘制。
+ * 待办（未来纳入绘制）：按 win+0x20 指针缓冲语义完整实现（FontFunc[2] /
+ * RenderTextHandleBold@0x02CC0 定案：upper/lower 写指向处、步进 0x40），并先解决
+ * F9 汉字右半溢出（槽宽 0x40 只容 TL/BL）再启用，避免左半汉字这类半成品输出。 */
+static void PrintGlyph_TextMode2(
+    TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth)
+{
+    (void)win;
+    (void)tiles;
+    (void)glyphWidth;
+}
+
+/* F9 汉字：gidx 经 GetGlyph（CHS 汉库）产出组色 128B 后进分发。 */
 void PrintGlyph_CHS_Adv(TextPrinter *win, uint32_t gidx, unsigned glyphWidth)
 {
+    uint8_t buf[128];
     struct ChsGlyphTiles t;
 
-    GetGlyphTilePointers_CHS(FONT_NORMAL_SHADOWED, gidx, &t.tl, &t.bl);
-    GetGlyphTilePointers_CHS(FONT_NORMAL_SHADOWED,
-                             gidx | CHS_GLYPH_HALF_BIT, &t.tr, &t.br);
-    PrintGlyph_Common_CHS(win, &t, glyphWidth);
+    if (!GetGlyph(win, GLYPH_SRC_CHS | (gidx & CHS_GLYPH_IDX_MASK), buf))
+        return;
+    t.tl = buf + 0x00;
+    t.bl = buf + 0x20;
+    t.tr = buf + 0x40;
+    t.br = buf + 0x60;
+    {
+        unsigned m = win_u8(win, WIN_TEXTMODE);
+        if (m >= PRINT_GLYPH_MODES)
+            m = 0;
+        sPrintGlyphFuncs[m](win, &t, glyphWidth);
+    }
 }
 
 /* Sym 标点 / JP 组合缓冲（128B TL,BL,TR,BR 连续）入口。 */
@@ -767,7 +969,12 @@ void PrintGlyph_Tiles_CHS_Adv(
     t.bl = (uint8_t *)tiles128 + 0x20;
     t.tr = (uint8_t *)tiles128 + 0x40;
     t.br = (uint8_t *)tiles128 + 0x60;
-    PrintGlyph_Common_CHS(win, &t, glyphWidth);
+    {
+        unsigned m = win_u8(win, WIN_TEXTMODE);
+        if (m >= PRINT_GLYPH_MODES)
+            m = 0;
+        sPrintGlyphFuncs[m](win, &t, glyphWidth);
+    }
 }
 
 /* =====================================================================
@@ -798,63 +1005,27 @@ void GetGlyphTilePointers_C(uint32_t fontNum, uint32_t glyph,
 
 /* =====================================================================
  * §11 单字节分发 [text.c L357 sPrintGlyphFuncs 表位的单函数替代]
+ * 字形产出统一走 GetGlyph（含空白/Sym/JP/不可印判定）；本函数只做
+ * 「取制 → 组装 → 分发」。返回恒 1（引擎零回落：不可印位直接消费）。
  * ===================================================================== */
 int DrawGlyph_CHS(TextPrinter *win, uint32_t cur_char)
 {
-    const uint8_t *src;
-    uint32_t tmp_words[32];
-    uint8_t *tmp = (uint8_t *)tmp_words;
-    unsigned i;
+    uint8_t buf[128];
+    struct ChsGlyphTiles t;
 
-    if (cur_char == 0) {
-        for (i = 0; i < 128u; i++)
-            tmp[i] = 0;
-        PrintGlyph_Tiles_CHS_Adv(win, tmp, 8u);
+    if (!GetGlyph(win, cur_char, buf))
         return 1;
-    }
-
-    if (cur_char >= SYM_GLYPH_BASE
-        && cur_char < SYM_GLYPH_BASE + SYM_GLYPH_COUNT) {
-        src = (const uint8_t *)(ADDR_FONT_CHS_SYM
-                                + (cur_char - SYM_GLYPH_BASE) * 64u);
-        for (i = 0; i < 128u; i++)
-            tmp[i] = 0;
-        for (i = 0; i < 32u; i++) {
-            tmp[0x00 + i] = src[i];
-            tmp[0x20 + i] = src[32u + i];
-        }
-        PrintGlyph_Tiles_CHS_Adv(win, tmp, 8u);
-        return 1;
-    }
-
-    /* 其它可印 JP PCS：官方取址 + CHS 同池 8px 步进。 */
+    t.tl = buf + 0x00;
+    t.bl = buf + 0x20;
+    t.tr = buf + 0x40;
+    t.br = buf + 0x60;
     {
-        uint8_t *upper = 0;
-        uint8_t *lower = 0;
-        uint8_t font;
-
-        if (cur_char >= 0xF7)
-            return 1;                       /* 引擎零回落：不可印位直接消费 */
-        font = win_u8(win, WIN_FONTNUM_REAL);
-        if (font > 6u)
-            font = FONT_NORMAL_SHADOWED;
-        chs_get_glyph_tile_pointers(font, (uint16_t)cur_char, &upper, &lower);
-        if (!upper || !lower)
-            return 1;
-        for (i = 0; i < 128u; i++)
-            tmp[i] = 0;
-        if (chs_font_is_shadowed(font)) {
-            for (i = 0; i < 32u; i++) {
-                tmp[0x00 + i] = upper[i];
-                tmp[0x20 + i] = lower[i];
-            }
-        } else {
-            chs_copy_glyph_1bpp_to_4bpp(upper, (uint32_t *)(uintptr_t)(tmp + 0x00), 0xFu, 0x0u);
-            chs_copy_glyph_1bpp_to_4bpp(lower, (uint32_t *)(uintptr_t)(tmp + 0x20), 0xFu, 0x0u);
-        }
-        PrintGlyph_Tiles_CHS_Adv(win, tmp, CHS_GLYPH_ADVANCE_JP_PX);
-        return 1;
+        unsigned m = win_u8(win, WIN_TEXTMODE);
+        if (m >= PRINT_GLYPH_MODES)
+            m = 0;
+        sPrintGlyphFuncs[m](win, &t, CHS_GLYPH_ADVANCE_JP_PX);
     }
+    return 1;
 }
 
 /* =====================================================================
@@ -1281,7 +1452,7 @@ int ProcessCurrentChar_C(TextPrinter *win)
         }
     }
 
-    if (c == PCS_MENU_CURSOR && !is_buffer_printer(win)) {
+    if (c == PCS_MENU_CURSOR && win_u8(win, WIN_TEXTMODE) != 2u) {
         if (DrawMenuCursorEF(win))
             return 1;
         /* 未画出则按可印字符继续（引擎零回落） */
@@ -1387,53 +1558,33 @@ void WaitArrow_Prepare_C(TextPrinter *win)
 /* PCS 0xEF ► → CHS_MENU_CURSOR_TILE 固定对（InitMenu ▶）。 */
 int DrawMenuCursorEF(TextPrinter *win)
 {
-    uint8_t *upper = 0;
-    uint8_t *lower = 0;
-    uint32_t src_words[32];
-    uint8_t *src = (uint8_t *)src_words;
-    uint8_t font;
+    uint8_t buf[128];
     uint8_t *du;
     uint8_t *dl;
-    unsigned i;
-    uint16_t abs_u = CHS_MENU_CURSOR_TILE;
-    uint16_t abs_l = CHS_MENU_CURSOR_TILE_HI;
+    struct GlyphTileInfo info;
 
     if (!win)
         return 0;
-
-    font = win_u8(win, WIN_FONTNUM_REAL);
-    if (font > 6u)
-        font = FONT_NORMAL_SHADOWED;
-    if (!chs_font_is_shadowed(font))
+    if (!chs_font_is_shadowed(win_u8(win, WIN_FONTNUM_REAL)))
         return 0;
 
-    chs_get_glyph_tile_pointers(font, 0xEFu, &upper, &lower);
-    if (!upper || !lower)
+    /* ▶ 字形取制统一走 GetGlyph（归一化源），着色在渲染层 */
+    if (!GetGlyph(win, PCS_MENU_CURSOR, buf))
         return 0;
 
-    for (i = 0; i < 128u; i++)
-        src[i] = 0;
-    for (i = 0; i < 32u; i++) {
-        src[0x00 + i] = upper[i];
-        src[0x20 + i] = lower[i];
-    }
-
-    du = vram_tile(win, abs_u);
-    dl = vram_tile(win, abs_l);
-    {
-        struct GlyphTileInfo info;
-        info.textMode = 0;
-        info.colors = 0;
-        info.startPixel = 0;
-        info.width = 8;
-        info.dest = (uint32_t *)(uintptr_t)du;
-        info.src = src + 0x00;
-        DrawGlyphTile_CHS(win, &info, 0);
-        info.dest = (uint32_t *)(uintptr_t)dl;
-        info.src = src + 0x20;
-        DrawGlyphTile_CHS(win, &info, 0);
-    }
-    chs_update_tilemap(win, abs_u, abs_l);
+    du = vram_tile(win, CHS_MENU_CURSOR_TILE);
+    dl = vram_tile(win, CHS_MENU_CURSOR_TILE_HI);
+    info.textMode = 0;
+    info.colors = 0;
+    info.startPixel = 0;
+    info.width = 8;
+    info.dest = (uint32_t *)(uintptr_t)du;
+    info.src = buf + 0x00;
+    DrawGlyphTile_CHS(win, &info, 0);
+    info.dest = (uint32_t *)(uintptr_t)dl;
+    info.src = buf + 0x20;
+    DrawGlyphTile_CHS(win, &info, 0);
+    chs_update_tilemap(win, CHS_MENU_CURSOR_TILE, CHS_MENU_CURSOR_TILE_HI);
     win_set_u8(win, WIN_CURSOR_TILE_X,
                (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
     return 1;

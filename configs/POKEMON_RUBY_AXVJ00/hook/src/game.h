@@ -14,7 +14,6 @@
  * on the equ line sets the ADDR_* macro name. */
 #define ADDR_BATTLE_IF_GFX                 0x02020004u
 #define ADDR_CALL_VIA_R2                   0x081B12DCu
-#define ADDR_CHINESE_TILE_STATE            0x0203FFF8u
 #define ADDR_CHS_PITCH_CTRL                0x0203FF80u
 #define ADDR_CHS_PITCH_SLOTS               0x0203FF90u
 #define ADDR_COPY_GLYPH_1BPP_4BPP          0x08003830u
@@ -26,6 +25,7 @@
 #define ADDR_FONT_FUNC_TABLE               0x081BB3ACu
 #define ADDR_GAME_BIN                      0x08800000u
 #define ADDR_GET_GLYPH_TILE_PTRS           0x08003730u
+#define ADDR_GLYPH_ALLOC_NEXT              0x0203FFF8u
 #define ADDR_GMENU                         0x03000618u
 #define ADDR_MENU_PRINT_TEXT               0x0806F16Cu
 #define ADDR_OPT_FG_COLOR                  0x0203FFD1u

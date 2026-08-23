@@ -69,8 +69,10 @@ SlotTableVMA                         equ 0x09EA0000  ; C: ADDR_SLOT_TABLE
 ;   ChineseTileState slots[8] @ 0x0203FF90 (64B)
 ChsPitchCtrl                           equ 0x0203FF80  ; C: ADDR_CHS_PITCH_CTRL
 ChsPitchSlots                          equ 0x0203FF90  ; C: ADDR_CHS_PITCH_SLOTS
-; 遗留单槽（hook 未用，供 docs/config）
-ChineseTileState                       equ 0x0203FFF8  ; C: ADDR_CHINESE_TILE_STATE
+; 遗留单槽（hook 未用，供 docs/config）；2026-08-23 起复用为首字存 EWRAM 变量：
+;   mode1 动态 tile 分配游标（text_jp2chs AllocGlyphTiles）——引擎静态变量会落
+;   BSS，而 game.bin 无运行时加载器（写 ROM 被忽略/读为垃圾），必须放 EWRAM。
+ChineseTileState                       equ 0x0203FFF8  ; C: ADDR_GLYPH_ALLOC_NEXT
 ; DrawOptionMenuChoice 选中调色板覆盖（避开 FFF0/F7F8）
 OptPaletteOverride                     equ 0x0203FFD0  ; C: ADDR_OPT_PALETTE_OVERRIDE
 OptFgColor                             equ 0x0203FFD1  ; C: ADDR_OPT_FG_COLOR

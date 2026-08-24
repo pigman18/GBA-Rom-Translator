@@ -58,6 +58,21 @@ Q1 需要用 C 写逻辑吗？（查表 / 协议解析 / 寄存器编组 / 超�
 
 ## 3. 命名规则
 
+### 3.1 C 函数命名（2026-08-25 起，全引擎强制）
+
+| 场景 | 命名 | 例 |
+|---|---|---|
+| hook 官方函数，**原版实现**在自定义代码中被调用 | `XXX_Origin` | `InitWindowTileData_Origin`、`UpdateTilemap_Origin` |
+| hook 官方函数，**自定义修改后替换**原版 | `XXX_Hook` | `PrintNextChar_Hook`、`InitWindowTileData_Hook` |
+| **模仿官方函数**（来源 pokeruby / pokeemerald / pokefirered），仅内部使用 | 直接用官方名 | `UpdateTilemap`、`GetCursorTileNum`、`DrawGlyphTiles` |
+| 项目自有逻辑（官方无对应物） | 官方风格命名，见名知义 | `BindPitchSlot`、`GlyphScratchBase` |
+
+**禁止**：函数名出现 `_CHS` / `_EN` / `_I18N` 字样——本汉化目标是多语言汉化，
+方法名直接跟随官方命名（如 `GetStringWidth`，而非 `GetStringWidth_CHS`）。
+同理禁用 `chs_` 前缀与「bak 破方法名」回潮（`DrawGlyph_JP_ViaCHS` 类）。
+
+### 3.2 目录与文件命名
+
 | 对象 | 规则 | 例 |
 |---|---|---|
 | 域名（目录） | 固定枚举：`map_name_popup` / `battle` / `pokedex` / `option`；新域先在本文件登记（文本引擎本体在 `src/` 根：text.c + entry.s + hooks_origin.s） | `src/pokedex/` |
@@ -149,3 +164,104 @@ Q1 需要用 C 写逻辑吗？（查表 / 协议解析 / 寄存器编组 / 超�
 [ ] 6. 构建：game.bin（如动了 C）→ armips → 模拟器冒烟
 [ ] 7. 校验：订址桩字面量 == syms 地址（可临时 dump 或用调试器确认）
 ```
+
+## 10. 文本引擎：原生分区实测与 CHS 绘制移植设计（2026-08-25）
+
+> 数据来源：gdb_patcher 采集 `InitWindowTileData`（入口 0x08002A50 / 出口 0x08002AEA，
+> 均与美版同址，fontNum 跳表 7 项实证）+ `InitTextPrinter`，原盘 ROM，
+> 覆盖场景：对话/开始菜单/队伍/图鉴/能力技能页/地图弹窗。日志 20514 行。
+
+### 10.1 实测事实
+
+| # | 事实 | 证据 |
+|---|---|---|
+| F1 | **tm1 窗（textMode=1）场景进入时把整个字库分帧预渲染**：256 字模 × 2 tile = 512 tile，startOffset 恒 1 → **恰好铺满整个 charBase**（[1,0x201)） | 每模板恰好 256 次命中（r2=字模序号 0..255 逐帧递增，每次 1 字模=2 tile）；弹窗 3 次进入=768 命中 |
+| F2 | 预渲染按窗体模板逐份进行，实测 5 份：`081BB874`（对话,cb0）、`081BB5BC`（cb2）、`081BB49C`（弹窗,cb0,×3）、`081BB43C`（队伍,cb1）、`081BB484`（cb2,采集截断） | IWTD r0 分布 |
+| F3 | **tm3 窗（`081BB46C`，开始菜单，470 次 ITP）不预渲染** → tm3 = 逐字原地像素绘制（FontFuncTable[3] @0x08003494 另一策略） | IWTD 无该模板 |
+| F4 | 场景图标 = 字库预渲染**之后**盖进的章（覆盖对应字模槽）：队伍 Lv/♂/♀ = 0x14C-0x151、状态 = 0x18C-0x19B（原生 `PartyMenuWriteTilemap` 直写 VRAM） | pokeruby party_menu.c + 队伍截图对照 |
+| F5 | 出口 r0 = 0x08002AAB（函数内返回地址残留）→ 分帧加载器返回值无意义，加载进度由调用方的 r2 序号承载 | IWTD-Ret 恒值 |
+| F6 | 全部窗体 TILE_BASE=1（1586 条 ITP 实证） | gdb 日志 |
+| F7 | **能力页场景自加载字库**：LZ77 → 0x06008000，dst_size=0x2000（8KB = tile [0x00,0x100)），**不走 InitWindowTileData**（081BB544/081BB784 有 ITP 无 IWTD 的原因）——场景字库与 font3 预渲染是两套互斥机制，按场景二选一 | 第二轮采集 LZDecompressVram LR=0x0800AE4E |
+| F8 | **能力页场景映射 [0x1C9,0x1F7]**（win=0x0202E5DC，LR=0x080034DA）——场景在 charBase 2 尾部映射自己的图形槽 | 原生 UTM 51 条明细 |
+| F9 | **队伍窗原生数字映射 [0x74,0xD5]**（u=0xD5 恒定 + l=0x74-0x9A，LR=0x080035C0）——cb1 池 [0xD7,0x14B] 恰好避开（0xD5<0xD7，队伍页实测通过） | 原生 UTM 明细 |
+| F10 | 原生代码确实会走 UpdateTilemap（共 51 条，LR 三类：0x080035C0 队伍数字 / 0x08003EB2 光标 0xBA-0xBB / 0x080034DA 能力页）——「场景章」不止直写 VRAM 一种 | UTM 调用方分布（C引擎 1306 / 原生 51） |
+
+### 10.2 原生绘制架构结论
+
+```
+tm1（等宽）: 场景进入 → InitWindowTileData 分帧预渲染字库（512 tile 铺满 charBase）
+            → 打印 = 写表项映射字库槽（font3 线性 2*glyph / font4 FontType1Map 紧凑表）
+            → 零像素绘制；场景图标章在字库槽之上
+tm3（菜单）: 无预渲染；逐字原地像素画（FontFuncTable[3]）
+tm0:        原地画 + 表项（pokeruby DrawGlyph_TextMode0 同构）
+分区方式:    无分配器——场景代码硬编码分区（字库区=全 charBase，图标章踩字库保留槽）
+```
+
+**推论**：tm1 窗的 charBase 里**不存在**原生预留的 CHS scratch 空间——CHS 必须
+与字库/图标章**槽位共存**。任何"全局游标池"都与多窗多块并发互斥（能力页/图鉴
+乱码根因），必须废除。
+
+### 10.3 CHS 绘制移植设计（pokeruby 结构 + 槽位分区表）
+
+**目标结构**（全部按 §3.1 命名）：
+
+```
+PrintNextChar_Hook            # 入口（现 PrintNextChar 改名；hooks_origin.s 同步）
+ ├─ GetGlyph                  # 取字模（不变）
+ ├─ 两级 PCS 分发表            # (1,4)=PrintGlyph_TextMode1_Origin（保留，实测✓）
+ └─ PrintGlyph_TextMode1      # CHS/自绘：改位置式寻址（见下）
+     ├─ GetCursorTileNum      # pokeruby 名：tile = f(cursorTY,cursorTX,row,spill)
+     ├─ DrawGlyphTiles        # 两趟 8+(w-8) 核心（已存在，保留）
+     ├─ WriteGlyphTilemap     # 已存在
+     └─ GlyphScratchBase(cb)  # 新增：CHS scratch 基址表（见 10.4）
+InitWindowTileData_Hook       # 新增（预留）：分区链观测/干预点
+InitWindowTileData_Origin     # 新增（预留）：调原版 0x08002A50
+```
+
+**CHS scratch 寻址 = 位置式**（pokeruby tm0/tm3 同构，零全局状态）：
+
+```
+tile = GlyphScratchBase(charBase) + (cursorTY*2 + row) * STRIDE + cursorTX*2 + spill
+```
+
+- 窗体自有字段 cursorTileX/Y 定位 → 多窗/多块**结构上不可能互踩**（不同块不同
+  cursor 位置 → 不同 tile）
+- 删除：`AllocGlyphTiles`、`MONO_TILE_NEXT`、`NEXT-2/-1` 共享列 hack、
+  `PcsPrint_NativeTm1` 之外的池逻辑
+
+### 10.4 场景盖章槽位表（实测 2026-08-25 第二轮，含能力页）
+
+| charBase | 已实测占用（不可碰） | 自由区（CHS 可用） | 依据 |
+|---|---|---|---|
+| 1（队伍 font4） | font4 区 [2,0xD6]；**原生数字映射 [0x74,0xD5]**；图标章 [0x14C-0x151]；状态章 [0x18C-0x19B] | **[0xD7,0x14B]**（117 tile ≈ 29 字） | F4/F8/F9；队伍页实测通过 |
+| 2（font3 菜单/对话/图鉴/**能力页**） | **能力页自加载字库 [0x00,0x100)**（F7）；**能力页映射 [0x1C9,0x1F7]**（F8）；▶对 [0x1E0-0x1E1]；UI 图标 [0x1E8-0x1FF]；font3 预渲染 [1,0x201)（菜单/对话场景，无原生映射=可覆写） | **[0x100,0x1C8]**（201 tile ≈ 50 字，各场景公共自由区） | F7/F8 + 两轮 UTM 落点分布 |
+| 0（弹窗/对话 font3） | 地图 tileset 共存关系未明（LZ→0x06000000 ×11） | 现池 [0x101,0x1AB] 实测正常，暂不动 | 弹窗 3 次进入均全量 blit |
+
+> ⚠️ cb2 自由区 [0x100,0x1C8] 容量 50 字/屏：对话满 3 行（~54 字）会回绕踩本屏
+> 前 4 字——对话场景 font3 全区无章，若实测出现可按场景放宽（能力页才需要让出
+> [0x00,0x100)）。根治见 §10.5 位置式寻址。
+
+### 10.5 pokeruby 逻辑能否避开这些 bug？（结构分析）
+
+| bug 类 | 实例 | pokeruby 结构下 |
+|---|---|---|
+| 全局游标踩踏 | 图鉴名称碎片、跨窗跨块互踩、能力页文本碎片 | **结构上不可能**：无全局分配器，tile 位置由窗体自有 cursor 字段决定（位置式寻址） |
+| 场景硬编码章被踩 | 队伍图标（池踩 0x14C-0x151）、能力页字库/映射（池踩 [0x00,0x100)/[0x1C9,0x1F7]） | **美版能**（章=场景 C 代码，编译进场景逻辑自洽）；**JP 必须用声明式槽位表替代**——JP 场景无源码，章的位置只能 gdb 实测积累 |
+
+**结论**：pokeruby 路线 = ①位置式寻址（结构根治第一类）+ ②场景章表（第二类
+的唯一解，表是 JP 场景分区的实测描述，不是补丁）。表的每一行都有 gdb 证据链
+（本节 F1-F10），新场景出乱码 = 表缺一行，补一行即收口。
+
+### 10.6 实施顺序
+
+0. **战术修复（先行）**：cb2 池 [4,0x1FB] → **[0x100,0x1C8]**（§10.4 实测自由区）
+   ——修能力/技能页乱码；cb1/cb0 不动
+1. 改名（§3.1）：`PrintNextChar`→`PrintNextChar_Hook`、`chs_update_tilemap`→
+   `UpdateTilemap_Origin`、`chs_get_glyph_tile_pointers`→`GetGlyphTilePointers_Origin`、
+   `chs_copy_glyph_*`→`CopyGlyph*To4bpp_Origin`、`chs_print_glyph_tm1_origin`→
+   `PrintGlyph_TextMode1_Origin`、`chs_bind_pitch_slot`→`BindPitchSlot`（entry.s /
+   hooks_origin.s 同步）
+2. `GlyphScratchBase(cb)` + 位置式 `GetCursorTileNum` 替换 `AllocGlyphTiles` 全部
+   调用点；删池与共享列 hack（根治第一类 bug）
+3. 场景章表（§10.4）表驱动碰撞重映射，一处实现（第二类 bug 收口点）
+4. 构建 + 回归：队伍（HP标签/♂/Lv/铁哑铃）、图鉴、能力/技能页、弹窗、对话、开始菜单

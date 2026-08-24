@@ -546,9 +546,24 @@ static uint16_t AllocGlyphTiles(TextPrinter *win, unsigned n)
     uint8_t *tpl = win_template(win);
     uint8_t cb = tpl ? tpl[1] : 0;
     uint16_t base = win_u16(win, WIN_TILE_BASE);
-    uint16_t lo = (uint16_t)(base + 0x100u);
-    uint16_t hi = (cb == 2) ? (uint16_t)(base + 0x1FBu) : (uint16_t)(base + 0x1AFu);
-    hi = (uint16_t)(hi - n);
+    uint16_t lo;
+    uint16_t hi;
+    /* 池范围按 charBase 分治（gdb 1586 条实证 TILE_BASE 恒 1）：
+     *  cb=1（font4 窗，队伍名 0x081BB43C）：font4 预渲染紧凑区 [2,0xD6]
+     *   （FontType1Map u8 max=212，(1,4) PCS 原生表项指向它）+ 图标带
+     *   [0x14C-0x151/0x18C-0x19B]（Lv/♂/♀/状态，原生直写 VRAM）均不可碰
+     *   → 池取 [0xD7,0x14B]（117 tile ≈ 29 字/屏）。
+     *  cb=2（font3 窗，菜单/对话/图鉴/请选择）：font3 线性区 [1,0x1BC] 在
+     *   本引擎路由下无任何原生映射（(1,3)/(3,3) PCS 全走自绘，实证现有池
+     *   踩 [0x101,0x1BC] 从未出错）→ 整区作 scratch，池 [4,0x1FB]
+     *   （504 tile ≈ 126 字/屏），消图鉴多块同窗的池回绕互踩。 */
+    if (cb == 1) {
+        lo = 0xD7u;
+        hi = (uint16_t)(0x14Bu - n);
+    } else {
+        lo = (uint16_t)(base + 4u);
+        hi = (uint16_t)(((cb == 2) ? (base + 0x1FBu) : (base + 0x1AFu)) - n);
+    }
     {
         uint16_t cur = MONO_TILE_NEXT;
         if (cur < lo || cur > hi)

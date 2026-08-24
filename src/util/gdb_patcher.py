@@ -777,8 +777,11 @@ def _mk_sheet_handler(name: str) -> HandlerFn:
             f" size=0x{size:04X} tag=0x{tag:04X} LR=0x{(regs.get('r14', 0) & ~1):08X}"
         )
         ctx.log(_rom_head(ctx, data, size))
-        if _TILES_HARVESTER is not None and name in ("LoadSpriteSheet", "LoadCompressedObjectPic"):
-            _TILES_HARVESTER.on_sheet(name, regs)
+        if _TILES_HARVESTER is not None:
+            if name in ("LoadSpriteSheet", "LoadCompressedObjectPic"):
+                _TILES_HARVESTER.on_sheet(name, regs)
+            elif name in ("LoadSpritePalette", "LoadCompressedObjectPalette"):
+                _TILES_HARVESTER.on_sprite_palette(name, regs)
 
     return fn
 
@@ -895,9 +898,10 @@ class TilesHarvester:
     """tiles 实时采集器。
 
     断点处只抓 sheet（ROM 源解压）；OAM 实测配对延迟到后续任意断点命中
-    （sheet 加载先于 OAM 建立，当场扫必空）。配对成功 → 导 PNG + 追加
-    preset；去重两层：本局 set → yaml 已有 address（启动加载 + 追加同步，
-    跨局生效），地址已存在则不导 PNG 也不追加 preset。
+    （sheet 加载先于 OAM 建立，当场扫必空）。配对成功 → 导 PNG + 写 preset；
+    去重：本局 set；跨局按 preset 完整配置的 md5 指纹比对——地址已有但指纹
+    不一致（管线升级/证据更全/旧版无指纹）则以最新配置覆盖并重新导出，
+    一致才跳过。调色板是硬前置，解析不到仅记日志不落盘。
     """
 
     def __init__(
@@ -918,32 +922,33 @@ class TilesHarvester:
         self.pending: dict[int, PendingSheet] = {}   # tag → sheet
         self.done_tags: set[int] = set()
         self.exported_addrs: set[int] = set()        # 本局已导 ROM 地址
-        self.known_addrs: set[str] = self._load_known_addrs()  # yaml 已有（跨局）
+        self.known_md5: dict[str, Optional[str]] = self._load_known_md5()  # 跨局指纹
+        self.pal_by_tag: dict[int, tuple[int, int, bool]] = {}  # tag → (src, size, compressed)
         self.stats = {"captured": 0, "paired": 0, "skipped": 0, "failed": 0}
 
-    def _read_mem_chunked(self, addr: int, size: int, chunk: int = 0x40) -> bytes:
-        """mGBA 0.10.5 stub 单包上限约 0x40（超限回 E06）；大块读取必须分段。
-        与 _gba_gdb.RSP.read_mem 同款策略，但不改共享 GdbClient。"""
-        out = bytearray()
-        for off in range(0, size, chunk):
-            n = min(chunk, size - off)
-            out += self.gdb.read_mem(addr + off, n)
-        return bytes(out)
+    @staticmethod
+    def _preset_md5(cfg: dict) -> str:
+        import hashlib
+        import json
 
-    def _load_known_addrs(self) -> set[str]:
-        """启动时读一次 yaml，收集已有 preset 的地址（小写十六进制串）。"""
+        payload = json.dumps(cfg, ensure_ascii=False, sort_keys=True,
+                             separators=(",", ":"))
+        return hashlib.md5(payload.encode("utf-8")).hexdigest()
+
+    def _load_known_md5(self) -> dict[str, Optional[str]]:
+        """启动时读一次 yaml：地址(小写) → 已存 preset 的配置指纹（无则 None）。"""
         try:
             import yaml
 
             data = yaml.safe_load(self.game_yaml.read_text(encoding="utf-8")) or {}
         except Exception:
-            return set()
+            return {}
         presets = (data.get("tiles") or {}).get("presets") or []
-        return {
-            str(p.get("address") or "").lower()
-            for p in presets
-            if isinstance(p, dict)
-        }
+        out: dict[str, Optional[str]] = {}
+        for p in presets:
+            if isinstance(p, dict) and p.get("address"):
+                out[str(p["address"]).lower()] = p.get("md5")
+        return out
 
     # ---- 断点侧 ----
 
@@ -1005,6 +1010,57 @@ class TilesHarvester:
         if not self.enabled:
             return
         self.stats["captured"] += 0  # 预留：后续按 LR 邻近挂 palette
+
+    def on_sprite_palette(self, name: str, regs: dict) -> None:
+        """LoadSpritePalette / LoadCompressedObjectPalette 命中：
+        按 tag 记录未渐变 ROM 源（{data,size,tag} 与 sheet 同构）。"""
+        if not self.enabled:
+            return
+        try:
+            p = regs.get("r0", 0)
+            head = self.gdb.read_mem(p, 8)
+            src = u32(head, 0)
+            size = u16(head, 4)
+            tag = u16(head, 6)
+            comp = name == "LoadCompressedObjectPalette"
+            if region_of(src) != "ROM" or not self.origin:
+                return
+            fo = src - 0x08000000
+            if not (0 <= fo < len(self.origin)):
+                return
+            self.pal_by_tag[tag] = (src, size, comp)
+        except GdbError:
+            pass
+
+    def _tag_palette(self, sh: PendingSheet) -> Optional[list[tuple]]:
+        """按 sheet 的 tag 取未渐变 ROM 调色板（游戏自身就是用 tag 配对的）。"""
+        ent = self.pal_by_tag.get(sh.tag)
+        if not ent:
+            return None
+        from util.tiles_patcher import decode_palette_gba555, lz77_decompress
+
+        src, size, comp = ent
+        fo = src - 0x08000000
+        if not (0 <= fo < len(self.origin)):
+            return None
+        head = self.origin[fo]
+        if comp or head in (0x10, 0x11):
+            dst_size = self.origin[fo + 1] | (self.origin[fo + 2] << 8) | (self.origin[fo + 3] << 16)
+            raw = None
+            for swap in (head == 0x11, head != 0x11):
+                try:
+                    cand = lz77_decompress(self.origin[fo:], swap=swap)
+                except Exception:
+                    continue
+                if len(cand) == dst_size:
+                    raw = cand
+                    break
+        else:
+            raw = self.origin[fo : fo + max(size * 32, 32)]
+        if not raw:
+            return None
+        pal = decode_palette_gba555(raw[:1024], bank_count=max(1, min(len(raw), 1024) // 32))
+        return pal[0] if pal and pal[0] else None
 
     # ---- OAM 观测（反向定位：OAM → VRAM 图块 → sheet 内偏移）----
 
@@ -1092,36 +1148,58 @@ class TilesHarvester:
         self._finish(sh, w, h, is8m)
 
     def flush_observed(self) -> int:
-        """会话收尾：有观测但未过收敛门的 sheet 用当前最优证据补导。"""
+        """会话收尾：有观测但未过收敛门的 sheet 用当前最优证据补导。
+        只统计真正落盘的（缺调色板的软跳过不计）。"""
         n = 0
         for sh in list(self.pending.values()):
             if sh.exported or not sh.sizes:
                 continue
             (w, h, is8m), _ = sh.sizes.most_common(1)[0]
-            self._finish(sh, w, h, is8m)
-            n += 1
+            if self._finish(sh, w, h, is8m):
+                n += 1
         return n
 
-    def _finish(self, sh: PendingSheet, w: int, h: int, is8: bool) -> None:
-        """观测充分：去重 → 导 PNG → 追加 preset。"""
+    def _finish(self, sh: PendingSheet, w: int, h: int, is8: bool) -> bool:
+        """观测充分：指纹比对 → 导 PNG → 覆盖/追加 preset。返回是否真正导出。"""
         sh.exported = True
         sh.idle = 0
         addr_key = f"0x{sh.data_addr:08X}".lower()
-        if sh.data_addr in self.exported_addrs or addr_key in self.known_addrs:
+        if sh.data_addr in self.exported_addrs:
             self.stats["skipped"] += 1
-            return
+            return False
+        bpp = 8 if is8 else 4
+        bps = ((h // 8) * (w // 8)) * (TILE_8BPP if is8 else TILE_4BPP)
+        count = max(1, len(sh.raw) // bps)
+        bank_list = [sh.banks.get(i) for i in range(count)]
+        cfg = self._build_preset(sh, bpp, count, w, h, bank_list)
+        md5hex = self._preset_md5(cfg)
+        old = self.known_md5.get(addr_key)
+        if addr_key in self.known_md5 and old == md5hex and addr_key in (
+            a for a in [addr_key]
+        ):
+            # 指纹一致：配置没变，跳过（PNG 也无需重导）
+            self.stats["skipped"] += 1
+            return False
         try:
-            self._export(sh, w, h, is8)
+            ok = self._export(sh, w, h, is8, count, bank_list)
+            if not ok:
+                self.stats["skipped"] += 1  # 缺调色板软跳过：仅采集
+                return False
+            self._upsert_preset(sh, cfg, md5hex)
+            self.known_md5[addr_key] = md5hex
             self.exported_addrs.add(sh.data_addr)
             self.stats["paired"] += 1
+            return True
         except Exception as e:
             self.log(f"  [tiles] 导出失败 @0x{sh.data_addr:08X}: {e}")
             self.stats["failed"] += 1
+            return False
 
-    def _export(self, sh: PendingSheet, w: int, h: int, is8: bool) -> None:
+    def _export(self, sh: PendingSheet, w: int, h: int, is8: bool) -> bool:
+        """导 PNG + 追加 preset。调色板是硬前置：解析不到 → 仅日志，不落盘。"""
         from PIL import Image
 
-        from util.tiles_patcher import decode_tiles, decode_palette_gba555
+        from util.tiles_patcher import decode_tiles
 
         try:
             dispcnt = u16(self.gdb.read_mem(0x04000000, 2), 0)
@@ -1139,27 +1217,29 @@ class TilesHarvester:
         if bytes_per_sprite <= 0:
             raise ValueError(f"sprite 尺寸非法 {w}x{h}")
         count = max(1, len(sh.raw) // bytes_per_sprite)
-        self.out_dir.mkdir(parents=True, exist_ok=True)
 
-        pal_banks = self._read_obj_palettes()
+        # ---- 调色板硬门控 ----
+        palette = self._tag_palette(sh)
+        pal_src = f"ROM tag=0x{sh.tag:04X}" if palette else None
+        bank_list = [sh.banks.get(i) for i in range(count)]
+        if palette is None:
+            pal_banks = self._read_obj_palettes()
+            known_banks = [b for b in bank_list if b is not None]
+            if pal_banks and known_banks and pal_banks[known_banks[0]]:
+                palette = pal_banks[known_banks[0]]
+                pal_src = f"live bank {known_banks[0]}"
+        if palette is None:
+            self.log(
+                f"  [tiles] 缺调色板 @0x{sh.data_addr:08X} tag=0x{sh.tag:04X}"
+                f"（{count}×{w}×{h} {bpp}bpp）：仅采集，不导出不写配置"
+            )
+            return False
+
         prefix = f"0x{sh.data_addr:08X}"
         png_path = self.out_dir / f"{prefix}.png"
+        self.out_dir.mkdir(parents=True, exist_ok=True)
 
-        bank_list = [sh.banks.get(i) for i in range(count)]
-        known_banks = [b for b in bank_list if b is not None]
-        images = []
-        if pal_banks and len(set(known_banks)) > 1:
-            # 观测到多 bank：逐子图按各自 bank 渲染（未观测的回退 bank0）
-            for i in range(count):
-                b = sh.banks.get(i, 0)
-                slice_ = sh.raw[i * bytes_per_sprite : (i + 1) * bytes_per_sprite]
-                images.append(decode_tiles(slice_, bpp, w // 8, h // 8,
-                                           count=1, palette=pal_banks[b])[0])
-        elif pal_banks and known_banks:
-            palette = pal_banks[known_banks[0]]
-            images = decode_tiles(sh.raw, bpp, w // 8, h // 8, count=count, palette=palette)
-        else:
-            images = decode_tiles(sh.raw, bpp, w // 8, h // 8, count=count, palette=None)
+        images = decode_tiles(sh.raw, bpp, w // 8, h // 8, count=count, palette=palette)
 
         if count == 1:
             images[0].save(png_path)
@@ -1170,13 +1250,17 @@ class TilesHarvester:
             for i, img in enumerate(images):
                 sheet_img.paste(img, ((i % cols) * w, (i // cols) * h))
             sheet_img.save(png_path)
-        self.log(f"  [tiles] 导出 {png_path.name} ({count}×{w}×{h} {bpp}bpp)")
+        self.log(f"  [tiles] 导出 {png_path.name} ({count}×{w}×{h} {bpp}bpp, 调色板={pal_src})")
 
         self._append_preset(sh, bpp, count, w, h, bank_list)
+        return True
 
     def _read_obj_palettes(self) -> Optional[list[list[tuple]]]:
         try:
-            data = self._read_mem_chunked(0x05000300, 256)
+            # OBJ 调色板 RAM 全段：0x05000200~0x050003FF（16 bank × 32B）。
+            # 旧实现读 0x05000300+256B：基址错位到 bank8-15 且长度不足，
+            # 解出的 bank0-7 实为 bank8-15、bank8-15 为空 → 导出全透明。
+            data = self._read_mem_chunked(0x05000200, 512)
         except GdbError:
             return None
         if not data or not any(data):

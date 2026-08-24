@@ -638,7 +638,7 @@ static void PrintGlyph_TextMode1(
     volatile struct ChineseTileState *st;
     uint8_t cur_tx;
     unsigned w, startPixel, w2, spilled;
-    uint16_t t;
+    uint16_t t, u1, l1, u2, l2;
     uint8_t fontNum = win_u8(win, WIN_FONTNUM_REAL) & 7u;
     struct GlyphTileInfo info;
 
@@ -677,25 +677,40 @@ static void PrintGlyph_TextMode1(
     w2 = (w > 8u) ? (w - 8u) : 0u;
     spilled = (startPixel > 0u);
 
-    t = AllocGlyphTiles(win, 4u);           /* 恒 4：列0 对 + 溢出列 对 */
+    /* 共享列（bak 原地合成语义）：startPixel>0 ⇒ 首列即上一字形溢出列，
+     * 其表项仍指向上一次分配的溢出对（池线性推进 ⇒ 分配前 NEXT-2/-1）。
+     * pass1 直接在该对上 RMW 合成，[0,startPixel) 保留上一字右半像素；
+     * 禁止重映射表项——用空白池 tile 重映射会把上一字右半整个顶掉。 */
+    if (spilled) {
+        u1 = (uint16_t)(MONO_TILE_NEXT - 2u);
+        l1 = (uint16_t)(MONO_TILE_NEXT - 1u);
+    }
+
+    t = AllocGlyphTiles(win, 4u);           /* 恒 4：首列对 + 溢出列对 */
+
+    if (!spilled) {
+        u1 = t;
+        l1 = (uint16_t)(t + 1u);
+        /* 表项：首列 cursor 格（仅全新列需要映射；共享列已指向 u1/l1） */
+        win_set_u8(win, WIN_CURSOR_TILE_X,
+                   (uint8_t)(st->base_tx + (st->chs_px >> 3)));
+        sWriteGlyphTilemapFuncs[fontNum](win, u1, l1);
+    }
+    u2 = (uint16_t)(t + 2u);
+    l2 = (uint16_t)(t + 3u);
 
     info.textMode = 0;
     info.colors = 0;
     info.startPixel = (uint8_t)startPixel;
     info.width = 8;
 
-    /* 第一趟：TL/BL 宽 8（跨列 spill 到保留区第 2 对） */
+    /* 第一趟：TL/BL 宽 8（跨列 spill 到新溢出对） */
     info.src = tiles->tl;
-    info.dest = (uint32_t *)(uintptr_t)vram_tile(win, t);
-    DrawGlyphTile_ShadowedFont(win, &info, spilled ? (uint8_t *)(uintptr_t)vram_tile(win, t + 2) : 0);
+    info.dest = (uint32_t *)(uintptr_t)vram_tile(win, u1);
+    DrawGlyphTile_ShadowedFont(win, &info, spilled ? (uint8_t *)(uintptr_t)vram_tile(win, u2) : 0);
     info.src = tiles->bl;
-    info.dest = (uint32_t *)(uintptr_t)vram_tile(win, t + 1);
-    DrawGlyphTile_ShadowedFont(win, &info, spilled ? (uint8_t *)(uintptr_t)vram_tile(win, t + 3) : 0);
-
-    /* 表项：首列 cursor 格 */
-    win_set_u8(win, WIN_CURSOR_TILE_X,
-               (uint8_t)(st->base_tx + (st->chs_px >> 3)));
-    sWriteGlyphTilemapFuncs[fontNum](win, t, (uint16_t)(t + 1));
+    info.dest = (uint32_t *)(uintptr_t)vram_tile(win, l1);
+    DrawGlyphTile_ShadowedFont(win, &info, spilled ? (uint8_t *)(uintptr_t)vram_tile(win, l2) : 0);
 
     st->chs_px = (uint16_t)(st->chs_px + 8u);
 
@@ -705,7 +720,7 @@ static void PrintGlyph_TextMode1(
         if (spilled) {
             win_set_u8(win, WIN_CURSOR_TILE_X,
                        (uint8_t)(st->base_tx + (st->chs_px >> 3)));
-            sWriteGlyphTilemapFuncs[fontNum](win, (uint16_t)(t + 2), (uint16_t)(t + 3));
+            sWriteGlyphTilemapFuncs[fontNum](win, u2, l2);
         }
         st->last_adv = (uint8_t)w;
         win_set_u8(win, WIN_CURSOR_TILE_X,
@@ -717,15 +732,15 @@ static void PrintGlyph_TextMode1(
      * [startPixel, +w2)，与第一趟 spill [0,startPixel) 拼满整列） */
     info.width = (uint8_t)w2;
     info.src = tiles->tr;
-    info.dest = (uint32_t *)(uintptr_t)vram_tile(win, t + 2);
+    info.dest = (uint32_t *)(uintptr_t)vram_tile(win, u2);
     DrawGlyphTile_ShadowedFont(win, &info, 0);
     info.src = tiles->br;
-    info.dest = (uint32_t *)(uintptr_t)vram_tile(win, t + 3);
+    info.dest = (uint32_t *)(uintptr_t)vram_tile(win, l2);
     DrawGlyphTile_ShadowedFont(win, &info, 0);
     /* 表项：溢出列 cursor+1 格 */
     win_set_u8(win, WIN_CURSOR_TILE_X,
                (uint8_t)(st->base_tx + (st->chs_px >> 3)));
-    sWriteGlyphTilemapFuncs[fontNum](win, (uint16_t)(t + 2), (uint16_t)(t + 3));
+    sWriteGlyphTilemapFuncs[fontNum](win, u2, l2);
 
     /* 相位推进 + cursorTileX 同步（像素制，Field 同款公式） */
     st->chs_px = (uint16_t)(st->chs_px + w2);

@@ -43,46 +43,6 @@ tiles:
     bank_list: 0,0,1,1,0,0,2,1,0,2,0,1,2,0,1,1,2,0,0,1,1,2,0
     pointers:
     - '0x0839747C'
-  - id: rt_0836CDA4
-    label: rt tag=0x03E9 LoadCompressedObjectPic
-    default: false
-    address: '0x0836CDA4'
-    format: 4bpp
-    compression: lz77_swap
-    sprite_size: 8x8
-    count: 41
-    raw_size: 1312
-    source: gdb_patcher
-  - id: rt_0836FBD4
-    label: rt tag=0x03EA LoadCompressedObjectPic
-    default: false
-    address: '0x0836FBD4'
-    format: 4bpp
-    compression: lz77_swap
-    sprite_size: 8x8
-    count: 64
-    raw_size: 2048
-    source: gdb_patcher
-  - id: rt_083BC6C4
-    label: rt tag=0x7533 LoadSpriteSheet
-    default: false
-    address: '0x083BC6C4'
-    format: 4bpp
-    compression: none
-    sprite_size: 32x8
-    count: 16
-    raw_size: 2048
-    source: gdb_patcher
-  - id: rt_0867EEA0
-    label: rt tag=0xD6E0 LoadCompressedObjectPic
-    default: false
-    address: '0x0867EEA0'
-    format: 4bpp
-    compression: lz77_swap
-    sprite_size: 16x16
-    count: 3
-    raw_size: 384
-    source: gdb_patcher
 texts:
   filters:
   - id: global_anim_cmd_filter

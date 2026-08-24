@@ -43,500 +43,505 @@ tiles:
     bank_list: 0,0,1,1,0,0,2,1,0,2,0,1,2,0,1,1,2,0,0,1,1,2,0
     pointers:
     - '0x0839747C'
-
+  - id: rt_0836CDA4
+    label: rt tag=0x03E9 LoadCompressedObjectPic
+    default: false
+    address: '0x0836CDA4'
+    format: 4bpp
+    compression: lz77_swap
+    sprite_size: 8x8
+    count: 41
+    raw_size: 1312
+    source: gdb_patcher
+  - id: rt_0836FBD4
+    label: rt tag=0x03EA LoadCompressedObjectPic
+    default: false
+    address: '0x0836FBD4'
+    format: 4bpp
+    compression: lz77_swap
+    sprite_size: 8x8
+    count: 64
+    raw_size: 2048
+    source: gdb_patcher
+  - id: rt_083BC6C4
+    label: rt tag=0x7533 LoadSpriteSheet
+    default: false
+    address: '0x083BC6C4'
+    format: 4bpp
+    compression: none
+    sprite_size: 32x8
+    count: 16
+    raw_size: 2048
+    source: gdb_patcher
+  - id: rt_0867EEA0
+    label: rt tag=0xD6E0 LoadCompressedObjectPic
+    default: false
+    address: '0x0867EEA0'
+    format: 4bpp
+    compression: lz77_swap
+    sprite_size: 16x16
+    count: 3
+    raw_size: 384
+    source: gdb_patcher
 texts:
   filters:
-    - id: global_anim_cmd_filter
-      type: anim_cmd_filter
-      value: true
-    - id: global_ime_keyboard_filter
-      type: ime_keyboard_filter
-      value: true
-    - id: global_title_lz_filter
-      type: address_filter
-      value:
-        start: '0x0836D000'
-        end: '0x0836FFFF'
+  - id: global_anim_cmd_filter
+    type: anim_cmd_filter
+    value: true
+  - id: global_ime_keyboard_filter
+    type: ime_keyboard_filter
+    value: true
+  - id: global_title_lz_filter
+    type: address_filter
+    value:
+      start: '0x0836D000'
+      end: '0x0836FFFF'
   modules:
-    - id: 属性名
-      label: 词条·属性
-      group: 词条
-      default: true
-      description: 属性名短表（单字注入需谨慎）
-      start: '0x1cbb0c'
-      end: '0x1cbb65'
-      type: stride
-      read:
-        stride: 5
+  - id: 属性名
+    label: 词条·属性
+    group: 词条
+    default: true
+    description: 属性名短表（单字注入需谨慎）
+    start: '0x1cbb0c'
+    end: '0x1cbb65'
+    type: stride
+    read:
+      stride: 5
+  - id: 属性名-华丽大赛
+    label: 词条·华丽大赛属性
+    group: 词条
+    default: true
+    description: 华丽大赛分类名指针表（4）
+    start: '0x39F798'
+    end: '0x39F7A7'
+    type: stride_ptr
+    read:
+      stride: 4
+  - id: 性格名
+    label: 词条·性格
+    group: 词条
+    default: true
+    description: 性格名指针表（25）；相遇/蛋描述走 UI callers
+    start: '0x397168'
+    end: '0x39734C'
+    type: stride_ptr
+    read:
+      stride: 4
+  - id: 特性名
+    label: 词条·特性
+    group: 词条
+    default: true
+    description: 特性名固定表
+    start: '0x1cbc4c'
+    end: '0x1cbeb3'
+    type: stride
+    read:
+      stride: 8
+  - id: 宝可梦名
+    label: 词条·宝可梦
+    group: 词条
+    default: true
+    description: 宝可梦名固定表
+    start: '0x1ca354'
+    end: '0x1cacfb'
+    type: stride
+    read:
+      stride: 6
+    filters:
+    - id: species_skip_qmark
+      type: character_filter
+      value: ？？？？？
+      filter: true
+    write:
+      relocate: false
+      replace: false
+      slot: true
+  - id: 招式名
+    label: 词条·招式
+    group: 词条
+    default: true
+    description: 招式名固定表
+    start: '0x1cad04'
+    end: '0x1cb813'
+    type: stride
+    read:
+      stride: 8
+  - id: 招式名-华丽大赛
+    label: 词条·华丽大赛招式
+    group: 词条
+    default: true
+    description: 华丽大赛特殊效果招式名指针表（12）
+    start: '0x39F748'
+    end: '0x39F777'
+    type: stride_ptr
+    read:
+      stride: 4
+  - id: 训练家名
+    label: 词条·训练家
+    group: 词条
+    default: true
+    description: Trainer class 名表（窄带定址）
+    start: '0x1C4A10'
+    end: '0x3E95FF'
+    type: scan
+    min_byte_length: 3
+    ranges:
+    - start: '0x1C4A10'
+      end: '0x1C4C8F'
+    - start: '0x3E944C'
+      end: '0x3E9453'
+    filters:
+    - id: name_min_byte_length_filter
+      type: min_byte_length_filter
+      value: 3
+    write:
+      relocate: false
+      replace: false
+      slot: true
+  - id: 训练家个人名
+    label: 词条·训练家个人名
+    group: 词条
+    default: true
+    description: 训练家个人名表（0x1C5040-0x1CA340，步长 0x20 名称偏移 0x18；区分于「训练家名」class 表与 0x1CA354 起物种名）；2026-08 复核：原 end 截短尾部（ユカリ/ナナとネネ等双人组合名至マサシ），实测终点
+      0x1CA340
+    start: '0x1C5040'
+    end: '0x1CA340'
+    type: struct
+    read:
+      entry_size: 32
+      name_offset: 24
+    write:
+      relocate: false
+      replace: false
+      slot: true
+  - id: 地点名
+    label: 词条·地点
+    group: 词条
+    default: true
+    description: 地点名表
+    start: '0x3BECB7'
+    end: '0x3BEF67'
+    type: scan
+    min_byte_length: 5
+    max_byte_length: 20
+  - id: 秘密基地装饰名
+    label: 词条·秘密基地装饰
+    group: 词条
+    default: true
+    description: 秘密基地装饰品名表（0x3C2A54 起 120 条，步长 0x1C 名称偏移 13）
+    start: '0x3C2A54'
+    end: '0x3C3773'
+    type: struct
+    read:
+      entry_size: 28
+      name_offset: 13
+    write:
+      byte_length: 5
+      relocate: true
+      replace: true
+      slot: true
+    reuse_slot_padding: true
+  - id: 道具名
+    label: 词条·道具
+    group: 词条
+    default: true
+    description: 道具结构内名称字段
+    start: '0x39a648'
+    end: '0x39dca7'
+    type: struct
+    read:
+      entry_size: 40
+      desc_ptr_offset: 16
+  - id: 道具说明
+    label: 说明·道具
+    group: 说明
+    default: true
+    description: 道具描述指针目标（定址 scan）
+    start: '0x3984DC'
+    end: '0x39A647'
+    type: scan
+    word_count: 9
+    wrap_pages: false
+    max_lines: 3
+  - id: 招式说明
+    label: 说明·招式
+    group: 说明
+    default: true
+    description: 招式说明（定长槽 0x38；非指针表）
+    start: '0x3923F8'
+    end: '0x397167'
+    type: stride
+    read:
+      stride: 56
+    word_count: 13
+    wrap_pages: false
+    max_lines: 2
+  - id: 招式说明-华丽大赛
+    label: 说明·华丽大赛招式
+    group: 说明
+    default: true
+    description: 华丽大赛招式效果说明指针表（47）
+    start: '0x39F638'
+    end: '0x39F6F3'
+    type: stride_ptr
+    read:
+      stride: 4
+      eos_window: 48
+    word_count: 13
+    wrap_pages: false
+    max_lines: 2
+  - id: 特性说明
+    label: 说明·特性
+    group: 说明
+    default: true
+    description: 特性说明（定长槽 0x13；含とくせいなし；非指针表）
+    start: '0x1CBEB4'
+    end: '0x1CC47D'
+    type: stride
+    read:
+      stride: 19
+    word_count: 12
+    wrap_pages: false
+    max_lines: 1
+    translate_rules:
+    - 单行输出：禁止任何换行（不得出现实际换行或 \\n）；句末不得使用「。」
+    - 全文不超过 12 个汉字（控制码占位符 {Cn} 不计入字数）；超长必须压缩语义，禁止用换行续写
+  - id: 图鉴分类名
+    label: 词条·图鉴分类名
+    group: 词条
+    default: true
+    description: 图鉴条目内联分类名（+0x06，6字节00补齐）
+    start: '0x384746'
+    end: '0x38717D'
+    type: struct
+    read:
+      entry_size: 28
+      name_offset: 6
+      eos: 0
+    write:
+      byte_length: 5
+      relocate: true
+      replace: true
+      slot: true
+    reuse_slot_padding: true
+  - id: 图鉴说明
+    label: 说明·图鉴说明
+    group: 说明
+    default: true
+    description: 图鉴正文（定址 scan）
+    start: '0x37DB9C'
+    end: '0x384703'
+    type: scan
+    word_count: 16
+    wrap_pages: false
+    max_lines: 3
+  - id: 其他UI界面
+    label: UI界面
+    group: 文本
+    default: true
+    description: 全 ROM；execute_filter（Menu/Text 打印函数，排除故事已消费）
+    start: '0x0'
+    end: '0xFFFFFF'
+    type: scan
+    filters:
+    - id: ui_original_text_filter
+      type: original_text_filter
+      filter: false
+      value:
+        file: reference_corpus/ui.txt
+        mapping: {}
+  - id: 剧情
+    label: 文本·剧情
+    group: 文本
+    default: true
+    description: 全 ROM；execute_filter（ShowFieldMessage + 脚本 op message/trainerbattle）
+    start: '0x0'
+    end: '0xFFFFFF'
+    type: scan
+    reader:
+      type: msg_reader
+      value:
+        file: reference_corpus/RubySapphire/ja-Hrkt_msg.txt
+        mapping:
+          　: ' '
+          \n: '
 
-    - id: 属性名-华丽大赛
-      label: 词条·华丽大赛属性
-      group: 词条
-      default: true
-      description: 华丽大赛分类名指针表（4）
-      start: '0x39F798'
-      end: '0x39F7A7'
-      type: stride_ptr
-      read:
-        stride: 4
+            '
+          \c: '
 
-    - id: 性格名
-      label: 词条·性格
-      group: 词条
-      default: true
-      description: 性格名指针表（25）；相遇/蛋描述走 UI callers
-      start: '0x397168'
-      end: '0x39734C'
-      type: stride_ptr
-      read:
-        stride: 4
 
-    - id: 特性名
-      label: 词条·特性
-      group: 词条
-      default: true
-      description: 特性名固定表
-      start: '0x1cbc4c'
-      end: '0x1cbeb3'
-      type: stride
-      read:
-        stride: 8
-
-    - id: 宝可梦名
-      label: 词条·宝可梦
-      group: 词条
-      default: true
-      description: 宝可梦名固定表
-      start: '0x1ca354'
-      end: '0x1cacfb'
-      type: stride
-      read:
-        stride: 6
-      filters:
-        - id: species_skip_qmark
-          type: character_filter
-          value: ？？？？？
-          filter: true
-      write:
-        relocate: false
-        replace: false
-        ## 强制slot，防止修改rom值
-        slot: true
-
-    - id: 招式名
-      label: 词条·招式
-      group: 词条
-      default: true
-      description: 招式名固定表
-      start: '0x1cad04'
-      end: '0x1cb813'
-      type: stride
-      read:
-        stride: 8
-
-    - id: 招式名-华丽大赛
-      label: 词条·华丽大赛招式
-      group: 词条
-      default: true
-      description: 华丽大赛特殊效果招式名指针表（12）
-      start: '0x39F748'
-      end: '0x39F777'
-      type: stride_ptr
-      read:
-        stride: 4
-
-    - id: 训练家名
-      label: 词条·训练家
-      group: 词条
-      default: true
-      description: Trainer class 名表（窄带定址）
-      start: '0x1C4A10'
-      end: '0x3E95FF'
-      type: scan
-      min_byte_length: 3
-      ranges:
-        - start: '0x1C4A10'
-          end: '0x1C4C8F'
-        - start: '0x3E944C'
-          end: '0x3E9453'
-      filters:
-        - id: name_min_byte_length_filter
-          type: min_byte_length_filter
-          value: 3
-      write:
-        relocate: false
-        replace: false
-        ## 强制slot，防止修改rom值
-        slot: true
-
-    - id: 训练家个人名
-      label: 词条·训练家个人名
-      group: 词条
-      default: true
-      description: 训练家个人名表（0x1C5040-0x1CA340，步长 0x20 名称偏移 0x18；区分于「训练家名」class 表与
-        0x1CA354 起物种名）；2026-08 复核：原 end 截短尾部（ユカリ/ナナとネネ等双人组合名至マサシ），实测终点 0x1CA340
-      start: '0x1C5040'
-      end: '0x1CA340'
-      type: struct
-      read:
-        entry_size: 32
-        name_offset: 24
-      write:
-        relocate: false
-        replace: false
-        ## 强制slot，防止修改rom值
-        slot: true
-
-    - id: 地点名
-      label: 词条·地点
-      group: 词条
-      default: true
-      description: 地点名表
-      start: '0x3BECB7'
-      end: '0x3BEF67'
-      type: scan
-      min_byte_length: 5
-      max_byte_length: 20
-
-    - id: 秘密基地装饰名
-      label: 词条·秘密基地装饰
-      group: 词条
-      default: true
-      description: 秘密基地装饰品名表（0x3C2A54 起 120 条，步长 0x1C 名称偏移 13）
-      start: '0x3C2A54'
-      end: '0x3C3773'
-      type: struct
-      read:
-        entry_size: 28
-        name_offset: 13
-      write:
-        byte_length: 5
-        relocate: true
-        replace: true
-        slot: true
-      reuse_slot_padding: true
-
-    - id: 道具名
-      label: 词条·道具
-      group: 词条
-      default: true
-      description: 道具结构内名称字段
-      start: '0x39a648'
-      end: '0x39dca7'
-      type: struct
-      read:
-        entry_size: 40
-        desc_ptr_offset: 16
-
-    - id: 道具说明
-      label: 说明·道具
-      group: 说明
-      default: true
-      description: 道具描述指针目标（定址 scan）
-      start: '0x3984DC'
-      end: '0x39A647'
-      type: scan
-      word_count: 9
-      wrap_pages: false
-      max_lines: 3
-
-    - id: 招式说明
-      label: 说明·招式
-      group: 说明
-      default: true
-      description: 招式说明（定长槽 0x38；非指针表）
-      start: '0x3923F8'
-      end: '0x397167'
-      type: stride
-      read:
-        stride: 56
-      word_count: 13
-      wrap_pages: false
-      max_lines: 2
-
-    - id: 招式说明-华丽大赛
-      label: 说明·华丽大赛招式
-      group: 说明
-      default: true
-      description: 华丽大赛招式效果说明指针表（47）
-      start: '0x39F638'
-      end: '0x39F6F3'
-      type: stride_ptr
-      read:
-        stride: 4
-        eos_window: 48
-      word_count: 13
-      wrap_pages: false
-      max_lines: 2
-
-    - id: 特性说明
-      label: 说明·特性
-      group: 说明
-      default: true
-      description: 特性说明（定长槽 0x13；含とくせいなし；非指针表）
-      start: '0x1CBEB4'
-      end: '0x1CC47D'
-      type: stride
-      read:
-        stride: 19
-      word_count: 12
-      wrap_pages: false
-      max_lines: 1
-      translate_rules:
-        - 单行输出：禁止任何换行（不得出现实际换行或 \\n）；句末不得使用「。」
-        - 全文不超过 12 个汉字（控制码占位符 {Cn} 不计入字数）；超长必须压缩语义，禁止用换行续写
-
-    - id: 图鉴分类名
-      label: 词条·图鉴分类名
-      group: 词条
-      default: true
-      description: 图鉴条目内联分类名（+0x06，6字节00补齐）
-      start: '0x384746'
-      end: '0x38717D'
-      type: struct
-      read:
-        entry_size: 28
-        name_offset: 6
-        eos: 0
-      write:
-        byte_length: 5
-        relocate: true
-        replace: true
-        slot: true
-      reuse_slot_padding: true
-
-    - id: 图鉴说明
-      label: 说明·图鉴说明
-      group: 说明
-      default: true
-      description: 图鉴正文（定址 scan）
-      start: '0x37DB9C'
-      end: '0x384703'
-      type: scan
-      word_count: 16
-      wrap_pages: false
-      max_lines: 3
-
-    - id: 其他UI界面
-      label: UI界面
-      group: 文本
-      default: true
-      description: 全 ROM；execute_filter（Menu/Text 打印函数，排除故事已消费）
-      start: '0x0'
-      end: '0xFFFFFF'
-      type: scan
-      filters:
-        - id: ui_original_text_filter
-          type: original_text_filter
-          filter: false
-          value:
-            file: reference_corpus/ui.txt
-            mapping: {}
-
-    - id: 剧情
-      label: 文本·剧情
-      group: 文本
-      default: true
-      description: 全 ROM；execute_filter（ShowFieldMessage + 脚本 op message/trainerbattle）
-      start: '0x0'
-      end: '0xFFFFFF'
-      type: scan
-      reader:
-        type: msg_reader
-        value:
-          file: reference_corpus/RubySapphire/ja-Hrkt_msg.txt
-          mapping:
-            "　": " "
-            "\\n": "\n"
-            "\\c": "\n\n"
-            "\\r": "\\l"
-            "\\e": ""
-            "[PLAYER]": "\\01"
-            "[STR_VAR_1]": "\\02"
-            "[STR_VAR_2]": "\\03"
-            "[STR_VAR_3]": "\\04"
-            '[KUN]': \05
-            '[RIVAL]': \06
-            # 方向箭头/阵营占位符均为 ROM 实测字节（2026-08 探针）：
-            # UP=FC0CF7 DOWN=FC0CF8 LEFT=FC0CF9 RIGHT=FC0CFA
-            # EVIL_TEAM=FD08 GOOD_TEAM=FD09 EVIL_LEADER=FD0A GOOD_LEADER=FD0B
-            '[RIGHT_ARROW]': \CC0CFA
-            '[LEFT_ARROW]': \CC0CF9
-            '[UP_ARROW]': \CC0CF7
-            '[DOWN_ARROW]': \CC0CF8
-            '[EVIL_TEAM]': \08
-            '[GOOD_TEAM]': \09
-            '[EVIL_LEADER]': \0A
-            '[GOOD_LEADER]': \0B
-            # 战斗引擎占位符（ROM 实证：WinningPrize/PickedUpYen/たおれた 等）
-            '[B_PLAYER_NAME]': \20
-            '[B_BUFF1]': \00
-            '[B_BUFF2]': \01
-            '[B_ATK_NAME_WITH_PREFIX]': \0C
-            '[B_DEF_NAME_WITH_PREFIX]': \0D
-      filters:
-        - id: story_pointer_filter
-          type: story_pointer_filter
-          value: true
-      # 启发式兜底通道：msg_reader 未命中的整段候选改走此闸（单模块双通道），
-      # 收指针索引型台词；require_real_ref 用结构性引用判据
-      # （ldr 直调/指针表聚集/文本邻域，非对齐指针直接否决）杀数据巧合。
-      fallback_filters:
-        - id: fb_require_pointer
-          type: require_pointer_filter
-          value: true
-        - id: fb_real_ref
-          type: require_real_ref_filter
-          value: true
-        - id: fb_dialogue_shape
-          type: dialogue_shape_filter
-          value:
-            enabled: true
-            pointer_ok: false
-        - id: fb_garbage
-          type: garbage_heuristic_filter
-          value: true
-
-    - id: 树果名
-      label: 词条·树果名
-      group: 词条
-      default: true
-      description: 树果数据表（クラボ..ナゾ）；name@0，desc_ptr@12 指向说明池
-        （说明池由 剧情 语料通道收录，故不设独立说明模块）
-      start: '0x3A1050'
-      end: '0x3A14E8'
-      type: struct
-      read:
-        entry_size: 56
-        name_offset: 0
-        desc_ptr_offset: 12
-
-# GDB 运行时追踪监听点（python src/util/gdb_patcher.py log）。
-# 加新监控点只需在此追加一条；无 Python handler 时自动打通用日志。
-#   name        监听点名（gdb_patcher 内部可按 name 注册增强 handler）
-#   address     断点地址（"0x…" 字符串或整数）
-#   description 通用日志描述（可选）
-#   default     false = 未传 --functions 时不启用（可选，缺省 true）
-#   cfg         传给该点 handler 的自定义参数（可选，如 charmap）
+            '
+          \r: \l
+          \e: ''
+          '[PLAYER]': \01
+          '[STR_VAR_1]': \02
+          '[STR_VAR_2]': \03
+          '[STR_VAR_3]': \04
+          '[KUN]': \05
+          '[RIVAL]': \06
+          '[RIGHT_ARROW]': \CC0CFA
+          '[LEFT_ARROW]': \CC0CF9
+          '[UP_ARROW]': \CC0CF7
+          '[DOWN_ARROW]': \CC0CF8
+          '[EVIL_TEAM]': \08
+          '[GOOD_TEAM]': \09
+          '[EVIL_LEADER]': \0A
+          '[GOOD_LEADER]': \0B
+          '[B_PLAYER_NAME]': \20
+          '[B_BUFF1]': \00
+          '[B_BUFF2]': \01
+          '[B_ATK_NAME_WITH_PREFIX]': \0C
+          '[B_DEF_NAME_WITH_PREFIX]': \0D
+    filters:
+    - id: story_pointer_filter
+      type: story_pointer_filter
+      value: true
+    fallback_filters:
+    - id: fb_require_pointer
+      type: require_pointer_filter
+      value: true
+    - id: fb_real_ref
+      type: require_real_ref_filter
+      value: true
+    - id: fb_dialogue_shape
+      type: dialogue_shape_filter
+      value:
+        enabled: true
+        pointer_ok: false
+    - id: fb_garbage
+      type: garbage_heuristic_filter
+      value: true
+  - id: 树果名
+    label: 词条·树果名
+    group: 词条
+    default: true
+    description: 树果数据表（クラボ..ナゾ）；name@0，desc_ptr@12 指向说明池 （说明池由 剧情 语料通道收录，故不设独立说明模块）
+    start: '0x3A1050'
+    end: '0x3A14E8'
+    type: struct
+    read:
+      entry_size: 56
+      name_offset: 0
+      desc_ptr_offset: 12
 gdb:
-  - name: InitTextPrinter
-    address: '0x08002C68'
-    description: '文本块开始（r0=win, r1=文本指针, r2=tile_base, r3=cur_x）'
-    cfg:
-      charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
-  - name: ProcessCurrentChar
-    address: '0x0800336E'
-    description: '逐字符（r4=win, r3=char）；输出量大且与 InitTextPrinter 冗余'
-    default: false
-  - name: PrintNextChar
-    address: '0x080032F8'
-    description: '字符处理器入口（r0=win）；入口处未取字符，handler 按 text[index] 读即将处理的字节流——FA..FF 控制码也在此可见'
-    default: false
-  - name: CtrlHnd_A
-    address: '0x08003324'
-    description: '控制码跳表处理器之一（静态表项共 7 个，与 FA..FF 的映射待运行时确认；r4=win）'
-    default: false
-    cfg:
-      winreg: r4
-  - name: CtrlHnd_B
-    address: '0x0800333C'
-    description: '控制码跳表处理器之二'
-    default: false
-    cfg:
-      winreg: r4
-  - name: CtrlHnd_C
-    address: '0x08003342'
-    description: '控制码跳表处理器之三'
-    default: false
-    cfg:
-      winreg: r4
-  - name: CtrlHnd_D
-    address: '0x08003346'
-    description: '控制码跳表处理器之四'
-    default: false
-    cfg:
-      winreg: r4
-  - name: CtrlHnd_E
-    address: '0x0800334A'
-    description: '控制码跳表处理器之五'
-    default: false
-    cfg:
-      winreg: r4
-  - name: CtrlHnd_F
-    address: '0x08003354'
-    description: '控制码跳表处理器之六'
-    default: false
-    cfg:
-      winreg: r4
-  - name: CtrlHnd_G
-    address: '0x08003362'
-    description: '控制码跳表处理器之七'
-    default: false
-    cfg:
-      winreg: r4
-  - name: BattleBufferGlyph
-    address: '0x0880040C'
-    description: '我方 TextMode2 缓冲写入（r0=win, r1=tiles*, r2=width）；观测 win[0x20] 指针与写入内容'
-    default: false
-    cfg:
-      winreg: r0
-  - name: DrawInitialDownArrow
-    address: '0x08003F4C'
-    description: '等 A 下箭头绘制入口（r0=win）；与 CtrlHnd 命中序列对照可定位触发它的控制码'
-    default: false
-    cfg:
-      winreg: r0
-  - name: TextClearWindow
-    address: '0x08003BA8'
-    description: '清屏入口（r0=win）'
-    default: false
-    cfg:
-      winreg: r0
-  - name: UpdateTilemap
-    address: '0x080036DC'
-    description: 'BG 表项写入总入口（r0=win, r1=upperTile, r2=lowerTile）；定位血条区乱码：谁在哪个格写了什么 tile'
-    default: false
-    cfg:
-      winreg: r0
-  - name: MapNamePopupX
-    address: '0x0809F6D0'
-    description: '地名弹窗 MenuPrint 调用点（r0=buf, r1=注入的 x 留白px, r2=y）；配 InitTextPrinter 看 win+0x1A curX'
-    cfg:
-      charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
-  - name: MapNameHookRet
-    address: '0x0880014A'
-    description: '居中钩跳板 C 返回点（r0=C 计算的留白px，v3 预期 未白镇=62 / 101号道路=50）'
-    default: false
-  - name: PopupStepTrace
-    address: '0x08800146'
-    description: '跳板入口（push lr 后）：指令级单步跟踪整个居中钩子，前 3 次命中'
-    default: false
-    cfg:
-      charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
-  - name: LoadSpriteSheet
-    address: '0x080021C4'
-    description: '图块 sheet → OBJ VRAM（r0=&sheet{data,size,tag}）'
-  - name: LoadSpritePalette
-    address: '0x08002410'
-    description: '调色板 sheet → gPlttBuffer OBJ 区（r0=&sheet{data,size,tag}）'
-  - name: LoadCompressedObjectPic
-    address: '0x0800A77C'
-    description: 'LZ77→0x02000000 后 LoadSpriteSheet（r0=&压缩图）'
-  - name: LoadCompressedObjectPalette
-    address: '0x0800A7D0'
-    description: 'LZ77→0x02000000 后 LoadSpritePalette（r0=&压缩调色板）'
-  - name: LoadCompressedPalette
-    address: '0x08070A4C'
-    description: '压缩调色板：LZ→0x0202F0BC + 2×拷贝→gPlttBuffer*（r0=src, r1=offset, r2=size）'
-  - name: LoadPalette
-    address: '0x08070A90'
-    description: '调色板 2×CpuCopy16→gPlttBufferUnfaded/Faded（r0=src, r1=offset, r2=size）'
-  - name: LZDecompressWram
-    address: '0x0800A764'
-    description: 'LZ77 解压到 EWRAM（r0=src, r1=dest）'
-  - name: LZDecompressVram
-    address: '0x0800A770'
-    description: 'LZ77 解压到 VRAM（r0=src, r1=dest）'
-  - name: DrawMapNamePopup
-    address: '0x0809F654'
-    description: '地图名弹窗绘制入口（无 handler，仅通用日志）'
+- name: InitTextPrinter
+  address: '0x08002C68'
+  description: 文本块开始（r0=win, r1=文本指针, r2=tile_base, r3=cur_x）
+  cfg:
+    charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
+- name: ProcessCurrentChar
+  address: '0x0800336E'
+  description: 逐字符（r4=win, r3=char）；输出量大且与 InitTextPrinter 冗余
+  default: false
+- name: PrintNextChar
+  address: '0x080032F8'
+  description: 字符处理器入口（r0=win）；入口处未取字符，handler 按 text[index] 读即将处理的字节流——FA..FF 控制码也在此可见
+  default: false
+- name: CtrlHnd_A
+  address: '0x08003324'
+  description: 控制码跳表处理器之一（静态表项共 7 个，与 FA..FF 的映射待运行时确认；r4=win）
+  default: false
+  cfg:
+    winreg: r4
+- name: CtrlHnd_B
+  address: '0x0800333C'
+  description: 控制码跳表处理器之二
+  default: false
+  cfg:
+    winreg: r4
+- name: CtrlHnd_C
+  address: '0x08003342'
+  description: 控制码跳表处理器之三
+  default: false
+  cfg:
+    winreg: r4
+- name: CtrlHnd_D
+  address: '0x08003346'
+  description: 控制码跳表处理器之四
+  default: false
+  cfg:
+    winreg: r4
+- name: CtrlHnd_E
+  address: '0x0800334A'
+  description: 控制码跳表处理器之五
+  default: false
+  cfg:
+    winreg: r4
+- name: CtrlHnd_F
+  address: '0x08003354'
+  description: 控制码跳表处理器之六
+  default: false
+  cfg:
+    winreg: r4
+- name: CtrlHnd_G
+  address: '0x08003362'
+  description: 控制码跳表处理器之七
+  default: false
+  cfg:
+    winreg: r4
+- name: BattleBufferGlyph
+  address: '0x0880040C'
+  description: 我方 TextMode2 缓冲写入（r0=win, r1=tiles*, r2=width）；观测 win[0x20] 指针与写入内容
+  default: false
+  cfg:
+    winreg: r0
+- name: DrawInitialDownArrow
+  address: '0x08003F4C'
+  description: 等 A 下箭头绘制入口（r0=win）；与 CtrlHnd 命中序列对照可定位触发它的控制码
+  default: false
+  cfg:
+    winreg: r0
+- name: TextClearWindow
+  address: '0x08003BA8'
+  description: 清屏入口（r0=win）
+  default: false
+  cfg:
+    winreg: r0
+- name: UpdateTilemap
+  address: '0x080036DC'
+  description: BG 表项写入总入口（r0=win, r1=upperTile, r2=lowerTile）；定位血条区乱码：谁在哪个格写了什么 tile
+  default: false
+  cfg:
+    winreg: r0
+- name: MapNamePopupX
+  address: '0x0809F6D0'
+  description: 地名弹窗 MenuPrint 调用点（r0=buf, r1=注入的 x 留白px, r2=y）；配 InitTextPrinter 看 win+0x1A curX
+  cfg:
+    charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
+- name: MapNameHookRet
+  address: '0x0880014A'
+  description: 居中钩跳板 C 返回点（r0=C 计算的留白px，v3 预期 未白镇=62 / 101号道路=50）
+  default: false
+- name: PopupStepTrace
+  address: '0x08800146'
+  description: 跳板入口（push lr 后）：指令级单步跟踪整个居中钩子，前 3 次命中
+  default: false
+  cfg:
+    charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
+- name: LoadSpriteSheet
+  address: '0x080021C4'
+  description: 图块 sheet → OBJ VRAM（r0=&sheet{data,size,tag}）
+- name: LoadSpritePalette
+  address: '0x08002410'
+  description: 调色板 sheet → gPlttBuffer OBJ 区（r0=&sheet{data,size,tag}）
+- name: LoadCompressedObjectPic
+  address: '0x0800A77C'
+  description: LZ77→0x02000000 后 LoadSpriteSheet（r0=&压缩图）
+- name: LoadCompressedObjectPalette
+  address: '0x0800A7D0'
+  description: LZ77→0x02000000 后 LoadSpritePalette（r0=&压缩调色板）
+- name: LoadCompressedPalette
+  address: '0x08070A4C'
+  description: 压缩调色板：LZ→0x0202F0BC + 2×拷贝→gPlttBuffer*（r0=src, r1=offset, r2=size）
+- name: LoadPalette
+  address: '0x08070A90'
+  description: 调色板 2×CpuCopy16→gPlttBufferUnfaded/Faded（r0=src, r1=offset, r2=size）
+- name: LZDecompressWram
+  address: '0x0800A764'
+  description: LZ77 解压到 EWRAM（r0=src, r1=dest）
+- name: LZDecompressVram
+  address: '0x0800A770'
+  description: LZ77 解压到 VRAM（r0=src, r1=dest）
+- name: DrawMapNamePopup
+  address: '0x0809F654'
+  description: 地图名弹窗绘制入口（无 handler，仅通用日志）

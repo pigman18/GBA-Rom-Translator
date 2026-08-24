@@ -869,6 +869,8 @@ OAM_SIZE_TABLE = {
 TILE_4BPP = 32
 TILE_8BPP = 64
 RETIRE_IDLE_TICKS = 120  # 导出后连续 N 次无新观测则退役
+MIN_OBS_EXPORT = 3       # 尺寸投票至少 N 次观测才允许导出（跨多次断点聚合）
+FLUSH_MULTIPLE = 3       # 观测达 MIN*N 仍未凑齐 bank 也强制导出（防永久滞留）
 
 
 class PendingSheet:
@@ -894,7 +896,8 @@ class TilesHarvester:
 
     断点处只抓 sheet（ROM 源解压）；OAM 实测配对延迟到后续任意断点命中
     （sheet 加载先于 OAM 建立，当场扫必空）。配对成功 → 导 PNG + 追加
-    preset；去重三层：本局 set → yaml 已有 address → work 目录已有 PNG。
+    preset；去重两层：本局 set → yaml 已有 address（启动加载 + 追加同步，
+    跨局生效），地址已存在则不导 PNG 也不追加 preset。
     """
 
     def __init__(
@@ -915,7 +918,32 @@ class TilesHarvester:
         self.pending: dict[int, PendingSheet] = {}   # tag → sheet
         self.done_tags: set[int] = set()
         self.exported_addrs: set[int] = set()        # 本局已导 ROM 地址
+        self.known_addrs: set[str] = self._load_known_addrs()  # yaml 已有（跨局）
         self.stats = {"captured": 0, "paired": 0, "skipped": 0, "failed": 0}
+
+    def _read_mem_chunked(self, addr: int, size: int, chunk: int = 0x40) -> bytes:
+        """mGBA 0.10.5 stub 单包上限约 0x40（超限回 E06）；大块读取必须分段。
+        与 _gba_gdb.RSP.read_mem 同款策略，但不改共享 GdbClient。"""
+        out = bytearray()
+        for off in range(0, size, chunk):
+            n = min(chunk, size - off)
+            out += self.gdb.read_mem(addr + off, n)
+        return bytes(out)
+
+    def _load_known_addrs(self) -> set[str]:
+        """启动时读一次 yaml，收集已有 preset 的地址（小写十六进制串）。"""
+        try:
+            import yaml
+
+            data = yaml.safe_load(self.game_yaml.read_text(encoding="utf-8")) or {}
+        except Exception:
+            return set()
+        presets = (data.get("tiles") or {}).get("presets") or []
+        return {
+            str(p.get("address") or "").lower()
+            for p in presets
+            if isinstance(p, dict)
+        }
 
     # ---- 断点侧 ----
 
@@ -966,6 +994,9 @@ class TilesHarvester:
             self.pending[tag] = PendingSheet(name, data_addr, size, tag, raw, compression)
             self.stats["captured"] += 1
             self.log(f"  [tiles] 抓取 tag=0x{tag:04X} @0x{data_addr:08X} raw={len(raw)}B ({compression})")
+            # 重载场景（同 tag 再次装载）此刻 OAM 往往已指向本 sheet 的旧图块：
+            # 抓取后立即补一轮观测，不等下一次断点。
+            self.tick()
         except GdbError:
             pass
 
@@ -979,15 +1010,17 @@ class TilesHarvester:
 
     def tick(self) -> None:
         """任意断点命中后调用：遍历活动 OAM 条目，把所指 VRAM 图块反查回
-        pending sheet；凑齐尺寸/bank 观测即导出。"""
+        pending sheet；凑齐尺寸/bank 观测即导出。已导出 sheet 连续
+        RETIRE_IDLE_TICKS 轮无新观测则退役（bank_list 导出时已定格）。"""
         if not self.enabled or not self.pending:
             return
         try:
-            oam = bytes(self.gdb.read_mem(OAM_BASE, OAM_MAX_ENTRIES * OAM_ENTRY_SIZE))
+            oam = self._read_mem_chunked(OAM_BASE, OAM_MAX_ENTRIES * OAM_ENTRY_SIZE)
         except GdbError:
             return
         if not oam:
             return
+        observed: set[int] = set()
         for entry in range(OAM_MAX_ENTRIES):
             a0 = u16(oam, entry * 8)
             a1 = u16(oam, entry * 8 + 2)
@@ -1018,11 +1051,19 @@ class TilesHarvester:
                 idx = sh.raw.find(head)
                 if idx < 0 or idx % TILE_4BPP:
                     continue
+                observed.add(tag)
                 self._observe(sh, idx, wh, is8, bank)
+        for tag in [t for t, s in self.pending.items()
+                    if s.exported and t not in observed]:
+            sh = self.pending[tag]
+            sh.idle += 1
+            if sh.idle >= RETIRE_IDLE_TICKS:
+                del self.pending[tag]
 
     def _observe(self, sh: PendingSheet, byte_idx: int,
                  wh: tuple[int, int], is8: bool, bank: int) -> None:
-        """一次 OAM 命中：记录尺寸/bank 观测；证据足够就导出。"""
+        """一次 OAM 命中：只累积证据（尺寸投票 + 逐子图 bank）。
+        导出推迟到证据收敛——尺寸取多数派，bank 覆盖全部子图或观测充分。"""
         tsize = TILE_8BPP if is8 else TILE_4BPP
         tiles_x, tiles_y = wh[0] // 8, wh[1] // 8
         # 一致性校验：sheet 内该偏移按此布局应放得下
@@ -1030,22 +1071,43 @@ class TilesHarvester:
         if need > len(sh.raw):
             return
         key = (wh[0], wh[1], is8)
-        prev = sh.sizes.get(key, 0)
-        sh.sizes[key] = prev + 1
+        sh.sizes[key] += 1
         sprite_i = (byte_idx // tsize) // max(1, tiles_x * tiles_y)
         if is8 and byte_idx % TILE_8BPP:
             return  # 8bpp 图块不会落在 32B 非对齐处，数据异常放弃本次
         sh.banks.setdefault(sprite_i, bank)
         if sh.exported:
             return
-        # 尺寸来自 OAM 硬件语义，单次观测即权威；多次观测只为聚合 bank_list
-        self._finish(sh, wh[0], wh[1], is8)
+        total = sum(sh.sizes.values())
+        if total < MIN_OBS_EXPORT:
+            return
+        (w, h, is8m), votes = sh.sizes.most_common(1)[0]
+        if votes < 2:
+            return  # 尺寸未收敛（多布局并存时以多数派为准）
+        bps = ((h // 8) * (w // 8)) * (TILE_8BPP if is8m else TILE_4BPP)
+        count = max(1, len(sh.raw) // bps)
+        covered = sum(1 for i in range(count) if sh.banks.get(i) is not None)
+        if covered < count and total < MIN_OBS_EXPORT * FLUSH_MULTIPLE:
+            return  # 还有子图没拿到 bank 观测，继续攒
+        self._finish(sh, w, h, is8m)
+
+    def flush_observed(self) -> int:
+        """会话收尾：有观测但未过收敛门的 sheet 用当前最优证据补导。"""
+        n = 0
+        for sh in list(self.pending.values()):
+            if sh.exported or not sh.sizes:
+                continue
+            (w, h, is8m), _ = sh.sizes.most_common(1)[0]
+            self._finish(sh, w, h, is8m)
+            n += 1
+        return n
 
     def _finish(self, sh: PendingSheet, w: int, h: int, is8: bool) -> None:
         """观测充分：去重 → 导 PNG → 追加 preset。"""
         sh.exported = True
         sh.idle = 0
-        if sh.data_addr in self.exported_addrs:
+        addr_key = f"0x{sh.data_addr:08X}".lower()
+        if sh.data_addr in self.exported_addrs or addr_key in self.known_addrs:
             self.stats["skipped"] += 1
             return
         try:
@@ -1061,6 +1123,15 @@ class TilesHarvester:
 
         from util.tiles_patcher import decode_tiles, decode_palette_gba555
 
+        try:
+            dispcnt = u16(self.gdb.read_mem(0x04000000, 2), 0)
+        except GdbError:
+            dispcnt = -1
+        if dispcnt >= 0 and not (dispcnt & 0x40):
+            self.log(
+                f"  [tiles] 警告 @0x{sh.data_addr:08X}: DISPCNT bit6=0（OBJ 2D 映射），"
+                f"线性切片可能错位"
+            )
         bpp = 8 if is8 else 4
         tile_size = TILE_8BPP if is8 else TILE_4BPP
         tiles_per_sprite = (w // 8) * (h // 8)
@@ -1105,7 +1176,7 @@ class TilesHarvester:
 
     def _read_obj_palettes(self) -> Optional[list[list[tuple]]]:
         try:
-            data = bytes(self.gdb.read_mem(0x05000300, 256))
+            data = self._read_mem_chunked(0x05000300, 256)
         except GdbError:
             return None
         if not data or not any(data):
@@ -1162,6 +1233,7 @@ class TilesHarvester:
             from util.texts_patcher import save_yaml_config
 
             save_yaml_config(self.game_yaml, data)
+            self.known_addrs.add(addr_hex.lower())
             self.log(f"  [tiles] preset 追加: {pid} ({count}×{w}×{h})")
         except Exception as e:
             self.log(f"  [tiles] 写 yaml 失败: {e}")
@@ -1352,11 +1424,17 @@ def run_log(args: argparse.Namespace) -> int:
         except OSError:
             pass
     if _TILES_HARVESTER is not None:
+        flushed = _TILES_HARVESTER.flush_observed()
+        if flushed:
+            ctx.log(f"  收尾补导 {flushed} 张（部分证据，尺寸取多数派）")
         s = _TILES_HARVESTER.stats
         ctx.log(
             f"  tiles 采集: 抓取 {s['captured']}，配对导出 {s['paired']}，"
             f"跳过 {s['skipped']}，失败 {s['failed']}；未配对 {len(_TILES_HARVESTER.pending)}"
         )
+        pend = sorted({f"0x{sh.data_addr:08X}" for sh in _TILES_HARVESTER.pending.values()})
+        if pend:
+            ctx.log(f"  未配对 sheet 地址: {', '.join(pend)}")
     ctx.log(f"追踪结束，共 {n} 次命中。日志: {logpath}")
     return 0
 

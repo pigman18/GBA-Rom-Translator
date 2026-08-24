@@ -252,6 +252,8 @@ static void GetGlyphTilePointers(uint8_t fontNum, uint32_t glyph,
 static int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth)
 {
     uint8_t fontNum = win_u8(win, WIN_FONTNUM_REAL);
+    if (fontNum > 6u)
+        fontNum = 3u;    /* bak DrawGlyph_JP_ViaCHS 钳制：非法 fontNum 回落 font3 */
 
     /* ---- CHS 汉库（128B 容器同构：TL,BL | TR,BR 各 64B） ---- */
     if (code & GLYPH_SRC_CHS) {
@@ -429,8 +431,16 @@ static void DrawGlyphTiles(
     if (glyphWidth > 12u)
         glyphWidth = 12u;
 
-    if (st->chs_px == 0)
+    if (st->chs_px == 0) {
         st->base_tx = pitch_capture_base_tx(win);
+        /* bak ensure_linear_dest_floor 基础下限：tm0 空白 tile = TILE_BASE+0，
+         * OFF<4 时首字形会踩掉空白对（之后清屏/翻页把碎片当背景铺出）。 */
+        {
+            uint16_t off0 = win_u16(win, WIN_TILE_OFFSET);
+            if (off0 < 4u)
+                win_set_u16(win, WIN_TILE_OFFSET, 4u);
+        }
+    }
 
     startPixel = (unsigned)(st->chs_px & 7u);
     map_tx = (uint8_t)(st->base_tx + (st->chs_px >> 3));
@@ -471,11 +481,12 @@ static void DrawGlyphTiles(
 
     map_tx = (uint8_t)(st->base_tx + (st->chs_px >> 3));
 
-    /* ---- 第二趟：宽 w2（TR/BR，整列对齐） ---- */
+    /* ---- 第二趟：宽 w2（TR/BR）——startPixel 复用第一趟相位（bak 同款）：
+     * TR 写在本列 [startPixel, +w2)，与第一趟 spill [0,startPixel) 拼满
+     * 整列；置 0 会覆盖 spill → 相位 4 的字隔字错乱。 ---- */
     off = win_u16(win, WIN_TILE_OFFSET);
     up0 = GetCursorTileNum(win, 0, 0);
     lo0 = GetCursorTileNum(win, 0, 1);
-    info.startPixel = 0;
     info.width = (uint8_t)w2;
     info.src = tiles->tr;
     info.dest = (uint32_t *)(uintptr_t)vram_tile(win, up0);
@@ -484,8 +495,11 @@ static void DrawGlyphTiles(
     info.dest = (uint32_t *)(uintptr_t)vram_tile(win, lo0);
     DrawGlyphTile_ShadowedFont(win, &info, 0);
     WriteGlyphTilemap(win, map_tx, up0, lo0);
+    /* bak 同款：相位 0 时第二趟落在第一趟推进后的列内（下一字形从同列
+     * 相位 4 续接，不再推进）；相位 >0 时第二趟耗尽当前列（下一字形相位 0
+     * 需新列，+2）。写反会导致 12px 序列逐字错位、互相啃食。 */
     win_set_u16(win, WIN_TILE_OFFSET,
-                (uint16_t)(off + ((startPixel == 0u) ? 2u : 0u)));
+                (uint16_t)(off + ((startPixel == 0u) ? 0u : 2u)));
 
     st->chs_px = (uint16_t)(st->chs_px + w2);
     st->last_adv = (uint8_t)glyphWidth;
@@ -538,6 +552,24 @@ static uint16_t AllocGlyphTiles(TextPrinter *win, unsigned n)
     {
         uint16_t cur = MONO_TILE_NEXT;
         if (cur < lo || cur > hi)
+            cur = lo;
+        /* bak avoid_dex_ui_tile 同源保护（分配级，非分发级）：本块 [cur,cur+n)
+         * 撞上菜单 ▶ 固定对 / UI 图标带则整块跳到带后——字形像素踩上会
+         * 花光标与图标。跳带后越上界则按原逻辑回卷 lo。 */
+        for (;;) {
+            if (cur <= hi && cur <= CHS_MENU_CURSOR_TILE_HI
+                && (uint16_t)(cur + n - 1u) >= CHS_MENU_CURSOR_TILE) {
+                cur = (uint16_t)(CHS_MENU_CURSOR_TILE_HI + 1u);
+                continue;
+            }
+            if (cur <= hi && cur <= CHS_UI_ICON_TILE_HI
+                && (uint16_t)(cur + n - 1u) >= CHS_UI_ICON_TILE_LO) {
+                cur = (uint16_t)(CHS_UI_ICON_TILE_HI + 1u);
+                continue;
+            }
+            break;
+        }
+        if (cur > hi)
             cur = lo;
         MONO_TILE_NEXT = (uint16_t)(cur + n);
         return cur;
@@ -596,14 +628,16 @@ static void PrintGlyph_TextMode0(
  * 12px 汉字 = 2 列表项 + 1.5 列步进（半列相位由 pitch 槽 chs_px 承载，
  * 下一字形自动从半列续接）；8px 日文 = 1 列表项 + 整列步进（相位对齐）。
  * 不读写 TILE_OFFSET（tm0 专属状态，行间隔离）。
- * 两趟：第一趟 TL/BL 宽 8@startPixel（spill → 保留区第 2 对），
- *       第二趟 TR/BR 宽 w-8 整列对齐。 */
+ * 两趟几何（bak DrawGlyphTiles_CHS_Core 同款）：第一趟 TL/BL 恒宽 8
+ * @startPixel（跨列 spill → 保留区第 2 对）；第二趟 TR/BR 恒宽 w-8、
+ * startPixel 复用（写第 2 对 [startPixel,+w2)，与 spill [0,startPixel)
+ * 拼满整列）；8px 字形仅第一趟，行尾半列 spill 亦落表项。 */
 static void PrintGlyph_TextMode1(
     TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth)
 {
     volatile struct ChineseTileState *st;
     uint8_t cur_tx;
-    unsigned w, startPixel, w1, w2;
+    unsigned w, startPixel, w2, spilled;
     uint16_t t;
     uint8_t fontNum = win_u8(win, WIN_FONTNUM_REAL) & 7u;
     struct GlyphTileInfo info;
@@ -617,57 +651,84 @@ static void PrintGlyph_TextMode1(
     st = chs_bind_pitch_slot(win, 0);
     cur_tx = win_u8(win, WIN_CURSOR_TILE_X);
 
-    /* 相位失配检测：ITP 重印已将 cursor 归零而 chs_px 未清（A切B再切A）→
-     * 重置相位，修复横向移动（与 tm0 同款守卫）。 */
+    /* 相位失配检测（bak PrintGlyph_Common_CHS 三重守卫的前两重）：
+     * 1) ITP 重印已将 cursor 归零而 chs_px 未清（A切B再切A）→ 重置；
+     * 2) cursor 跳到既非行首也非期望点的位置（菜单重绘/SetCursorX 换列）
+     *    → 带陈旧相位继续画会半字错列，重置（tm1 不用 TILE_OFFSET，
+     *    无 OFF 副作用；与 tm0 行同款）。 */
     if (st->chs_px != 0 && cur_tx <= st->base_tx) {
         st->chs_px = 0;
         st->base_tx = cur_tx;
+    } else if (st->chs_px != 0) {
+        unsigned last = st->last_adv ? st->last_adv : CHS_GLYPH_ADVANCE_PX;
+        uint8_t expect = (uint8_t)(st->base_tx + ((st->chs_px + last - 1) >> 3));
+        if (cur_tx != expect) {
+            st->chs_px = 0;
+            st->base_tx = cur_tx;
+        }
     }
     if (st->chs_px == 0)
         st->base_tx = cur_tx;
 
     startPixel = st->chs_px & 7u;
-    w1 = (startPixel + w > 8u) ? 8u - startPixel : w;
-    w2 = w - w1;
+    /* bak 同款切分：第一趟恒宽 8，第二趟恒宽 w-8。不可按相位收缩第一趟——
+     * 那会画错字节段（相位 4 时需要 TL[4,8) 却画成 TL[0,4)），第二趟还会
+     * 以 8px 全覆盖抹掉 spill → 相位 4 的字全部水平错乱。 */
+    w2 = (w > 8u) ? (w - 8u) : 0u;
+    spilled = (startPixel > 0u);
 
     t = AllocGlyphTiles(win, 4u);           /* 恒 4：列0 对 + 溢出列 对 */
 
     info.textMode = 0;
     info.colors = 0;
     info.startPixel = (uint8_t)startPixel;
-    info.width = (uint8_t)w1;
+    info.width = 8;
 
-    /* 第一趟：TL/BL（跨列 spill 到保留区第 2 对） */
+    /* 第一趟：TL/BL 宽 8（跨列 spill 到保留区第 2 对） */
     info.src = tiles->tl;
     info.dest = (uint32_t *)(uintptr_t)vram_tile(win, t);
-    DrawGlyphTile_ShadowedFont(win, &info, w2 ? (uint8_t *)(uintptr_t)vram_tile(win, t + 2) : 0);
+    DrawGlyphTile_ShadowedFont(win, &info, spilled ? (uint8_t *)(uintptr_t)vram_tile(win, t + 2) : 0);
     info.src = tiles->bl;
     info.dest = (uint32_t *)(uintptr_t)vram_tile(win, t + 1);
-    DrawGlyphTile_ShadowedFont(win, &info, w2 ? (uint8_t *)(uintptr_t)vram_tile(win, t + 3) : 0);
+    DrawGlyphTile_ShadowedFont(win, &info, spilled ? (uint8_t *)(uintptr_t)vram_tile(win, t + 3) : 0);
 
     /* 表项：首列 cursor 格 */
     win_set_u8(win, WIN_CURSOR_TILE_X,
                (uint8_t)(st->base_tx + (st->chs_px >> 3)));
     sWriteGlyphTilemapFuncs[fontNum](win, t, (uint16_t)(t + 1));
 
-    if (w2) {
-        /* 第二趟：TR/BR（剩余列，整列对齐）→ 保留区第 2 对 */
-        info.startPixel = 0;
-        info.width = (uint8_t)w2;
-        info.src = tiles->tr;
-        info.dest = (uint32_t *)(uintptr_t)vram_tile(win, t + 2);
-        DrawGlyphTile_ShadowedFont(win, &info, 0);
-        info.src = tiles->br;
-        info.dest = (uint32_t *)(uintptr_t)vram_tile(win, t + 3);
-        DrawGlyphTile_ShadowedFont(win, &info, 0);
-        /* 表项：溢出列 cursor+1 格 */
+    st->chs_px = (uint16_t)(st->chs_px + 8u);
+
+    if (w2 == 0u) {
+        /* 8px 字形（日文）：行尾半列 spill 也要落表项（bak 同款），
+         * 否则右半像素落在无表项的列上 → 丢半边。 */
+        if (spilled) {
+            win_set_u8(win, WIN_CURSOR_TILE_X,
+                       (uint8_t)(st->base_tx + (st->chs_px >> 3)));
+            sWriteGlyphTilemapFuncs[fontNum](win, (uint16_t)(t + 2), (uint16_t)(t + 3));
+        }
+        st->last_adv = (uint8_t)w;
         win_set_u8(win, WIN_CURSOR_TILE_X,
-                   (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
-        sWriteGlyphTilemapFuncs[fontNum](win, (uint16_t)(t + 2), (uint16_t)(t + 3));
+                   (uint8_t)(st->base_tx + ((st->chs_px + w - 1) >> 3)));
+        return;
     }
 
+    /* 第二趟：TR/BR 宽 w-8，startPixel 复用（写第 2 对的
+     * [startPixel, +w2)，与第一趟 spill [0,startPixel) 拼满整列） */
+    info.width = (uint8_t)w2;
+    info.src = tiles->tr;
+    info.dest = (uint32_t *)(uintptr_t)vram_tile(win, t + 2);
+    DrawGlyphTile_ShadowedFont(win, &info, 0);
+    info.src = tiles->br;
+    info.dest = (uint32_t *)(uintptr_t)vram_tile(win, t + 3);
+    DrawGlyphTile_ShadowedFont(win, &info, 0);
+    /* 表项：溢出列 cursor+1 格 */
+    win_set_u8(win, WIN_CURSOR_TILE_X,
+               (uint8_t)(st->base_tx + (st->chs_px >> 3)));
+    sWriteGlyphTilemapFuncs[fontNum](win, (uint16_t)(t + 2), (uint16_t)(t + 3));
+
     /* 相位推进 + cursorTileX 同步（像素制，Field 同款公式） */
-    st->chs_px = (uint16_t)(st->chs_px + w);
+    st->chs_px = (uint16_t)(st->chs_px + w2);
     st->last_adv = (uint8_t)w;
     win_set_u8(win, WIN_CURSOR_TILE_X,
                (uint8_t)(st->base_tx + ((st->chs_px + w - 1) >> 3)));

@@ -1,4 +1,4 @@
-/* AXVJ patch ??? ? ?? / Win ?? / ?????
+﻿/* AXVJ patch ??? ? ?? / Win ?? / ?????
  * PrintNextChar ≈ pokeruby PrintNextChar
  */
 #ifndef GAME_H
@@ -167,7 +167,7 @@ struct ChsPitchCtrl {
  * 旧 12px 双趟 drawGlyph12 说明（历史）：
  * Hardware glyph container stays 8x16 (two 8x8 tiles) / 16x16 slot — do not change.
  * See docs/FONT_12PX_DRAW.md and .cursor/rules/axvj-font-12px-only.mdc. */
-#define CHS_GLYPH_ADVANCE_PX 8
+#define CHS_GLYPH_ADVANCE_PX 12
 #define CHS_CHAR_HEIGHT_PX   12
 #define CHS_LINE_FEED_PX     14
 #define CHS_CELL_BYTES       128
@@ -330,7 +330,6 @@ static inline uint16_t chs_pitch_key(TextPrinter *win)
                       ^ stream);
 }
 
-int PrintNextChar_C(TextPrinter *win, uint32_t cur_char);
 
 /* Hook3：CHS 字模取址（官方 GetGlyphTilePointers 的伪 glyph 分支）。
  * glyph bit15=右半 → upperTilePtr/lowerTilePtr 写入 FontChsNormal 内 TL/TR 与 BL/BR。
@@ -378,7 +377,7 @@ int  scene_is_party_footer(TextPrinter *win);
 /* PCS 0xEF ► → CHS_MENU_CURSOR_TILE pair. 1=drawn, 0=FontFunc. */
 int  DrawMenuCursorEF(TextPrinter *win);
 /* FA/FB 等 A 箭头：chs_px 对齐 TILE_X，必要时 TILE_OFFSET+=2（B04 双▼）。 */
-void WaitArrow_Prepare_C(TextPrinter *win);
+void WaitArrow_Prepare(TextPrinter *win);
 int  scene_jp_via_chs(TextPrinter *win);
 int  scene_is_battle_interface_dest(TextPrinter *win);
 /* 缓冲型打印机（dest=win[0x20]）：血条 textMode2 + RenderTextHandleBold textMode1+font4 */

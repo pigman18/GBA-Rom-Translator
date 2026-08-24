@@ -1,4 +1,4 @@
-; =============================================================================
+﻿; =============================================================================
 ; src/text/hooks_origin.s — 文本类复杂钩子的 ROM 订址桩
 ; armips 专用（main.asm include），不进 gcc；
 ; 逻辑侧: src/text/entry.s（跳板，编入 game.bin）+ src/text/*_hook.c
@@ -38,6 +38,6 @@
 ; FA/FB 不经 PrintNextChar；TILE_OFFSET 与 CURSOR 错位 -> 双▼
 ; pokeruby: src/text.c 等 A 箭头绘制段（AXVJ: DrawInitialDownArrow @0x08003F4C）
 .org DrawInitialDownArrow
-    ldr r3, =(WaitArrow_Prepare | 1)
+    ldr r3, =(WaitArrow_Prepare_Hook | 1)
     bx r3
 .pool

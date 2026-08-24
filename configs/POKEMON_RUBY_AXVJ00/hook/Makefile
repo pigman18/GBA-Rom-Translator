@@ -1,4 +1,4 @@
-# AXVJ hook → out/game.bin (VMA 0x08800000)
+﻿# AXVJ hook → out/game.bin (VMA 0x08800000)
 # Windows: build.bat
 # WSL:     scripts/wsl-interop-setup.sh 一次后
 #          PATH="$REPO/tools/wsl-bin:$PATH" make
@@ -23,7 +23,7 @@ LDFLAGS := -mthumb -mcpu=arm7tdmi -nostdlib -T link/game.ld -Wl,-Map=$(OUT)/game
 
 OBJS := \
 	$(BUILD)/text_entry.o \
-	$(BUILD)/text_jp2chs.o \
+	$(BUILD)/text_ruby_jp.o \
 	$(BUILD)/UpdateNickInHealthbox_entry.o \
 	$(BUILD)/UpdateNickInHealthbox_hook.o \
 	$(BUILD)/UnusedPrintMonName_entry.o \
@@ -43,7 +43,7 @@ $(BUILD):
 $(BUILD)/text_entry.o: $(TEXT)/entry.s | $(BUILD)
 	$(CC) $(ASFLAGS) $< -o $@
 
-$(BUILD)/text_jp2chs.o: $(SRC_ROOT)/text_jp2chs.c | $(BUILD)
+$(BUILD)/text_ruby_jp.o: $(SRC_ROOT)/text_ruby_jp.c | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD)/%.o: $(TEXT)/%.s | $(BUILD)
@@ -79,11 +79,11 @@ $(OUT)/game.bin: $(OUT)/game.elf
 # 与 build.bat 对齐：5 个符号（含 MapName_DisplayCellLength，地名居中钩跳板）
 $(OUT)/game_syms.asm: $(OUT)/game.map
 	@MPN=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'MapName_DisplayCellLength$$' | awk '{print $$1}'); \
-	WTA=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'WaitArrow_Prepare$$' | awk '{print $$1}'); \
+ WTA=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'WaitArrow_Prepare_Hook$$$$' | awk '{print $$1}'); \
 	UPMN=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'UnusedPrintMonName_Hook$$' | awk '{print $$1}'); \
 	DOMC=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'DrawOptionMenuChoice_Hook$$' | awk '{print $$1}'); \
 	GGTPH=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'GetGlyphTilePointers_Hook$$' | awk '{print $$1}'); \
-	printf '; Auto-generated from out/game.map - do not edit\nMapName_DisplayCellLength               equ %s\nWaitArrow_Prepare                       equ %s\nUnusedPrintMonName_Hook                 equ %s\nDrawOptionMenuChoice_Hook               equ %s\nGetGlyphTilePointers_Hook               equ %s\n' "$${MPN:-0x08800000}" "$${WTA:-0x08800000}" "$${UPMN:-0x08800000}" "$${DOMC:-0x08800000}" "$${GGTPH:-0x08800000}" > $@
+ printf '; Auto-generated from out/game.map - do not edit\nMapName_DisplayCellLength               equ %s\nWaitArrow_Prepare_Hook                  equ %s\nUnusedPrintMonName_Hook                 equ %s\nDrawOptionMenuChoice_Hook               equ %s\nGetGlyphTilePointers_Hook               equ %s\n' "$${MPN:-0x08800000}" "$${WTA:-0x08800000}" "$${UPMN:-0x08800000}" "$${DOMC:-0x08800000}" "$${GGTPH:-0x08800000}" > $@
 
 clean:
 	rm -rf $(OUT)/obj $(OUT)/game.elf $(OUT)/game.bin $(OUT)/game.map $(OUT)/game_syms.asm

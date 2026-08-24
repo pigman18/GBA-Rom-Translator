@@ -43,6 +43,105 @@ tiles:
     bank_list: 0,0,1,1,0,0,2,1,0,2,0,1,2,0,1,1,2,0,0,1,1,2,0
     pointers:
     - '0x0839747C'
+  - id: rt_0837CB34
+    label: rt tag=0x1000 LoadCompressedObjectPic
+    default: false
+    address: '0x0837CB34'
+    format: 4bpp
+    compression: lz77_swap
+    sprite_size: 16x8
+    count: 76
+    raw_size: 4864
+    source: gdb_patcher
+    md5: 0e28a111c3dcf3265638136ccf827561
+  - id: rt_083501F0
+    label: rt tag=0xD750 LoadSpriteSheet
+    default: false
+    address: '0x083501F0'
+    format: 4bpp
+    compression: none
+    sprite_size: 8x8
+    count: 2
+    raw_size: 64
+    source: gdb_patcher
+    md5: 3b2a71d745ba2d355c452c567011cc9b
+  - id: rt_083BC6C4
+    label: rt tag=0x7533 LoadSpriteSheet
+    default: false
+    address: '0x083BC6C4'
+    format: 4bpp
+    compression: none
+    sprite_size: 32x8
+    count: 16
+    raw_size: 2048
+    source: gdb_patcher
+    md5: 995d3f7799d88005bb98cc725453dc33
+  - id: rt_083BBB48
+    label: rt tag=0x0019 LoadSpriteSheet
+    default: false
+    address: '0x083BBB48'
+    format: 4bpp
+    compression: none
+    sprite_size: 32x16
+    count: 1
+    raw_size: 256
+    source: gdb_patcher
+    md5: 7d96a4f2a1561efaf9d126619bb5ead3
+  - id: rt_083BD99C
+    label: rt tag=0x0008 LoadSpriteSheet
+    default: false
+    address: '0x083BD99C'
+    format: 4bpp
+    compression: none
+    sprite_size: 16x16
+    count: 1
+    raw_size: 128
+    source: gdb_patcher
+    md5: 50f0c37cd5b99f4958880b6a04aed340
+  - id: rt_083BAE70
+    label: rt tag=0x0003 LoadSpriteSheet
+    default: false
+    address: '0x083BAE70'
+    format: 4bpp
+    compression: none
+    sprite_size: 16x16
+    count: 2
+    raw_size: 256
+    source: gdb_patcher
+    md5: 04807a43ae4deff9f5bcf7ed7d0d6656
+  - id: rt_083BB0B0
+    label: rt tag=0x0017 LoadSpriteSheet
+    default: false
+    address: '0x083BB0B0'
+    format: 4bpp
+    compression: none
+    sprite_size: 16x16
+    count: 7
+    raw_size: 896
+    source: gdb_patcher
+    md5: 4968674e91ace27629c76cfa02704441
+  - id: rt_083BB470
+    label: rt tag=0x0009 LoadSpriteSheet
+    default: false
+    address: '0x083BB470'
+    format: 4bpp
+    compression: none
+    sprite_size: 8x16
+    count: 1
+    raw_size: 64
+    source: gdb_patcher
+    md5: 4c7e44182d8988e807116201a3834037
+  - id: rt_083BB4B0
+    label: rt tag=0x000A LoadSpriteSheet
+    default: false
+    address: '0x083BB4B0'
+    format: 4bpp
+    compression: none
+    sprite_size: 16x8
+    count: 2
+    raw_size: 128
+    source: gdb_patcher
+    md5: 6ea1db7e23ab9ef7b7d447d88ac7bfa2
 texts:
   filters:
   - id: global_anim_cmd_filter
@@ -490,6 +589,9 @@ gdb:
 - name: LoadCompressedObjectPalette
   address: '0x0800A7D0'
   description: LZ77→0x02000000 后 LoadSpritePalette（r0=&压缩调色板）
+- name: CreateSprite
+  address: '0x08000BCC'
+  description: 创建精灵（r0=&SpriteTemplate，AXVJ 布局 tileTag@0/paletteTag@2/oam*@4；绑定 sheet↔调色板 + 权威尺寸）
 - name: LoadCompressedPalette
   address: '0x08070A4C'
   description: 压缩调色板：LZ→0x0202F0BC + 2×拷贝→gPlttBuffer*（r0=src, r1=offset, r2=size）

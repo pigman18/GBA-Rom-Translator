@@ -825,6 +825,20 @@ def _on_load_palette(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) 
     ctx.log(_rom_head(ctx, src, size))
 
 
+@handler("CreateSprite")
+def _on_create_sprite(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    p = regs.get("r0", 0)
+    if not ctx._hit(("CreateSprite", p)):
+        return
+    ctx.log(
+        f"\n[CreateSprite] template=0x{p:08X}({region_of(p)})"
+        f" x={regs.get('r1', 0):#06x} y={regs.get('r2', 0):#06x}"
+        f" LR=0x{(regs.get('r14', 0) & ~1):08X}"
+    )
+    if _TILES_HARVESTER is not None:
+        _TILES_HARVESTER.on_create_sprite(regs)
+
+
 @handler("LZDecompressWram")
 def _on_lz_wram(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
     src = regs.get("r0", 0)
@@ -852,14 +866,13 @@ def _on_lz_vram(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> No
 
 
 # ---------------------------------------------------------------------------
-# tiles 实时采集：LoadSpriteSheet / LoadCompressedObjectPic / LoadPalette
-# → 解压 → OAM 实测尺寸 → 导出 PNG + 追加 tiles.presets（src/util 自留地）
-
-
-OAM_BASE = 0x07000000
-OBJ_VRAM_BASE = 0x06010000
-OAM_ENTRY_SIZE = 8
-OAM_MAX_ENTRIES = 128
+# tiles 实时采集 v2（登记 + 绑定，反汇编定案见 docs）：
+#   LoadSpriteSheet / LoadCompressedObjectPic → tag 登记像素资产
+#   LoadSpritePalette / LoadCompressedObjectPalette → tag 登记调色板源
+#   CreateSprite 读 SpriteTemplate{tileTag@0, paletteTag@2, oam@4}
+#   （AXVJ 布局，已反汇编证实；美版布局不同勿混用）
+#   三件套齐 → 权威尺寸 + 未渐变 ROM 调色板 → 导出 PNG + 写 preset；
+#   缺任一环仅记日志不落盘。跨局按 preset 配置 md5 指纹去重，不一致覆盖重导。
 
 # OAM attr0 bit14-15 形状 / attr1 bit14-15 尺寸档 → (宽, 高) 像素
 # （标准 GBA 表：方形 8/16/32/64；宽形 16x8..64x32；高形 8x16..32x64）
@@ -871,13 +884,10 @@ OAM_SIZE_TABLE = {
 
 TILE_4BPP = 32
 TILE_8BPP = 64
-RETIRE_IDLE_TICKS = 120  # 导出后连续 N 次无新观测则退役
-MIN_OBS_EXPORT = 3       # 尺寸投票至少 N 次观测才允许导出（跨多次断点聚合）
-FLUSH_MULTIPLE = 3       # 观测达 MIN*N 仍未凑齐 bank 也强制导出（防永久滞留）
 
 
 class PendingSheet:
-    """断点抓到、等待 OAM 观测的图块 sheet（tag 唯一）。"""
+    """登记的 sheet 资产（tag 唯一）。"""
 
     def __init__(self, name: str, data_addr: int, size: int, tag: int,
                  raw: bytes, compression: str):
@@ -887,21 +897,15 @@ class PendingSheet:
         self.tag = tag
         self.raw = raw
         self.compression = compression
-        self.exported = False
-        self.idle = 0
-        self.hits = 0
-        self.sizes: Counter = Counter()          # (w,h,is8) → 出现次数
-        self.banks: dict[int, int] = {}          # 子图序号 → 调色板 bank（观测值）
 
 
 class TilesHarvester:
-    """tiles 实时采集器。
+    """tiles 实时采集器 v2（登记 + 绑定）。
 
-    断点处只抓 sheet（ROM 源解压）；OAM 实测配对延迟到后续任意断点命中
-    （sheet 加载先于 OAM 建立，当场扫必空）。配对成功 → 导 PNG + 写 preset；
-    去重：本局 set；跨局按 preset 完整配置的 md5 指纹比对——地址已有但指纹
-    不一致（管线升级/证据更全/旧版无指纹）则以最新配置覆盖并重新导出，
-    一致才跳过。调色板是硬前置，解析不到仅记日志不落盘。
+    Load* 埋点登记资产：sheets[tag]={ROM 数据}, pal_by_tag[tag]=ROM 源；
+    CreateSprite 埋点读 SpriteTemplate 得 (tileTag, paletteTag, 权威 w/h/is8)
+    并落 bindings。三件套齐 → 导出 PNG + 写 preset；缺环仅记日志不落盘。
+    跨局按 preset 配置 md5 指纹比对，不一致覆盖重导，一致跳过。
     """
 
     def __init__(
@@ -919,11 +923,11 @@ class TilesHarvester:
         self.origin = origin
         self.log = log
         self.enabled = enabled
-        self.pending: dict[int, PendingSheet] = {}   # tag → sheet
-        self.done_tags: set[int] = set()
+        self.sheets: dict[int, PendingSheet] = {}    # tileTag → sheet 资产
+        self.bindings: dict[int, tuple] = {}         # tileTag → (paletteTag, (w,h,is8)|None)
+        self.pal_by_tag: dict[int, int] = {}         # paletteTag → ROM src
         self.exported_addrs: set[int] = set()        # 本局已导 ROM 地址
         self.known_md5: dict[str, Optional[str]] = self._load_known_md5()  # 跨局指纹
-        self.pal_by_tag: dict[int, tuple[int, int, bool]] = {}  # tag → (src, size, compressed)
         self.stats = {"captured": 0, "paired": 0, "skipped": 0, "failed": 0}
 
     @staticmethod
@@ -961,7 +965,7 @@ class TilesHarvester:
             if f is None:
                 return
             data_addr, size, tag = f
-            if tag in self.pending or tag in self.done_tags:
+            if tag in self.sheets:
                 return
             if size == 0 or size > 0x20000:
                 self.stats["skipped"] += 1
@@ -996,57 +1000,83 @@ class TilesHarvester:
             else:
                 raw = self.origin[fo : fo + size]
                 compression = "none"
-            self.pending[tag] = PendingSheet(name, data_addr, size, tag, raw, compression)
+            ps = PendingSheet(name, data_addr, size, tag, raw, compression)
+            self.sheets[tag] = ps
             self.stats["captured"] += 1
-            self.log(f"  [tiles] 抓取 tag=0x{tag:04X} @0x{data_addr:08X} raw={len(raw)}B ({compression})")
-            # 重载场景（同 tag 再次装载）此刻 OAM 往往已指向本 sheet 的旧图块：
-            # 抓取后立即补一轮观测，不等下一次断点。
-            self.tick()
+            self.log(f"  [tiles] 登记 sheet tag=0x{tag:04X} @0x{data_addr:08X} raw={len(raw)}B ({compression})")
+            self.try_export(tag)
         except GdbError:
             pass
 
-    def on_palette(self, regs: dict) -> None:
-        """LoadPalette 命中：暂不单独成 preset，只做统计（配对走 OAM attr2）。"""
-        if not self.enabled:
-            return
-        self.stats["captured"] += 0  # 预留：后续按 LR 邻近挂 palette
-
     def on_sprite_palette(self, name: str, regs: dict) -> None:
-        """LoadSpritePalette / LoadCompressedObjectPalette 命中：
-        按 tag 记录未渐变 ROM 源（{data,size,tag} 与 sheet 同构）。"""
+        """LoadSpritePalette / LoadCompressedObjectPalette 命中：登记调色板 ROM 源。
+        结构体布局按名分支（pokeruby 定案）：裸版 {data, tag} 无 size，
+        压缩版 {data, size, tag}——tag 偏移分别为 +4 / +6。"""
         if not self.enabled:
             return
         try:
             p = regs.get("r0", 0)
             head = self.gdb.read_mem(p, 8)
             src = u32(head, 0)
-            size = u16(head, 4)
-            tag = u16(head, 6)
-            comp = name == "LoadCompressedObjectPalette"
+            tag_off = 6 if name == "LoadCompressedObjectPalette" else 4
+            tag = u16(head, tag_off)
             if region_of(src) != "ROM" or not self.origin:
                 return
             fo = src - 0x08000000
             if not (0 <= fo < len(self.origin)):
                 return
-            self.pal_by_tag[tag] = (src, size, comp)
+            self.pal_by_tag[tag] = src
+            self.log(f"  [tiles] 登记调色板 tag=0x{tag:04X} src=0x{src:08X}")
+            for t, b in list(self.bindings.items()):
+                if b[0] == tag:
+                    self.try_export(t)
         except GdbError:
             pass
 
-    def _tag_palette(self, sh: PendingSheet) -> Optional[list[tuple]]:
-        """按 sheet 的 tag 取未渐变 ROM 调色板（游戏自身就是用 tag 配对的）。"""
-        ent = self.pal_by_tag.get(sh.tag)
-        if not ent:
-            return None
+    def on_create_sprite(self, regs: dict) -> None:
+        """CreateSprite 命中：读 SpriteTemplate{tileTag@0, paletteTag@2,
+        oam*@4}（AXVJ 布局，反汇编定案）落绑定；oam 可读时给权威尺寸。"""
+        if not self.enabled:
+            return
+        try:
+            p = regs.get("r0", 0)
+            head = self.gdb.read_mem(p, 8)
+            tile_tag = u16(head, 0)
+            pal_tag = u16(head, 2)
+            oam_ptr = u32(head, 4)
+            dims = None
+            if region_of(oam_ptr) == "ROM":
+                od = self.gdb.read_mem(oam_ptr, 4)
+                a0 = u16(od, 0)
+                a1 = u16(od, 2)
+                wh = OAM_SIZE_TABLE.get(((a0 >> 14) & 0x3, (a1 >> 14) & 0x3))
+                if wh:
+                    dims = (wh[0], wh[1], bool(a0 & 0x2000))
+            self.bindings[tile_tag] = (pal_tag, dims)
+            bpp_s = ("8bpp" if dims[2] else "4bpp") if dims else "?"
+            dim_s = f"{dims[0]}x{dims[1]}" if dims else "?"
+            self.log(
+                f"  [tiles] 绑定 tileTag=0x{tile_tag:04X} -> paletteTag=0x{pal_tag:04X}"
+                f" ({dim_s} {bpp_s})"
+            )
+            self.try_export(tile_tag)
+        except GdbError:
+            pass
+
+    def _decode_rom_palette(self, src: int) -> Optional[list[tuple]]:
+        """从 ROM 源解出首个 bank（32B）的 16 色；自动识别 LZ77 压缩。"""
         from util.tiles_patcher import decode_palette_gba555, lz77_decompress
 
-        src, size, comp = ent
+        if not self.origin:
+            return None
         fo = src - 0x08000000
         if not (0 <= fo < len(self.origin)):
             return None
         head = self.origin[fo]
-        if comp or head in (0x10, 0x11):
-            dst_size = self.origin[fo + 1] | (self.origin[fo + 2] << 8) | (self.origin[fo + 3] << 16)
-            raw = None
+        raw = None
+        if head in (0x10, 0x11):
+            dst_size = (self.origin[fo + 1] | (self.origin[fo + 2] << 8)
+                        | (self.origin[fo + 3] << 16))
             for swap in (head == 0x11, head != 0x11):
                 try:
                     cand = lz77_decompress(self.origin[fo:], swap=swap)
@@ -1056,184 +1086,76 @@ class TilesHarvester:
                     raw = cand
                     break
         else:
-            raw = self.origin[fo : fo + max(size * 32, 32)]
+            raw = self.origin[fo : fo + 32]
         if not raw:
             return None
-        pal = decode_palette_gba555(raw[:1024], bank_count=max(1, min(len(raw), 1024) // 32))
+        pal = decode_palette_gba555(raw[:32], bank_count=1)
         return pal[0] if pal and pal[0] else None
 
-    # ---- OAM 观测（反向定位：OAM → VRAM 图块 → sheet 内偏移）----
-
-    def tick(self) -> None:
-        """任意断点命中后调用：遍历活动 OAM 条目，把所指 VRAM 图块反查回
-        pending sheet；凑齐尺寸/bank 观测即导出。已导出 sheet 连续
-        RETIRE_IDLE_TICKS 轮无新观测则退役（bank_list 导出时已定格）。"""
-        if not self.enabled or not self.pending:
+    def try_export(self, tile_tag: int) -> None:
+        """三件套（sheet/绑定/调色板）齐 → 指纹比对 → 导出。缺环静默等待。"""
+        if not self.enabled:
             return
-        try:
-            oam = self._read_mem_chunked(OAM_BASE, OAM_MAX_ENTRIES * OAM_ENTRY_SIZE)
-        except GdbError:
+        sh = self.sheets.get(tile_tag)
+        b = self.bindings.get(tile_tag)
+        if not sh or not b or sh.data_addr in self.exported_addrs:
             return
-        if not oam:
+        pal_src = self.pal_by_tag.get(b[0])
+        dims = b[1]
+        if pal_src is None or not dims:
+            return  # 绑定或调色板未到齐，等后续事件补齐
+        palette = self._decode_rom_palette(pal_src)
+        if not palette:
+            self.log(
+                f"  [tiles] 缺调色板 @0x{sh.data_addr:08X}"
+                f" tag=0x{tile_tag:04X}：仅登记，不导出不写配置"
+            )
             return
-        observed: set[int] = set()
-        for entry in range(OAM_MAX_ENTRIES):
-            a0 = u16(oam, entry * 8)
-            a1 = u16(oam, entry * 8 + 2)
-            a2 = u16(oam, entry * 8 + 4)
-            if a2 == 0:
-                continue  # 空条目（tile=0,bank=0）：真实精灵几乎不指向 tile0+bank0，
-                # 而未用 OAM 大量存在，会把 (8,8) 观测刷成多数派污染判定
-            rot_scale = a0 & 0x0100
-            disable = (a0 & 0x0300) == 0x0300
-            if not rot_scale and disable:
-                continue  # 仅 bit9=1（非 affine 禁用）跳过；affine bit8=1 是双用途位
-            shape = (a0 >> 14) & 0x3
-            size = (a1 >> 14) & 0x3
-            tile = a2 & 0x3FF
-            is8 = bool(a0 & 0x2000)
-            bank = (a2 >> 12) & 0xF
-            wh = OAM_SIZE_TABLE.get((shape, size))
-            if not wh:
-                continue
-            vram_off = tile * TILE_4BPP
-            if vram_off >= 0x8000:
-                continue
-            try:
-                head = bytes(self.gdb.read_mem(OBJ_VRAM_BASE + vram_off, TILE_4BPP))
-            except GdbError:
-                return
-            for tag, sh in list(self.pending.items()):
-                idx = sh.raw.find(head)
-                if idx < 0 or idx % TILE_4BPP:
-                    continue
-                observed.add(tag)
-                self._observe(sh, idx, wh, is8, bank)
-        for tag in [t for t, s in self.pending.items()
-                    if s.exported and t not in observed]:
-            sh = self.pending[tag]
-            sh.idle += 1
-            if sh.idle >= RETIRE_IDLE_TICKS:
-                del self.pending[tag]
-
-    def _observe(self, sh: PendingSheet, byte_idx: int,
-                 wh: tuple[int, int], is8: bool, bank: int) -> None:
-        """一次 OAM 命中：只累积证据（尺寸投票 + 逐子图 bank）。
-        导出推迟到证据收敛——尺寸取多数派，bank 覆盖全部子图或观测充分。"""
-        tsize = TILE_8BPP if is8 else TILE_4BPP
-        tiles_x, tiles_y = wh[0] // 8, wh[1] // 8
-        # 一致性校验：sheet 内该偏移按此布局应放得下
-        need = byte_idx + tiles_x * tiles_y * tsize
-        if need > len(sh.raw):
-            return
-        key = (wh[0], wh[1], is8)
-        sh.sizes[key] += 1
-        sprite_i = (byte_idx // tsize) // max(1, tiles_x * tiles_y)
-        if is8 and byte_idx % TILE_8BPP:
-            return  # 8bpp 图块不会落在 32B 非对齐处，数据异常放弃本次
-        sh.banks.setdefault(sprite_i, bank)
-        if sh.exported:
-            return
-        total = sum(sh.sizes.values())
-        if total < MIN_OBS_EXPORT:
-            return
-        (w, h, is8m), votes = sh.sizes.most_common(1)[0]
-        if votes < 2:
-            return  # 尺寸未收敛（多布局并存时以多数派为准）
-        bps = ((h // 8) * (w // 8)) * (TILE_8BPP if is8m else TILE_4BPP)
-        count = max(1, len(sh.raw) // bps)
-        covered = sum(1 for i in range(count) if sh.banks.get(i) is not None)
-        if covered < count and total < MIN_OBS_EXPORT * FLUSH_MULTIPLE:
-            return  # 还有子图没拿到 bank 观测，继续攒
-        self._finish(sh, w, h, is8m)
-
-    def flush_observed(self) -> int:
-        """会话收尾：有观测但未过收敛门的 sheet 用当前最优证据补导。
-        只统计真正落盘的（缺调色板的软跳过不计）。"""
-        n = 0
-        for sh in list(self.pending.values()):
-            if sh.exported or not sh.sizes:
-                continue
-            (w, h, is8m), _ = sh.sizes.most_common(1)[0]
-            if self._finish(sh, w, h, is8m):
-                n += 1
-        return n
-
-    def _finish(self, sh: PendingSheet, w: int, h: int, is8: bool) -> bool:
-        """观测充分：指纹比对 → 导 PNG → 覆盖/追加 preset。返回是否真正导出。"""
-        sh.exported = True
-        sh.idle = 0
-        addr_key = f"0x{sh.data_addr:08X}".lower()
-        if sh.data_addr in self.exported_addrs:
-            self.stats["skipped"] += 1
-            return False
+        w, h, is8 = dims
         bpp = 8 if is8 else 4
-        bps = ((h // 8) * (w // 8)) * (TILE_8BPP if is8 else TILE_4BPP)
+        bps = ((w // 8) * (h // 8)) * (TILE_8BPP if is8 else TILE_4BPP)
         count = max(1, len(sh.raw) // bps)
-        bank_list = [sh.banks.get(i) for i in range(count)]
-        cfg = self._build_preset(sh, bpp, count, w, h, bank_list)
+        addr_key = f"0x{sh.data_addr:08X}".lower()
+        cfg = self._build_preset(sh, bpp, count, w, h)
         md5hex = self._preset_md5(cfg)
-        old = self.known_md5.get(addr_key)
-        if addr_key in self.known_md5 and old == md5hex and addr_key in (
-            a for a in [addr_key]
-        ):
-            # 指纹一致：配置没变，跳过（PNG 也无需重导）
-            self.stats["skipped"] += 1
-            return False
+        if self.known_md5.get(addr_key) == md5hex:
+            self.stats["skipped"] += 1  # 指纹一致：无需重导
+            self.exported_addrs.add(sh.data_addr)
+            return
         try:
-            ok = self._export(sh, w, h, is8, count, bank_list)
-            if not ok:
-                self.stats["skipped"] += 1  # 缺调色板软跳过：仅采集
-                return False
+            if not self._export(sh, w, h, is8, count, palette):
+                self.stats["skipped"] += 1
+                return
             self._upsert_preset(sh, cfg, md5hex)
             self.known_md5[addr_key] = md5hex
             self.exported_addrs.add(sh.data_addr)
             self.stats["paired"] += 1
-            return True
         except Exception as e:
             self.log(f"  [tiles] 导出失败 @0x{sh.data_addr:08X}: {e}")
             self.stats["failed"] += 1
-            return False
 
-    def _export(self, sh: PendingSheet, w: int, h: int, is8: bool) -> bool:
-        """导 PNG + 追加 preset。调色板是硬前置：解析不到 → 仅日志，不落盘。"""
+    def flush_observed(self) -> int:
+        """会话收尾：报告已登记但三件套未齐的 sheet（不导出）。"""
+        pend = sorted(
+            f"0x{sh.data_addr:08X}(tag=0x{t:04X})"
+            for t, sh in self.sheets.items()
+            if sh.data_addr not in self.exported_addrs
+        )
+        if pend:
+            self.log(f"  [tiles] 仅登记未导出 {len(pend)} 个：{', '.join(pend)}")
+        return 0
+
+    def _export(self, sh: PendingSheet, w: int, h: int, is8: bool,
+                count: int, palette: list[tuple]) -> bool:
+        """纯渲染落盘：调色板已由 try_export 按 tag 绑定解析。"""
         from PIL import Image
 
         from util.tiles_patcher import decode_tiles
 
-        try:
-            dispcnt = u16(self.gdb.read_mem(0x04000000, 2), 0)
-        except GdbError:
-            dispcnt = -1
-        if dispcnt >= 0 and not (dispcnt & 0x40):
-            self.log(
-                f"  [tiles] 警告 @0x{sh.data_addr:08X}: DISPCNT bit6=0（OBJ 2D 映射），"
-                f"线性切片可能错位"
-            )
         bpp = 8 if is8 else 4
-        tile_size = TILE_8BPP if is8 else TILE_4BPP
-        tiles_per_sprite = (w // 8) * (h // 8)
-        bytes_per_sprite = tiles_per_sprite * tile_size
+        bytes_per_sprite = ((w // 8) * (h // 8)) * (TILE_8BPP if is8 else TILE_4BPP)
         if bytes_per_sprite <= 0:
             raise ValueError(f"sprite 尺寸非法 {w}x{h}")
-        count = max(1, len(sh.raw) // bytes_per_sprite)
-
-        # ---- 调色板硬门控 ----
-        palette = self._tag_palette(sh)
-        pal_src = f"ROM tag=0x{sh.tag:04X}" if palette else None
-        bank_list = [sh.banks.get(i) for i in range(count)]
-        if palette is None:
-            pal_banks = self._read_obj_palettes()
-            known_banks = [b for b in bank_list if b is not None]
-            if pal_banks and known_banks and pal_banks[known_banks[0]]:
-                palette = pal_banks[known_banks[0]]
-                pal_src = f"live bank {known_banks[0]}"
-        if palette is None:
-            self.log(
-                f"  [tiles] 缺调色板 @0x{sh.data_addr:08X} tag=0x{sh.tag:04X}"
-                f"（{count}×{w}×{h} {bpp}bpp）：仅采集，不导出不写配置"
-            )
-            return False
 
         prefix = f"0x{sh.data_addr:08X}"
         png_path = self.out_dir / f"{prefix}.png"
@@ -1250,31 +1172,30 @@ class TilesHarvester:
             for i, img in enumerate(images):
                 sheet_img.paste(img, ((i % cols) * w, (i // cols) * h))
             sheet_img.save(png_path)
-        self.log(f"  [tiles] 导出 {png_path.name} ({count}×{w}×{h} {bpp}bpp, 调色板={pal_src})")
-
-        self._append_preset(sh, bpp, count, w, h, bank_list)
+        self.log(
+            f"  [tiles] 导出 {png_path.name} ({count}×{w}×{h} {bpp}bpp,"
+            f" 调色板=ROM 绑定 tag=0x{self.bindings.get(sh.tag, (0,))[0]:04X})"
+        )
         return True
 
-    def _read_obj_palettes(self) -> Optional[list[list[tuple]]]:
-        try:
-            # OBJ 调色板 RAM 全段：0x05000200~0x050003FF（16 bank × 32B）。
-            # 旧实现读 0x05000300+256B：基址错位到 bank8-15 且长度不足，
-            # 解出的 bank0-7 实为 bank8-15、bank8-15 为空 → 导出全透明。
-            data = self._read_mem_chunked(0x05000200, 512)
-        except GdbError:
-            return None
-        if not data or not any(data):
-            return None
-        try:
-            from util.tiles_patcher import decode_palette_gba555
+    @staticmethod
+    def _build_preset(sh: PendingSheet, bpp: int, count: int,
+                      w: int, h: int) -> dict:
+        return {
+            "id": f"rt_{sh.data_addr:08X}",
+            "label": f"rt tag=0x{sh.tag:04X} {sh.name}",
+            "default": False,
+            "address": f"0x{sh.data_addr:08X}",
+            "format": f"{bpp}bpp",
+            "compression": sh.compression,
+            "sprite_size": f"{w}x{h}",
+            "count": count,
+            "raw_size": len(sh.raw),
+            "source": "gdb_patcher",
+        }
 
-            return decode_palette_gba555(data, bank_count=16)
-        except Exception:
-            return None
-
-    def _append_preset(self, sh: PendingSheet, bpp: int, count: int,
-                       w: int, h: int, bank_list: list[Optional[int]]) -> None:
-        """yaml 追加 preset；id 唯一（地址派生），已有 address 跳过。"""
+    def _upsert_preset(self, sh: PendingSheet, cfg: dict, md5hex: str) -> None:
+        """yaml 写回 preset：同地址已有则原位覆盖（指纹不一致才走到这），否则追加。"""
         import yaml
 
         try:
@@ -1290,35 +1211,23 @@ class TilesHarvester:
         if not isinstance(presets, list):
             presets = []
             tiles["presets"] = presets
-        addr_hex = f"0x{sh.data_addr:08X}"
-        if any(str(p.get("address") or "").lower() == addr_hex.lower() for p in presets):
-            self.stats["skipped"] += 1
-            return
-        pid = f"rt_{sh.data_addr:08X}"
-        if any(str(p.get("id") or "") == pid for p in presets):
-            self.stats["skipped"] += 1
-            return
-        preset = {
-            "id": pid,
-            "label": f"rt tag=0x{sh.tag:04X} {sh.name}",
-            "default": False,
-            "address": addr_hex,
-            "format": f"{bpp}bpp",
-            "compression": sh.compression,
-            "sprite_size": f"{w}x{h}",
-            "count": count,
-            "raw_size": len(sh.raw),
-            "source": "gdb_patcher",
-        }
-        if all(b is not None for b in bank_list) and len(set(bank_list)) > 1:
-            preset["bank_list"] = ",".join(str(b) for b in bank_list)
-        presets.append(preset)
+        addr_hex = str(cfg["address"])
+        entry = dict(cfg)
+        entry["md5"] = md5hex
+        idx = next((i for i, p in enumerate(presets)
+                    if str(p.get("address") or "").lower() == addr_hex.lower()), None)
+        if idx is None:
+            presets.append(entry)
+            action = "追加"
+        else:
+            presets[idx] = entry
+            action = "覆盖"
         try:
             from util.texts_patcher import save_yaml_config
 
             save_yaml_config(self.game_yaml, data)
-            self.known_addrs.add(addr_hex.lower())
-            self.log(f"  [tiles] preset 追加: {pid} ({count}×{w}×{h})")
+            self.log(f"  [tiles] preset {action}: {cfg['id']} "
+                     f"({cfg['count']}×{cfg['sprite_size']}) md5={md5hex[:8]}")
         except Exception as e:
             self.log(f"  [tiles] 写 yaml 失败: {e}")
 
@@ -1491,8 +1400,6 @@ def run_log(args: argparse.Namespace) -> int:
             generic_log(ctx, hook, regs)
             if hook.fn is not None:
                 hook.fn(gdb, regs, ctx, hook.point.cfg)
-            if _TILES_HARVESTER is not None:
-                _TILES_HARVESTER.tick()
     except KeyboardInterrupt:
         ctx.log("\n[用户中断]")
     finally:
@@ -1508,17 +1415,16 @@ def run_log(args: argparse.Namespace) -> int:
         except OSError:
             pass
     if _TILES_HARVESTER is not None:
-        flushed = _TILES_HARVESTER.flush_observed()
-        if flushed:
-            ctx.log(f"  收尾补导 {flushed} 张（部分证据，尺寸取多数派）")
+        _TILES_HARVESTER.flush_observed()
         s = _TILES_HARVESTER.stats
-        ctx.log(
-            f"  tiles 采集: 抓取 {s['captured']}，配对导出 {s['paired']}，"
-            f"跳过 {s['skipped']}，失败 {s['failed']}；未配对 {len(_TILES_HARVESTER.pending)}"
+        unexported = sum(
+            1 for sh in _TILES_HARVESTER.sheets.values()
+            if sh.data_addr not in _TILES_HARVESTER.exported_addrs
         )
-        pend = sorted({f"0x{sh.data_addr:08X}" for sh in _TILES_HARVESTER.pending.values()})
-        if pend:
-            ctx.log(f"  未配对 sheet 地址: {', '.join(pend)}")
+        ctx.log(
+            f"  tiles 采集: 登记 {s['captured']}，导出 {s['paired']}，"
+            f"跳过 {s['skipped']}，失败 {s['failed']}；仅登记未导出 {unexported}"
+        )
     ctx.log(f"追踪结束，共 {n} 次命中。日志: {logpath}")
     return 0
 

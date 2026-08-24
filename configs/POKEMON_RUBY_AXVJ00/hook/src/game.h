@@ -41,6 +41,7 @@
 #define ADDR_SLOT_TABLE                    0x09EA0000u
 #define ADDR_TEXT_CLEAR_WINDOW             0x08003BA8u
 #define ADDR_UPDATE_TILEMAP                0x080036DCu
+#define ADDR_PRINT_GLYPH_TM1_ORIGIN        0x0800360Cu
 // <<<GEN_ADDR_END>>>
 /*
  * 短语表（PhraseTable）—— 固定长度字段突破字符数限制的方案。
@@ -301,6 +302,15 @@ static inline void chs_update_tilemap(TextPrinter *win, uint16_t upper, uint16_t
     if (ov != 0u)
         win_set_u8(win, WIN_PALETTE, ov);
     ((chs_fn3)(ADDR_UPDATE_TILEMAP | 1u))(win, upper, lower);
+}
+
+/* 原生 tm1 等宽打印（PCS 专用分发）：FontSubTable[fontNum](win, glyph) 写
+ * 预渲染字体 tile 表项（font0/3 = base+2*glyph；font1/4 = base+FontType1Map）
+ * + [win+0x1B](cursorTileX)+=1。零像素绘制、零池分配。 */
+static inline void chs_print_glyph_tm1_origin(TextPrinter *win, uint32_t glyph)
+{
+    typedef void (*fn_t)(void *, uint32_t);
+    ((fn_t)(ADDR_PRINT_GLYPH_TM1_ORIGIN | 1u))(win, glyph);
 }
 static inline void chs_copy_glyph_2bpp_to_4bpp(
     const void *src, void *dst, uint32_t c, uint32_t e, uint32_t d)

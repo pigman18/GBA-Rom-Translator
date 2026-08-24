@@ -788,26 +788,90 @@ static const PrintGlyphFunc sPrintGlyphFuncs[8] = {
 #define PRINT_GLYPH_MODES 8u
 
 /* =====================================================================
- * §11 单字节分发（GetGlyph 薄壳）
+ * §11 单字节分发（PCS 两级表，镜像原生 sPrintGlyphFuncs × sWriteGlyphTilemapFuncs）
  * ===================================================================== */
-static int DrawGlyph(TextPrinter *win, uint32_t cur_char)
+typedef void (*PcsPrintFunc)(TextPrinter *win, uint32_t glyph);
+
+/* 自绘：GetGlyph 取字模 → 既有 sPrintGlyphFuncs[textMode]（原逻辑不动；
+ * CHS/SYM 亦经此）。 */
+static void PcsPrint_Custom(TextPrinter *win, uint32_t cur_char)
 {
     uint8_t buf[128];
     uint8_t width = 8;
     struct ChsGlyphTiles t;
+    unsigned m = win_u8(win, WIN_TEXTMODE);
 
     if (!GetGlyph(win, cur_char, buf, &width))
-        return 1;                       /* 引擎零回落：不可印位直接消费 */
+        return;                         /* 引擎零回落：不可印位直接消费 */
     t.tl = buf + 0x00;
     t.bl = buf + 0x20;
     t.tr = buf + 0x40;
     t.br = buf + 0x60;
-    {
-        unsigned m = win_u8(win, WIN_TEXTMODE);
-        if (m >= PRINT_GLYPH_MODES)
-            m = 0;
-        sPrintGlyphFuncs[m](win, &t, width);
+    if (m >= PRINT_GLYPH_MODES)
+        m = 0;
+    sPrintGlyphFuncs[m](win, &t, width);
+}
+
+/* 原生 tm1：FontSubTable[fontNum](win, glyph) 写预渲染字体 tile 表项 +
+ * cursorTileX+=1。零像素绘制、零池分配。 */
+static void PcsPrint_NativeTm1(TextPrinter *win, uint32_t cur_char)
+{
+    chs_print_glyph_tm1_origin(win, cur_char);
+}
+
+/* 第二级 [fontNum]，镜像原生 sWriteGlyphTilemapFuncs——每格对应日志实证窗口：
+ *  [4]=NativeTm1 队伍名窗 0x081BB43C（charBase1）：font4 走 FontType1Map
+ *                紧凑区 [TILE_BASE,+0xD5]，在 CHS 池 [0x101,0x1AC] 下方，
+ *                原生表项指向的 tile 完好（gdb 24 处实证；♂/♀/Lv/状态图标
+ *                0x14C-0x151/0x18C-0x19B 不再被池覆写）。
+ *  [3]=Custom    弹窗 0x081BB49C（charBase0）/请选择 0x081BB484：font3 线性
+ *                区 [1,0x1BC] 与池重叠（数字 0xA2→tile0x145 踩池，208 处实证）。
+ *  [1]=Custom    无实证，默认安全（原生同为紧凑区，将来可切 NativeTm1）。
+ *  其余=Custom。 */
+static const PcsPrintFunc sPcsTm1FontFuncs[8] = {
+    PcsPrint_Custom,       /* font0 */
+    PcsPrint_Custom,       /* font1：无实证，默认自绘 */
+    PcsPrint_Custom,       /* font2 */
+    PcsPrint_Custom,       /* font3：线性区与池重叠 */
+    PcsPrint_NativeTm1,    /* font4：FontType1Map 区在池下方 */
+    PcsPrint_Custom,       /* font5 */
+    PcsPrint_Custom,       /* font6 */
+    PcsPrint_Custom,       /* font7 */
+};
+
+static void PcsPrint_Tm1(TextPrinter *win, uint32_t cur_char)
+{
+    sPcsTm1FontFuncs[win_u8(win, WIN_FONTNUM_REAL) & 7u](win, cur_char);
+}
+
+/* 第一级 [textMode]，镜像原生 sPrintGlyphFuncs：
+ *  [1]=Tm1      二级查 fontNum（上表）。
+ *  [3]=Custom   菜单/对话 0x081BB46C：原生 tm3 = FontFuncTable[3]@0x08003494
+ *               另一策略未 RE；上版误派 tm1 函数致数字/假名蓝块（140 处实证）。
+ *  其余=Custom（tm0/tm2 自绘，已验证）。 */
+static const PcsPrintFunc sPcsPrintFuncs[8] = {
+    PcsPrint_Custom,       /* 0：tm0 自绘 */
+    PcsPrint_Tm1,          /* 1：二级查 fontNum */
+    PcsPrint_Custom,       /* 2：tm2 占位 */
+    PcsPrint_Custom,       /* 3：tm3 自绘（原生 tm3 未 RE） */
+    PcsPrint_Custom,       /* 4 */
+    PcsPrint_Custom,       /* 5 */
+    PcsPrint_Custom,       /* 6 */
+    PcsPrint_Custom,       /* 7 */
+};
+
+static int DrawGlyph(TextPrinter *win, uint32_t cur_char)
+{
+    /* CHS 标点 SYM 带走自绘（自建 sym 字库）；≥0xF7 不可印位直接消费。
+     * 其余按 textMode（tm1 再查 fontNum）两级表分发。 */
+    if (cur_char >= SYM_GLYPH_BASE
+        && cur_char < SYM_GLYPH_BASE + SYM_GLYPH_COUNT) {
+        PcsPrint_Custom(win, cur_char);
+        return 1;
     }
+    if (cur_char >= 0xF7u)
+        return 1;
+    sPcsPrintFuncs[win_u8(win, WIN_TEXTMODE) & 7u](win, cur_char);
     return 1;
 }
 

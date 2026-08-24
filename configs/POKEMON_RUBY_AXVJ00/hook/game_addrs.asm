@@ -17,6 +17,9 @@ CopyGlyph1bppTo4bpp                    equ 0x08003830  ; C: ADDR_COPY_GLYPH_1BPP
 CopyGlyph2bppTo4bpp                    equ 0x080038A0  ; C: ADDR_COPY_GLYPH_2BPP_4BPP
 GetGlyphTilePointers                   equ 0x08003730  ; C: ADDR_GET_GLYPH_TILE_PTRS
 UpdateTilemap                          equ 0x080036DC  ; C: ADDR_UPDATE_TILEMAP
+; 原生 tm1 等宽打印（FontFuncTable[1] @0x081BB3AC[1]）：FontSubTable[fontNum]
+; 写预渲染字体 tile 表项 + [win+0x1B](cursorTileX)+=1。PCS 字形分发专用。
+PrintGlyph_TextMode1_Origin            equ 0x0800360C  ; C: ADDR_PRINT_GLYPH_TM1_ORIGIN
 ; FA/FB → DrawInitialDownArrow：画等 A 的 ▼（再进 state 8/9）
 DrawInitialDownArrow                   equ 0x08003F4C  ; C: ADDR_DRAW_INITIAL_DOWN_ARROW
 ; P05 桩已折入 text.c static DrawInitialDownArrow（2026-08-24，入口不再订址）：

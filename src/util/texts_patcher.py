@@ -1621,8 +1621,154 @@ class ControlOrShortFilter(TextFilter):
         return False
 
 
+class RequireRealRefFilter(TextFilter):
+    """三态引用验证（结构性判据，替代纯形态打分）：指针必须来自真实引用。
+
+    - R1 直接调用：指针词被 Thumb ldr rX,[pc,#imm] 引用，且 ldr 之后短窗内
+      存在 bl 且目标以 push {..,lr} 开头（打印函数直调形态）；
+    - R2 指针表聚集：指针 ±64B 窗口内多数 word 为 ROM 指针，且这些目标聚集在
+      指针附近（±16KB 占比 >=60%）——gBattleStringsTable 等表驱动场景；
+    - R3 文本邻域：目标 ±256B 内 FF 结尾串 >=8 条且非零字节充足（活跃文本区）；
+    - 非对齐指针一律否决（字面量池词必然 4 对齐，非对齐即数据巧合）。
+
+    value: true 时：所有指针来源皆弱则丢弃；任一来源通过则保留；
+    无指针 / 无 ROM 上下文时不适用（交由其他闸判定）。
+    """
+
+    type_name = "require_real_ref_filter"
+
+    _pool_ldr: set[int] | None = None   # 惰性 LDR(pc) 引用集合（模块级缓存）
+    _REF_ROM: bytes | None = None       # 由 extract_module 入口注入
+
+    @classmethod
+    def set_rom(cls, rom) -> None:
+        cls._REF_ROM = rom
+        cls._pool_ldr = None
+
+    def hit(self, ctx) -> bool | None:
+        if not bool(self.value):
+            return None
+        if not ctx.is_pointer_based or not ctx.pointer_offs:
+            return None
+        rom = type(self)._REF_ROM
+        if rom is None:
+            return None
+        for q in ctx.pointer_offs:
+            try:
+                qi = int(q)
+            except (TypeError, ValueError):
+                continue
+            if qi < 0 or qi + 4 > len(rom):
+                continue
+            if self._real_ref(rom, qi, int(ctx.address)):
+                return False
+        return True
+
+    def _pool_refs(self, rom):
+        if RequireRealRefFilter._pool_ldr is None:
+            refs = set()
+            n = len(rom)
+            for o in range(0, n - 2, 2):
+                hw = rom[o] | (rom[o + 1] << 8)
+                if (hw & 0xF800) == 0x4800:
+                    tgt = ((o + 4) & ~3) + (hw & 0xFF) * 4
+                    if 0 <= tgt <= n - 4:
+                        refs.add(tgt)
+            RequireRealRefFilter._pool_ldr = refs
+        return RequireRealRefFilter._pool_ldr
+
+    def _r1_direct_call(self, rom, q) -> bool:
+        if q % 4 != 0 or q not in self._pool_refs(rom):
+            return False
+        n = len(rom)
+        for back in range(2, 1024, 2):
+            o = q - back
+            if o < 0:
+                break
+            hw = rom[o] | (rom[o + 1] << 8)
+            if (hw & 0xF800) != 0x4800:
+                continue
+            if ((o + 4) & ~3) + (hw & 0xFF) * 4 != q:
+                continue
+            for fwd in range(2, 66, 2):
+                p2 = o + fwd
+                if p2 + 4 > n:
+                    break
+                h1 = rom[p2] | (rom[p2 + 1] << 8)
+                if (h1 & 0xF800) != 0xF000:
+                    continue
+                h2 = rom[p2 + 2] | (rom[p2 + 3] << 8)
+                if (h2 & 0xF800) != 0xF800:
+                    continue
+                off = ((h1 & 0x7FF) << 12) | (h2 & 0x7FF)
+                if off & 0x200000:
+                    off -= 0x400000
+                tgt = p2 + 4 + off * 2
+                if 0 <= tgt <= n - 2:
+                    th = rom[tgt] | (rom[tgt + 1] << 8)
+                    if (th & 0xFE00) == 0xB400:  # push {..(, lr)}
+                        return True
+            break
+        return False
+
+    def _r2_clustered_table(self, rom, q) -> bool:
+        n = len(rom)
+        tgts = []
+        for d in range(-64, 65, 4):
+            w = q + d
+            if w < 0 or w + 4 > n:
+                continue
+            v = struct.unpack_from("<I", rom, w)[0]
+            if BASE <= v < BASE + n:
+                tgts.append(v - BASE)
+        if len(tgts) < 8:
+            return False
+        near = sum(1 for t in tgts if abs(t - q) <= 0x4000)
+        if near < len(tgts) * 0.6:
+            return False
+        # 目标文本性：聚集目标须指向 FF 结尾串（伪指针海的目标是随机地址，
+        # 大多落在无 FF 分隔的数据中）。
+        txt = 0
+        for t in tgts:
+            tail = rom[t : t + 20] if t + 20 <= n else b""
+            i = tail.find(0xFF)
+            if i >= 0 and any(b != 0x00 for b in tail[:i]):
+                txt += 1
+        return txt >= len(tgts) * 0.5
+
+    @staticmethod
+    def _ff_segments(rom, lo, hi, min_len=12, min_nz=6) -> int:
+        """统计 [lo,hi) 内「FF 结尾且段长>=min_len、含>=min_nz 个非零字节」的段。"""
+        segs = run = nz = 0
+        for b in rom[lo:hi]:
+            if b == 0xFF:
+                if run >= min_len and nz >= min_nz:
+                    segs += 1
+                run = nz = 0
+            else:
+                run += 1
+                if b != 0x00:
+                    nz += 1
+        return segs
+
+    def _r3_text_neighborhood(self, rom, fo) -> bool:
+        lo = max(0, fo - 256)
+        hi = min(len(rom), fo + 256)
+        # 真·句子计数：FF 结尾的 >=12B 段（gfx 数据块的 FF 不构成规律短段链）
+        return self._ff_segments(rom, lo, hi) >= 5
+
+    def _real_ref(self, rom, q, fo) -> bool:
+        if q % 4 != 0:
+            return False
+        if self._r1_direct_call(rom, q):
+            return True
+        if self._r2_clustered_table(rom, q):
+            return True
+        return self._r3_text_neighborhood(rom, fo)
+
 FILTER_TYPES: dict[str, type[TextFilter]] = {
     CharacterFilter.type_name: CharacterFilter,
+    RequireRealRefFilter.type_name: RequireRealRefFilter,
     DialogueShapeFilter.type_name: DialogueShapeFilter,
     MinByteLengthFilter.type_name: MinByteLengthFilter,
     MaxByteLengthFilter.type_name: MaxByteLengthFilter,
@@ -2419,6 +2565,12 @@ def extract_module(
     exclude_ranges: list[tuple[int, int]] | None = None,
     filters: list[dict[str, Any]] | None = None,
 ) -> list[dict]:
+    # 结构性引用判据需要 ROM 字节上下文（ldr 字面量池/指针表密度），
+    # 在此注入；每个模块导出前刷新一次。
+    try:
+        RequireRealRefFilter.set_rom(rom)
+    except Exception:
+        pass
     rtype = str(mod.get("type") or "scan")
     if rtype == "stride":
         return extract_stride(rom, mod, game_code, filters=filters)

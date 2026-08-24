@@ -43,368 +43,373 @@ tiles:
     bank_list: 0,0,1,1,0,0,2,1,0,2,0,1,2,0,1,1,2,0,0,1,1,2,0
     pointers:
     - '0x0839747C'
+
 texts:
   filters:
-  - id: global_anim_cmd_filter
-    type: anim_cmd_filter
-    value: true
-  - id: global_ime_keyboard_filter
-    type: ime_keyboard_filter
-    value: true
-  - id: global_title_lz_filter
-    type: address_filter
-    value:
-      start: '0x0836D000'
-      end: '0x0836FFFF'
+    - id: global_anim_cmd_filter
+      type: anim_cmd_filter
+      value: true
+    - id: global_ime_keyboard_filter
+      type: ime_keyboard_filter
+      value: true
+    - id: global_title_lz_filter
+      type: address_filter
+      value:
+        start: '0x0836D000'
+        end: '0x0836FFFF'
   modules:
-  - id: 属性名
-    label: 词条·属性
-    group: 词条
-    default: true
-    description: 属性名短表（单字注入需谨慎）
-    start: '0x1cbb0c'
-    end: '0x1cbb65'
-    type: stride
-    read:
-      stride: 5
+    - id: 属性名
+      label: 词条·属性
+      group: 词条
+      default: true
+      description: 属性名短表（单字注入需谨慎）
+      start: '0x1cbb0c'
+      end: '0x1cbb65'
+      type: stride
+      read:
+        stride: 5
 
-  - id: 属性名-华丽大赛
-    label: 词条·华丽大赛属性
-    group: 词条
-    default: true
-    description: 华丽大赛分类名指针表（4）
-    start: '0x39F798'
-    end: '0x39F7A7'
-    type: stride_ptr
-    read:
-      stride: 4
+    - id: 属性名-华丽大赛
+      label: 词条·华丽大赛属性
+      group: 词条
+      default: true
+      description: 华丽大赛分类名指针表（4）
+      start: '0x39F798'
+      end: '0x39F7A7'
+      type: stride_ptr
+      read:
+        stride: 4
 
-  - id: 性格名
-    label: 词条·性格
-    group: 词条
-    default: true
-    description: 性格名指针表（25）；相遇/蛋描述走 UI callers
-    start: '0x397168'
-    end: '0x39734C'
-    type: stride_ptr
-    read:
-      stride: 4
+    - id: 性格名
+      label: 词条·性格
+      group: 词条
+      default: true
+      description: 性格名指针表（25）；相遇/蛋描述走 UI callers
+      start: '0x397168'
+      end: '0x39734C'
+      type: stride_ptr
+      read:
+        stride: 4
 
-  - id: 特性名
-    label: 词条·特性
-    group: 词条
-    default: true
-    description: 特性名固定表
-    start: '0x1cbc4c'
-    end: '0x1cbeb3'
-    type: stride
-    read:
-      stride: 8
+    - id: 特性名
+      label: 词条·特性
+      group: 词条
+      default: true
+      description: 特性名固定表
+      start: '0x1cbc4c'
+      end: '0x1cbeb3'
+      type: stride
+      read:
+        stride: 8
 
-  - id: 宝可梦名
-    label: 词条·宝可梦
-    group: 词条
-    default: true
-    description: 宝可梦名固定表
-    start: '0x1ca354'
-    end: '0x1cacfb'
-    type: stride
-    read:
-      stride: 6
-    filters:
-    - id: species_skip_qmark
-      type: character_filter
-      value: ？？？？？
-      filter: true
-    write:
-      relocate: false
-      replace: false
-      ## 强制slot，防止修改rom值
-      slot: true
+    - id: 宝可梦名
+      label: 词条·宝可梦
+      group: 词条
+      default: true
+      description: 宝可梦名固定表
+      start: '0x1ca354'
+      end: '0x1cacfb'
+      type: stride
+      read:
+        stride: 6
+      filters:
+        - id: species_skip_qmark
+          type: character_filter
+          value: ？？？？？
+          filter: true
+      write:
+        relocate: false
+        replace: false
+        ## 强制slot，防止修改rom值
+        slot: true
 
-  - id: 招式名
-    label: 词条·招式
-    group: 词条
-    default: true
-    description: 招式名固定表
-    start: '0x1cad04'
-    end: '0x1cb813'
-    type: stride
-    read:
-      stride: 8
+    - id: 招式名
+      label: 词条·招式
+      group: 词条
+      default: true
+      description: 招式名固定表
+      start: '0x1cad04'
+      end: '0x1cb813'
+      type: stride
+      read:
+        stride: 8
 
-  - id: 招式名-华丽大赛
-    label: 词条·华丽大赛招式
-    group: 词条
-    default: true
-    description: 华丽大赛特殊效果招式名指针表（12）
-    start: '0x39F748'
-    end: '0x39F777'
-    type: stride_ptr
-    read:
-      stride: 4
+    - id: 招式名-华丽大赛
+      label: 词条·华丽大赛招式
+      group: 词条
+      default: true
+      description: 华丽大赛特殊效果招式名指针表（12）
+      start: '0x39F748'
+      end: '0x39F777'
+      type: stride_ptr
+      read:
+        stride: 4
 
-  - id: 训练家名
-    label: 词条·训练家
-    group: 词条
-    default: true
-    description: Trainer class 名表（窄带定址）
-    start: '0x1C4A10'
-    end: '0x3E95FF'
-    type: scan
-    min_byte_length: 3
-    ranges:
-    - start: '0x1C4A10'
-      end: '0x1C4C8F'
-    - start: '0x3E944C'
-      end: '0x3E9453'
-    filters:
-    - id: name_min_byte_length_filter
-      type: min_byte_length_filter
-      value: 3
-    write:
-      relocate: false
-      replace: false
-      ## 强制slot，防止修改rom值
-      slot: true
+    - id: 训练家名
+      label: 词条·训练家
+      group: 词条
+      default: true
+      description: Trainer class 名表（窄带定址）
+      start: '0x1C4A10'
+      end: '0x3E95FF'
+      type: scan
+      min_byte_length: 3
+      ranges:
+        - start: '0x1C4A10'
+          end: '0x1C4C8F'
+        - start: '0x3E944C'
+          end: '0x3E9453'
+      filters:
+        - id: name_min_byte_length_filter
+          type: min_byte_length_filter
+          value: 3
+      write:
+        relocate: false
+        replace: false
+        ## 强制slot，防止修改rom值
+        slot: true
 
-  - id: 训练家个人名
-    label: 词条·训练家个人名
-    group: 词条
-    default: true
-    description: 训练家个人名表（0x1C5040-0x1CA340，步长 0x20 名称偏移 0x18；区分于「训练家名」class 表与
-      0x1CA354 起物种名）；2026-08 复核：原 end 截短尾部（ユカリ/ナナとネネ等双人组合名至マサシ），实测终点 0x1CA340
-    start: '0x1C5040'
-    end: '0x1CA340'
-    type: struct
-    read:
-      entry_size: 32
-      name_offset: 24
-    write:
-      relocate: false
-      replace: false
-      ## 强制slot，防止修改rom值
-      slot: true
+    - id: 训练家个人名
+      label: 词条·训练家个人名
+      group: 词条
+      default: true
+      description: 训练家个人名表（0x1C5040-0x1CA340，步长 0x20 名称偏移 0x18；区分于「训练家名」class 表与
+        0x1CA354 起物种名）；2026-08 复核：原 end 截短尾部（ユカリ/ナナとネネ等双人组合名至マサシ），实测终点 0x1CA340
+      start: '0x1C5040'
+      end: '0x1CA340'
+      type: struct
+      read:
+        entry_size: 32
+        name_offset: 24
+      write:
+        relocate: false
+        replace: false
+        ## 强制slot，防止修改rom值
+        slot: true
 
-  - id: 地点名
-    label: 词条·地点
-    group: 词条
-    default: true
-    description: 地点名表
-    start: '0x3BECB7'
-    end: '0x3BEF67'
-    type: scan
-    min_byte_length: 5
-    max_byte_length: 20
+    - id: 地点名
+      label: 词条·地点
+      group: 词条
+      default: true
+      description: 地点名表
+      start: '0x3BECB7'
+      end: '0x3BEF67'
+      type: scan
+      min_byte_length: 5
+      max_byte_length: 20
 
-  - id: 秘密基地装饰名
-    label: 词条·秘密基地装饰
-    group: 词条
-    default: true
-    description: 秘密基地装饰品名表（0x3C2A54 起 120 条，步长 0x1C 名称偏移 13）
-    start: '0x3C2A54'
-    end: '0x3C3773'
-    type: struct
-    read:
-      entry_size: 28
-      name_offset: 13
-    write:
-      byte_length: 5
-      relocate: true
-      replace: true
-      slot: true
-    reuse_slot_padding: true
+    - id: 秘密基地装饰名
+      label: 词条·秘密基地装饰
+      group: 词条
+      default: true
+      description: 秘密基地装饰品名表（0x3C2A54 起 120 条，步长 0x1C 名称偏移 13）
+      start: '0x3C2A54'
+      end: '0x3C3773'
+      type: struct
+      read:
+        entry_size: 28
+        name_offset: 13
+      write:
+        byte_length: 5
+        relocate: true
+        replace: true
+        slot: true
+      reuse_slot_padding: true
 
-  - id: 道具名
-    label: 词条·道具
-    group: 词条
-    default: true
-    description: 道具结构内名称字段
-    start: '0x39a648'
-    end: '0x39dca7'
-    type: struct
-    read:
-      entry_size: 40
-      desc_ptr_offset: 16
+    - id: 道具名
+      label: 词条·道具
+      group: 词条
+      default: true
+      description: 道具结构内名称字段
+      start: '0x39a648'
+      end: '0x39dca7'
+      type: struct
+      read:
+        entry_size: 40
+        desc_ptr_offset: 16
 
-  - id: 道具说明
-    label: 说明·道具
-    group: 说明
-    default: true
-    description: 道具描述指针目标（定址 scan）
-    start: '0x3984DC'
-    end: '0x39A647'
-    type: scan
-    word_count: 9
-    wrap_pages: false
-    max_lines: 3
+    - id: 道具说明
+      label: 说明·道具
+      group: 说明
+      default: true
+      description: 道具描述指针目标（定址 scan）
+      start: '0x3984DC'
+      end: '0x39A647'
+      type: scan
+      word_count: 9
+      wrap_pages: false
+      max_lines: 3
 
-  - id: 招式说明
-    label: 说明·招式
-    group: 说明
-    default: true
-    description: 招式说明（定长槽 0x38；非指针表）
-    start: '0x3923F8'
-    end: '0x397167'
-    type: stride
-    read:
-      stride: 56
-    word_count: 13
-    wrap_pages: false
-    max_lines: 2
+    - id: 招式说明
+      label: 说明·招式
+      group: 说明
+      default: true
+      description: 招式说明（定长槽 0x38；非指针表）
+      start: '0x3923F8'
+      end: '0x397167'
+      type: stride
+      read:
+        stride: 56
+      word_count: 13
+      wrap_pages: false
+      max_lines: 2
 
-  - id: 招式说明-华丽大赛
-    label: 说明·华丽大赛招式
-    group: 说明
-    default: true
-    description: 华丽大赛招式效果说明指针表（47）
-    start: '0x39F638'
-    end: '0x39F6F3'
-    type: stride_ptr
-    read:
-      stride: 4
-      eos_window: 48
-    word_count: 13
-    wrap_pages: false
-    max_lines: 2
+    - id: 招式说明-华丽大赛
+      label: 说明·华丽大赛招式
+      group: 说明
+      default: true
+      description: 华丽大赛招式效果说明指针表（47）
+      start: '0x39F638'
+      end: '0x39F6F3'
+      type: stride_ptr
+      read:
+        stride: 4
+        eos_window: 48
+      word_count: 13
+      wrap_pages: false
+      max_lines: 2
 
-  - id: 特性说明
-    label: 说明·特性
-    group: 说明
-    default: true
-    description: 特性说明（定长槽 0x13；含とくせいなし；非指针表）
-    start: '0x1CBEB4'
-    end: '0x1CC47D'
-    type: stride
-    read:
-      stride: 19
-    word_count: 12
-    wrap_pages: false
-    max_lines: 1
-    translate_rules:
-    - 单行输出：禁止任何换行（不得出现实际换行或 \\n）；句末不得使用「。」
-    - 全文不超过 12 个汉字（控制码占位符 {Cn} 不计入字数）；超长必须压缩语义，禁止用换行续写
+    - id: 特性说明
+      label: 说明·特性
+      group: 说明
+      default: true
+      description: 特性说明（定长槽 0x13；含とくせいなし；非指针表）
+      start: '0x1CBEB4'
+      end: '0x1CC47D'
+      type: stride
+      read:
+        stride: 19
+      word_count: 12
+      wrap_pages: false
+      max_lines: 1
+      translate_rules:
+        - 单行输出：禁止任何换行（不得出现实际换行或 \\n）；句末不得使用「。」
+        - 全文不超过 12 个汉字（控制码占位符 {Cn} 不计入字数）；超长必须压缩语义，禁止用换行续写
 
-  - id: 图鉴分类名
-    label: 词条·图鉴分类名
-    group: 词条
-    default: true
-    description: 图鉴条目内联分类名（+0x06，6字节00补齐）
-    start: '0x384746'
-    end: '0x38717D'
-    type: struct
-    read:
-      entry_size: 28
-      name_offset: 6
-      eos: 0
-    write:
-      byte_length: 5
-      relocate: true
-      replace: true
-      slot: true
-    reuse_slot_padding: true
+    - id: 图鉴分类名
+      label: 词条·图鉴分类名
+      group: 词条
+      default: true
+      description: 图鉴条目内联分类名（+0x06，6字节00补齐）
+      start: '0x384746'
+      end: '0x38717D'
+      type: struct
+      read:
+        entry_size: 28
+        name_offset: 6
+        eos: 0
+      write:
+        byte_length: 5
+        relocate: true
+        replace: true
+        slot: true
+      reuse_slot_padding: true
 
-  - id: 图鉴说明
-    label: 说明·图鉴说明
-    group: 说明
-    default: true
-    description: 图鉴正文（定址 scan）
-    start: '0x37DB9C'
-    end: '0x384703'
-    type: scan
-    word_count: 16
-    wrap_pages: false
-    max_lines: 3
+    - id: 图鉴说明
+      label: 说明·图鉴说明
+      group: 说明
+      default: true
+      description: 图鉴正文（定址 scan）
+      start: '0x37DB9C'
+      end: '0x384703'
+      type: scan
+      word_count: 16
+      wrap_pages: false
+      max_lines: 3
 
-  - id: 其他UI界面
-    label: UI界面
-    group: 文本
-    default: true
-    description: 全 ROM；execute_filter（Menu/Text 打印函数，排除故事已消费）
-    start: '0x0'
-    end: '0xFFFFFF'
-    type: scan
-    filters:
-    - id: ui_original_text_filter
-      type: original_text_filter
-      filter: false
-      value:
-        file: reference_corpus/ui.txt
-        mapping: {}
+    - id: 其他UI界面
+      label: UI界面
+      group: 文本
+      default: true
+      description: 全 ROM；execute_filter（Menu/Text 打印函数，排除故事已消费）
+      start: '0x0'
+      end: '0xFFFFFF'
+      type: scan
+      filters:
+        - id: ui_original_text_filter
+          type: original_text_filter
+          filter: false
+          value:
+            file: reference_corpus/ui.txt
+            mapping: {}
 
-  - id: 剧情
-    label: 文本·剧情
-    group: 文本
-    default: true
-    description: 全 ROM；execute_filter（ShowFieldMessage + 脚本 op message/trainerbattle）
-    start: '0x0'
-    end: '0xFFFFFF'
-    type: scan
-    reader:
-      type: msg_reader
-      value:
-        file: reference_corpus/RubySapphire/ja-Hrkt_msg.txt
-        mapping:
-          "　": " "
-          "\\n": "\n"
-          "\\c": "\n\n"
-          "\\r": "\\l"
-          "\\e": ""
-          "[PLAYER]": "\\01"
-          "[STR_VAR_1]": "\\02"
-          "[STR_VAR_2]": "\\03"
-          "[STR_VAR_3]": "\\04"
-          '[KUN]': \05
-          '[RIVAL]': \06
-          # 方向箭头/阵营占位符均为 ROM 实测字节（2026-08 探针）：
-          # UP=FC0CF7 DOWN=FC0CF8 LEFT=FC0CF9 RIGHT=FC0CFA
-          # EVIL_TEAM=FD08 GOOD_TEAM=FD09 EVIL_LEADER=FD0A GOOD_LEADER=FD0B
-          '[RIGHT_ARROW]': \CC0CFA
-          '[LEFT_ARROW]': \CC0CF9
-          '[UP_ARROW]': \CC0CF7
-          '[DOWN_ARROW]': \CC0CF8
-          '[EVIL_TEAM]': \08
-          '[GOOD_TEAM]': \09
-          '[EVIL_LEADER]': \0A
-          '[GOOD_LEADER]': \0B
-          # 战斗引擎占位符（ROM 实证：WinningPrize/PickedUpYen/たおれた 等）
-          '[B_PLAYER_NAME]': \20
-          '[B_BUFF1]': \00
-          '[B_BUFF2]': \01
-          '[B_ATK_NAME_WITH_PREFIX]': \0C
-          '[B_DEF_NAME_WITH_PREFIX]': \0D
-    filters:
-    - id: story_pointer_filter
-      type: story_pointer_filter
-      value: true
-    # 启发式兜底通道：msg_reader 未命中的整段候选改走此闸（单模块双通道），
-    # 收指针索引型台词；伪命中由 mark-404/remove 链路兜底。
-    fallback_filters:
-    - id: fb_require_pointer
-      type: require_pointer_filter
-      value: true
-    - id: fb_dialogue_shape
-      type: dialogue_shape_filter
-      value:
-        enabled: true
-        pointer_ok: false
-    - id: fb_garbage
-      type: garbage_heuristic_filter
-      value: true
+    - id: 剧情
+      label: 文本·剧情
+      group: 文本
+      default: true
+      description: 全 ROM；execute_filter（ShowFieldMessage + 脚本 op message/trainerbattle）
+      start: '0x0'
+      end: '0xFFFFFF'
+      type: scan
+      reader:
+        type: msg_reader
+        value:
+          file: reference_corpus/RubySapphire/ja-Hrkt_msg.txt
+          mapping:
+            "　": " "
+            "\\n": "\n"
+            "\\c": "\n\n"
+            "\\r": "\\l"
+            "\\e": ""
+            "[PLAYER]": "\\01"
+            "[STR_VAR_1]": "\\02"
+            "[STR_VAR_2]": "\\03"
+            "[STR_VAR_3]": "\\04"
+            '[KUN]': \05
+            '[RIVAL]': \06
+            # 方向箭头/阵营占位符均为 ROM 实测字节（2026-08 探针）：
+            # UP=FC0CF7 DOWN=FC0CF8 LEFT=FC0CF9 RIGHT=FC0CFA
+            # EVIL_TEAM=FD08 GOOD_TEAM=FD09 EVIL_LEADER=FD0A GOOD_LEADER=FD0B
+            '[RIGHT_ARROW]': \CC0CFA
+            '[LEFT_ARROW]': \CC0CF9
+            '[UP_ARROW]': \CC0CF7
+            '[DOWN_ARROW]': \CC0CF8
+            '[EVIL_TEAM]': \08
+            '[GOOD_TEAM]': \09
+            '[EVIL_LEADER]': \0A
+            '[GOOD_LEADER]': \0B
+            # 战斗引擎占位符（ROM 实证：WinningPrize/PickedUpYen/たおれた 等）
+            '[B_PLAYER_NAME]': \20
+            '[B_BUFF1]': \00
+            '[B_BUFF2]': \01
+            '[B_ATK_NAME_WITH_PREFIX]': \0C
+            '[B_DEF_NAME_WITH_PREFIX]': \0D
+      filters:
+        - id: story_pointer_filter
+          type: story_pointer_filter
+          value: true
+      # 启发式兜底通道：msg_reader 未命中的整段候选改走此闸（单模块双通道），
+      # 收指针索引型台词；require_real_ref 用结构性引用判据
+      # （ldr 直调/指针表聚集/文本邻域，非对齐指针直接否决）杀数据巧合。
+      fallback_filters:
+        - id: fb_require_pointer
+          type: require_pointer_filter
+          value: true
+        - id: fb_real_ref
+          type: require_real_ref_filter
+          value: true
+        - id: fb_dialogue_shape
+          type: dialogue_shape_filter
+          value:
+            enabled: true
+            pointer_ok: false
+        - id: fb_garbage
+          type: garbage_heuristic_filter
+          value: true
 
-  - id: 树果名
-    label: 词条·树果名
-    group: 词条
-    default: true
-    description: 树果数据表（クラボ..ナゾ）；name@0，desc_ptr@12 指向说明池
-      （说明池由 剧情 语料通道收录，故不设独立说明模块）
-    start: '0x3A1050'
-    end: '0x3A14E8'
-    type: struct
-    read:
-      entry_size: 56
-      name_offset: 0
-      desc_ptr_offset: 12
+    - id: 树果名
+      label: 词条·树果名
+      group: 词条
+      default: true
+      description: 树果数据表（クラボ..ナゾ）；name@0，desc_ptr@12 指向说明池
+        （说明池由 剧情 语料通道收录，故不设独立说明模块）
+      start: '0x3A1050'
+      end: '0x3A14E8'
+      type: struct
+      read:
+        entry_size: 56
+        name_offset: 0
+        desc_ptr_offset: 12
 
 # GDB 运行时追踪监听点（python src/util/gdb_patcher.py log）。
 # 加新监控点只需在此追加一条；无 Python handler 时自动打通用日志。

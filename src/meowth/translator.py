@@ -45,8 +45,7 @@ PROVIDER_PRESETS: dict[str, tuple[str, str, str]] = {
     "zhipu":     ("https://open.bigmodel.cn/api/paas/v4",     "glm-4-flash",       "ZHIPU_API_KEY"),
     "moonshot":  ("https://api.moonshot.cn/v1",               "moonshot-v1-8k",    "MOONSHOT_API_KEY"),
     "qwen":      ("https://dashscope.aliyuncs.com/compatible-mode/v1", "qwen-plus", "DASHSCOPE_API_KEY"),
-    "opencode":      ("https://opencode.ai/zen/go/v1", "deepseek-v4-flash", "OPENCODE_GO_KEY"),
-    "opencode-free": ("https://opencode.ai/zen/v1", "deepseek-v4-flash-free", "OPENCODE_GO_KEY"),
+    "opencode":      ("https://opencode.ai/zen/go/v1", "deepseek-v4-flash", "OPENCODE_GO_KEY")
 }
 
 # Old DeepSeek ids → current API ids

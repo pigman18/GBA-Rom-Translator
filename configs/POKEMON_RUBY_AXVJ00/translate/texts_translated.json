@@ -3474,6 +3474,10 @@
     "translated": "『好“\\02”与\\n坏“\\02”』\\p『“\\02”与\\n宝可梦的关系』\\p『实用的\\n“\\02”』\\p关于“\\02”的\\n书整整齐齐地排成一排！"
   },
   {
+    "status": 404,
+    "original": "あ    ぞ３     けそ  \\CC0010あ た あ     まろ「うüン\\EEｚｚ►►►"
+  },
+  {
     "status": 200,
     "original": "あ あなた！ \\01さん！",
     "translated": "啊，是你！\\01！"
@@ -3668,6 +3672,10 @@
     "translated": "靛蓝色宝珠……\\n竟然自己开始发光了……！？"
   },
   {
+    "status": 404,
+    "original": "あいうえお"
+  },
+  {
     "status": 200,
     "original": "あいかわらず おつよいのね\nおねえさん かんしん しちゃったわ",
     "translated": "你还是那么强呢，\\n姐姐，我都佩服了。"
@@ -3824,6 +3832,11 @@
   },
   {
     "status": 200,
+    "original": "あいての こころも わかる",
+    "translated": "对方的心思也能明白"
+  },
+  {
+    "status": 200,
     "original": "あいての じゃくてんを せめる",
     "translated": "攻击对手的弱点"
   },
@@ -3896,6 +3909,11 @@
     "status": 200,
     "original": "あいてを まどわせて たたかう",
     "translated": "迷惑对手进行战斗"
+  },
+  {
+    "status": 200,
+    "original": "あいを そそいだ ポケモン",
+    "translated": "倾注了爱心的宝可梦"
   },
   {
     "status": 404,
@@ -4141,8 +4159,18 @@
   },
   {
     "status": 200,
+    "original": "あきらめ",
+    "translated": "放弃"
+  },
+  {
+    "status": 200,
     "original": "あきらめない トレーナー",
     "translated": "不放弃的训练家"
+  },
+  {
+    "status": 200,
+    "original": "あきらめないわよ！",
+    "translated": "我才不会放弃呢！"
   },
   {
     "status": 200,
@@ -4163,6 +4191,11 @@
     "status": 200,
     "original": "あくしゅう",
     "translated": "恶臭"
+  },
+  {
+    "status": 200,
+    "original": "あくの びがく！",
+    "translated": "恶之美学！"
   },
   {
     "status": 200,
@@ -4203,6 +4236,11 @@
     "status": 200,
     "original": "あくむ",
     "translated": "恶梦"
+  },
+  {
+    "status": 200,
+    "original": "あこがれる よねー",
+    "translated": "真令人憧憬呢——"
   },
   {
     "status": 200,
@@ -4258,6 +4296,11 @@
     "status": 200,
     "original": "あさのひざし",
     "translated": "晨光"
+  },
+  {
+    "status": 200,
+    "original": "あさはやく おきないとね",
+    "translated": "就得早起才行呢"
   },
   {
     "status": 200,
@@ -4341,8 +4384,18 @@
   },
   {
     "status": 200,
+    "original": "あせを かいたら こまめに",
+    "translated": "出汗之后要及时"
+  },
+  {
+    "status": 200,
     "original": "あそこに いる オヤジ\nへんなこと いったり するの！\n\nなんだか おもしろくって\nわすれられない そんざい だわ！",
     "translated": "那边那个大叔，{\\n}老说些奇怪的话！{\\p}总觉得挺有趣的，是个让人\\n忘不了的存在呢！"
+  },
+  {
+    "status": 200,
+    "original": "あそびたい",
+    "translated": "想玩"
   },
   {
     "status": 200,
@@ -4393,6 +4446,11 @@
     "status": 200,
     "original": "あたしが じてんしゃに のれたら\nカイナに いくのも すぐなのに‥‥\n\nそして カイナの フレンドリィショップで\nハーバーメールを かえるのに‥‥",
     "translated": "如果我能骑上自行车的话，{\\n}去凯那市就很快了……{\\p}然后就能在凯那市的友好商\\n店买到港口邮件了……"
+  },
+  {
+    "status": 200,
+    "original": "あたしが たたかっちゃう！",
+    "translated": "我就亲自出手！"
   },
   {
     "status": 200,
@@ -4488,6 +4546,11 @@
     "status": 200,
     "original": "あたしを あまく みない ことね！\nないても しらないわよ！",
     "translated": "可别小看我！\\n等下哭了可别怪我！"
+  },
+  {
+    "status": 200,
+    "original": "あたたかい とち だからこそ",
+    "translated": "正因为是温暖的土地"
   },
   {
     "status": 200,
@@ -4771,6 +4834,11 @@
   },
   {
     "status": 200,
+    "original": "あなたが",
+    "translated": "你呀"
+  },
+  {
+    "status": 200,
     "original": "あなたが これまで あゆんできた みちのり\nあなたが けいけん してきた ことがら\n\nすべてを ぶつけて きなさい！",
     "translated": "你一路走来所经历的旅\\n程\\p你所积累的所有经验\\p把它们全都发挥出来吧！"
   },
@@ -4831,6 +4899,11 @@
   },
   {
     "status": 200,
+    "original": "あなたに",
+    "translated": "对你"
+  },
+  {
+    "status": 200,
     "original": "あなたに パラソルは にあわないわ！\n\nだって こんなの もっていたら\nすっごく ジャマに なりそう なんだもの",
     "translated": "遮阳伞不适合你！\\p因为拿着这个会很不方\\n便。"
   },
@@ -4848,6 +4921,11 @@
     "status": 200,
     "original": "あなたには チャンピオンに なれる\nかのうせいが あるみたいね",
     "translated": "你似乎有成为冠军\\n的可能性呢。"
+  },
+  {
+    "status": 200,
+    "original": "あなたの",
+    "translated": "你的"
   },
   {
     "status": 200,
@@ -4926,6 +5004,11 @@
   },
   {
     "status": 200,
+    "original": "あなたは",
+    "translated": "你啊"
+  },
+  {
+    "status": 200,
     "original": "あなたは さらに つよすぎた！",
     "translated": "结果你比我还要强得多！"
   },
@@ -4966,6 +5049,11 @@
   },
   {
     "status": 200,
+    "original": "あなたを",
+    "translated": "把你"
+  },
+  {
+    "status": 200,
     "original": "あなぬけのヒモ",
     "translated": "离洞绳"
   },
@@ -4996,6 +5084,11 @@
   },
   {
     "status": 200,
+    "original": "あの おかの むこうには",
+    "translated": "那座山丘的对面"
+  },
+  {
+    "status": 200,
     "original": "あの インタビュアーの おねえさん\nかっこよくて びじん！\n\nあたしも おおきく なったら\nこくさい ジャーナリストに なるわ！",
     "translated": "那个采访的姐姐{\\n}又帅又漂亮！{\\p}我长大了也要成为国\\n际记者！"
   },
@@ -5018,6 +5111,11 @@
     "status": 200,
     "original": "あの‥‥ ぼく‥‥\nポケモンが ほしいん ですけど‥‥",
     "translated": "那个……我……\\n我想要一只宝可梦……"
+  },
+  {
+    "status": 200,
+    "original": "あのこに とどけておくれ",
+    "translated": "请传达给那个女孩吧"
   },
   {
     "status": 200,
@@ -5611,6 +5709,11 @@
   },
   {
     "status": 200,
+    "original": "あわてて",
+    "translated": "慌慌张张"
+  },
+  {
+    "status": 200,
     "original": "あわはき",
     "translated": "吐泡"
   },
@@ -5713,6 +5816,11 @@
     "status": 200,
     "original": "あんなに すばらしい たたかいを\nみせて いただいて まんぞくです！\\lバトルタワーを つくった かいが あった！",
     "translated": "让我看到了\\n那么精彩的对战，太满\\p足了！建造对战塔真是\\n值得！"
+  },
+  {
+    "status": 200,
+    "original": "あんなに でっかい ポケモンを",
+    "translated": "那么巨大的宝可梦"
   },
   {
     "status": 200,
@@ -5826,6 +5934,11 @@
   },
   {
     "status": 200,
+    "original": "あ１しゅうめ",
+    "translated": "A·第1周目"
+  },
+  {
+    "status": 200,
     "original": "いあいぎり",
     "translated": "居合斩"
   },
@@ -5878,6 +5991,16 @@
     "status": 200,
     "original": "いい どきょうだ！ きにいったぞ！",
     "translated": "胆识不错！我很中意你！"
+  },
+  {
+    "status": 200,
+    "original": "いい においの くさポケモン",
+    "translated": "香气怡人的草属性宝可梦"
+  },
+  {
+    "status": 200,
+    "original": "いい はしりをする ポケモン",
+    "translated": "善于奔跑的宝可梦"
   },
   {
     "status": 200,
@@ -5956,6 +6079,11 @@
   },
   {
     "status": 200,
+    "original": "いえには ポケモンせんようの",
+    "translated": "我家有专门给宝可梦用的"
+  },
+  {
+    "status": 200,
     "original": "いかがわしき屋敷",
     "translated": "可疑宅邸"
   },
@@ -5968,6 +6096,11 @@
     "status": 200,
     "original": "いかさまダイス",
     "translated": "机变骰子"
+  },
+  {
+    "status": 200,
+    "original": "いかした みずタイプ",
+    "translated": "帅气的水属性"
   },
   {
     "status": 200,
@@ -6021,6 +6154,11 @@
   },
   {
     "status": 200,
+    "original": "いきおい",
+    "translated": "势头"
+  },
+  {
+    "status": 200,
     "original": "いきおい あまって\n\\0Cは じめんに ぶつかった！",
     "translated": "势头过猛\\n\\0C撞到了地面！"
   },
@@ -6033,6 +6171,11 @@
     "status": 200,
     "original": "いきさきは どちら でしょう？",
     "translated": "请问您要去哪里？"
+  },
+  {
+    "status": 200,
+    "original": "いきたい",
+    "translated": "想去"
   },
   {
     "status": 200,
@@ -6058,6 +6201,11 @@
     "status": 200,
     "original": "いくつ ひきだしますか？",
     "translated": "要取出几只？"
+  },
+  {
+    "status": 200,
+    "original": "いくわよ",
+    "translated": "我要上了"
   },
   {
     "status": 200,
@@ -6146,6 +6294,11 @@
   },
   {
     "status": 200,
+    "original": "いじょう",
+    "translated": "以上"
+  },
+  {
+    "status": 200,
     "original": "いじょうのとき こうげきが あがる",
     "translated": "异常时攻击提升"
   },
@@ -6211,6 +6364,11 @@
   },
   {
     "status": 200,
+    "original": "いそがしい",
+    "translated": "忙碌"
+  },
+  {
+    "status": 200,
     "original": "いたします",
     "translated": "我这就去做"
   },
@@ -6261,8 +6419,23 @@
   },
   {
     "status": 200,
+    "original": "いちども",
+    "translated": "一次"
+  },
+  {
+    "status": 200,
+    "original": "いちにち",
+    "translated": "一天"
+  },
+  {
+    "status": 200,
     "original": "いちにちじゅう ネイティオが じっとしているのは\nみらいよちで わかった おそろしい できごとに\nおびえているからだと しんじられている。",
     "translated": "天然鸟一整天一动不动，\\n是因为预见到了未来可\\p怕的灾难而害怕，人们\\n如此相信着。"
+  },
+  {
+    "status": 200,
+    "original": "いちにちの つかれは",
+    "translated": "一天的疲劳"
   },
   {
     "status": 200,
@@ -6291,13 +6464,28 @@
   },
   {
     "status": 200,
+    "original": "いっしょに",
+    "translated": "一起"
+  },
+  {
+    "status": 200,
     "original": "いっしょに いれば いるほど\nポケモンが かわいくなって たまらん！",
     "translated": "在一起的时间越长\\n宝可梦就越可爱，真是\\p让人受不了！"
   },
   {
     "status": 200,
+    "original": "いっしょに そだててるの！",
+    "translated": "我们是一起培育的哦！"
+  },
+  {
+    "status": 200,
     "original": "いっしょに たたかうの！",
     "translated": "并肩作战吧！"
+  },
+  {
+    "status": 200,
+    "original": "いっしょに つよくなったんです",
+    "translated": "一起变强了"
   },
   {
     "status": 200,
@@ -6336,6 +6524,11 @@
   },
   {
     "status": 200,
+    "original": "いっぱい",
+    "translated": "很多"
+  },
+  {
+    "status": 200,
     "original": "いっぽんあしで かいてん しながら いどうする。\nヤジロンと にんげんが いっしょに くらす\nこだいの へきがが いせきから はっけんされた。",
     "translated": "用单脚旋转移动。从遗\\n迹中发现了天秤偶和人\\p类共同生活的古代壁画。"
   },
@@ -6343,6 +6536,11 @@
     "status": 200,
     "original": "いつ どこで たいせんや しょうぶを\nいどまれるか わからないからな\\lゲームボーイ アドバンスは てばなせないよ！",
     "translated": "因为不知道什么时候在\\n哪里会被挑战对战\\p所以Game Boy Advance\\n不能离手啊！"
+  },
+  {
+    "status": 200,
+    "original": "いつか さいきょうでんせつを",
+    "translated": "总有一天要创造最强的传说"
   },
   {
     "status": 200,
@@ -6408,6 +6606,11 @@
     "status": 200,
     "original": "いつも なかまを おうえんしている ポケモン。\nなかまが がんばると からだを ショートさせて\nパチパチと ひばなの おとを たてて よろこぶ。",
     "translated": "总是为同伴加油的\\n宝可梦。\\p同伴努力时，会让身体\\n短路，\\p发出噼啪的火花声来表\\n达喜悦。"
+  },
+  {
+    "status": 200,
+    "original": "いつも なかよしの ポケモン！",
+    "translated": "总是亲密无间的宝可梦！"
   },
   {
     "status": 200,
@@ -6786,6 +6989,11 @@
   },
   {
     "status": 200,
+    "original": "いらっしゃい",
+    "translated": "欢迎"
+  },
+  {
+    "status": 200,
     "original": "いらっしゃいませ！\n\nこちらでは ゲームで ためた コインを\nおすきな けいひんと こうかん します！",
     "translated": "欢迎光临！{\\p}这里可以用游戏中积\\n攒的代币兑换你喜欢的\\p奖品哦！"
   },
@@ -6851,6 +7059,11 @@
   },
   {
     "status": 200,
+    "original": "いれた たね",
+    "translated": "放入了种子"
+  },
+  {
+    "status": 200,
     "original": "いろあざやかな キノコを たべたら‥‥\nわ わらいが とまらない！\\lわっはっはっ！",
     "translated": "吃了色彩鲜艳的蘑菇……{\\p}哈哈笑停不下来！哇\\n哈哈哈！"
   },
@@ -6898,6 +7111,11 @@
     "status": 200,
     "original": "いろんな ほんが いっぱいだ！",
     "translated": "有好多各种各样的书！"
+  },
+  {
+    "status": 200,
+    "original": "いろんな タイプで しょうぶ",
+    "translated": "用各种属性来对决"
   },
   {
     "status": 200,
@@ -7136,6 +7354,11 @@
   },
   {
     "status": 200,
+    "original": "うおりゃー",
+    "translated": "嘿呀——"
+  },
+  {
+    "status": 200,
     "original": "うおォ！ ずいぶん あかるく なったな！\n\nきみの みらいも あかるいぞ！",
     "translated": "喔噢！变得相当明亮了呢！\\p你的未来也很光明哦！"
   },
@@ -7146,8 +7369,18 @@
   },
   {
     "status": 200,
+    "original": "うおー！",
+    "translated": "呜哦！"
+  },
+  {
+    "status": 200,
     "original": "うおー！\nまけてしまったーっ！",
     "translated": "呜哦——！\\n输掉了——！"
+  },
+  {
+    "status": 200,
+    "original": "うかれて",
+    "translated": "得意忘形"
   },
   {
     "status": 200,
@@ -7181,8 +7414,18 @@
   },
   {
     "status": 200,
+    "original": "うきわが すき なんだよ！",
+    "translated": "只是很喜欢游泳圈啦！"
+  },
+  {
+    "status": 200,
     "original": "うきわが ないと およげないけど\nポケモンなら だれにも まけないよ！",
     "translated": "虽然没有游泳圈就游不\\n了泳，\\p但宝可梦对战我可不会\\n输给任何人哦！"
+  },
+  {
+    "status": 200,
+    "original": "うきわが なくても",
+    "translated": "就算没有游泳圈"
   },
   {
     "status": 200,
@@ -7361,6 +7604,11 @@
   },
   {
     "status": 200,
+    "original": "うつくしい ポケモンを みつけます   ",
+    "translated": "寻找美丽的宝可梦"
+  },
+  {
+    "status": 200,
     "original": "うつくしさ",
     "translated": "美丽"
   },
@@ -7418,6 +7666,11 @@
     "status": 200,
     "original": "うばった せんすいていの のりごこち\nありゃ さいあく だな！\\lとにかく せますぎ じゃねーか！",
     "translated": "抢来的潜水艇坐起来的感觉\\n那真是糟透了！总之也太窄了\\p吧！"
+  },
+  {
+    "status": 200,
+    "original": "うひょー",
+    "translated": "呜哟——"
   },
   {
     "status": 200,
@@ -7543,6 +7796,11 @@
     "status": 200,
     "original": "うみねこ",
     "translated": "黑尾鸥"
+  },
+  {
+    "status": 200,
+    "original": "うみの おとこは きが あらい",
+    "translated": "海的男人脾气火爆"
   },
   {
     "status": 200,
@@ -7746,8 +8004,23 @@
   },
   {
     "status": 200,
+    "original": "うるさい",
+    "translated": "吵闹"
+  },
+  {
+    "status": 200,
+    "original": "うれしい",
+    "translated": "开心"
+  },
+  {
+    "status": 200,
     "original": "うれしい！\nじゃ コインケースと こうかんね！",
     "translated": "好高兴！\\n，交换硬币盒吧！"
+  },
+  {
+    "status": 200,
+    "original": "うれしさ",
+    "translated": "喜悦"
   },
   {
     "status": 200,
@@ -7793,6 +8066,11 @@
     "status": 200,
     "original": "うわー\nどうして そんなに つよいの？",
     "translated": "哇啊\\n你怎么这么强呀？"
+  },
+  {
+    "status": 200,
+    "original": "うわーん",
+    "translated": "呜哇——"
   },
   {
     "status": 200,
@@ -7946,6 +8224,16 @@
   },
   {
     "status": 200,
+    "original": "えいえん",
+    "translated": "永远"
+  },
+  {
+    "status": 200,
+    "original": "えいえんに ラブラブ！",
+    "translated": "永远相亲相爱！"
+  },
+  {
+    "status": 200,
     "original": "えいえんのこおり",
     "translated": "永恒之冰"
   },
@@ -7968,6 +8256,10 @@
     "status": 200,
     "original": "えいよう まんてんの タマゴを まいにち うむ。\nしょくよくを なくした ひとでも ペロリと\nたべてしまうほど おいしい タマゴだ。",
     "translated": "每天产下营养满分的蛋。\\n即使是失去食欲的人也\\p会忍不住舔着吃的美味\\n蛋。"
+  },
+  {
+    "status": 404,
+    "original": "えいろいわせらは\\CC26おぇテずＱぼヂカ「ツ"
   },
   {
     "status": 404,
@@ -8057,6 +8349,11 @@
     "status": 200,
     "original": "えへへ キャモメに\nちょっと おつかいを たのんだのさ",
     "translated": "嘿嘿，我让长翅鸥\\n去帮我办了点小差事。"
+  },
+  {
+    "status": 200,
+    "original": "えものを みつけると けあなから もうどくの\nたいえきを ふきだして あびせかけるぞ。\nよわった ところを おおきな くちで ペロリ。",
+    "translated": "一旦发现猎物，就会从毛孔喷\\n出剧毒的\\p体液泼向对方。\\n再趁其虚弱时用大嘴一口吞\\p掉。"
   },
   {
     "status": 200,
@@ -8390,6 +8687,11 @@
   },
   {
     "status": 200,
+    "original": "おおきい",
+    "translated": "大大的"
+  },
+  {
+    "status": 200,
     "original": "おおきい キノココ もってないの？\nそれは ざんねん‥‥\n\nこんど おおきい キノココ みせてね",
     "translated": "你没有大的蘑蘑菇吗？\\n那真遗憾……\\p下次让我看看大的蘑蘑\\n菇哦"
   },
@@ -8412,6 +8714,11 @@
     "status": 200,
     "original": "おおきくて あじも ととのっている。",
     "translated": "又大，味道也调得很好。"
+  },
+  {
+    "status": 200,
+    "original": "おおきくて たくましい",
+    "translated": "又大又强壮"
   },
   {
     "status": 200,
@@ -8685,6 +8992,11 @@
   },
   {
     "status": 200,
+    "original": "おかあさん",
+    "translated": "妈妈"
+  },
+  {
+    "status": 200,
     "original": "おかあさんに あえなくて\nさみしいから ないてるんじゃ ないよ！\\lぐすん‥‥",
     "translated": "见不到妈妈{\\n}因为太寂寞才哭的！\\p呜……"
   },
@@ -8697,6 +9009,11 @@
     "status": 200,
     "original": "おかげさまで えを\nかざる ことが できましたよ！\n\nあなたの ポケモン なんですって ね！\nほんとうに すばらしい です！\n\nどうも ありがとう‥‥！",
     "translated": "托您的福 终于\\n能够展示画作了呢！\\p是您的宝可梦呢！真的\\n太棒了！\\p非常感谢……！"
+  },
+  {
+    "status": 200,
+    "original": "おかしい",
+    "translated": "奇怪"
   },
   {
     "status": 200,
@@ -8747,6 +9064,16 @@
     "status": 200,
     "original": "おかねもちの ボク なのに\nなかなか ポケモンに かてない‥‥\n\nなんて おくが ふかいんだろう\nポケモンって‥‥",
     "translated": "明明我这么有钱{\\n}却怎么也赢不了\\p宝可梦……{\\p}宝可梦这东西真是深\\n奥啊……"
+  },
+  {
+    "status": 200,
+    "original": "おかねもちの ボクだから",
+    "translated": "因为我是个有钱人嘛"
+  },
+  {
+    "status": 200,
+    "original": "おかねを かけて そだてたよ！",
+    "translated": "可是花了大价钱养大的哦！"
   },
   {
     "status": 200,
@@ -8865,6 +9192,11 @@
   },
   {
     "status": 200,
+    "original": "おくりびやまの おばあちゃん",
+    "translated": "送火山的奶奶"
+  },
+  {
+    "status": 200,
     "original": "おくりびやまは ポケモンの たましいを\nなぐさめる ための ところ‥‥\n\nここは たかい ばしょに あって\nホウエンを みわたす ことが できるから\\lポケモンたちの たましいも\\lやすらぎを おぼえるの じゃろう‥‥\n\nおまえさんが ここに きたのも\nなにかの えん‥‥\n\nホウエンちほうに つたわる はなしを\nきいて いきなされ‥‥",
     "translated": "送神山是为了{\\n}安抚宝可梦灵魂的地\\p方……{\\p}这里地势很高可以俯\\n瞰丰缘所以宝可梦的灵\\p魂也能得到安宁吧……{\\p}你来到这里也是一种\\n缘分……{\\p}请听听流传在丰缘地\\n区的故事吧……"
   },
@@ -8914,6 +9246,11 @@
   },
   {
     "status": 200,
+    "original": "おしえて",
+    "translated": "请告诉我"
+  },
+  {
+    "status": 200,
     "original": "おしえテレビ",
     "translated": "教学电视"
   },
@@ -8944,6 +9281,11 @@
   },
   {
     "status": 200,
+    "original": "おして おしまくる さくせん！",
+    "translated": "又推又挤的作战！"
+  },
+  {
+    "status": 200,
     "original": "おしゃべり",
     "translated": "喋喋不休"
   },
@@ -8966,6 +9308,11 @@
     "status": 200,
     "original": "おしりの トゲで きの かわを はがして\nしみだした じゅえきを しょくりょうに する。\nきゅうばんの あしは ガラスでも すべらない。",
     "translated": "用尾部的刺剥开树皮，\\n以渗出的树汁为食。\\p带有吸盘的脚即使在玻\\n璃上也不会打滑。"
+  },
+  {
+    "status": 200,
+    "original": "おじいさん",
+    "translated": "爷爷"
   },
   {
     "status": 200,
@@ -9029,6 +9376,11 @@
   },
   {
     "status": 200,
+    "original": "おすすめ",
+    "translated": "推荐"
+  },
+  {
+    "status": 200,
     "original": "おすすめメール",
     "translated": "推荐邮件"
   },
@@ -9051,6 +9403,11 @@
     "status": 200,
     "original": "おそらの ポケモン！\nおそらの ポケモン！",
     "translated": "天空的宝可梦！\\n天空的宝可梦！"
+  },
+  {
+    "status": 200,
+    "original": "おたがいの こころが わかる",
+    "translated": "彼此心意相通"
   },
   {
     "status": 200,
@@ -9244,6 +9601,11 @@
   },
   {
     "status": 200,
+    "original": "おとうさん",
+    "translated": "爸爸"
+  },
+  {
+    "status": 200,
     "original": "おとうさん ったら どこかしら？\nせっかく \\01\\05が\\lあいさつに きてくれたのに‥‥\n\nあの ひと おちつきが ないから\nもしかしたら けんきゅうじょに いるかも",
     "translated": "爸爸真是的，去哪儿了呢？\\n明明\\01\\05特意来打招呼的……\\p那个人总是静不下来，说不定\\n在研究所呢。"
   },
@@ -9364,6 +9726,11 @@
   },
   {
     "status": 200,
+    "original": "おととい",
+    "translated": "前天"
+  },
+  {
+    "status": 200,
     "original": "おとどけもの",
     "translated": "包裹"
   },
@@ -9469,6 +9836,11 @@
   },
   {
     "status": 200,
+    "original": "おにいさん",
+    "translated": "哥哥"
+  },
+  {
+    "status": 200,
     "original": "おにいさん『ちなみに\nボールを ぜんぶで \\04こ なげて\n\nさいごは \\03で\nつかまえたって うわさだよ！",
     "translated": "哥哥『顺便一提\\n总共扔了\\04个球，\\p据说最后是用\\03抓住的哦！』"
   },
@@ -9524,6 +9896,11 @@
   },
   {
     "status": 200,
+    "original": "おねえさん",
+    "translated": "姐姐"
+  },
+  {
+    "status": 200,
     "original": "おねえさん『\\02さんの\n\\03は だいじな マスターボールを\n\nつかって やっと つかまえた\nおもいでの ポケモン なんだって！\n\nおにいさん『えー！ すごいねー！\n\nおねえさん『\\02さん ほんとうに\n\\03を つかまえ たかったんだね！",
     "translated": "姐姐‘\\02的\\n\\03是 用了珍贵的 大师球\\p好不容易才捉到的 充满回忆\\n的宝可梦呢！\\p哥哥‘诶ー！ 好厉害呢ー！\\p姐姐‘\\02 真的很想 捉到 \\\\n03呢！"
   },
@@ -9574,6 +9951,11 @@
   },
   {
     "status": 200,
+    "original": "おねがい",
+    "translated": "拜托"
+  },
+  {
+    "status": 200,
     "original": "おねーちゃんたちを みならって\nがんばって おはなを そだててるの\n\nはい！ これあげる！",
     "translated": "我在向姐姐们学习\\n努力培育鲜花呢\\p给！这个送你！"
   },
@@ -9604,6 +9986,21 @@
   },
   {
     "status": 200,
+    "original": "おばあさん",
+    "translated": "奶奶"
+  },
+  {
+    "status": 200,
+    "original": "おばかさん",
+    "translated": "大笨蛋"
+  },
+  {
+    "status": 200,
+    "original": "おばさん",
+    "translated": "阿姨"
+  },
+  {
+    "status": 200,
     "original": "おひさしぶりね\nよろしかったら しょうぶ しません？",
     "translated": "好久不见呢\\n如果可以的话，要不要来一场\\p对战？"
   },
@@ -9611,6 +10008,11 @@
     "status": 200,
     "original": "おふれのせきしつ",
     "translated": "神和之洞窟"
+  },
+  {
+    "status": 200,
+    "original": "おふろに はいりまーす",
+    "translated": "一起去泡澡～"
   },
   {
     "status": 200,
@@ -9699,6 +10101,11 @@
   },
   {
     "status": 200,
+    "original": "おまえの かんがえは",
+    "translated": "你的想法"
+  },
+  {
+    "status": 200,
     "original": "おまえの さくせんは すべて みえた！\nわたしが まけるはず ない！",
     "translated": "你的战术我已经全部看\\n穿了！\\p我不可能会输的！"
   },
@@ -9744,6 +10151,11 @@
   },
   {
     "status": 200,
+    "original": "おままごと",
+    "translated": "过家家"
+  },
+  {
+    "status": 200,
     "original": "おまもりこばん",
     "translated": "护符金币"
   },
@@ -9771,6 +10183,11 @@
     "status": 200,
     "original": "おむかえ",
     "translated": "来接你了"
+  },
+  {
+    "status": 200,
+    "original": "おめでとう",
+    "translated": "恭喜"
   },
   {
     "status": 200,
@@ -9844,8 +10261,28 @@
   },
   {
     "status": 200,
+    "original": "おもしろい",
+    "translated": "有趣"
+  },
+  {
+    "status": 200,
+    "original": "おもしろい よねー",
+    "translated": "很有趣呢——"
+  },
+  {
+    "status": 200,
+    "original": "おもしろく",
+    "translated": "有趣地"
+  },
+  {
+    "status": 200,
     "original": "おもたい てつで できている ふねが\nうみに うくなんて ふしぎ だろう？\n\nあれは 「ふりょく」 という げんりを\nおうよう しているんだ",
     "translated": "用沉重的铁打造的船{\\n}能浮在海面上，很神\\p奇吧？{\\p}那是应用了\"浮力\"这\\n个原理"
+  },
+  {
+    "status": 200,
+    "original": "おもちゃ",
+    "translated": "玩具"
   },
   {
     "status": 200,
@@ -9934,8 +10371,18 @@
   },
   {
     "status": 200,
+    "original": "およいでいるわね！",
+    "translated": "至少10公里呢！"
+  },
+  {
+    "status": 200,
     "original": "およぎ つかれちゃった！\nわたしと ひとしょうぶ どう？",
     "translated": "游泳游累了！\\n要不要和我来一场对战？"
+  },
+  {
+    "status": 200,
+    "original": "およぎが じょうずな ポケモン",
+    "translated": "擅长游泳的宝可梦"
   },
   {
     "status": 200,
@@ -9954,8 +10401,28 @@
   },
   {
     "status": 200,
+    "original": "およげない ときには",
+    "translated": "不会游泳的时候"
+  },
+  {
+    "status": 200,
+    "original": "およげない わけじゃ ないよ！",
+    "translated": "不是不会游泳哦！"
+  },
+  {
+    "status": 200,
+    "original": "およげるように なりたいなー",
+    "translated": "也想变得会游泳啊——"
+  },
+  {
+    "status": 200,
     "original": "おらーっ！！\nおれの かわいい ポケモンだー！！",
     "translated": "喂——！！\\n那可是我可爱的宝可梦\\p啊——！！"
+  },
+  {
+    "status": 200,
+    "original": "おります",
+    "translated": "在"
   },
   {
     "status": 200,
@@ -9986,6 +10453,11 @@
     "status": 200,
     "original": "おれが きいた ウワサだと\nその つよい こども ってのは\\lトウカ しゅっしん らしいな！",
     "translated": "我听说的传闻是{\\n}那个很强的孩子好像\\p是丰缘出身的！"
+  },
+  {
+    "status": 200,
+    "original": "おれさま",
+    "translated": "本大爷"
   },
   {
     "status": 200,
@@ -10066,6 +10538,16 @@
     "status": 200,
     "original": "おんがえし",
     "translated": "报恩"
+  },
+  {
+    "status": 200,
+    "original": "おんがく",
+    "translated": "音乐"
+  },
+  {
+    "status": 200,
+    "original": "おんせんで スッキリ！",
+    "translated": "在温泉里一扫而空！"
   },
   {
     "status": 200,
@@ -10344,6 +10826,16 @@
   },
   {
     "status": 200,
+    "original": "かいめの じゅしん",
+    "translated": "第…次的接收"
+  },
+  {
+    "status": 200,
+    "original": "かいめの そうしん",
+    "translated": "第…次的发送"
+  },
+  {
+    "status": 200,
     "original": "かいめの アピール！\nしかし さんか できない！",
     "translated": "本轮的表演！\\n但是无法参加！"
   },
@@ -10351,6 +10843,11 @@
     "status": 200,
     "original": "かいめの アピール！\nどの わざを だす？",
     "translated": "第2次展示！\\n要使出哪个招式？"
+  },
+  {
+    "status": 200,
+    "original": "かいもの",
+    "translated": "购物"
   },
   {
     "status": 200,
@@ -10404,6 +10901,11 @@
   },
   {
     "status": 200,
+    "original": "かいパンやろうには まけないぜ",
+    "translated": "我才不会输给泳裤小子"
+  },
+  {
+    "status": 200,
     "original": "かえらずのあな",
     "translated": "不归之穴"
   },
@@ -10411,6 +10913,11 @@
     "status": 200,
     "original": "かえられる ことばは １つ までです！",
     "translated": "能更改的词语最多1个！"
+  },
+  {
+    "status": 200,
+    "original": "かえりたい",
+    "translated": "想回去"
   },
   {
     "status": 200,
@@ -10488,6 +10995,10 @@
     "translated": "光辉花瓣"
   },
   {
+    "status": 404,
+    "original": "かきくけこ"
+  },
+  {
     "status": 200,
     "original": "かぎづめ",
     "translated": "钩爪"
@@ -10504,8 +11015,53 @@
   },
   {
     "status": 200,
+    "original": "かくとう ポケモン いのち！",
+    "translated": "格斗宝可梦万岁！"
+  },
+  {
+    "status": 200,
+    "original": "かくとうの おうぎを みよ！ ",
+    "translated": "看看格斗的奥义吧！"
+  },
+  {
+    "status": 200,
     "original": "かくとうジュエル",
     "translated": "格斗宝石"
+  },
+  {
+    "status": 200,
+    "original": "かくとうタイプ",
+    "translated": "格斗属性"
+  },
+  {
+    "status": 200,
+    "original": "かくとうタイプ じゃよ",
+    "translated": "是格斗属性哦"
+  },
+  {
+    "status": 200,
+    "original": "かくにん ちゅうです",
+    "translated": "正在确认中"
+  },
+  {
+    "status": 200,
+    "original": "かくにん できました",
+    "translated": "确认完成"
+  },
+  {
+    "status": 200,
+    "original": "かくにん できません",
+    "translated": "无法确认"
+  },
+  {
+    "status": 200,
+    "original": "かくにん は しっぱい",
+    "translated": "确认失败"
+  },
+  {
+    "status": 200,
+    "original": "かくにん を かくにん",
+    "translated": "确认的确认"
   },
   {
     "status": 200,
@@ -10629,6 +11185,11 @@
   },
   {
     "status": 200,
+    "original": "かしこい ポケモンを みつけます   ",
+    "translated": "寻找聪明的宝可梦"
+  },
+  {
+    "status": 200,
     "original": "かしこさ",
     "translated": "聪明"
   },
@@ -10664,6 +11225,11 @@
   },
   {
     "status": 200,
+    "original": "かしこそうな ポケモン！",
+    "translated": "看起来很聪明的宝可梦！"
+  },
+  {
+    "status": 200,
     "original": "かしらのしるし",
     "translated": "头领凭证"
   },
@@ -10691,6 +11257,11 @@
     "status": 200,
     "original": "かぜに なびいて きもち よさそうに\nゆれている くさポケモンが えがかれている",
     "translated": "画中描绘着草属性\\n宝可梦\\p随风摇曳，看起来十分\\n惬意的样子。"
+  },
+  {
+    "status": 200,
+    "original": "かぜに なれるのさ‥‥！",
+    "translated": "就能化作风……！"
   },
   {
     "status": 200,
@@ -10736,6 +11307,11 @@
     "status": 200,
     "original": "かたい",
     "translated": "坚硬"
+  },
+  {
+    "status": 200,
+    "original": "かたい からだの ポケモン！",
+    "translated": "身体坚硬的宝可梦！"
   },
   {
     "status": 200,
@@ -10889,6 +11465,11 @@
   },
   {
     "status": 200,
+    "original": "かっこいい ポケモンを みつけます   ",
+    "translated": "寻找帅气的宝可梦"
+  },
+  {
+    "status": 200,
     "original": "かっこいー！！\n\nいい きめゼリフ ですね\nつぎの たたかいも きたい してますよ\n\nそれでは また！",
     "translated": "好帅！！\\p真是句漂亮的收尾台词\\n呢\\p我也很期待你的下一场\\n对战哦\\p那么下次见！"
   },
@@ -10969,6 +11550,11 @@
   },
   {
     "status": 200,
+    "original": "かなしい",
+    "translated": "难过"
+  },
+  {
+    "status": 200,
     "original": "かなしばり",
     "translated": "定身法"
   },
@@ -11001,6 +11587,11 @@
     "status": 200,
     "original": "かなわん！",
     "translated": "受不了了！"
+  },
+  {
+    "status": 200,
+    "original": "かのじょ",
+    "translated": "女朋友"
   },
   {
     "status": 200,
@@ -11136,6 +11727,11 @@
     "status": 200,
     "original": "かめのこ",
     "translated": "小龟"
+  },
+  {
+    "status": 200,
+    "original": "かようび",
+    "translated": "星期二"
   },
   {
     "status": 200,
@@ -11374,6 +11970,11 @@
   },
   {
     "status": 200,
+    "original": "からだを けんこうに します！",
+    "translated": "身体保持健康！"
+  },
+  {
+    "status": 200,
     "original": "からだを すばやく １かいてんさせ\nそのいきおいで キックを くりだす",
     "translated": "让身体快速旋转１圈，\\n借着那股势头使出踢击。"
   },
@@ -11454,8 +12055,18 @@
   },
   {
     "status": 200,
+    "original": "かれいな わたしに ふさわしい",
+    "translated": "适合华丽的我"
+  },
+  {
+    "status": 200,
     "original": "かれいに おおぞらを まう\nとりポケモンが さいこう だぜ！",
     "translated": "华丽地在天空中飞舞\\n鸟宝可梦最棒了！"
+  },
+  {
+    "status": 200,
+    "original": "かれいに そらを まう！",
+    "translated": "华丽地在空中飞舞！"
   },
   {
     "status": 200,
@@ -11484,6 +12095,16 @@
   },
   {
     "status": 200,
+    "original": "かわいい みずポケモン",
+    "translated": "可爱的水宝可梦"
+  },
+  {
+    "status": 200,
+    "original": "かわいい よねー",
+    "translated": "很可爱呢——"
+  },
+  {
+    "status": 200,
     "original": "かわいい わざ",
     "translated": "可爱的招式"
   },
@@ -11494,8 +12115,18 @@
   },
   {
     "status": 200,
+    "original": "かわいい ポケモン だいすき！",
+    "translated": "最喜欢可爱的宝可梦！"
+  },
+  {
+    "status": 200,
     "original": "かわいい ポケモンちゃんは\nやられた すがたも かわいいな‥‥",
     "translated": "可爱的宝可梦\\n连被打倒的样子都很可\\p爱呢……"
+  },
+  {
+    "status": 200,
+    "original": "かわいい ポケモンを みつけます   ",
+    "translated": "寻找可爱的宝可梦"
   },
   {
     "status": 200,
@@ -11506,6 +12137,11 @@
     "status": 200,
     "original": "かわいいはな",
     "translated": "可爱花朵"
+  },
+  {
+    "status": 200,
+    "original": "かわいいわよ",
+    "translated": "很可爱哦"
   },
   {
     "status": 200,
@@ -11521,6 +12157,11 @@
     "status": 200,
     "original": "かわいかった エネコとの おもいで‥‥\nおもいだすだけで なみだが あふれる‥‥",
     "translated": "和可爱伊布的美好回忆……{\\n}光是回想起来，眼泪就止不\\p住了……"
+  },
+  {
+    "status": 200,
+    "original": "かわいがって",
+    "translated": "疼爱"
   },
   {
     "status": 200,
@@ -11604,6 +12245,11 @@
   },
   {
     "status": 200,
+    "original": "かわら１０まい われるぜ！",
+    "translated": "我可是能劈碎10块瓦片的！"
+  },
+  {
+    "status": 200,
     "original": "かわりもの",
     "translated": "变身者"
   },
@@ -11624,6 +12270,11 @@
   },
   {
     "status": 200,
+    "original": "かんしょう",
+    "translated": "观赏"
+  },
+  {
+    "status": 200,
     "original": "かんじょう",
     "translated": "感情"
   },
@@ -11631,6 +12282,11 @@
     "status": 200,
     "original": "かんせい させた めずらしい\nポケモンの あしあとの スケッチ\\lよくみたら じぶんの あしあと だったよ‥‥",
     "translated": "完成了稀有的\\n宝可梦的足迹素描，仔\\p细一看，原来是我自己\\n的脚印啊‥‥"
+  },
+  {
+    "status": 200,
+    "original": "かんせん",
+    "translated": "感染"
   },
   {
     "status": 200,
@@ -11654,6 +12310,11 @@
   },
   {
     "status": 200,
+    "original": "かんぺき",
+    "translated": "完美"
+  },
+  {
+    "status": 200,
     "original": "かんぽうやくの ききめは すごいが\nポケモンに のませると きらわれるぞよ\\lきっと すっごく にがいんじゃろうな！",
     "translated": "中药的效果虽然很好\\n但让宝可梦喝的话会被\\p讨厌的哦肯定超级苦的！"
   },
@@ -11666,6 +12327,11 @@
     "status": 200,
     "original": "かーっ ひろいね ここは！\nいなかの コンテスト かいじょう とは\\lきんちょうかんが ちがうね！",
     "translated": "哇——好宽敞啊这里！{\\n}和乡下的大赛会场紧\\p张感完全不一样呢！"
+  },
+  {
+    "status": 200,
+    "original": "がいこくの おみやげで",
+    "translated": "用国外的伴手礼"
   },
   {
     "status": 200,
@@ -11686,6 +12352,41 @@
     "status": 200,
     "original": "がくっと ",
     "translated": "浑身一软"
+  },
+  {
+    "status": 200,
+    "original": "がたがた",
+    "translated": "咔哒咔哒"
+  },
+  {
+    "status": 200,
+    "original": "がっかり",
+    "translated": "失望"
+  },
+  {
+    "status": 200,
+    "original": "がっくし",
+    "translated": "沮丧"
+  },
+  {
+    "status": 200,
+    "original": "がっこう",
+    "translated": "学校"
+  },
+  {
+    "status": 200,
+    "original": "がっしり タイプが いいですね",
+    "translated": "结实类型的最好了"
+  },
+  {
+    "status": 200,
+    "original": "がつがつ",
+    "translated": "狼吞虎咽"
+  },
+  {
+    "status": 200,
+    "original": "ができた！",
+    "translated": "完成了！"
   },
   {
     "status": 200,
@@ -11716,6 +12417,11 @@
     "status": 200,
     "original": "がんじょうあご",
     "translated": "强壮之颚"
+  },
+  {
+    "status": 200,
+    "original": "がんじょうな カラは みを まもる だけではなく\nえものを はさんで つかまえる ことも できる。\nそだった パールルの かいがらは キズだらけ。",
+    "translated": "坚硬的壳不仅能保护身体，还\\n能夹住猎物将其捕获。长大后\\p珍珠贝的贝壳上满是伤痕。"
   },
   {
     "status": 200,
@@ -11759,6 +12465,11 @@
   },
   {
     "status": 200,
+    "original": "がんばって",
+    "translated": "加油"
+  },
+  {
+    "status": 200,
     "original": "がんばって あかいポロック つくるんだ！\n\\02も がんばってね！",
     "translated": "我要努力做出红色的宝\\n可方块！\\p\\02也要加油哦！"
   },
@@ -11771,6 +12482,16 @@
     "status": 200,
     "original": "がんばりや",
     "translated": "勤奋"
+  },
+  {
+    "status": 200,
+    "original": "がんばる",
+    "translated": "努力"
+  },
+  {
+    "status": 200,
+    "original": "がんばるぜ！",
+    "translated": "加油吧！"
   },
   {
     "status": 200,
@@ -11811,6 +12532,10 @@
     "status": 200,
     "original": "きあいパンチ",
     "translated": "真气拳"
+  },
+  {
+    "status": 404,
+    "original": "きいけいくいユいタいスいＫいタくスつＫねｙや９わサぐギぞäっ「シノフ"
   },
   {
     "status": 200,
@@ -11899,8 +12624,23 @@
   },
   {
     "status": 200,
+    "original": "きがしない",
+    "translated": "不觉得"
+  },
+  {
+    "status": 200,
+    "original": "きがする",
+    "translated": "觉得"
+  },
+  {
+    "status": 200,
     "original": "ききかいひ",
     "translated": "危险回避"
+  },
+  {
+    "status": 200,
+    "original": "ききたい",
+    "translated": "想听"
   },
   {
     "status": 200,
@@ -11921,6 +12661,11 @@
     "status": 200,
     "original": "きしゅう さくせんは シッパイだった‥‥",
     "translated": "奇袭作战失败了……"
+  },
+  {
+    "status": 200,
+    "original": "きずく ことが だいじだよ！",
+    "translated": "才是最重要的！"
   },
   {
     "status": 200,
@@ -12004,6 +12749,11 @@
   },
   {
     "status": 200,
+    "original": "きになる",
+    "translated": "在意"
+  },
+  {
+    "status": 200,
     "original": "きねんび きねんリボン",
     "translated": "纪念日纪念缎带"
   },
@@ -12026,6 +12776,11 @@
     "status": 200,
     "original": "きのこ",
     "translated": "蘑菇"
+  },
+  {
+    "status": 200,
+    "original": "きのせい",
+    "translated": "错觉"
   },
   {
     "status": 200,
@@ -12141,6 +12896,11 @@
     "status": 200,
     "original": "きのみ畑",
     "translated": "树果园"
+  },
+  {
+    "status": 200,
+    "original": "きひん あふれる ポケモン",
+    "translated": "气质高雅的宝可梦"
   },
   {
     "status": 200,
@@ -12594,6 +13354,11 @@
   },
   {
     "status": 200,
+    "original": "きゅうじょくんれんを してるの",
+    "translated": "进行救援训练呢"
+  },
+  {
+    "status": 200,
     "original": "きゅうばん",
     "translated": "吸盘"
   },
@@ -12636,6 +13401,21 @@
     "status": 200,
     "original": "きょうせいギプス",
     "translated": "强制锻炼器"
+  },
+  {
+    "status": 200,
+    "original": "きょうだい",
+    "translated": "兄弟姐妹"
+  },
+  {
+    "status": 200,
+    "original": "きょうだい なかよく",
+    "translated": "兄弟姐妹和睦相处"
+  },
+  {
+    "status": 200,
+    "original": "きょうの とざんの ために",
+    "translated": "为了今天的登山"
   },
   {
     "status": 200,
@@ -12794,6 +13574,11 @@
   },
   {
     "status": 200,
+    "original": "きれい だよねー",
+    "translated": "很漂亮呢——"
+  },
+  {
+    "status": 200,
     "original": "きれいな しんじゅ\nやすく うれる",
     "translated": "漂亮的珍珠\\n能卖得便宜"
   },
@@ -12949,6 +13734,11 @@
   },
   {
     "status": 200,
+    "original": "きんようび",
+    "translated": "星期五"
+  },
+  {
+    "status": 200,
     "original": "きんりょくのもち",
     "translated": "肌力粘糕"
   },
@@ -12956,6 +13746,11 @@
     "status": 200,
     "original": "きんりょくのハネ",
     "translated": "肌力之羽"
+  },
+  {
+    "status": 200,
+    "original": "きんトレ やってるぜ！",
+    "translated": "就在做肌肉训练呢！"
   },
   {
     "status": 200,
@@ -12976,6 +13771,11 @@
     "status": 200,
     "original": "ぎゃくじょう",
     "translated": "怒火冲天"
+  },
+  {
+    "status": 200,
+    "original": "ぎゅうぎゅう",
+    "translated": "挤挤挨挨"
   },
   {
     "status": 200,
@@ -13184,6 +13984,11 @@
   },
   {
     "status": 200,
+    "original": "ください",
+    "translated": "请给我"
+  },
+  {
+    "status": 200,
     "original": "くだり ロープウェイ\nまもなく しゅっぱつ です\\lごりように なられますか？",
     "translated": "下行缆车{\\n}即将出发，请问您准备好了\\p吗？"
   },
@@ -13279,8 +14084,18 @@
   },
   {
     "status": 200,
+    "original": "くやしい",
+    "translated": "不甘心"
+  },
+  {
+    "status": 200,
     "original": "くやしい‥‥\n\n‥‥ ぐっすん！ おばあちゃーん！！",
     "translated": "好不甘心……\\p……呜呜！奶奶——！！"
+  },
+  {
+    "status": 200,
+    "original": "くやしさ",
+    "translated": "悔恨"
   },
   {
     "status": 200,
@@ -13316,6 +14131,11 @@
     "status": 200,
     "original": "くりかえし",
     "translated": "重复"
+  },
+  {
+    "status": 200,
+    "original": "くるくる",
+    "translated": "转个不停"
   },
   {
     "status": 200,
@@ -13548,6 +14368,11 @@
   },
   {
     "status": 200,
+    "original": "けっこう",
+    "translated": "相当"
+  },
+  {
+    "status": 200,
     "original": "けっこう つよい じゃんか！",
     "translated": "还挺强的嘛！"
   },
@@ -13555,6 +14380,11 @@
     "status": 200,
     "original": "けっこう つよいと おもってたんだけどな\nじぶんのこと‥‥ がっかり‥‥",
     "translated": "我还以为自己挺有名的\\n呢\\p没想到居然没人知道……\\n真让人失望……"
+  },
+  {
+    "status": 200,
+    "original": "けっこんして ５０ねん",
+    "translated": "结婚已经50年"
   },
   {
     "status": 200,
@@ -13595,6 +14425,11 @@
     "status": 200,
     "original": "けんきゅう ようの ノートだ\nボックスに ついて かかれている！\n\nボックス１つに ３０ぴきの\nポケモンを あずけられる ようにする\n\nパソコンには ぜんぶで ４２０ひきの\nポケモンを あずけられる ようにする\n\nつづきを よみますか？",
     "translated": "这是科研专用笔记本，\\n上面写着关于箱子的信\\p息！一个箱子最多存放\\n30只宝可梦，电脑总共\\p最多存放420只宝可梦。\\n继续阅读吗？"
+  },
+  {
+    "status": 200,
+    "original": "けんきゅうしゃに なりたい！",
+    "translated": "研究员！"
   },
   {
     "status": 200,
@@ -13660,6 +14495,11 @@
     "status": 200,
     "original": "げっこう",
     "translated": "月光"
+  },
+  {
+    "status": 200,
+    "original": "げつようび",
+    "translated": "星期一"
   },
   {
     "status": 200,
@@ -13735,6 +14575,11 @@
     "status": 200,
     "original": "げんきな アピールを みていると\nいっしょに からだを\\lうごかしたく なって こないか？",
     "translated": "看着充满活力的表演{\\n}会不会也想一起动起\\p来呢？"
+  },
+  {
+    "status": 200,
+    "original": "げんきに している かしら？",
+    "translated": "不知道她过得好不好呢？"
   },
   {
     "status": 200,
@@ -13822,6 +14667,18 @@
     "translated": "小狗"
   },
   {
+    "status": 404,
+    "original": "こいろいレいボいレせボはぐら×ぇピず２ぼ。カゆツ"
+  },
+  {
+    "status": 404,
+    "original": "こいろいレせボはぐら×ぇピず２ぼ。カゆツ"
+  },
+  {
+    "status": 404,
+    "original": "こいヤいｏい\\02ｏせ\\1AボよＱぇ２ずでぼくキ「ツ"
+  },
+  {
     "status": 200,
     "original": "こういう ちいさな しまで\nポケモンと かぞく なかよく くらすのも\\lなかなか いい もんですよ",
     "translated": "在这种小小的岛上，{\\n}和宝可梦一起，像家人一样\\p和睦生活，其实也挺不错的\\n呢。"
@@ -13880,6 +14737,11 @@
     "status": 200,
     "original": "こうかん を やめますか？",
     "translated": "要停止交换吗？"
+  },
+  {
+    "status": 200,
+    "original": "こうかんせいりつ     ",
+    "translated": "交换成立"
   },
   {
     "status": 200,
@@ -14168,6 +15030,11 @@
   },
   {
     "status": 200,
+    "original": "こおりタイプが きたえられる！",
+    "translated": "才能锻炼冰属性！"
+  },
+  {
+    "status": 200,
     "original": "こがらしあらし",
     "translated": "枯叶风暴"
   },
@@ -14380,6 +15247,11 @@
     "status": 200,
     "original": "ここには おけません！",
     "translated": "这里无法放置！"
+  },
+  {
+    "status": 200,
+    "original": "ここには おけません！\nつくえの うえなどに おいてください！",
+    "translated": "不能放在这里！\\n请放在桌子上等地方！"
   },
   {
     "status": 200,
@@ -14770,6 +15642,11 @@
     "status": 200,
     "original": "こだいの もじに にた すがたの ポケモン。\nさきに うまれたのは もじか アンノーンなのか。\nけんきゅうちゅうだが いまだに なぞである。",
     "translated": "形似古代文字的宝可梦。\\n先诞生的是文字还是未\\p知图腾呢。正在研究中，\\n至今仍是谜。"
+  },
+  {
+    "status": 200,
+    "original": "こだいの ロマンを もとめて",
+    "translated": "追寻古代的浪漫"
   },
   {
     "status": 200,
@@ -15173,6 +16050,11 @@
   },
   {
     "status": 200,
+    "original": "この みちは きびしい‥‥",
+    "translated": "这条路很严酷……"
+  },
+  {
+    "status": 200,
     "original": "この わざを だした あとは\nあまり びっくり しなくなる",
     "translated": "使出这个招式后，就不太会感\\n到惊讶了"
   },
@@ -15290,6 +16172,11 @@
     "status": 200,
     "original": "このあたりは からだが ひえきって\nしゅぎょう するのも ままならぬ‥‥\n\nだが きあいが あれば だいじょうぶッ！\n\nおぬしも この きあいのハチマキで\nさむさに たえてみせるのだッ！",
     "translated": "这一带冷得刺骨，\\n连修行都难以进行……\\p但只要有斗志就没问题！\\p你也戴上这条气势头带，展现\\n抵御严寒的毅力吧！"
+  },
+  {
+    "status": 200,
+    "original": "このあと",
+    "translated": "之后"
   },
   {
     "status": 200,
@@ -15418,6 +16305,11 @@
   },
   {
     "status": 200,
+    "original": "このまえ",
+    "translated": "之前"
+  },
+  {
+    "status": 200,
     "original": "このまちは きのうえに\nいえを たてて くらしている‥‥\n\nそのせいか みんな げんきで\nイキイキと している のですよ\n\nわしも このまちに きてから\n３０ねんほど わかがえった きぶんです",
     "translated": "这座城市是在树上{\\n}建造房屋居住的……{\\p}正因如此 大家都很有\\n精神 充满活力{\\p}老夫来到这座城市后 \\n也感觉年轻了30岁左右"
   },
@@ -15490,6 +16382,11 @@
     "status": 200,
     "original": "こぼれダネ",
     "translated": "掉出种子"
+  },
+  {
+    "status": 200,
+    "original": "こまかさ",
+    "translated": "精细度"
   },
   {
     "status": 200,
@@ -15823,6 +16720,11 @@
   },
   {
     "status": 200,
+    "original": "こんにちは",
+    "translated": "你好"
+  },
+  {
+    "status": 200,
     "original": "こんにちは\n\n『きょうの かいもの じょうず』の\nじかん です\n\nインタビュアー『みなさん おげんきですか？\n\nきょうは \\03の\nおみせに きています\n\nさいきん なにが うれているのか\nチェック してみましょう！",
     "translated": "你好\\p现在是《今日购物达人》的\\n时间\\p采访者：各位观众，大家好！\\p今天我们来到了\\03的店铺。\\p让我们来看看最近什么商品畅\\n销吧！"
   },
@@ -15928,8 +16830,23 @@
   },
   {
     "status": 200,
+    "original": "ごくごく",
+    "translated": "咕嘟咕嘟"
+  },
+  {
+    "status": 200,
+    "original": "ございます",
+    "translated": "有"
+  },
+  {
+    "status": 200,
     "original": "ごじゅうおん じゅん",
     "translated": "五十音顺序"
+  },
+  {
+    "status": 200,
+    "original": "ごっつい いわポケモン！",
+    "translated": "结实魁梧的岩石宝可梦！"
   },
   {
     "status": 200,
@@ -15938,8 +16855,18 @@
   },
   {
     "status": 200,
+    "original": "ごめんなさい",
+    "translated": "对不起"
+  },
+  {
+    "status": 200,
     "original": "ごめんなさい！\nタマゴは しゅつじょう できないんです‥‥",
     "translated": "对不起！\\n蛋是不能出场的……"
+  },
+  {
+    "status": 200,
+    "original": "ごめんね",
+    "translated": "抱歉呢"
   },
   {
     "status": 200,
@@ -15970,6 +16897,11 @@
     "status": 200,
     "original": "ごりよう ありがとう ございました",
     "translated": "感谢您的使用"
+  },
+  {
+    "status": 200,
+    "original": "ごろごろ",
+    "translated": "咕噜咕噜"
   },
   {
     "status": 200,
@@ -16103,6 +17035,11 @@
   },
   {
     "status": 200,
+    "original": "さかさま",
+    "translated": "颠倒"
+  },
+  {
+    "status": 200,
     "original": "さかだち",
     "translated": "倒立"
   },
@@ -16148,6 +17085,11 @@
   },
   {
     "status": 200,
+    "original": "さこうそく",
+    "translated": "移动速度"
+  },
+  {
+    "status": 200,
     "original": "ささ どうぞ！",
     "translated": "来，请！"
   },
@@ -16170,6 +17112,10 @@
     "status": 200,
     "original": "さしおさえ",
     "translated": "查封"
+  },
+  {
+    "status": 404,
+    "original": "さしすせそ"
   },
   {
     "status": 200,
@@ -16210,6 +17156,11 @@
     "status": 200,
     "original": "さっすが！\n\nその まんぞくした かおを みれば\nどんなに いいしあいだったか\\lわかりますよ！",
     "translated": "不愧是！\\p从您满足的表情\\n就能看出是多么精彩的\\p对战呢！"
+  },
+  {
+    "status": 200,
+    "original": "さっぱり",
+    "translated": "清爽"
   },
   {
     "status": 200,
@@ -16328,6 +17279,11 @@
   },
   {
     "status": 200,
+    "original": "さみしい",
+    "translated": "寂寞"
+  },
+  {
+    "status": 200,
     "original": "さみしがり",
     "translated": "怕寂寞"
   },
@@ -16350,6 +17306,11 @@
     "status": 200,
     "original": "さようなら",
     "translated": "再见"
+  },
+  {
+    "status": 200,
+    "original": "さらさら",
+    "translated": "沙沙作响"
   },
   {
     "status": 200,
@@ -16408,6 +17369,11 @@
   },
   {
     "status": 200,
+    "original": "さわやか",
+    "translated": "清爽"
+  },
+  {
+    "status": 200,
     "original": "さわると くずれる\nすなの おきもの",
     "translated": "一碰就碎\\n的沙子摆件"
   },
@@ -16463,6 +17429,11 @@
   },
   {
     "status": 200,
+    "original": "さんじょう",
+    "translated": "驾到"
+  },
+  {
+    "status": 200,
     "original": "さんにん",
     "translated": "3人"
   },
@@ -16485,6 +17456,11 @@
     "status": 200,
     "original": "ざぶざぶサーフ",
     "translated": "滔滔冲浪"
+  },
+  {
+    "status": 200,
+    "original": "ざんねん",
+    "translated": "可惜"
   },
   {
     "status": 200,
@@ -16658,8 +17634,23 @@
   },
   {
     "status": 200,
+    "original": "しかたない",
+    "translated": "没办法"
+  },
+  {
+    "status": 200,
     "original": "しかたないなぁ もう\n\nおじさんの あまった きのみで\nよければ あげるよ！\n\nこれで いっしょに きのみブレンダーで\nポロックを つくろうや",
     "translated": "没办法大叔{\\p}我多余的树果可以分\\n给你一些！{\\p}这样我们一起用树果\\n混合器做宝可方块吧"
+  },
+  {
+    "status": 200,
+    "original": "しがいせんは おはだの てき",
+    "translated": "紫外线是肌肤的大敌"
+  },
+  {
+    "status": 200,
+    "original": "しくしく",
+    "translated": "抽抽搭搭"
   },
   {
     "status": 200,
@@ -16693,6 +17684,11 @@
   },
   {
     "status": 200,
+    "original": "しぜんの なかで そだてた",
+    "translated": "在大自然中培育的"
+  },
+  {
+    "status": 200,
     "original": "しぜんのいかり",
     "translated": "自然之怒"
   },
@@ -16715,6 +17711,16 @@
     "status": 200,
     "original": "しぜんのめぐみ",
     "translated": "自然之恩"
+  },
+  {
+    "status": 200,
+    "original": "しぜんを こわす やからは",
+    "translated": "破坏自然的家伙"
+  },
+  {
+    "status": 200,
+    "original": "したくない",
+    "translated": "不想做"
   },
   {
     "status": 200,
@@ -16745,6 +17751,11 @@
     "status": 200,
     "original": "しちせいだっこんたい",
     "translated": "七星夺魂腿"
+  },
+  {
+    "status": 200,
+    "original": "しっけい",
+    "translated": "失敬"
   },
   {
     "status": 200,
@@ -16808,6 +17819,11 @@
   },
   {
     "status": 200,
+    "original": "しつれい",
+    "translated": "失礼了"
+  },
+  {
+    "status": 200,
     "original": "してい しない",
     "translated": "做 不做"
   },
@@ -16865,6 +17881,11 @@
     "status": 200,
     "original": "しぼりとる",
     "translated": "绞紧"
+  },
+  {
+    "status": 200,
+    "original": "しまった",
+    "translated": "糟了"
   },
   {
     "status": 200,
@@ -16938,8 +17959,23 @@
   },
   {
     "status": 200,
+    "original": "しゅうりょう",
+    "translated": "结束"
+  },
+  {
+    "status": 200,
     "original": "しゅうりょう しました\nおつかれさまでした",
     "translated": "已修理完毕{\\n}辛苦了"
+  },
+  {
+    "status": 200,
+    "original": "しゅうりょうまちです   ",
+    "translated": "这里是终了镇"
+  },
+  {
+    "status": 200,
+    "original": "しゅぎょう",
+    "translated": "修行"
   },
   {
     "status": 200,
@@ -17107,6 +18143,16 @@
   },
   {
     "status": 200,
+    "original": "しょうらいは ポケモンの",
+    "translated": "将来我想成为宝可梦"
+  },
+  {
+    "status": 200,
+    "original": "しょうり",
+    "translated": "胜利"
+  },
+  {
+    "status": 200,
     "original": "しょうりのほし",
     "translated": "胜利之星"
   },
@@ -17152,6 +18198,11 @@
   },
   {
     "status": 200,
+    "original": "しょんぼり",
+    "translated": "无精打采"
+  },
+  {
+    "status": 200,
     "original": "しょんぼり‥‥",
     "translated": "垂头丧气……"
   },
@@ -17159,6 +18210,11 @@
     "status": 200,
     "original": "しらたま",
     "translated": "白玉宝珠"
+  },
+  {
+    "status": 200,
+    "original": "しらない",
+    "translated": "不知道"
   },
   {
     "status": 200,
@@ -17332,6 +18388,11 @@
   },
   {
     "status": 200,
+    "original": "しんさいんに ついて",
+    "translated": "关于新标记"
+  },
+  {
+    "status": 200,
     "original": "しんさいんの \\02への\nいんしょうは かわらない！",
     "translated": "评委对\\02的\\n印象没有变化！"
   },
@@ -17362,8 +18423,18 @@
   },
   {
     "status": 200,
+    "original": "しんじて",
+    "translated": "相信"
+  },
+  {
+    "status": 200,
     "original": "しんじゅ",
     "translated": "珍珠"
+  },
+  {
+    "status": 200,
+    "original": "しんじられない",
+    "translated": "无法相信"
   },
   {
     "status": 200,
@@ -17637,6 +18708,11 @@
   },
   {
     "status": 200,
+    "original": "じぶんが",
+    "translated": "自己呀"
+  },
+  {
+    "status": 200,
     "original": "じぶんが おぼえて いる わざを\nあいては つかうことが できなくなる",
     "translated": "对手将无法使用\\n自己学会的招式"
   },
@@ -17654,6 +18730,16 @@
     "status": 200,
     "original": "じぶんできめる",
     "translated": "自己决定"
+  },
+  {
+    "status": 200,
+    "original": "じぶんに",
+    "translated": "对自己"
+  },
+  {
+    "status": 200,
+    "original": "じぶんの",
+    "translated": "自己的"
   },
   {
     "status": 200,
@@ -17737,6 +18823,11 @@
   },
   {
     "status": 200,
+    "original": "じぶんは",
+    "translated": "自己啊"
+  },
+  {
+    "status": 200,
     "original": "じぶんは ひんしに なるが \nあいての のうりょくが さがる",
     "translated": "自己会陷入濒死状态\\n但对手的能力会下降"
   },
@@ -17744,6 +18835,16 @@
     "status": 200,
     "original": "じぶんよりも なかまの おうえんが だいじ。\nからだから はっする でんきを ショートさせて\nはでに ひばなを だしながら おうえんするぞ。",
     "translated": "比起自己，为同伴加油\\n更重要。\\p会让身体发出的电短路，\\n一边华丽地放出火花，\\p一边加油助威。"
+  },
+  {
+    "status": 200,
+    "original": "じぶんを",
+    "translated": "把自己"
+  },
+  {
+    "status": 200,
+    "original": "じまん じゃないけど",
+    "translated": "不是自夸"
   },
   {
     "status": 200,
@@ -17852,6 +18953,11 @@
   },
   {
     "status": 200,
+    "original": "じゃーね",
+    "translated": "再见啦"
+  },
+  {
+    "status": 200,
     "original": "じゅう よく ごうを せいす！\nみごとな たたかいぶり だった！",
     "translated": "柔能克刚！\\n真是精彩的战斗！"
   },
@@ -17872,6 +18978,11 @@
   },
   {
     "status": 200,
+    "original": "じゅうぶん",
+    "translated": "够了"
+  },
+  {
+    "status": 200,
     "original": "じゅうぶんな えいようと たいようの ひかりが\nはなの いろを あざやかに すると いわれる。\nはなの かおりは ひとの こころを いやす。",
     "translated": "据说，充足的营养和阳\\n光\\p会让它的花色变得更加\\n鲜艳。\\p花的香味能抚慰人心。"
   },
@@ -17879,6 +18990,11 @@
     "status": 200,
     "original": "じゅうりょく",
     "translated": "重力"
+  },
+  {
+    "status": 200,
+    "original": "じゅぎょう",
+    "translated": "上课"
   },
   {
     "status": 200,
@@ -17954,6 +19070,11 @@
     "status": 200,
     "original": "じょうぶないた",
     "translated": "结实木板"
+  },
+  {
+    "status": 200,
+    "original": "じょうほう",
+    "translated": "信息"
   },
   {
     "status": 200,
@@ -18082,6 +19203,11 @@
   },
   {
     "status": 200,
+    "original": "すいぶんを ほきゅうしよう！",
+    "translated": "补充水分！"
+  },
+  {
+    "status": 200,
     "original": "すいぶんを むだなく きゅうしゅうする からだの\nつくりなので かんそうした すなちでも へいき。\nからだを まるめて てきの こうげきを ふせぐ。",
     "translated": "因为身体构造能高效吸\\n收水分，所以在干燥的\\p沙地也没问题。会蜷缩\\n身体来抵御敌人的攻击。"
   },
@@ -18097,8 +19223,18 @@
   },
   {
     "status": 200,
+    "original": "すいようび",
+    "translated": "星期三"
+  },
+  {
+    "status": 200,
     "original": "すいりゅうれんだ",
     "translated": "水流连打"
+  },
+  {
+    "status": 200,
+    "original": "すき きらいは なしよ",
+    "translated": "没有喜欢讨厌之分哦"
   },
   {
     "status": 200,
@@ -18114,6 +19250,11 @@
     "status": 200,
     "original": "すきな ばしょを さがして\nすきな グッズを おく！\n\nすきな ポケモンを そだてて\nぼくも いっしょに つよくなる\n\nそんな ぼくと しょうぶ しよう！",
     "translated": "寻找喜欢的地方\\n放置喜欢的道具！\\p培养喜欢的宝可梦，我\\n也会一起变强\\p来和这样的我对战吧！"
+  },
+  {
+    "status": 200,
+    "original": "すきな ポケモンは おなじでも",
+    "translated": "就算喜欢的宝可梦相同"
   },
   {
     "status": 200,
@@ -18134,6 +19275,11 @@
     "status": 200,
     "original": "すぐに たたかいを いどむ きしょうの あらさ。\nシザリガーの すむ いけには ほかの いきものが\nすみつかず さみしい ばしょに なってしまう。",
     "translated": "好斗性格，马上挑起战\\n斗。巨钳螳螂居住的池\\p塘，其他生物无法栖息，\\n变成寂寞的地方。"
+  },
+  {
+    "status": 200,
+    "original": "すこしは",
+    "translated": "稍微一点"
   },
   {
     "status": 200,
@@ -18219,6 +19365,11 @@
     "status": 200,
     "original": "すごく にがい こな\nじょうたい いじょうを\nすべて かいふくする",
     "translated": "极其苦涩的粉末\\n恢复所有异常状态\\p全部"
+  },
+  {
+    "status": 200,
+    "original": "すごすぎ",
+    "translated": "太厉害了"
   },
   {
     "status": 200,
@@ -18517,6 +19668,16 @@
   },
   {
     "status": 200,
+    "original": "すばやい かくとうタイプ",
+    "translated": "敏捷的格斗属性"
+  },
+  {
+    "status": 200,
+    "original": "すばやい ポケモンを つかう",
+    "translated": "使用敏捷的宝可梦"
+  },
+  {
+    "status": 200,
     "original": "すばやく こうげきだ！",
     "translated": "迅速攻击！"
   },
@@ -18582,6 +19743,16 @@
   },
   {
     "status": 200,
+    "original": "すばろう",
+    "translated": "斯巴罗"
+  },
+  {
+    "status": 200,
+    "original": "すべて おみとおしだ！",
+    "translated": "我全都看穿了！"
+  },
+  {
+    "status": 200,
     "original": "すべての こんなんを",
     "translated": "所有的困难"
   },
@@ -18627,6 +19798,16 @@
   },
   {
     "status": 200,
+    "original": "すべてのポケモンを くわしく しらべます ",
+    "translated": "详细调查所有的宝可梦"
+  },
+  {
+    "status": 200,
+    "original": "すべてを しりたいのです",
+    "translated": "一切"
+  },
+  {
+    "status": 200,
     "original": "すべりだい",
     "translated": "滑梯"
   },
@@ -18639,6 +19820,11 @@
     "status": 200,
     "original": "すみの かたまりを はっしゃして\nめいちゅうりつを さげさせる",
     "translated": "发射墨团，\\n降低其命中率。"
+  },
+  {
+    "status": 200,
+    "original": "すみません",
+    "translated": "不好意思"
   },
   {
     "status": 200,
@@ -18962,6 +20148,11 @@
   },
   {
     "status": 200,
+    "original": "せかいじゅうの めずらしい",
+    "translated": "全世界稀有的"
+  },
+  {
+    "status": 200,
     "original": "せかいで ７ばんめに はっけん されたので",
     "translated": "因为在世界上第7个被发现，\\n所以"
   },
@@ -18979,6 +20170,11 @@
     "status": 200,
     "original": "せかいの ふしぎを かいめい するため まいにち\nけんきゅう しているが あたまの シェルダーが\nはずれると ぜんぶ わすれてしまう らしい。",
     "translated": "为了解开世界的谜团每\\n天都在研究，但头上的\\p谢尔达脱落的话似乎会\\n全部忘记。"
+  },
+  {
+    "status": 200,
+    "original": "せかいの ビッグウェーブが",
+    "translated": "世界的巨浪"
   },
   {
     "status": 200,
@@ -19057,6 +20253,21 @@
   },
   {
     "status": 200,
+    "original": "せつぞく ちゅうです",
+    "translated": "正在连接中"
+  },
+  {
+    "status": 200,
+    "original": "せつぞく できない ききの ようです\nただしい ききと やりなおしてください",
+    "translated": "似乎无法连接机器\\n请使用正确的机器重新尝试"
+  },
+  {
+    "status": 200,
+    "original": "せつぞく できません",
+    "translated": "无法连接"
+  },
+  {
+    "status": 200,
     "original": "せつぞくを きる",
     "translated": "断开连接"
   },
@@ -19099,6 +20310,11 @@
     "status": 200,
     "original": "せんすいてい には\n「かいえん １ごう」と かかれている\n\n\\08だんが カイナから\nうばって いった せんすいてい だ！\n\n\\08だんは\nここから うえに あがったみたいだ",
     "translated": "潜水艇上写着\\n“海渊１号”\\p这就是\\08团从凯那市抢走的潜\\n水艇！\\p\\08团的人好像从这里往上走了"
+  },
+  {
+    "status": 200,
+    "original": "せんせい",
+    "translated": "老师"
   },
   {
     "status": 200,
@@ -19152,6 +20368,11 @@
   },
   {
     "status": 200,
+    "original": "せんとうへ",
+    "translated": "去战斗"
+  },
+  {
+    "status": 200,
     "original": "ぜぇ‥‥ ぜぇ‥‥\nやっと ここまで きたけど‥‥\n\nつかれちゃって ポケモン つかまえる\nげんきも のこって ないよ‥‥",
     "translated": "喘……喘……\\n终于到这里了但是……\\p太累了，连捕捉宝可梦\\n的力气都没了……"
   },
@@ -19159,6 +20380,16 @@
     "status": 200,
     "original": "ぜえ‥‥ ぜえ‥‥\nまけて つかれて しまった",
     "translated": "呼……呼……\\n输了，累坏了。"
+  },
+  {
+    "status": 200,
+    "original": "ぜったい",
+    "translated": "绝对"
+  },
+  {
+    "status": 200,
+    "original": "ぜったいに ゆるさない！",
+    "translated": "绝对不可原谅！"
   },
   {
     "status": 200,
@@ -19252,6 +20483,11 @@
   },
   {
     "status": 200,
+    "original": "ぜんぜん",
+    "translated": "完全"
+  },
+  {
+    "status": 200,
     "original": "ぜんぜん かてません‥‥！",
     "translated": "完全赢不了……！"
   },
@@ -19324,6 +20560,11 @@
     "status": 200,
     "original": "そう いらないんだ‥\nほしくなったら また こえかけてね！",
     "translated": "这样啊，不需要啊……\\n想要的时候再叫我哦！"
+  },
+  {
+    "status": 200,
+    "original": "そう おもわない？",
+    "translated": "你不觉得吗？"
   },
   {
     "status": 200,
@@ -19767,6 +21008,11 @@
   },
   {
     "status": 200,
+    "original": "そのうち",
+    "translated": "不久"
+  },
+  {
+    "status": 200,
     "original": "そのぐらい かな・・・\n\nまた はなし しようね！\nばいばい！",
     "translated": "差不多就这些吧……\\p下次再聊哦！\\n拜拜！"
   },
@@ -19869,6 +21115,11 @@
     "status": 200,
     "original": "それ いじょう\nもちきれない ですよ！\\CC09",
     "translated": "再多的话\\n拿不下了！\\CC09"
+  },
+  {
+    "status": 200,
+    "original": "それじゃ",
+    "translated": "那么"
   },
   {
     "status": 200,
@@ -20116,14 +21367,28 @@
     "translated": "既然这么强\\n不如以宝可梦联盟为目\\p标吧！"
   },
   {
+    "status": 404,
+    "original": "たい♂いょはチぇ９ぼげツモレごヂべ！"
+  },
+  {
     "status": 200,
     "original": "たいあたり",
     "translated": "撞击"
   },
   {
     "status": 200,
+    "original": "たいかい",
+    "translated": "大会"
+  },
+  {
+    "status": 200,
     "original": "たいかいのせきばん",
     "translated": "大海石板"
+  },
+  {
+    "status": 200,
+    "original": "たいくつ",
+    "translated": "无聊"
   },
   {
     "status": 200,
@@ -20137,6 +21402,11 @@
   },
   {
     "status": 200,
+    "original": "たいした",
+    "translated": "了不起"
+  },
+  {
+    "status": 200,
     "original": "たいせつなてがみ",
     "translated": "重要信件"
   },
@@ -20144,6 +21414,11 @@
     "status": 200,
     "original": "たいせつなもの",
     "translated": "重要物品"
+  },
+  {
+    "status": 200,
+    "original": "たいせん",
+    "translated": "对战"
   },
   {
     "status": 200,
@@ -20207,8 +21482,18 @@
   },
   {
     "status": 200,
+    "original": "たいへん",
+    "translated": "辛苦"
+  },
+  {
+    "status": 200,
     "original": "たいへんだ！！\nこうしちゃ いられない！",
     "translated": "大事不好了！！\\n不能这样下去！"
+  },
+  {
+    "status": 200,
+    "original": "たいもうが こすれて せいでんきが たまる。\nでんりょくが たくさん たまるほど しっぽの\nさきに ついた でんきゅうが あかるく ひかる。",
+    "translated": "体毛相互摩擦会积聚静电。\\n积存的电力越多，长在尾巴\\p尖端的灯泡就会发出明亮的光\\n芒。"
   },
   {
     "status": 200,
@@ -20367,6 +21652,11 @@
   },
   {
     "status": 200,
+    "original": "たからもの",
+    "translated": "宝物"
+  },
+  {
+    "status": 200,
     "original": "たからもの かぁ‥‥\n\nあると いいけど\nそうでなくても ポケモンと いっしょに\\lかいていを おさんぽ なんて す・て・き！",
     "translated": "宝藏啊……\\p有就好了\\n即使没有和宝可梦一起\\p在海底散步也很·棒·呢！"
   },
@@ -20444,6 +21734,11 @@
     "status": 200,
     "original": "たくましい アピールを した\nポケモンを かなり おどろかす",
     "translated": "极大地惊吓表演了强壮表演的\\n宝可梦"
+  },
+  {
+    "status": 200,
+    "original": "たくましい ポケモンを みつけます   ",
+    "translated": "寻找强壮的宝可梦"
   },
   {
     "status": 200,
@@ -20552,6 +21847,21 @@
   },
   {
     "status": 200,
+    "original": "たたかい",
+    "translated": "战斗"
+  },
+  {
+    "status": 200,
+    "original": "たたかい なのよ！",
+    "translated": "一场战斗哦！"
+  },
+  {
+    "status": 200,
+    "original": "たたかいかたが あるのじゃ",
+    "translated": "战斗方式"
+  },
+  {
+    "status": 200,
     "original": "たたかいかたを まよってしまった‥‥",
     "translated": "在对战中迷失了方向……"
   },
@@ -20592,6 +21902,11 @@
   },
   {
     "status": 200,
+    "original": "たたかうことで ポケモンの",
+    "translated": "通过战斗来了解宝可梦的"
+  },
+  {
+    "status": 200,
     "original": "たたかうって じぶんで きめたから\nまけても すっきり してるわ！\n\n‥‥もちろん まけて くやしいけどね",
     "translated": "因为战斗是我自己决定的\\n所以就算输了也觉得很痛快！\\p……当然，输了还是会不甘心\\n啦"
   },
@@ -20609,6 +21924,11 @@
     "status": 200,
     "original": "たたかえる ポケモンさん\n１ひき しか いないですか？\n\nじゃあ しょうぶは おあずけ ですね！",
     "translated": "能战斗的宝可梦\\n只剩1只了吗？\\p那这场对战就先到此为\\n止吧！"
+  },
+  {
+    "status": 200,
+    "original": "たたかった あとは ポケモンと",
+    "translated": "战斗结束后就和宝可梦"
   },
   {
     "status": 200,
@@ -20652,6 +21972,15 @@
   },
   {
     "status": 200,
+    "original": "ただしい",
+    "translated": "正确"
+  },
+  {
+    "status": 404,
+    "original": "たちつてと"
+  },
+  {
+    "status": 200,
     "original": "たっ たすけて くれーっ！！",
     "translated": "救、救命啊——！！"
   },
@@ -20692,6 +22021,11 @@
   },
   {
     "status": 200,
+    "original": "たのしい",
+    "translated": "开心"
+  },
+  {
+    "status": 200,
     "original": "たのしい ことが あるとき って\nいい においで いっぱいに なってるのね",
     "translated": "有开心的事情的时候，\\n就会充满好闻的气味呢。"
   },
@@ -20699,6 +22033,16 @@
     "status": 200,
     "original": "たのしい しょうぶ だったよ",
     "translated": "真是一场愉快的对战"
+  },
+  {
+    "status": 200,
+    "original": "たのしくて のめりこんじゃった",
+    "translated": "结果太开心就沉迷进去了"
+  },
+  {
+    "status": 200,
+    "original": "たのしすぎ",
+    "translated": "太开心"
   },
   {
     "status": 200,
@@ -20719,6 +22063,11 @@
     "status": 200,
     "original": "たびは いいぞ！\n\nわしも わかいときは あちこちの\nうみや やまを わたりあるいた ものだ！",
     "translated": "旅行很不错哦！{\\p}我年轻的时候也到处游历过\\n大海和群山呢！"
+  },
+  {
+    "status": 200,
+    "original": "たべたい",
+    "translated": "想吃"
   },
   {
     "status": 200,
@@ -20797,6 +22146,11 @@
   },
   {
     "status": 200,
+    "original": "たりない",
+    "translated": "不够"
+  },
+  {
+    "status": 200,
     "original": "たわわこやし",
     "translated": "硕果肥"
   },
@@ -20836,6 +22190,10 @@
     "translated": "短裤小子"
   },
   {
+    "status": 404,
+    "original": "たタ     ソひほはｄと ふがビほ『の"
+  },
+  {
     "status": 200,
     "original": "だ だめだぁ！ ポケモンより\nじぶんの ほうが きんちょう してる！\\lブルブル‥‥ ドキドキ‥",
     "translated": "不、不行啊！比起\\n宝可梦{\\p}我自己更紧张！发抖……\\n心跳……"
@@ -20844,6 +22202,11 @@
     "status": 200,
     "original": "だい   かい でんどういり！",
     "translated": "大型电涌涌入！"
+  },
+  {
+    "status": 200,
+    "original": "だいきらい",
+    "translated": "最讨厌"
   },
   {
     "status": 200,
@@ -20867,6 +22230,11 @@
   },
   {
     "status": 200,
+    "original": "だいじに",
+    "translated": "珍惜地"
+  },
+  {
+    "status": 200,
     "original": "だいじに してね！",
     "translated": "要好好珍惜哦！"
   },
@@ -20874,6 +22242,16 @@
     "status": 200,
     "original": "だいじにそだてなさいよ！",
     "translated": "要好好培育它哦！"
+  },
+  {
+    "status": 200,
+    "original": "だいじょうぶ",
+    "translated": "没问题"
+  },
+  {
+    "status": 200,
+    "original": "だいすき",
+    "translated": "最喜欢"
   },
   {
     "status": 200,
@@ -20992,6 +22370,11 @@
   },
   {
     "status": 200,
+    "original": "だからね",
+    "translated": "所以啊"
+  },
+  {
+    "status": 200,
     "original": "だくりゅう",
     "translated": "浊流"
   },
@@ -21032,8 +22415,23 @@
   },
   {
     "status": 200,
+    "original": "だめだたらしいよ     ",
+    "translated": "好像不行哦"
+  },
+  {
+    "status": 200,
     "original": "だめだ！ ポケモンが\nボールから でてしまった！",
     "translated": "糟了！宝可梦从\\n精灵球里跑出来了！"
+  },
+  {
+    "status": 200,
+    "original": "だよねー！",
+    "translated": "对吧！"
+  },
+  {
+    "status": 200,
+    "original": "だらだら",
+    "translated": "拖拖拉拉"
   },
   {
     "status": 200,
@@ -21119,6 +22517,11 @@
     "status": 200,
     "original": "だんなったら みただけで\nポケモンが すきな ポロック わかるのよ",
     "translated": "如果是你的话，只要看\\n一眼\\p就能知道宝可梦喜欢哪\\n种宝可方块哦"
+  },
+  {
+    "status": 200,
+    "original": "ちいさい",
+    "translated": "小小的"
   },
   {
     "status": 200,
@@ -21327,8 +22730,18 @@
   },
   {
     "status": 200,
+    "original": "ちくしょー",
+    "translated": "可恶"
+  },
+  {
+    "status": 200,
     "original": "ちくでん",
     "translated": "蓄电"
+  },
+  {
+    "status": 200,
+    "original": "ちしきと あいじょうよ！",
+    "translated": "就是知识与爱心！"
   },
   {
     "status": 200,
@@ -21501,6 +22914,11 @@
   },
   {
     "status": 200,
+    "original": "ちょっと",
+    "translated": "喂"
+  },
+  {
+    "status": 200,
     "original": "ちょっと あんた\nわたしと しょうぶ しましょ！",
     "translated": "喂，你\\n和我来对战吧！"
   },
@@ -21555,6 +22973,26 @@
   },
   {
     "status": 200,
+    "original": "っていうか",
+    "translated": "话说回来"
+  },
+  {
+    "status": 200,
+    "original": "ってかんじ",
+    "translated": "就是这感觉"
+  },
+  {
+    "status": 200,
+    "original": "っぱなし",
+    "translated": "一直"
+  },
+  {
+    "status": 200,
+    "original": "つい あしを はこんじゃう",
+    "translated": "总会不由自主地走过去"
+  },
+  {
+    "status": 200,
     "original": "つい ながながと しつれい しました\n\nあなたは まだ おわかいし\nたびを なさって いる ようだから\n\nいきいきとした ポケモンや\nそれを えがいた すてきな さくひんに\\lであわれる かも しれません！\n\nもし そんな さくひんに であったら\nそのえを ここに かざれる ように\\lあなたから おねがい して くださると\\lたいへん うれしいです",
     "translated": "不知不觉说了这么久 \\n失礼了\\p您还年轻 似乎正在旅\\n行\\p或许能遇到充满活力的\\n宝可梦以及描绘它们的\\p精彩作品！\\p如果遇到那样的作品 \\n为了让那幅画能展示在\\p这里恳请您能答应我的\\n请求 我会非常高兴"
   },
@@ -21567,6 +23005,10 @@
     "status": 200,
     "original": "ついばむ",
     "translated": "啄食"
+  },
+  {
+    "status": 404,
+    "original": "ついｇにたわノぢぎク：ホゥャ『ボü‥<F8>Ｌ"
   },
   {
     "status": 200,
@@ -21690,6 +23132,11 @@
   },
   {
     "status": 200,
+    "original": "つかって",
+    "translated": "使用"
+  },
+  {
+    "status": 200,
     "original": "つかっても こうかがないよ\\CC09",
     "translated": "即使使用了也没有效果哦\\CC09"
   },
@@ -21742,6 +23189,11 @@
     "status": 200,
     "original": "つかまえポン",
     "translated": "捕捉碰碰"
+  },
+  {
+    "status": 200,
+    "original": "つかみどころ ありません",
+    "translated": "让人捉摸不透"
   },
   {
     "status": 200,
@@ -21860,6 +23312,11 @@
   },
   {
     "status": 200,
+    "original": "つくってやるぜ！",
+    "translated": "我说到做到！"
+  },
+  {
+    "status": 200,
     "original": "つけあがる",
     "translated": "嚣张"
   },
@@ -21877,6 +23334,11 @@
     "status": 200,
     "original": "つちへび",
     "translated": "土蛇"
+  },
+  {
+    "status": 200,
+    "original": "つったのは せかいで オレだけ",
+    "translated": "全世界只有我钓到过"
   },
   {
     "status": 200,
@@ -21912,6 +23374,11 @@
     "status": 200,
     "original": "つながりのヒモ",
     "translated": "联系绳"
+  },
+  {
+    "status": 200,
+    "original": "つながりました",
+    "translated": "连接成功了"
   },
   {
     "status": 200,
@@ -22075,6 +23542,11 @@
   },
   {
     "status": 200,
+    "original": "つよい ポケモンが すき",
+    "translated": "喜欢强大的宝可梦"
+  },
+  {
+    "status": 200,
     "original": "つよいかぜで てきを ふきとばす\nふきとばすと せんとうは おわる",
     "translated": "用强风吹飞对手。\\n吹飞后战斗就会结束。"
   },
@@ -22135,6 +23607,11 @@
   },
   {
     "status": 200,
+    "original": "つよけりゃ いいだろ？",
+    "translated": "只要够强不就行了吗？"
+  },
+  {
+    "status": 200,
     "original": "つよさ",
     "translated": "攻击"
   },
@@ -22150,6 +23627,11 @@
   },
   {
     "status": 200,
+    "original": "つよすぎ",
+    "translated": "太强了"
+  },
+  {
+    "status": 200,
     "original": "つよすぎるーっ！",
     "translated": "太强啦——！"
   },
@@ -22162,6 +23644,11 @@
     "status": 200,
     "original": "つよそうな トレーナーですけど\nあたしたちに かてますか？",
     "translated": "看起来是个很强的训练\\n家，\\p不过能赢过我们吗？"
+  },
+  {
+    "status": 200,
+    "original": "つらかった",
+    "translated": "好难受"
   },
   {
     "status": 200,
@@ -22332,6 +23819,11 @@
     "status": 200,
     "original": "ていこうのハネ",
     "translated": "抵抗之羽"
+  },
+  {
+    "status": 200,
+    "original": "ていない",
+    "translated": "没有"
   },
   {
     "status": 200,
@@ -22635,6 +24127,11 @@
   },
   {
     "status": 200,
+    "original": "てつやして てにいれた‥‥",
+    "translated": "熬夜才弄到手的……"
+  },
+  {
+    "status": 200,
     "original": "てつやで いわを おして きたのに‥‥\n\nわがはいの つぎの つぎの つぎ\nくらいに すごい！",
     "translated": "通宵推石头结果……{\\p}也就比我接下来的接\\n下来的接下来厉害那么\\p一点！"
   },
@@ -22687,6 +24184,11 @@
     "status": 200,
     "original": "てに もっている ふりこの うごきと かがやきが\nあいてを ふかい さいみんじょうたいに おとす。\nえものを さがしながら ふりこを みがいている。",
     "translated": "手中拿着的摆锤的动作\\n和光芒能让对手陷入深\\p度催眠状态。一边寻找\\n猎物一边打磨摆锤。"
+  },
+  {
+    "status": 200,
+    "original": "てにいれた きねんリボンを みます   ",
+    "translated": "查看获得的纪念缎带"
   },
   {
     "status": 200,
@@ -22757,6 +24259,11 @@
     "status": 200,
     "original": "てもちポケモンが １ひきしかいません！\n                   ",
     "translated": "同行宝可梦只有１只！"
+  },
+  {
+    "status": 200,
+    "original": "てもちポケモンを くわしく しらべます  ",
+    "translated": "详细调查携带的宝可梦"
   },
   {
     "status": 200,
@@ -22860,6 +24367,11 @@
   },
   {
     "status": 200,
+    "original": "てんさい",
+    "translated": "天才"
+  },
+  {
+    "status": 200,
     "original": "てんさい など いない\nすべては どりょく！\\lわたしは そう しんじている‥‥",
     "translated": "没有什么天才\\n一切都是努力！我就是\\p这么相信的……"
   },
@@ -22882,6 +24394,16 @@
     "status": 200,
     "original": "てんのめぐみ",
     "translated": "天恩"
+  },
+  {
+    "status": 200,
+    "original": "で かえった",
+    "translated": "从……回来了"
+  },
+  {
+    "status": 200,
+    "original": "で であった",
+    "translated": "在……相遇了"
   },
   {
     "status": 200,
@@ -22915,6 +24437,11 @@
   },
   {
     "status": 200,
+    "original": "できごと",
+    "translated": "事件"
+  },
+  {
+    "status": 200,
     "original": "できごとの よみこみが\nせいじょうに しゅうりょう しました",
     "translated": "事件读取已\\n正常结束。"
   },
@@ -22922,6 +24449,11 @@
     "status": 200,
     "original": "できごとを よみこみちゅう！！",
     "translated": "正在读取事件！！"
+  },
+  {
+    "status": 200,
+    "original": "できない",
+    "translated": "做不到"
   },
   {
     "status": 200,
@@ -22937,6 +24469,21 @@
     "status": 200,
     "original": "でぐちが わかんねーんだよ\n\nこわがってる わけじゃ ねーぞ\nかんちがい すんなよ！",
     "translated": "找不到出口啊{\\p}我可不是在害怕，别\\n误会了！"
+  },
+  {
+    "status": 200,
+    "original": "でしょー！",
+    "translated": "是吧！"
+  },
+  {
+    "status": 200,
+    "original": "でしょ？",
+    "translated": "是吧？"
+  },
+  {
+    "status": 200,
+    "original": "ですか？",
+    "translated": "是吗？"
   },
   {
     "status": 200,
@@ -23065,6 +24612,16 @@
   },
   {
     "status": 200,
+    "original": "でんきの ちからを みせるゼ！",
+    "translated": "让你见识一下电的力量吧！"
+  },
+  {
+    "status": 200,
+    "original": "でんきの パワーを くらえ！",
+    "translated": "尝尝电之力量的厉害！"
+  },
+  {
+    "status": 200,
     "original": "でんきのジュエル",
     "translated": "电之宝石"
   },
@@ -23150,6 +24707,11 @@
   },
   {
     "status": 200,
+    "original": "でんしゃ",
+    "translated": "电车"
+  },
+  {
+    "status": 200,
     "original": "でんじは",
     "translated": "电磁波"
   },
@@ -23220,6 +24782,11 @@
   },
   {
     "status": 200,
+    "original": "でーす！",
+    "translated": "是哦！"
+  },
+  {
+    "status": 200,
     "original": "と   に と あ いたＡげくォきと ü",
     "translated": "与   与 与 与 与 与\\n A 给喔 基与 ü"
   },
@@ -23260,6 +24827,16 @@
   {
     "status": 404,
     "original": "と ほ "
+  },
+  {
+    "status": 200,
+    "original": "とうざいなんぼく どこへでも！",
+    "translated": "东南西北，天涯海角任我行！"
+  },
+  {
+    "status": 200,
+    "original": "とうぜん",
+    "translated": "当然"
   },
   {
     "status": 200,
@@ -23375,6 +24952,11 @@
     "status": 200,
     "original": "とおりぬけ できる\nおかしな ドア",
     "translated": "可以穿过的\\n奇怪的门"
+  },
+  {
+    "status": 200,
+    "original": "とかいって",
+    "translated": "说这种话"
   },
   {
     "status": 200,
@@ -23570,6 +25152,11 @@
     "status": 200,
     "original": "ところで‥\nまだ でんせつ ききたい？",
     "translated": "话说回来……\\n还想听传说吗？"
+  },
+  {
+    "status": 200,
+    "original": "としよりには としよりなりの",
+    "translated": "老人自有老人的"
   },
   {
     "status": 200,
@@ -23838,6 +25425,11 @@
   },
   {
     "status": 200,
+    "original": "とまらない",
+    "translated": "停不下来"
+  },
+  {
+    "status": 200,
     "original": "とみさわ あきひと",
     "translated": "富泽 明人"
   },
@@ -23865,6 +25457,11 @@
     "status": 200,
     "original": "ともしびやま",
     "translated": "灯火山"
+  },
+  {
+    "status": 200,
+    "original": "ともだち",
+    "translated": "朋友"
   },
   {
     "status": 200,
@@ -23908,6 +25505,11 @@
   },
   {
     "status": 200,
+    "original": "とりあえず",
+    "translated": "总之"
+  },
+  {
+    "status": 200,
     "original": "とりこみちゅうの ようだ‥",
     "translated": "好像正在忙……"
   },
@@ -23920,6 +25522,16 @@
     "status": 200,
     "original": "とりひき せいりつ！\nだいじに つかって くれよな！",
     "translated": "交易成立！\\n要好好使用哦！"
+  },
+  {
+    "status": 200,
+    "original": "とりポケの かれいなる まい！",
+    "translated": "鸟宝可梦的华丽之舞！"
+  },
+  {
+    "status": 200,
+    "original": "とりポケよ おれの きもち",
+    "translated": "鸟宝可梦啊 我的心意"
   },
   {
     "status": 200,
@@ -23950,6 +25562,11 @@
     "status": 200,
     "original": "とんでもこやし",
     "translated": "超效肥"
+  },
+  {
+    "status": 200,
+    "original": "とんでもない",
+    "translated": "岂有此理"
   },
   {
     "status": 200,
@@ -24088,6 +25705,11 @@
   },
   {
     "status": 200,
+    "original": "どうしても",
+    "translated": "无论如何"
+  },
+  {
+    "status": 200,
     "original": "どうしても シダケに いきたい\nやつが じぶんの ちから だけで\\lトンネルを ほっているよ\n\nにんげんの ちからで すこしずつ ほれば\nポケモンを おどろかせなくて すむし\\lまわりの しぜんにも わるい えいきょうを\\lあたえないで すむって いってな",
     "translated": "无论怎样都想见见西达\\n克！他说自己正独自挖\\p掘隧道呢！人类一点点\\n帮忙挖掘就能避免惊扰\\p附近的宝可梦，也不会\\n破坏周围的自然环境，\\p请多多关照！"
   },
@@ -24095,6 +25717,11 @@
     "status": 200,
     "original": "どうしますか？",
     "translated": "想做什么？"
+  },
+  {
+    "status": 200,
+    "original": "どうしよう",
+    "translated": "怎么办"
   },
   {
     "status": 200,
@@ -24110,6 +25737,11 @@
     "status": 200,
     "original": "どうなが",
     "translated": "躯干长"
+  },
+  {
+    "status": 200,
+    "original": "どうなの？",
+    "translated": "怎么样？"
   },
   {
     "status": 200,
@@ -24140,6 +25772,11 @@
     "status": 200,
     "original": "どうやら デボンのにもつは\nもどってきた らしいね",
     "translated": "看来得文的行李已经回到\\n那里了呢。"
+  },
+  {
+    "status": 200,
+    "original": "どうよ？",
+    "translated": "如何？"
   },
   {
     "status": 200,
@@ -24255,6 +25892,11 @@
     "status": 200,
     "original": "どくどく",
     "translated": "剧毒"
+  },
+  {
+    "status": 200,
+    "original": "どくどくしい ポケモン",
+    "translated": "毒性强烈的宝可梦"
   },
   {
     "status": 200,
@@ -24563,6 +26205,11 @@
   },
   {
     "status": 200,
+    "original": "どようび",
+    "translated": "星期六"
+  },
+  {
+    "status": 200,
     "original": "どりょく あるのみ！\n\nまけたのは まだまだ\nどりょくが たりないからだ！",
     "translated": "唯有努力！\\p我会输是因为\\n努力得还不够！"
   },
@@ -24643,6 +26290,11 @@
   },
   {
     "status": 200,
+    "original": "どんどん",
+    "translated": "不断"
+  },
+  {
+    "status": 200,
     "original": "どんどん いろが あざやかに なる。",
     "translated": "颜色变得越来越鲜艳。"
   },
@@ -24695,6 +26347,11 @@
     "status": 200,
     "original": "どんな みちも ピクニックは たのしい！\nポケモンも いっしょ だしね！",
     "translated": "不管什么路，野餐都很\\n开心！\\p而且有宝可梦陪着呢！"
+  },
+  {
+    "status": 200,
+    "original": "どんな ポケモンでも そだてる",
+    "translated": "无论什么宝可梦都能养好"
   },
   {
     "status": 200,
@@ -24762,6 +26419,11 @@
   },
   {
     "status": 200,
+    "original": "なかった",
+    "translated": "没有"
+  },
+  {
+    "status": 200,
     "original": "なかなか いい かんじ だな！\nこの ちょうしで がんばって くれよ",
     "translated": "感觉相当不错嘛！\\n就保持这个势头加油吧。"
   },
@@ -24789,6 +26451,11 @@
     "status": 200,
     "original": "なかには \\02が\nきろくされていた！\n\n\\02を\nポケモンに おぼえさせますか？",
     "translated": "里面记录着\\02\\n！\\p要让宝可梦学会\\02\\n吗？"
+  },
+  {
+    "status": 200,
+    "original": "なかの いい ポケモンよ！",
+    "translated": "是感情很好的宝可梦哦！"
   },
   {
     "status": 200,
@@ -24907,8 +26574,18 @@
   },
   {
     "status": 200,
+    "original": "ながねん いっしょの ポケモン",
+    "translated": "相伴多年的宝可梦"
+  },
+  {
+    "status": 200,
     "original": "ながはな",
     "translated": "长鼻"
+  },
+  {
+    "status": 200,
+    "original": "ながれが みえるのよ",
+    "translated": "风的流动哦"
   },
   {
     "status": 200,
@@ -25032,6 +26709,11 @@
   },
   {
     "status": 200,
+    "original": "なでなで",
+    "translated": "摸摸"
+  },
+  {
+    "status": 200,
     "original": "ななしの洞窟",
     "translated": "无名洞窟"
   },
@@ -25067,6 +26749,11 @@
   },
   {
     "status": 200,
+    "original": "なにが あるのかしら‥‥？",
+    "translated": "会有什么呢……？"
+  },
+  {
+    "status": 200,
     "original": "なにが うまれて くるのかな？\nうまれる まで まだまだ かかりそう",
     "translated": "会孵出什么呢？\\n距离孵化还早得很"
   },
@@ -25089,6 +26776,10 @@
     "status": 200,
     "original": "なにっ もちきれない？\nそんなに なにを もちあるいてるんだ？\\lまあ せっかく ここまで こられたんだし\\lほうびは あとで やろう！",
     "translated": "什么？拿不下？{\\n}你身上带了那么多东\\p西？算了，好不容易来\\n到这里奖励待会儿再给\\p吧！"
+  },
+  {
+    "status": 404,
+    "original": "なにぬねの"
   },
   {
     "status": 200,
@@ -25257,6 +26948,11 @@
   },
   {
     "status": 200,
+    "original": "なるほど",
+    "translated": "原来如此"
+  },
+  {
+    "status": 200,
     "original": "なるほど\nかなり きたえてるね！",
     "translated": "原来如此\\n锻炼得相当不错呢！"
   },
@@ -25337,6 +27033,11 @@
   },
   {
     "status": 200,
+    "original": "なんじゃ",
+    "translated": "干什么呀"
+  },
+  {
+    "status": 200,
     "original": "なんじゅっキロも ある にもつを せおって\nやまみちを あるき つづけるんだ\\lからだが じょうぶに なるぞ！",
     "translated": "背着几十公斤的行李{\\n}在山路上持续行走会\\p变得强壮哦！"
   },
@@ -25349,6 +27050,11 @@
     "status": 200,
     "original": "なんだ おまえ？\nこどもが ひとりで なにしよう ってんだ？",
     "translated": "你是什么人？\\n一个小孩子独自跑来想\\p干什么？"
+  },
+  {
+    "status": 200,
+    "original": "なんだ かんだ いっても",
+    "translated": "不管怎么说"
   },
   {
     "status": 200,
@@ -25412,6 +27118,11 @@
   },
   {
     "status": 200,
+    "original": "なんだね",
+    "translated": "是这样啊"
+  },
+  {
+    "status": 200,
     "original": "なんだね きみは？\n\nもしかして ひょっとすると\nあるかもしれない といわれる\\lこだいの いせきを さがしに きたのかね！？",
     "translated": "你是谁？\\p难道说\\n你是来找传说中的古代\\p遗迹的！？"
   },
@@ -25442,13 +27153,38 @@
   },
   {
     "status": 200,
+    "original": "なんてね",
+    "translated": "开玩笑啦"
+  },
+  {
+    "status": 200,
     "original": "なんで オトコって\nビキニが すき なのかしらね！\n\nみんな わたしの こと\nジロジロ みるのよ！",
     "translated": "为什么男人\\n喜欢比基尼呢！\\p大家都盯着我看！"
   },
   {
     "status": 200,
+    "original": "なんです",
+    "translated": "是这样"
+  },
+  {
+    "status": 200,
+    "original": "なんでも",
+    "translated": "什么都"
+  },
+  {
+    "status": 200,
     "original": "なんでも うりきれ らしくて\nモンスターボール かえないの‥‥",
     "translated": "好像什么都卖光了，{\\n}买不到精灵球了……"
+  },
+  {
+    "status": 200,
+    "original": "なんでも そだてる",
+    "translated": "什么都能培养"
+  },
+  {
+    "status": 200,
+    "original": "なんでも そだてるわよ！",
+    "translated": "什么都能培育哦！"
   },
   {
     "status": 200,
@@ -25484,6 +27220,16 @@
     "status": 200,
     "original": "なんと ５ケタ すべて\nあって いました！！\n\nとくとうです！！\n\\02を さしあげます！！",
     "translated": "竟然5位数全部\\n匹配！！\\p是特等奖！！\\n送给您\\02！！"
+  },
+  {
+    "status": 200,
+    "original": "なんとか",
+    "translated": "总算"
+  },
+  {
+    "status": 200,
+    "original": "なんとなく",
+    "translated": "不知为何"
   },
   {
     "status": 200,
@@ -25529,6 +27275,11 @@
     "status": 200,
     "original": "なんなのかしら\nあの ぎょうれつ？",
     "translated": "那到底是什么呀\\n那条长队？"
+  },
+  {
+    "status": 200,
+    "original": "なんなんだ",
+    "translated": "是什么啊"
   },
   {
     "status": 200,
@@ -25661,6 +27412,11 @@
     "translated": "日期"
   },
   {
+    "status": 200,
+    "original": "にちようび",
+    "translated": "星期日"
+  },
+  {
     "status": 404,
     "original": "にちタう ケ うチうたチにしかたあた テたヌ チ・ マチ ラにたロ ガみうÖみÜ：あ：あＷ"
   },
@@ -25726,6 +27482,11 @@
   },
   {
     "status": 200,
+    "original": "にんじゃに なるため",
+    "translated": "为了成为忍者"
+  },
+  {
+    "status": 200,
     "original": "にんじんのダネ",
     "translated": "萝卜种子"
   },
@@ -25753,6 +27514,10 @@
     "status": 200,
     "original": "ぬいぐるみや クッションって\nゆかに おくと よごれちゃうでしょ？\n\nだから きれいなまま かざれるように\nぬいぐるみや クッションを おくための\\lレンガを かいに きたの！",
     "translated": "毛绒玩具和靠垫{\\n}放在地上会弄脏对吧？\\p{\\p}所以我来买能让它们\\n保持干净、用来摆放毛\\p绒玩具和靠垫的砖块！"
+  },
+  {
+    "status": 404,
+    "original": "ぬうねいタしひにはみねるヤれギゃ９ずＧぶＱイのシ「ニ"
   },
   {
     "status": 200,
@@ -25788,6 +27553,11 @@
     "status": 200,
     "original": "ぬめぬめ",
     "translated": "黏滑"
+  },
+  {
+    "status": 200,
+    "original": "ぬるぬる",
+    "translated": "滑溜溜"
   },
   {
     "status": 200,
@@ -26046,6 +27816,11 @@
   },
   {
     "status": 200,
+    "original": "の\nゆうがな ひととき",
+    "translated": "的\\n悠闲的一刻"
+  },
+  {
+    "status": 200,
     "original": "の おおきさくらべ",
     "translated": "宝可梦体型对比"
   },
@@ -26146,6 +27921,11 @@
   },
   {
     "status": 200,
+    "original": "のみたい",
+    "translated": "想喝"
+  },
+  {
+    "status": 200,
     "original": "のもと がくじ",
     "translated": "野本 岳志"
   },
@@ -26201,6 +27981,11 @@
   },
   {
     "status": 200,
+    "original": "のんびり だよねー",
+    "translated": "很悠闲呢——"
+  },
+  {
+    "status": 200,
     "original": "のトレーナーカード",
     "translated": "的训练家卡片"
   },
@@ -26247,6 +28032,11 @@
     "status": 200,
     "original": "はあ ふう‥‥\n\nすなブロに ながく はいっていると\nけっこう つかれちゃう もんだよ‥‥",
     "translated": "哈 呼……\\p在沙漠里待久了还真是\\n挺累人的……"
+  },
+  {
+    "status": 200,
+    "original": "はあはあ",
+    "translated": "气喘吁吁"
   },
   {
     "status": 200,
@@ -26305,6 +28095,11 @@
   },
   {
     "status": 200,
+    "original": "はいけいセット",
+    "translated": "背景设置"
+  },
+  {
+    "status": 200,
     "original": "はいすいのじん",
     "translated": "背水一战"
   },
@@ -26322,6 +28117,11 @@
     "status": 200,
     "original": "はいの なかから ドロロンッ！！\nしょうぶで ござる！",
     "translated": "从灰烬中现身，咚隆！！\\n来一决胜负吧！"
+  },
+  {
+    "status": 200,
+    "original": "はいはい",
+    "translated": "好啦好啦"
   },
   {
     "status": 200,
@@ -26405,6 +28205,11 @@
   },
   {
     "status": 200,
+    "original": "はがねの つよさを みせてやる",
+    "translated": "让你见识钢铁的力量"
+  },
+  {
+    "status": 200,
     "original": "はがねの ツノが へんけいした おおきな あご。\nおとなしそうな かおに ゆだんを していると\nとつぜん ふりむき バクリと かみつかれるぞ。",
     "translated": "钢铁的角变形而成的大\\n下巴。被温顺的表情麻\\p痹大意的话，会突然回\\n头一口咬住。"
   },
@@ -26475,6 +28280,11 @@
   },
   {
     "status": 200,
+    "original": "はしりつづけていると",
+    "translated": "只要持续奔跑下去"
+  },
+  {
+    "status": 200,
     "original": "はじけるほのお",
     "translated": "烈焰溅射"
   },
@@ -26487,6 +28297,11 @@
     "status": 200,
     "original": "はじまりのはま",
     "translated": "起始海滩"
+  },
+  {
+    "status": 200,
+    "original": "はじめて つかまえた ポケモン",
+    "translated": "第一次捕捉到的宝可梦"
   },
   {
     "status": 200,
@@ -26515,6 +28330,11 @@
   },
   {
     "status": 200,
+    "original": "はじめまして",
+    "translated": "初次见面"
+  },
+  {
+    "status": 200,
     "original": "はずれのしま",
     "translated": "外岛"
   },
@@ -26532,6 +28352,16 @@
     "status": 200,
     "original": "はたく",
     "translated": "拍击"
+  },
+  {
+    "status": 200,
+    "original": "はたらき",
+    "translated": "劳动"
+  },
+  {
+    "status": 200,
+    "original": "はたらく",
+    "translated": "工作"
   },
   {
     "status": 200,
@@ -26577,6 +28407,11 @@
     "status": 200,
     "original": "はったつした ２ほんの キバは １０トンも ある\nひょうざんを いちげきで ふんさいする。\nしぼうが ぶあつく ひょうてんかでも へいき。",
     "translated": "发达的两根獠牙能一击\\n粉碎10吨重的冰山。脂\\p肪很厚，所以冰冻也没\\n事。"
+  },
+  {
+    "status": 200,
+    "original": "はっはっは",
+    "translated": "哈哈哈"
   },
   {
     "status": 200,
@@ -26737,6 +28572,15 @@
     "status": 200,
     "original": "はばたけ！\nおいらの とりポケモン！",
     "translated": "展翅高飞吧！\\n我的鸟宝可梦！"
+  },
+  {
+    "status": 404,
+    "original": "はひふへほ"
+  },
+  {
+    "status": 200,
+    "original": "はまって",
+    "translated": "着迷"
   },
   {
     "status": 200,
@@ -26955,6 +28799,11 @@
   },
   {
     "status": 200,
+    "original": "ばっかり",
+    "translated": "净是"
+  },
+  {
+    "status": 200,
     "original": "ばつぐん",
     "translated": "效果绝佳"
   },
@@ -26987,6 +28836,11 @@
     "status": 200,
     "original": "ばんめ",
     "translated": "番目"
+  },
+  {
+    "status": 200,
+    "original": "ぱくぱく",
+    "translated": "大口大口"
   },
   {
     "status": 200,
@@ -27132,6 +28986,11 @@
     "status": 200,
     "original": "ひくい じゅん",
     "translated": "从低到高"
+  },
+  {
+    "status": 200,
+    "original": "ひけつは とにかく わらうこと",
+    "translated": "秘诀总之就是多笑"
   },
   {
     "status": 200,
@@ -27369,8 +29228,18 @@
   },
   {
     "status": 200,
+    "original": "ひとしょうぶ してますの",
+    "translated": "就来较量一番"
+  },
+  {
+    "status": 200,
     "original": "ひとつ まえの メニューに もどります\n                   ",
     "translated": "返回上一级菜单"
+  },
+  {
+    "status": 200,
+    "original": "ひとつきまえから けいかく",
+    "translated": "从一个月前就开始计划"
   },
   {
     "status": 200,
@@ -27441,6 +29310,11 @@
     "status": 200,
     "original": "ひとり サイズの\nちいさな つくえ",
     "translated": "一人尺寸的\\n小桌子"
+  },
+  {
+    "status": 200,
+    "original": "ひとりで",
+    "translated": "一个人"
   },
   {
     "status": 200,
@@ -27589,6 +29463,11 @@
   },
   {
     "status": 200,
+    "original": "ひょうてんかの じょうねつ！",
+    "translated": "冰点下的热情！"
+  },
+  {
+    "status": 200,
     "original": "ひょうばんの きのみ。",
     "translated": "备受好评的树果。"
   },
@@ -27649,6 +29528,11 @@
   },
   {
     "status": 200,
+    "original": "ひを けす みずを わすれるな",
+    "translated": "可别忘了用来灭火的水"
+  },
+  {
+    "status": 200,
     "original": "ひんし じょうたいから\nたいりょく はんぶんまで\nかいふくする",
     "translated": "从濒死状态恢复至体力\\n的一半"
   },
@@ -27681,6 +29565,11 @@
     "status": 200,
     "original": "びじゅつかんに ある\nゆうめいな ちょうこくを\nガラスで かたどったもの",
     "translated": "美术馆中陈列的\\n著名雕刻的\\p玻璃仿制品"
+  },
+  {
+    "status": 200,
+    "original": "びっくり",
+    "translated": "吓一跳"
   },
   {
     "status": 200,
@@ -27894,6 +29783,11 @@
   },
   {
     "status": 200,
+    "original": "ふしぎ だよねー",
+    "translated": "很神奇呢——"
+  },
+  {
+    "status": 200,
     "original": "ふしぎな ちからで てきを こうげき\nてきを ひるませることがある",
     "translated": "用奇妙的力量攻击对手\\n有时能使对手眩晕"
   },
@@ -27911,6 +29805,11 @@
     "status": 200,
     "original": "ふしぎな ちからを はっきしている コダックから\nねむっている ときにだけ でるはずの のうはが\nかんそくされて がっかいの わだいに なった。",
     "translated": "从拥有神奇力量的可达\\n鸭身上观测到了只在睡\\p觉时才会出现的大脑波，\\n成为学会的话题。"
+  },
+  {
+    "status": 200,
+    "original": "ふしぎな ちからを もつ ヤツ",
+    "translated": "那个拥有神秘力量的家伙"
   },
   {
     "status": 200,
@@ -28029,6 +29928,11 @@
   },
   {
     "status": 200,
+    "original": "ふたりが すきな ポケモン！",
+    "translated": "我们俩都喜欢的宝可梦！"
+  },
+  {
+    "status": 200,
     "original": "ふたりで きょうりょく！",
     "translated": "两个人齐心协力！"
   },
@@ -28049,8 +29953,18 @@
   },
   {
     "status": 200,
+    "original": "ふっかつ",
+    "translated": "复活"
+  },
+  {
+    "status": 200,
     "original": "ふっかつそう",
     "translated": "复活草"
+  },
+  {
+    "status": 200,
+    "original": "ふっふっふ",
+    "translated": "呵呵呵"
   },
   {
     "status": 200,
@@ -28111,6 +30025,11 @@
     "status": 200,
     "original": "ふなのりは ふねに のるとき\nかならず ポケモンを もっている！\\lちょいと しょうぶ してくれ！",
     "translated": "水手上船的时候，\\n一定会带着宝可梦！来跟我较\\p量一下吧！"
+  },
+  {
+    "status": 200,
+    "original": "ふにゃふにゃ",
+    "translated": "软绵绵"
   },
   {
     "status": 200,
@@ -28289,6 +30208,11 @@
   },
   {
     "status": 200,
+    "original": "ふらふら",
+    "translated": "摇摇晃晃"
+  },
+  {
+    "status": 200,
     "original": "ふるい おおきな タイヤ\nうえに ものを おける",
     "translated": "旧的大轮胎\\n上面可以放东西"
   },
@@ -28434,6 +30358,11 @@
   },
   {
     "status": 200,
+    "original": "ぶりっこ",
+    "translated": "装可爱"
+  },
+  {
+    "status": 200,
     "original": "ぶんしんで てきを まどわせ\nかいひりつを あげる",
     "translated": "制造分身迷惑对手，\\n提高自己的闪避率。"
   },
@@ -28501,6 +30430,11 @@
     "status": 200,
     "original": "へそのいわ",
     "translated": "肚脐岩"
+  },
+  {
+    "status": 200,
+    "original": "へっへっへ",
+    "translated": "嘿嘿嘿"
   },
   {
     "status": 200,
@@ -28581,6 +30515,16 @@
     "status": 200,
     "original": "べにいろのたま",
     "translated": "朱红色宝珠"
+  },
+  {
+    "status": 200,
+    "original": "べろべろ",
+    "translated": "吧唧吧唧"
+  },
+  {
+    "status": 200,
+    "original": "べんきょう",
+    "translated": "学习"
   },
   {
     "status": 200,
@@ -28686,6 +30630,11 @@
     "status": 200,
     "original": "ほかくポケット",
     "translated": "捕捉口袋"
+  },
+  {
+    "status": 200,
+    "original": "ほかの ひとには みえない",
+    "translated": "其他人是看不见的"
   },
   {
     "status": 200,
@@ -29039,6 +30988,11 @@
   },
   {
     "status": 200,
+    "original": "ほんと いうと わたし",
+    "translated": "说实话，我"
+  },
+  {
+    "status": 200,
     "original": "ほんと ひのようじん だけは おこたるな！\nひを あまく みるんじゃないぜ！",
     "translated": "千万不可疏忽防火！\\n可别小看火的威力！"
   },
@@ -29126,6 +31080,11 @@
     "status": 200,
     "original": "ぼうぎょを だいじに",
     "translated": "重视防御"
+  },
+  {
+    "status": 200,
+    "original": "ぼうけん",
+    "translated": "冒险"
   },
   {
     "status": 200,
@@ -29229,6 +31188,11 @@
   },
   {
     "status": 200,
+    "original": "ぼくと ポケモンは",
+    "translated": "我和宝可梦"
+  },
+  {
+    "status": 200,
     "original": "ぼくね ポケモンと いっしょに\nキャンプ できるだけで しあわせ だよ",
     "translated": "我啊，只要能和宝可梦\\n一起\\p露营就觉得好幸福"
   },
@@ -29241,6 +31205,11 @@
     "status": 200,
     "original": "ぼくの かおが すいめんに うつってる‥‥\n\nきぼうに あふれた\nかがやく えがお‥‥\n\nふあんと たたかう\nしずかな ちんもく‥‥\n\nきみの かおは どんなふうに うつってる？",
     "translated": "我的脸倒映在水面上……\\p充满希望的灿烂笑容……\\p与不安抗争的沉默……\\p你的脸会怎样倒映出来呢？"
+  },
+  {
+    "status": 200,
+    "original": "ぼくの こころの メロディで",
+    "translated": "用我心中的旋律"
   },
   {
     "status": 200,
@@ -29389,6 +31358,11 @@
   },
   {
     "status": 200,
+    "original": "ぽっかぽか だよねー",
+    "translated": "暖洋洋的呢——"
+  },
+  {
+    "status": 200,
     "original": "まぁ そんな ときも あるよね！",
     "translated": "嘛，也有那种时候呢！"
   },
@@ -29406,6 +31380,11 @@
     "status": 200,
     "original": "まあ！",
     "translated": "嘛！"
+  },
+  {
+    "status": 200,
+    "original": "まいった",
+    "translated": "认输了"
   },
   {
     "status": 200,
@@ -29449,8 +31428,18 @@
   },
   {
     "status": 200,
+    "original": "まいにち",
+    "translated": "每天"
+  },
+  {
+    "status": 200,
     "original": "まいにち およいでる おかげで\nみよ！ この きんにくっ！！",
     "translated": "多亏了每天游泳\\n看！这身肌肉！！"
+  },
+  {
+    "status": 200,
+    "original": "まいにち しゅぎょうで ござる",
+    "translated": "每天都在修行"
   },
   {
     "status": 200,
@@ -29464,8 +31453,23 @@
   },
   {
     "status": 200,
+    "original": "まいにち １０キロは",
+    "translated": "我每天都要游"
+  },
+  {
+    "status": 200,
     "original": "まいにち ２０リットルの ミルクを だす。\nあまい ミルクは おとなも こどもも だいすき。\nにがてな ひとは ヨーグルトにして たべている。",
     "translated": "每天产出20升牛奶。\\n香甜的牛奶无论大人小\\p孩都很喜欢。不喜欢的\\n人会做成酸奶吃。"
+  },
+  {
+    "status": 200,
+    "original": "まいにち‥‥ もりに はいって",
+    "translated": "每天……走进森林"
+  },
+  {
+    "status": 200,
+    "original": "まいにちの ティータイムです",
+    "translated": "度过每天的下午茶时光"
   },
   {
     "status": 200,
@@ -29664,6 +31668,11 @@
   },
   {
     "status": 200,
+    "original": "まけたら",
+    "translated": "输了的话"
+  },
+  {
+    "status": 200,
     "original": "まけたら\nいたい じゃねーか！",
     "translated": "输了的话\\n可是会很疼的！"
   },
@@ -29721,6 +31730,11 @@
     "status": 200,
     "original": "まけても ちょっと たのしいのは\nほんとうに ポケモンが すき だからかな？",
     "translated": "输了也觉得有点开心\\n大概是因为我真的很喜\\p欢宝可梦吧？"
+  },
+  {
+    "status": 200,
+    "original": "まけてられんわ！",
+    "translated": "可不能输啊！"
   },
   {
     "status": 200,
@@ -29791,6 +31805,11 @@
     "status": 200,
     "original": "ますだ じゅんいち",
     "translated": "增田顺一"
+  },
+  {
+    "status": 200,
+    "original": "ますます",
+    "translated": "越来越"
   },
   {
     "status": 200,
@@ -29924,6 +31943,11 @@
   },
   {
     "status": 200,
+    "original": "まだまだ",
+    "translated": "还不够"
+  },
+  {
+    "status": 200,
     "original": "まだまだ げんき ですからね\nサイユウシティ めざして およぎますよ！",
     "translated": "我还很有精神呢\\n向着彩悠市游过去哦！"
   },
@@ -29936,6 +31960,11 @@
     "status": 200,
     "original": "まだまだ みちは ながく けわしい\n\nオレと オレの ポケモンが\nいちばんに なれるのは いつだろう‥‥",
     "translated": "前路还很长很艰险{\\p}我和我的宝可梦什么\\n时候才能成为最强呢……"
+  },
+  {
+    "status": 200,
+    "original": "まちがって",
+    "translated": "弄错"
   },
   {
     "status": 200,
@@ -30014,6 +32043,11 @@
   },
   {
     "status": 200,
+    "original": "まったく",
+    "translated": "真是的"
+  },
+  {
+    "status": 200,
     "original": "まってぇー！\n\nその にもつを かえしてぇぇぇー！！",
     "translated": "等等！\\p把那个行李还给我——！！"
   },
@@ -30036,6 +32070,11 @@
     "status": 200,
     "original": "まつみや としのぶ",
     "translated": "松宫俊信"
+  },
+  {
+    "status": 200,
+    "original": "まてない",
+    "translated": "等不及"
   },
   {
     "status": 200,
@@ -30121,6 +32160,10 @@
     "status": 200,
     "original": "まぼろしモモン",
     "translated": "幻之桃桃果"
+  },
+  {
+    "status": 404,
+    "original": "まみむめも"
   },
   {
     "status": 200,
@@ -30261,6 +32304,11 @@
     "status": 200,
     "original": "まんまるいし",
     "translated": "浑圆之石"
+  },
+  {
+    "status": 200,
+    "original": "まーす！",
+    "translated": "去咯！"
   },
   {
     "status": 200,
@@ -30424,6 +32472,11 @@
   },
   {
     "status": 200,
+    "original": "みずあそび している",
+    "translated": "正在玩水"
+  },
+  {
+    "status": 200,
     "original": "みずあめボム‎",
     "translated": "糖浆炸弹"
   },
@@ -30471,6 +32524,11 @@
     "status": 200,
     "original": "みずでっぽう",
     "translated": "水枪"
+  },
+  {
+    "status": 200,
+    "original": "みずと かくとうタイプ",
+    "translated": "水和格斗属性"
   },
   {
     "status": 200,
@@ -30541,6 +32599,11 @@
     "status": 200,
     "original": "みずの はいった\nきいろい ふうせん\nふむと われる",
     "translated": "装有水的\\n黄色气球\\p踩到会破"
+  },
+  {
+    "status": 200,
+    "original": "みずの イリュージョン",
+    "translated": "水的幻影"
   },
   {
     "status": 200,
@@ -30629,8 +32692,28 @@
   },
   {
     "status": 200,
+    "original": "みずタイプ ばんざい！",
+    "translated": "水属性万岁！"
+  },
+  {
+    "status": 200,
+    "original": "みずポケモン さいこう！",
+    "translated": "水属性宝可梦最棒！"
+  },
+  {
+    "status": 200,
+    "original": "みずポケモンで しょうぶ！",
+    "translated": "用水属性宝可梦来对战！"
+  },
+  {
+    "status": 200,
     "original": "みずポケモンの エキスパートとは\nなにを かくそう オレのこと！\n\n‥‥え？\nしらないの？",
     "translated": "说到水属性宝可梦的专\\n家\\p不是别人，正是我！\\p……咦？\\n你不知道吗？"
+  },
+  {
+    "status": 200,
+    "original": "みずポケモンは ともだち！",
+    "translated": "水属性宝可梦是伙伴！"
   },
   {
     "status": 200,
@@ -30641,6 +32724,11 @@
     "status": 200,
     "original": "みた ものや かんがえた イメージを あいてに\nえいぞうとして みせる のうりょくを もつ。\nにんげんの ことばを りかいすることが できる。",
     "translated": "拥有将看到的事物或想\\n到的形象\\p作为影像展示给对方的\\n能力。\\p能够理解人类的语言。"
+  },
+  {
+    "status": 200,
+    "original": "みたいな",
+    "translated": "像……一样"
   },
   {
     "status": 200,
@@ -30714,6 +32802,11 @@
   },
   {
     "status": 200,
+    "original": "みつけた ポケモン \\02！\nつかまえた ポケモン \\03！\n\nオダマキはかせの\nポケモンずかん ひょうか！\n\nオダマキ『どれどれ\n\n",
+    "translated": "发现的宝可梦\\02！\\n捕捉到的宝可梦\\03！\\p小田卷博士的\\n宝可梦图鉴评价！\\p小田卷『让我看看\\p"
+  },
+  {
+    "status": 200,
     "original": "みつけたポケモンの なまえを\nごじゅうおんじゅんで ひょうじ します",
     "translated": "将找到的宝可梦的名字\\n按五十音顺序显示"
   },
@@ -30751,6 +32844,16 @@
     "status": 200,
     "original": "みとめたくは ないんだが\nあんたには まけた‥‥！\\lまあ なんども きてくれた あたり\\lよっぽど わがはいに\\lみりょくを かんじたの だろうが\\lそれと わがはいの まけは かんけいなし！\n\nそうだ！\nがんばりやの あんたと\\lてんさいの わがはいの\\lゆうじょうを きねんして‥\\lこれを うけとって くれ！",
     "translated": "虽然不想承认{\\n}但我输给你了……！嘛，\\p来了这么多次，肯定是\\n很迷恋本大爷吧不过这\\p和本大爷输了没关系！{\\p}对了！为了纪念努力\\n的我和天才的本大爷的\\p友谊……请收下这个！"
+  },
+  {
+    "status": 200,
+    "original": "みとめない",
+    "translated": "不承认"
+  },
+  {
+    "status": 200,
+    "original": "みとめる",
+    "translated": "承认"
   },
   {
     "status": 200,
@@ -30944,8 +33047,23 @@
   },
   {
     "status": 200,
+    "original": "みんなが",
+    "translated": "大家"
+  },
+  {
+    "status": 200,
     "original": "みんなで こうそくで まわし まくるんだ\n\nすっげー はやいと\nすっげー いいポロックが できるらしいぜ！",
     "translated": "大家一起高速旋转搅拌{\\p}据说转得超快就能做\\n出超棒的宝可方块！"
+  },
+  {
+    "status": 200,
+    "original": "みんなに",
+    "translated": "给大家"
+  },
+  {
+    "status": 200,
+    "original": "みんなの",
+    "translated": "大家的"
   },
   {
     "status": 200,
@@ -30971,6 +33089,16 @@
     "status": 200,
     "original": "みんなの アピールを \nおおはばに ひくくみせた！",
     "translated": "把大家的表演\\n大幅度地压制了！"
+  },
+  {
+    "status": 200,
+    "original": "みんなは",
+    "translated": "大家都"
+  },
+  {
+    "status": 200,
+    "original": "みんなを なかせてみたいよ",
+    "translated": "想让大家感动落泪呢"
   },
   {
     "status": 200,
@@ -31023,6 +33151,30 @@
     "translated": "唔、唔唔……！\\p你怎么知道本大王\\n藏在衣柜里？……有两下\\p子！"
   },
   {
+    "status": 404,
+    "original": "むいろいほしＱにまめねぁでざやぼ「コｌハ"
+  },
+  {
+    "status": 404,
+    "original": "むいろいフいゃいフしゃねツれ？ずゥコゅリ"
+  },
+  {
+    "status": 404,
+    "original": "むいろいフいフしゃねツれ？ずゥエゅフ"
+  },
+  {
+    "status": 404,
+    "original": "むいろいフしゃねツよ？ょゥぶゅシ"
+  },
+  {
+    "status": 404,
+    "original": "むいヤいふいやうふくやなｕは\\CC26つわはごけづＡっＱクどニ「ホ"
+  },
+  {
+    "status": 404,
+    "original": "むいヤいふくやなｕは\\CC26つわはぐけぜＡぼＱっどシ「ツ"
+  },
+  {
     "status": 200,
     "original": "むかし ひとに ふういんされた ポケモン。\nたたかいで からだが くずれると じぶんで\nあたらしい いわを さがして なおすと いう。",
     "translated": "过去被人类封印的\\n宝可梦。\\p据说如果在战斗中身体\\n碎裂，会自己\\p寻找新的岩石来修复。"
@@ -31056,6 +33208,11 @@
     "status": 200,
     "original": "むかしエビ",
     "translated": "古老的虾"
+  },
+  {
+    "status": 200,
+    "original": "むきー！！",
+    "translated": "气死啦——！！"
   },
   {
     "status": 200,
@@ -31144,6 +33301,21 @@
   },
   {
     "status": 200,
+    "original": "むしタイプが いちばん！",
+    "translated": "虫属性是最棒的！"
+  },
+  {
+    "status": 200,
+    "original": "むしポケモン つかまえる‥‥",
+    "translated": "捕捉虫属性宝可梦……"
+  },
+  {
+    "status": 200,
+    "original": "むしポケモンって かっこいいぜ",
+    "translated": "虫属性宝可梦超帅的！"
+  },
+  {
+    "status": 200,
     "original": "むしポケモンは しんかが はやいから\nつよく なるのも はやい！",
     "translated": "虫属性宝可梦进化得快，\\n所以变强也快！"
   },
@@ -31151,6 +33323,11 @@
     "status": 200,
     "original": "むしポケモンを がっこうに もっていくと\nそれだけで にんきもの だろ！？",
     "translated": "只要带虫属性宝可梦去\\n学校\\p就能成为人气王吧！？"
+  },
+  {
+    "status": 200,
+    "original": "むしポケモンを つかまえるなら",
+    "translated": "要捕捉虫属性宝可梦的话"
   },
   {
     "status": 200,
@@ -31215,6 +33392,11 @@
     "status": 200,
     "original": "むねんのつるぎ",
     "translated": "悔念剑"
+  },
+  {
+    "status": 200,
+    "original": "むねキュン",
+    "translated": "怦然心动"
   },
   {
     "status": 404,
@@ -31297,6 +33479,11 @@
   },
   {
     "status": 200,
+    "original": "めざすは ポケモンチャンピオン",
+    "translated": "目标是宝可梦冠军"
+  },
+  {
+    "status": 200,
     "original": "めざましビンタ",
     "translated": "唤醒巴掌"
   },
@@ -31332,6 +33519,11 @@
   },
   {
     "status": 200,
+    "original": "めずらしい",
+    "translated": "稀奇"
+  },
+  {
+    "status": 200,
     "original": "めずらしい ことばを ついかしました",
     "translated": "添加了稀有的词语"
   },
@@ -31344,6 +33536,11 @@
     "status": 200,
     "original": "めずらしい ポケモン たくさん！\n「サファリゾーン」",
     "translated": "有许多稀有的宝可梦！\\n“狩猎地带”"
+  },
+  {
+    "status": 200,
+    "original": "めずらしい ポケモン だいすき",
+    "translated": "最喜欢稀有的宝可梦"
   },
   {
     "status": 200,
@@ -31379,6 +33576,11 @@
     "status": 200,
     "original": "めったに ひとが はいらない やま だから\nめずらしい ポケモンが いると おもってさ",
     "translated": "因为这是座很少有人进\\n的山\\p所以我想说不定会有稀\\n有的宝可梦"
+  },
+  {
+    "status": 200,
+    "original": "めっぽう",
+    "translated": "特别"
   },
   {
     "status": 200,
@@ -31482,6 +33684,11 @@
   },
   {
     "status": 200,
+    "original": "もうすぐ",
+    "translated": "马上"
+  },
+  {
+    "status": 200,
     "original": "もうすぐ ミツルが かえってくるぞ！\nたのしみだなあ‥‥！",
     "translated": "小光马上就要回来了！\\n真是让人期待啊……！"
   },
@@ -31527,6 +33734,11 @@
   },
   {
     "status": 200,
+    "original": "もえろ じょうねつの ほのお！",
+    "translated": "燃烧吧，热情的火焰！"
+  },
+  {
+    "status": 200,
     "original": "もくざい",
     "translated": "木材"
   },
@@ -31539,6 +33751,11 @@
     "status": 200,
     "original": "もくたん",
     "translated": "木炭"
+  },
+  {
+    "status": 200,
+    "original": "もくようび",
+    "translated": "星期四"
   },
   {
     "status": 200,
@@ -31564,6 +33781,11 @@
     "status": 200,
     "original": "もしも ってことが あるかも しれないし\nどうぐは おおめに かうように してるのよ",
     "translated": "因为说不定会有万一，\\n道具我会多买一些。"
+  },
+  {
+    "status": 200,
+    "original": "もしもし",
+    "translated": "喂喂"
   },
   {
     "status": 200,
@@ -31777,6 +33999,11 @@
   },
   {
     "status": 200,
+    "original": "もってる ポケモン",
+    "translated": "持有的宝可梦"
+  },
+  {
+    "status": 200,
     "original": "もっと かくれかたを けんきゅう しよう\nそれでは しつれいするで ござる",
     "translated": "让我们再研究一下隐藏方法吧\\n那么，我就告辞了。"
   },
@@ -31967,6 +34194,11 @@
   },
   {
     "status": 200,
+    "original": "もらった",
+    "translated": "收下了"
+  },
+  {
+    "status": 200,
     "original": "もらった \\03に\nニックネームを つけますか？",
     "translated": "要给收到的\\03\\n起个昵称吗？"
   },
@@ -32014,6 +34246,11 @@
     "status": 200,
     "original": "もろはのずつき",
     "translated": "双刃头锤"
+  },
+  {
+    "status": 200,
+    "original": "もんく あるか こらー！",
+    "translated": "有意见吗，喂——！"
   },
   {
     "status": 200,
@@ -32077,6 +34314,11 @@
   },
   {
     "status": 200,
+    "original": "やくそく",
+    "translated": "约定"
+  },
+  {
+    "status": 200,
     "original": "やくわり ぶんたん してるわ",
     "translated": "我们在分工呢。"
   },
@@ -32107,6 +34349,11 @@
   },
   {
     "status": 200,
+    "original": "やけどしそうな ポケモン",
+    "translated": "容易被烧伤的宝可梦"
+  },
+  {
+    "status": 200,
     "original": "やけどなおし",
     "translated": "灼伤药"
   },
@@ -32124,6 +34371,11 @@
     "status": 200,
     "original": "やさいパック",
     "translated": "袋装蔬菜"
+  },
+  {
+    "status": 200,
+    "original": "やさしい",
+    "translated": "温柔"
   },
   {
     "status": 200,
@@ -32182,6 +34434,11 @@
   },
   {
     "status": 200,
+    "original": "やったー",
+    "translated": "太棒了"
+  },
+  {
+    "status": 200,
     "original": "やったー！\n\\03を つかまえたぞ！\\CC0A\\CC0B6001\n\n",
     "translated": "太好了！抓到了\\n\\03！\\CC0A\\CC0B6001\\p"
   },
@@ -32209,6 +34466,11 @@
     "status": 200,
     "original": "やっと ボクを つかまえられたね！\nそれとも にげようと していたのかな？",
     "translated": "终于把我抓住了呢！\\n还是说你本来打算逃跑\\p的？"
+  },
+  {
+    "status": 200,
+    "original": "やっぱり",
+    "translated": "果然"
   },
   {
     "status": 200,
@@ -32249,6 +34511,11 @@
     "status": 200,
     "original": "やっぱり デコボコだと\nたたかいにくいよ‥‥",
     "translated": "果然凹凸不平的话，\\n很难战斗啊……"
+  },
+  {
+    "status": 200,
+    "original": "やっほー",
+    "translated": "呀吼"
   },
   {
     "status": 200,
@@ -32397,6 +34664,11 @@
   },
   {
     "status": 200,
+    "original": "やられた",
+    "translated": "被打败了"
+  },
+  {
+    "status": 200,
     "original": "やられたか！？",
     "translated": "被干掉了吗！？"
   },
@@ -32404,6 +34676,11 @@
     "status": 200,
     "original": "やられたー！\nだけど ポケモン しょうぶは たのしいー！",
     "translated": "哎呀，输了—！\\n不过宝可梦对战真开心—！"
+  },
+  {
+    "status": 200,
+    "original": "やられて",
+    "translated": "被打败"
   },
   {
     "status": 200,
@@ -32457,6 +34734,11 @@
   },
   {
     "status": 200,
+    "original": "ゆうがな ポケモンが すき",
+    "translated": "喜欢优雅的宝可梦"
+  },
+  {
+    "status": 200,
     "original": "ゆうぐれになると かつどうする やこうせい。\nつりびとを みかけると すいちゅうから いとを\nひっぱり ジャマをしては よろこんでいる。",
     "translated": "黄昏时分开始活动的夜\\n行性宝可梦。\\p看到钓鱼的人，就会从\\n水中拉扯鱼线\\p进行捣乱并以此为乐。"
   },
@@ -32474,6 +34756,16 @@
     "status": 200,
     "original": "ゆうしょう！ \\02の \\03！",
     "translated": "冠军！ \\02的 \\03！"
+  },
+  {
+    "status": 200,
+    "original": "ゆうとうせい なんだよ",
+    "translated": "优等生哦"
+  },
+  {
+    "status": 200,
+    "original": "ゆうはんの かいもの ついでに",
+    "translated": "顺便买晚饭的时候"
   },
   {
     "status": 200,
@@ -32597,6 +34889,11 @@
   },
   {
     "status": 200,
+    "original": "よい かおりが こころと",
+    "translated": "宜人的香气能让心灵和"
+  },
+  {
+    "status": 200,
     "original": "よい しょうぶを きたい しておるぞ！",
     "translated": "老夫期待着一场精彩的\\n对战！"
   },
@@ -32632,6 +34929,11 @@
   },
   {
     "status": 200,
+    "original": "ようこそ",
+    "translated": "欢迎"
+  },
+  {
+    "status": 200,
     "original": "ようこそ\nしてんのうの プリムと いいます\n\nこおりの わざを きわめたくて\nはるか ホウエンまで やって きました\n\nですが ここに ちょうせんに くるのは\nやわな トレーナーと ポケモンばかり‥‥\n\nあなたは どう？\n\nほんきを だしても だいじょうぶ だと\nうれしいの ですが‥‥！！",
     "translated": "欢迎光临。{\\n}我是四天王波妮。{\\p}为了钻研冰系招式，我特地\\n远道来到丰缘地区。{\\p}但前来挑战的人，尽是些软\\n弱的训练家和宝可梦……{\\p}你又如何呢？{\\p}如果你能让我认真起来，那\\n我会很高兴……！！"
   },
@@ -32649,6 +34951,11 @@
     "status": 200,
     "original": "ようしゃ しないわよ！",
     "translated": "我可不会手下留情！"
+  },
+  {
+    "status": 200,
+    "original": "ようじん しなくちゃね！",
+    "translated": "可得小心提防呢！"
   },
   {
     "status": 200,
@@ -32677,6 +34984,11 @@
   },
   {
     "status": 200,
+    "original": "ようちえん",
+    "translated": "幼儿园"
+  },
+  {
+    "status": 200,
     "original": "ようやく であえたね！\nぼくの むしポケモンが あいて するよ！",
     "translated": "终于碰到你了！\\n就让我的虫属性宝可梦\\p来做你的对手吧！"
   },
@@ -32689,6 +35001,11 @@
     "status": 200,
     "original": "よお！ おまえの ポケモン げんき？\n\nてもちの ポケモンが よわっていて\nたたかわせたく ないときは なるべく\\lくさむらを よけて あるくと いいよ！",
     "translated": "哟！你的宝可梦精神吗？{\\p}当手上的宝可梦变弱\\n不想让它战斗时，尽量\\p避开草丛走比较好哦！"
+  },
+  {
+    "status": 200,
+    "original": "よかった",
+    "translated": "太好了"
   },
   {
     "status": 200,
@@ -32852,6 +35169,16 @@
   },
   {
     "status": 200,
+    "original": "よむのを やめる",
+    "translated": "停止阅读"
+  },
+  {
+    "status": 200,
+    "original": "よるに であうと こわいです",
+    "translated": "夜里遇到会很可怕"
+  },
+  {
+    "status": 200,
     "original": "よるに なると おおきな ベロで かいていの\nすなに あなを ほり そのなかで ねむる。\nカラを とじて ねむるが ベロは だしたまま。",
     "translated": "夜晚时会用巨大的舌头\\n在沙滩上挖洞，并在洞\\p中睡觉。虽然闭着眼睛，\\n但舌头仍保持伸出状态。"
   },
@@ -32872,6 +35199,11 @@
   },
   {
     "status": 200,
+    "original": "よろしく",
+    "translated": "请多关照"
+  },
+  {
+    "status": 200,
     "original": "よわいでんげきを てきに ぶつけて\nまひさせてしまう",
     "translated": "向对手发出微弱的电击，\\n从而让对手陷入麻痹状\\p态。"
   },
@@ -32879,6 +35211,16 @@
     "status": 200,
     "original": "よわき",
     "translated": "软弱"
+  },
+  {
+    "status": 200,
+    "original": "よわすぎ",
+    "translated": "太弱了"
+  },
+  {
+    "status": 200,
+    "original": "よわって",
+    "translated": "为难"
   },
   {
     "status": 200,
@@ -32917,8 +35259,27 @@
   },
   {
     "status": 200,
+    "original": "らいしゅう",
+    "translated": "下周"
+  },
+  {
+    "status": 200,
     "original": "らいめいげり",
     "translated": "雷鸣蹴击"
+  },
+  {
+    "status": 200,
+    "original": "らくしょう",
+    "translated": "轻松获胜"
+  },
+  {
+    "status": 404,
+    "original": "らりるれろ"
+  },
+  {
+    "status": 200,
+    "original": "られない",
+    "translated": "不了"
   },
   {
     "status": 200,
@@ -32929,6 +35290,11 @@
     "status": 200,
     "original": "りっぱなうえき",
     "translated": "华丽盆栽"
+  },
+  {
+    "status": 200,
+    "original": "りゅうこう",
+    "translated": "流行"
   },
   {
     "status": 200,
@@ -33024,6 +35390,11 @@
     "status": 200,
     "original": "りょうてチョップで てきを こうげき\nきゅうしょに あたりやすい",
     "translated": "用双手劈打攻击对手。\\n容易击中要害"
+  },
+  {
+    "status": 200,
+    "original": "りょこう",
+    "translated": "旅行"
   },
   {
     "status": 200,
@@ -33152,6 +35523,11 @@
   },
   {
     "status": 200,
+    "original": "ろんがい",
+    "translated": "论外"
+  },
+  {
+    "status": 200,
     "original": "わぁーーーん！\nまけたーーーっ！",
     "translated": "哇啊啊啊！\\n输掉了——！"
   },
@@ -33174,6 +35550,10 @@
     "status": 200,
     "original": "わあ！ いとが からまった！\nまさに あとの まつり",
     "translated": "哇！钓线缠住了！\\n真是为时已晚啊。"
+  },
+  {
+    "status": 404,
+    "original": "わいんいゃせろはざらやぇ？ずせぱチカゅツ"
   },
   {
     "status": 200,
@@ -33219,6 +35599,11 @@
     "status": 200,
     "original": "わざ",
     "translated": "技能"
+  },
+  {
+    "status": 200,
+    "original": "わざ へんこう",
+    "translated": "招式变更"
   },
   {
     "status": 200,
@@ -33782,6 +36167,11 @@
   },
   {
     "status": 200,
+    "original": "わたくし",
+    "translated": "我"
+  },
+  {
+    "status": 200,
     "original": "わたくし まけたのね‥‥\n\nもっと おおくの ことを\nまなぶ ひつようが あるみたい‥‥\n\nわかりましたわ\n\nポケモンリーグの きまりでは\nジムリーダーに かった トレーナーに\\lこれを わたすことに なっています\n\nどうぞ ポケモンリーグ こうにんの\nストーンバッジ うけとって ください",
     "translated": "我输了啊……{\\p}看来还需要学习更多\\n东西……{\\p}我明白了{\\p}按照宝可梦联盟的规\\n定战胜道馆馆主的训练\\p家要将这个交给他{\\p}请收下宝可梦联盟公\\n认的岩石徽章"
   },
@@ -33857,6 +36247,11 @@
   },
   {
     "status": 200,
+    "original": "わたしが",
+    "translated": "我"
+  },
+  {
+    "status": 200,
     "original": "わたしが あなたに\nきょうりょく しちゃった みたいね‥‥",
     "translated": "结果好像变成\\n我在协助你了呢……"
   },
@@ -33869,6 +36264,16 @@
     "status": 200,
     "original": "わたしじゃ あいてに ならなかったわ！",
     "translated": "我根本算不上你的对手\\n啊！"
+  },
+  {
+    "status": 200,
+    "original": "わたしたち ポケモンクラブの",
+    "translated": "我们是宝可梦俱乐部的"
+  },
+  {
+    "status": 200,
+    "original": "わたしたち ラブラブ！",
+    "translated": "我们相亲相爱！"
   },
   {
     "status": 200,
@@ -33892,6 +36297,11 @@
   },
   {
     "status": 200,
+    "original": "わたしに",
+    "translated": "给我"
+  },
+  {
+    "status": 200,
     "original": "わたしに かつなんて きせきよ！\nじまん できる ことだわ！",
     "translated": "能赢我简直是奇迹！\\n这绝对值得你好好炫耀\\p一番！"
   },
@@ -33904,6 +36314,16 @@
     "status": 200,
     "original": "わたしに はなしかけた‥‥\nつまり しょうぶを いどむ つもりだな！\n\nよーし！ なみのり しながら\nつりあげた ポケモンで たたかうぞ！",
     "translated": "你跟我搭话……\\n也就是想挑战对战吧！\\p好！就用冲浪时钓上来\\n的宝可梦战斗！"
+  },
+  {
+    "status": 200,
+    "original": "わたしには かぜの",
+    "translated": "我能看见"
+  },
+  {
+    "status": 200,
+    "original": "わたしの",
+    "translated": "我的"
   },
   {
     "status": 200,
@@ -33977,6 +36397,11 @@
   },
   {
     "status": 200,
+    "original": "わたしの ポケモンは カチカチ",
+    "translated": "我的宝可梦硬邦邦的"
+  },
+  {
+    "status": 200,
     "original": "わたしの ラブカスたちと\nたのしく しょうぶ しましょうよ！",
     "translated": "来和我的爱心鱼们\\n开心地对战吧！"
   },
@@ -33984,6 +36409,11 @@
     "status": 200,
     "original": "わたしのね\nすきな トレーナーは\n\nかっこよくて\n\nつよくて\n\nそれでいて やさしい\n\nそんな トレーナーが いいなぁ‥‥",
     "translated": "我呢\\n喜欢的训练家是\\p又帅气\\p又强大\\p而且还很温柔\\p这样的训练家最好了‥‥"
+  },
+  {
+    "status": 200,
+    "original": "わたしは",
+    "translated": "我是"
   },
   {
     "status": 200,
@@ -34062,6 +36492,11 @@
   },
   {
     "status": 200,
+    "original": "わたしを",
+    "translated": "把我"
+  },
+  {
+    "status": 200,
     "original": "わたどり",
     "translated": "候鸟"
   },
@@ -34107,8 +36542,23 @@
   },
   {
     "status": 200,
+    "original": "わっはははは！ けんこうの",
+    "translated": "哇哈哈哈！健康的"
+  },
+  {
+    "status": 200,
     "original": "わっはははは！ わしの まけじゃ！\nおまえさんには しびれた わい\\lこの バッジ もっていくが いいぞ！",
     "translated": "哇哈哈哈！老夫输了！{\\p}你可以拿走让对手麻\\n痹的徽章！"
+  },
+  {
+    "status": 200,
+    "original": "わっ！！",
+    "translated": "哇！！"
+  },
+  {
+    "status": 200,
+    "original": "わははは！",
+    "translated": "哇哈哈哈！"
   },
   {
     "status": 200,
@@ -34179,6 +36629,11 @@
     "status": 200,
     "original": "わーん\nまけて しまった",
     "translated": "呜哇\\n输掉了"
+  },
+  {
+    "status": 200,
+    "original": "わーん！！",
+    "translated": "呜哇！！"
   },
   {
     "status": 200,
@@ -34369,6 +36824,11 @@
     "status": 200,
     "original": "アキヒト",
     "translated": "明仁"
+  },
+  {
+    "status": 200,
+    "original": "アキヒロ",
+    "translated": "明宏"
   },
   {
     "status": 200,
@@ -35627,6 +38087,11 @@
   },
   {
     "status": 200,
+    "original": "ウツクシ",
+    "translated": "美丽"
+  },
+  {
+    "status": 200,
     "original": "ウツドン",
     "translated": "口呆花"
   },
@@ -35912,6 +38377,11 @@
   },
   {
     "status": 200,
+    "original": "エキサイト",
+    "translated": "兴奋"
+  },
+  {
+    "status": 200,
     "original": "エクスレッグ",
     "translated": "烈腿蝗"
   },
@@ -35934,6 +38404,11 @@
     "status": 200,
     "original": "エスパー",
     "translated": "超能力"
+  },
+  {
+    "status": 200,
+    "original": "エスパーわざ",
+    "translated": "超能力招式"
   },
   {
     "status": 200,
@@ -36452,6 +38927,11 @@
   },
   {
     "status": 200,
+    "original": "オッケー",
+    "translated": "好"
+  },
+  {
+    "status": 200,
     "original": "オトシドリ",
     "translated": "下石鸟"
   },
@@ -36679,6 +39159,11 @@
     "status": 200,
     "original": "オレは ダイビング トレジャーハンター！\n\nふかい うみに もぐっては\nかいていに ねむる おたからを あつめる\\lすげえ やろう なのさ！",
     "translated": "我是潜水寻宝猎人！\\p潜入深海，收集沉睡在海底的\\n宝藏，我可是个超厉害的家\\p伙！"
+  },
+  {
+    "status": 200,
+    "original": "オレを よんでいるぜ！",
+    "translated": "正在呼唤着我！"
   },
   {
     "status": 200,
@@ -36922,8 +39407,18 @@
   },
   {
     "status": 200,
+    "original": "カイワン",
+    "translated": "凯万"
+  },
+  {
+    "status": 200,
     "original": "カウンター",
     "translated": "双倍奉还"
+  },
+  {
+    "status": 200,
+    "original": "カウント",
+    "translated": "计数"
   },
   {
     "status": 200,
@@ -37039,6 +39534,11 @@
     "status": 200,
     "original": "カサのような きが\nうえられた\nおおきな うえき",
     "translated": "种着像伞一样的树\\n的\\p大盆栽"
+  },
+  {
+    "status": 200,
+    "original": "カシコイ",
+    "translated": "聪明"
   },
   {
     "status": 200,
@@ -37162,6 +39662,11 @@
   },
   {
     "status": 200,
+    "original": "カチカチ",
+    "translated": "咔嚓咔嚓"
+  },
+  {
+    "status": 200,
     "original": "カチコール",
     "translated": "冰宝"
   },
@@ -37187,6 +39692,11 @@
   },
   {
     "status": 200,
+    "original": "カッコイ",
+    "translated": "帅气"
+  },
+  {
+    "status": 200,
     "original": "カットパイン",
     "translated": "凤梨片"
   },
@@ -37194,6 +39704,11 @@
     "status": 200,
     "original": "カットミニトマト",
     "translated": "小番茄块"
+  },
+  {
+    "status": 200,
+    "original": "カッパー",
+    "translated": "铜"
   },
   {
     "status": 200,
@@ -37214,6 +39729,11 @@
     "status": 200,
     "original": "カツ『ポケモン ２ひき いたら\nポケモンしょうぶ してやるよ！",
     "translated": "卡茨“如果有2只宝可梦的话\\n我就和你来一场宝可梦对战！\\p”"
+  },
+  {
+    "status": 200,
+    "original": "カツとアミ",
+    "translated": "胜和亚美"
   },
   {
     "status": 200,
@@ -37587,6 +40107,11 @@
   },
   {
     "status": 200,
+    "original": "カヨとイヨ",
+    "translated": "佳代和伊代"
+  },
+  {
+    "status": 200,
     "original": "カラは ひふが ひえて かたまった もの。\nさわった だけで ボロボロと くずれて しまう。\nマグマに はいると もとの おおきさに もどる。",
     "translated": "壳是皮肤冷却凝固而成\\n的。\\p只是触碰就会哗啦哗啦\\n碎掉。进入岩浆后会恢\\p复原大小。"
   },
@@ -37697,6 +40222,11 @@
   },
   {
     "status": 200,
+    "original": "カワイイ",
+    "translated": "可爱"
+  },
+  {
+    "status": 200,
     "original": "カンタイシティ",
     "translated": "慷待市"
   },
@@ -37704,6 +40234,11 @@
     "status": 200,
     "original": "カンタイビーチ",
     "translated": "慷待海滩USUM"
+  },
+  {
+    "status": 200,
+    "original": "カンタロウ",
+    "translated": "勘太郎"
   },
   {
     "status": 200,
@@ -38292,6 +40827,11 @@
   },
   {
     "status": 200,
+    "original": "キミタカ",
+    "translated": "公隆"
+  },
+  {
+    "status": 200,
     "original": "キモリ",
     "translated": "木守宫"
   },
@@ -38332,6 +40872,11 @@
   },
   {
     "status": 200,
+    "original": "キャモくん",
+    "translated": "卡莫君"
+  },
+  {
+    "status": 200,
     "original": "キャモメ",
     "translated": "长翅鸥"
   },
@@ -38359,6 +40904,11 @@
     "status": 200,
     "original": "キャモメの すがたが\nプリントされた びんせん\nポケモンに もたせる",
     "translated": "印有长翅鸥图案的\\n信纸\\p让宝可梦携带"
+  },
+  {
+    "status": 200,
+    "original": "キャンセル",
+    "translated": "取消"
   },
   {
     "status": 200,
@@ -38394,6 +40944,11 @@
     "status": 200,
     "original": "キャンプファイヤー するとき\nはなびを するとき\\lみずを ようい するように なったか！？",
     "translated": "篝火的时候\\n放烟花的时候也要准备\\p水了吗！？"
+  },
+  {
+    "status": 200,
+    "original": "キャンプファイヤーの ときは",
+    "translated": "篝火晚会的时候"
   },
   {
     "status": 200,
@@ -38434,6 +40989,11 @@
     "status": 200,
     "original": "キュワワー",
     "translated": "花疗环环"
+  },
+  {
+    "status": 200,
+    "original": "キョウカ",
+    "translated": "京香"
   },
   {
     "status": 200,
@@ -38617,6 +41177,11 @@
   },
   {
     "status": 200,
+    "original": "キヨハル",
+    "translated": "清春"
+  },
+  {
+    "status": 200,
     "original": "キヨヒコ",
     "translated": "清彦"
   },
@@ -38684,6 +41249,11 @@
     "status": 200,
     "original": "キレイハナの すがたが\nプリントされた びんせん\nポケモンに もたせる",
     "translated": "印有美丽花图案的\\n信纸\\p让宝可梦携带"
+  },
+  {
+    "status": 200,
+    "original": "キンちゃん",
+    "translated": "小金"
   },
   {
     "status": 200,
@@ -38837,6 +41407,11 @@
   },
   {
     "status": 200,
+    "original": "ギャーコ",
+    "translated": "嘎子"
+  },
+  {
+    "status": 200,
     "original": "ギラティナ",
     "translated": "骑拉帝纳"
   },
@@ -38924,6 +41499,11 @@
     "status": 200,
     "original": "クサＺ",
     "translated": "草Ｚ"
+  },
+  {
+    "status": 200,
+    "original": "クスクス",
+    "translated": "偷偷地笑"
   },
   {
     "status": 200,
@@ -39322,6 +41902,11 @@
   },
   {
     "status": 200,
+    "original": "クンの マブシイ\nキラキラ スマイル",
+    "translated": "～君的耀眼\\n闪闪发光的微笑"
+  },
+  {
+    "status": 200,
     "original": "グソクムシャ",
     "translated": "具甲武者"
   },
@@ -39422,6 +42007,11 @@
   },
   {
     "status": 200,
+    "original": "グラスケ",
+    "translated": "古拉助"
+  },
+  {
+    "status": 200,
     "original": "グラスシード",
     "translated": "青草种子"
   },
@@ -39492,6 +42082,11 @@
   },
   {
     "status": 200,
+    "original": "グルグル",
+    "translated": "团团转"
+  },
+  {
+    "status": 200,
     "original": "グルトン",
     "translated": "爱吃豚"
   },
@@ -39499,6 +42094,11 @@
     "status": 200,
     "original": "グルルクッション",
     "translated": "咕妞妞靠垫"
+  },
+  {
+    "status": 200,
+    "original": "グループ",
+    "translated": "团体"
   },
   {
     "status": 200,
@@ -39539,6 +42139,11 @@
     "status": 200,
     "original": "グローバルターミナル",
     "translated": "全球终端"
+  },
+  {
+    "status": 200,
+    "original": "グーチャン",
+    "translated": "古酱"
   },
   {
     "status": 200,
@@ -39629,6 +42234,11 @@
     "status": 200,
     "original": "ケルディオ",
     "translated": "凯路迪欧"
+  },
+  {
+    "status": 200,
+    "original": "ケロタロウ",
+    "translated": "凯罗太郎"
   },
   {
     "status": 200,
@@ -39759,6 +42369,11 @@
     "status": 200,
     "original": "ゲン『わしらは いつも ふうふで\nポケモンを たのしんでおる からのう\\lしょうぶにも じしんが あるんじゃよ",
     "translated": "源『我们夫妻俩总是\\n宝可梦，乐在其中，所以对战\\p也有自信。』"
+  },
+  {
+    "status": 200,
+    "original": "ゲンとハツ",
+    "translated": "元和初"
   },
   {
     "status": 200,
@@ -39914,6 +42529,11 @@
     "status": 200,
     "original": "コウ『オレらと たたかう つもり？\nポケモン ２ひき つれてきなよ！",
     "translated": "小浩『你想和我们战斗吗？\\n带两只宝可梦来吧！"
+  },
+  {
+    "status": 200,
+    "original": "コウとナミ",
+    "translated": "浩和奈美"
   },
   {
     "status": 200,
@@ -40187,6 +42807,11 @@
   },
   {
     "status": 200,
+    "original": "コレクション",
+    "translated": "收藏"
+  },
+  {
+    "status": 200,
     "original": "コレクレー",
     "translated": "索财灵"
   },
@@ -40317,6 +42942,11 @@
   },
   {
     "status": 200,
+    "original": "コンテストも ねらってます",
+    "translated": "也想挑战华丽大赛"
+  },
+  {
+    "status": 200,
     "original": "コンテストわざ",
     "translated": "华丽大赛技能"
   },
@@ -40342,6 +42972,11 @@
   },
   {
     "status": 200,
+    "original": "コンディションの メニューに もどります ",
+    "translated": "返回状态的菜单"
+  },
+  {
+    "status": 200,
     "original": "コンパス",
     "translated": "指南针"
   },
@@ -40349,6 +42984,16 @@
     "status": 200,
     "original": "コンパン",
     "translated": "毛球"
+  },
+  {
+    "status": 200,
+    "original": "コンビニ",
+    "translated": "便利店"
+  },
+  {
+    "status": 200,
+    "original": "コンプリート",
+    "translated": "完成"
   },
   {
     "status": 200,
@@ -40434,6 +43079,11 @@
     "status": 200,
     "original": "ゴチルゼル",
     "translated": "哥德小姐"
+  },
+  {
+    "status": 200,
+    "original": "ゴッくん",
+    "translated": "戈君"
   },
   {
     "status": 200,
@@ -40572,6 +43222,11 @@
   },
   {
     "status": 200,
+    "original": "ゴージャスタイプよ！",
+    "translated": "我是豪华型的哦！"
+  },
+  {
+    "status": 200,
     "original": "ゴージャスボール",
     "translated": "豪华球"
   },
@@ -40589,6 +43244,11 @@
     "status": 200,
     "original": "ゴースト",
     "translated": "幽灵"
+  },
+  {
+    "status": 200,
+    "original": "ゴーストわざ",
+    "translated": "幽灵招式"
   },
   {
     "status": 200,
@@ -40619,6 +43279,11 @@
     "status": 200,
     "original": "ゴーリキー",
     "translated": "豪力"
+  },
+  {
+    "status": 200,
+    "original": "ゴールド",
+    "translated": "黄金"
   },
   {
     "status": 200,
@@ -40917,6 +43582,11 @@
   },
   {
     "status": 200,
+    "original": "サトチン",
+    "translated": "萨托钦"
+  },
+  {
+    "status": 200,
     "original": "サトピカＺ",
     "translated": "智皮卡Ｚ"
   },
@@ -40984,6 +43654,11 @@
     "status": 200,
     "original": "サファリゾーン",
     "translated": "狩猎地带"
+  },
+  {
+    "status": 200,
+    "original": "サファリゾーン だいすき！",
+    "translated": "最喜欢狩猎地带了！"
   },
   {
     "status": 200,
@@ -41122,8 +43797,18 @@
   },
   {
     "status": 200,
+    "original": "サンちゃん",
+    "translated": "小珊"
+  },
+  {
+    "status": 200,
     "original": "サンのみ",
     "translated": "兰萨果"
+  },
+  {
+    "status": 200,
+    "original": "サンキュー",
+    "translated": "谢谢"
   },
   {
     "status": 200,
@@ -41212,6 +43897,11 @@
   },
   {
     "status": 200,
+    "original": "サービス",
+    "translated": "服务"
+  },
+  {
+    "status": 200,
     "original": "サーフゴー",
     "translated": "赛富豪"
   },
@@ -41219,6 +43909,11 @@
     "status": 200,
     "original": "サーフテール",
     "translated": "冲浪之尾"
+  },
+  {
+    "status": 200,
+    "original": "ザクマちん",
+    "translated": "扎克马君"
   },
   {
     "status": 200,
@@ -41327,6 +44022,11 @@
   },
   {
     "status": 200,
+    "original": "シキとリキ",
+    "translated": "志希和理希"
+  },
+  {
+    "status": 200,
     "original": "シキジカ",
     "translated": "四季鹿"
   },
@@ -41369,6 +44069,16 @@
     "status": 200,
     "original": "シシコ",
     "translated": "小狮狮"
+  },
+  {
+    "status": 200,
+    "original": "システム",
+    "translated": "系统"
+  },
+  {
+    "status": 200,
+    "original": "システムメッセージＡＤＤ",
+    "translated": "系统消息添加"
   },
   {
     "status": 200,
@@ -41576,6 +44286,11 @@
   },
   {
     "status": 200,
+    "original": "シュウジ",
+    "translated": "修二"
+  },
+  {
+    "status": 200,
     "original": "シュカのみ",
     "translated": "腰木果"
   },
@@ -41656,6 +44371,11 @@
   },
   {
     "status": 200,
+    "original": "ショップへ",
+    "translated": "去商店"
+  },
+  {
+    "status": 200,
     "original": "シリンダーブリッジ",
     "translated": "圓筒橋"
   },
@@ -41673,6 +44393,11 @@
     "status": 200,
     "original": "シルシュルー",
     "translated": "滋汁鼹"
+  },
+  {
+    "status": 200,
+    "original": "シルバー",
+    "translated": "白银"
   },
   {
     "status": 200,
@@ -41748,6 +44473,11 @@
     "status": 200,
     "original": "シン『オレらと たたかうなら\nもっと ポケモン つれてきてよ！",
     "translated": "慎：“想和我们打的话\\n就多带几只宝可梦来嘛！"
+  },
+  {
+    "status": 200,
+    "original": "シンとユミ",
+    "translated": "新和由美"
   },
   {
     "status": 200,
@@ -41863,6 +44593,10 @@
     "status": 200,
     "original": "シールぶくろ",
     "translated": "贴纸袋"
+  },
+  {
+    "status": 404,
+    "original": "シＲょくキらキら．レゅくヤＲょく    ．ぉひくユヨきくづらづら．レゅく？ぉひく    ．ぉひく\\75きく  お \n"
   },
   {
     "status": 200,
@@ -42008,6 +44742,11 @@
     "status": 200,
     "original": "ジムリーダーが きみに まけてから\nくんれんが さらに きびしく なったよ！",
     "translated": "自从馆主输给你之后，\\n我们的训练变得更加严\\p格了！"
+  },
+  {
+    "status": 200,
+    "original": "ジムリーダーに かつまで",
+    "translated": "直到战胜道馆馆主为止"
   },
   {
     "status": 200,
@@ -42186,6 +44925,11 @@
   },
   {
     "status": 200,
+    "original": "ジュンタ",
+    "translated": "淳太"
+  },
+  {
+    "status": 200,
     "original": "ジョインアベニュー",
     "translated": "汇合大道"
   },
@@ -42248,6 +44992,11 @@
     "status": 200,
     "original": "ジン『ポケモン いっぴき？\nそれだと さみしくないか？",
     "translated": "仁『只有一只宝可梦？\\n那样的话不寂寞吗？"
+  },
+  {
+    "status": 200,
+    "original": "ジンパチ",
+    "translated": "甚八"
   },
   {
     "status": 200,
@@ -42416,6 +45165,11 @@
   },
   {
     "status": 200,
+    "original": "スタート",
+    "translated": "开始"
+  },
+  {
+    "status": 200,
     "original": "スターミナイト",
     "translated": "宝石海星进化石"
   },
@@ -42461,6 +45215,11 @@
   },
   {
     "status": 200,
+    "original": "ストップ",
+    "translated": "停止"
+  },
+  {
+    "status": 200,
     "original": "ストライク",
     "translated": "飞天螳螂"
   },
@@ -42488,6 +45247,11 @@
     "status": 200,
     "original": "ストレンジャハウス",
     "translated": "陌生人之家"
+  },
+  {
+    "status": 200,
+    "original": "ストロング ストロンガー\nストロンゲスト ",
+    "translated": "强壮 更强壮\\n最强壮"
   },
   {
     "status": 200,
@@ -42528,6 +45292,11 @@
     "status": 200,
     "original": "スナヘビ",
     "translated": "沙包蛇"
+  },
+  {
+    "status": 200,
+    "original": "スネーキー",
+    "translated": "史尼奇"
   },
   {
     "status": 200,
@@ -42668,6 +45437,11 @@
     "status": 200,
     "original": "スポットライト",
     "translated": "聚光灯"
+  },
+  {
+    "status": 200,
+    "original": "スポーツ",
+    "translated": "运动"
   },
   {
     "status": 200,
@@ -42971,6 +45745,11 @@
   },
   {
     "status": 200,
+    "original": "センパイと コウハイでーす！",
+    "translated": "前辈和后辈哦！"
+  },
+  {
+    "status": 200,
     "original": "センパイとコウハイ",
     "translated": "前辈与后辈"
   },
@@ -42978,6 +45757,21 @@
     "status": 200,
     "original": "センリ",
     "translated": "千里"
+  },
+  {
+    "status": 200,
+    "original": "セーブできました",
+    "translated": "保存成功"
+  },
+  {
+    "status": 200,
+    "original": "セーブできませんでした",
+    "translated": "无法保存"
+  },
+  {
+    "status": 200,
+    "original": "セーブに しっぱい しました‥",
+    "translated": "存档失败了……"
   },
   {
     "status": 200,
@@ -43221,6 +46015,11 @@
   },
   {
     "status": 200,
+    "original": "タイプに こだわらず なんでも",
+    "translated": "不拘泥于属性，什么都用"
+  },
+  {
+    "status": 200,
     "original": "タイプを してい します\n ／つかまえたポケモンのみ",
     "translated": "按类型指定\\n／仅限已捕获的宝可梦"
   },
@@ -43308,6 +46107,11 @@
     "status": 200,
     "original": "タクマ",
     "translated": "拓马"
+  },
+  {
+    "status": 200,
+    "original": "タクマシ",
+    "translated": "强壮"
   },
   {
     "status": 200,
@@ -43451,6 +46255,11 @@
   },
   {
     "status": 200,
+    "original": "タネビー",
+    "translated": "种比"
+  },
+  {
+    "status": 200,
     "original": "タネボー",
     "translated": "橡实果"
   },
@@ -43478,6 +46287,10 @@
     "status": 200,
     "original": "タネマシンガン",
     "translated": "种子机关枪"
+  },
+  {
+    "status": 404,
+    "original": "タパほくネパほくＢトほく う‥な‥な・なクパほくミパほく    ．ぉひく『ォえく ィ ィ え    こ "
   },
   {
     "status": 200,
@@ -43523,6 +46336,11 @@
     "status": 200,
     "original": "タマゴうみ",
     "translated": "生蛋"
+  },
+  {
+    "status": 200,
+    "original": "タマゴが かえって\n\\02が うまれた！",
+    "translated": "蛋孵化了，\\n\\02诞生了！"
   },
   {
     "status": 200,
@@ -43743,6 +46561,16 @@
     "status": 200,
     "original": "ダイウォール",
     "translated": "极巨防壁"
+  },
+  {
+    "status": 200,
+    "original": "ダイエット",
+    "translated": "减肥"
+  },
+  {
+    "status": 200,
+    "original": "ダイエットの つもりだったのに",
+    "translated": "明明本来是打算减肥的"
   },
   {
     "status": 200,
@@ -44161,6 +46989,11 @@
   },
   {
     "status": 200,
+    "original": "ダメダメ",
+    "translated": "不行不行"
+  },
+  {
+    "status": 200,
     "original": "ダメージは おおきいが\nつかうと つぎのターン\nうごけなく なってしまう",
     "translated": "虽然伤害很高，但使用\\n后下一回合无法行动"
   },
@@ -44336,6 +47169,11 @@
   },
   {
     "status": 200,
+    "original": "チャレンジ",
+    "translated": "挑战"
+  },
+  {
+    "status": 200,
     "original": "チャレンジビーチ",
     "translated": "挑戰海灘"
   },
@@ -44343,6 +47181,11 @@
     "status": 200,
     "original": "チャレンジロード",
     "translated": "挑戰之路"
+  },
+  {
+    "status": 200,
+    "original": "チャンネル",
+    "translated": "频道"
   },
   {
     "status": 200,
@@ -44556,6 +47399,11 @@
   },
   {
     "status": 200,
+    "original": "ツッチー",
+    "translated": "兹奇"
+  },
+  {
+    "status": 200,
     "original": "ツツケラ",
     "translated": "小笃儿"
   },
@@ -44703,6 +47551,21 @@
     "status": 200,
     "original": "テクノバスター",
     "translated": "高科技光炮"
+  },
+  {
+    "status": 200,
+    "original": "テストで いいてん とると",
+    "translated": "只要考试拿到好成绩"
+  },
+  {
+    "status": 200,
+    "original": "テストです",
+    "translated": "这是测试。"
+  },
+  {
+    "status": 200,
+    "original": "テストな",
+    "translated": "是测试"
   },
   {
     "status": 200,
@@ -45041,6 +47904,11 @@
   },
   {
     "status": 200,
+    "original": "テレパシーで はなしてたの",
+    "translated": "是用心灵感应交谈的"
+  },
+  {
+    "status": 200,
     "original": "テレビ",
     "translated": "电视"
   },
@@ -45058,6 +47926,11 @@
     "status": 200,
     "original": "テレビで えいがを やってる！\n\nおとなと こどもが ふたり ならんで\nおおきな ピアノの うえで おどってる！\n\nもう いかなきゃ！",
     "translated": "电视上在放电影！\\p大人和小孩两个人并排在大钢\\n琴上跳舞！\\p我得走了！"
+  },
+  {
+    "status": 200,
+    "original": "テレビの しゅざいも うけたし",
+    "translated": "还接受过电视采访呢"
   },
   {
     "status": 200,
@@ -45191,6 +48064,21 @@
   },
   {
     "status": 200,
+    "original": "デザイン",
+    "translated": "设计"
+  },
+  {
+    "status": 200,
+    "original": "デザートの このみは ちがうよ",
+    "translated": "对甜点的喜好也不同哦"
+  },
+  {
+    "status": 200,
+    "original": "デジタル",
+    "translated": "数码"
+  },
+  {
+    "status": 200,
     "original": "デスウイング",
     "translated": "死亡之翼"
   },
@@ -45218,6 +48106,11 @@
     "status": 200,
     "original": "デトルネ通り",
     "translated": "绕行道路"
+  },
+  {
+    "status": 200,
+    "original": "デパート",
+    "translated": "百货商店"
   },
   {
     "status": 200,
@@ -45333,6 +48226,11 @@
     "status": 200,
     "original": "デンリュウナイト",
     "translated": "电龙进化石"
+  },
+  {
+    "status": 200,
+    "original": "データを じゅしんしました",
+    "translated": "已接收数据"
   },
   {
     "status": 200,
@@ -45518,6 +48416,11 @@
     "status": 200,
     "original": "トシヒロ",
     "translated": "俊宏"
+  },
+  {
+    "status": 200,
+    "original": "トットン",
+    "translated": "托通"
   },
   {
     "status": 200,
@@ -45761,6 +48664,11 @@
   },
   {
     "status": 200,
+    "original": "トレーナーが とうろく されていません ",
+    "translated": "未登录训练家"
+  },
+  {
+    "status": 200,
     "original": "トレーナーさん！ よかったら\nポケモンを こうかん して くださいな\n\nキナギだけに いると つかまえられる\nポケモンが かぎられるのよね！\n\nあなた \\02 もってない？\nあたしは \\03を あげるわ！",
     "translated": "训练家！可以的话，{\\n}我们交换宝可梦吧！{\\p}一直待在凯那市的话，能抓\\n到的宝可梦太有限了！{\\p}你有\\p吗？我可以给你\\p！"
   },
@@ -45801,6 +48709,11 @@
   },
   {
     "status": 200,
+    "original": "トレーナーの じょうほうを みます   ",
+    "translated": "查看训练家的信息"
+  },
+  {
+    "status": 200,
     "original": "トレーナーの そだてた ポケモンは\nホントに つよいなぁ‥‥",
     "translated": "训练家培育出的宝可梦\\n真的很强啊……"
   },
@@ -45833,6 +48746,11 @@
     "status": 200,
     "original": "トレーナーズ スクールで\nもういちど べんきょう しなおさなきゃ\\lツツジさんに おこられちゃうよ",
     "translated": "在训练家学校\\n必须重新学习才行不然\\p会被杜鹃小姐骂的哦"
+  },
+  {
+    "status": 200,
+    "original": "トレーナーズ スクールの",
+    "translated": "训练家学校的"
   },
   {
     "status": 200,
@@ -45941,6 +48859,11 @@
   },
   {
     "status": 200,
+    "original": "ドキドキ するよねー",
+    "translated": "让人心跳加速呢——"
+  },
+  {
+    "status": 200,
     "original": "ドククラゲ",
     "translated": "毒刺水母"
   },
@@ -45991,6 +48914,11 @@
   },
   {
     "status": 200,
+    "original": "ドックン",
+    "translated": "多库恩"
+  },
+  {
+    "status": 200,
     "original": "ドッコラー",
     "translated": "搬运小匠"
   },
@@ -46016,6 +48944,11 @@
   },
   {
     "status": 200,
+    "original": "ドラちゃん",
+    "translated": "多拉酱"
+  },
+  {
+    "status": 200,
     "original": "ドラゴン",
     "translated": "龙"
   },
@@ -46023,6 +48956,11 @@
     "status": 200,
     "original": "ドラゴンつかい",
     "translated": "龙之使者"
+  },
+  {
+    "status": 200,
+    "original": "ドラゴンの つよさを みろ！",
+    "translated": "看看龙的强大吧！"
   },
   {
     "status": 200,
@@ -46063,6 +49001,11 @@
     "status": 200,
     "original": "ドラゴンタイプの\nポケモンが もっている\nふしぎな ウロコ",
     "translated": "龙属性宝可梦持有的神\\n秘鳞片"
+  },
+  {
+    "status": 200,
+    "original": "ドラゴンタイプの そこぢから！",
+    "translated": "龙属性的深厚实力！"
   },
   {
     "status": 200,
@@ -46226,6 +49169,11 @@
   },
   {
     "status": 200,
+    "original": "ドードン",
+    "translated": "多多恩"
+  },
+  {
+    "status": 200,
     "original": "ドードー",
     "translated": "嘟嘟"
   },
@@ -46376,6 +49324,11 @@
   },
   {
     "status": 200,
+    "original": "ナゾの おおい ポケモン",
+    "translated": "充满谜团的宝可梦"
+  },
+  {
+    "status": 200,
     "original": "ナゾのみ",
     "translated": "谜芝果"
   },
@@ -46461,6 +49414,11 @@
   },
   {
     "status": 200,
+    "original": "ナナとネネ",
+    "translated": "娜娜和妮妮"
+  },
+  {
+    "status": 200,
     "original": "ナナのみ",
     "translated": "蕉香果"
   },
@@ -46528,6 +49486,11 @@
     "status": 200,
     "original": "ナマズン",
     "translated": "鲶鱼王"
+  },
+  {
+    "status": 200,
+    "original": "ナマゾー",
+    "translated": "鲶藏"
   },
   {
     "status": 200,
@@ -46706,8 +49669,18 @@
   },
   {
     "status": 200,
+    "original": "ニュース",
+    "translated": "新闻"
+  },
+  {
+    "status": 200,
     "original": "ニューラ",
     "translated": "狃拉"
+  },
+  {
+    "status": 200,
+    "original": "ニョニョ",
+    "translated": "尼欧尼欧"
   },
   {
     "status": 200,
@@ -46738,6 +49711,11 @@
     "status": 200,
     "original": "ニンジャの せんせいを さがして\nでしいり しようかな？",
     "translated": "要不要去找忍者老师\\n拜师学艺呢？"
+  },
+  {
+    "status": 200,
+    "original": "ニンニン",
+    "translated": "忍忍"
   },
   {
     "status": 200,
@@ -46968,6 +49946,16 @@
     "status": 200,
     "original": "ノブヒサ",
     "translated": "信久"
+  },
+  {
+    "status": 200,
+    "original": "ノブヒロ",
+    "translated": "信弘"
+  },
+  {
+    "status": 200,
+    "original": "ノブユキ",
+    "translated": "信之"
   },
   {
     "status": 200,
@@ -47373,6 +50361,11 @@
     "status": 200,
     "original": "ハッサムナイト",
     "translated": "巨钳螳螂进化石"
+  },
+  {
+    "status": 200,
+    "original": "ハッスル",
+    "translated": "干劲十足"
   },
   {
     "status": 200,
@@ -47830,6 +50823,14 @@
     "translated": "香草香肠"
   },
   {
+    "status": 404,
+    "original": "バいをいがいＳいをこがとＳふ\\lよょぁタぐょぞピぼづケュネぎヨ"
+  },
+  {
+    "status": 404,
+    "original": "バいをこがとＳふ\\lよょぁタぐょぞピぼづウュシぎト"
+  },
+  {
     "status": 200,
     "original": "バイウールー",
     "translated": "毛毛角羊"
@@ -47838,6 +50839,11 @@
     "status": 200,
     "original": "バイオレットブック",
     "translated": "紫之书"
+  },
+  {
+    "status": 200,
+    "original": "バイバイ",
+    "translated": "拜拜"
   },
   {
     "status": 200,
@@ -47868,6 +50874,11 @@
     "status": 200,
     "original": "バオップ",
     "translated": "爆香猴"
+  },
+  {
+    "status": 200,
+    "original": "バキバキ",
+    "translated": "咔吧咔吧"
   },
   {
     "status": 200,
@@ -48021,6 +51032,16 @@
   },
   {
     "status": 200,
+    "original": "バッチグー",
+    "translated": "完美无缺"
+  },
+  {
+    "status": 200,
+    "original": "バッチリ",
+    "translated": "完美"
+  },
+  {
+    "status": 200,
     "original": "バッテリー",
     "translated": "蓄电池"
   },
@@ -48108,6 +51129,11 @@
     "status": 200,
     "original": "バトルタワーで \\02にん かちぬいた\nきねんの \\03の たて",
     "translated": "纪念在对战塔中连赢\\02人\\n的\\03之盾"
+  },
+  {
+    "status": 200,
+    "original": "バトルタワーに あらたな\nたいせんしゃが あらわれた！",
+    "translated": "对战塔出现了新的\\n挑战者！"
   },
   {
     "status": 200,
@@ -48221,6 +51247,16 @@
   },
   {
     "status": 200,
+    "original": "バランスが いのちよ！",
+    "translated": "平衡就是生命！"
+  },
+  {
+    "status": 200,
+    "original": "バランスよく そだてている",
+    "translated": "培养得很均衡"
+  },
+  {
+    "status": 200,
     "original": "バリアフリー",
     "translated": "除障"
   },
@@ -48238,6 +51274,11 @@
     "status": 200,
     "original": "バリコオル",
     "translated": "踏冰人偶"
+  },
+  {
+    "status": 200,
+    "original": "バリバリ",
+    "translated": "嘎嘣嘎嘣"
   },
   {
     "status": 200,
@@ -48366,6 +51407,11 @@
   },
   {
     "status": 200,
+    "original": "パソコン",
+    "translated": "电脑"
+  },
+  {
+    "status": 200,
     "original": "パソコン から\nどうぐを ひきだします",
     "translated": "从电脑取出{\\n}道具"
   },
@@ -48401,6 +51447,11 @@
   },
   {
     "status": 200,
+    "original": "パソコンへ",
+    "translated": "去电脑"
+  },
+  {
+    "status": 200,
     "original": "パソコンを つかえば\nどうぐや ポケモンが ほぞん できるんだ！\n\nかがくの ちからって しびれるーっ！",
     "translated": "只要使用电脑\\n就能存放道具和宝可梦！\\p科学的力量真是让人兴\\n奋啊！"
   },
@@ -48431,6 +51482,11 @@
   },
   {
     "status": 200,
+    "original": "パッチン",
+    "translated": "帕钦"
+  },
+  {
+    "status": 200,
     "original": "パッチール",
     "translated": "晃晃斑"
   },
@@ -48458,6 +51514,11 @@
     "status": 200,
     "original": "パパ『\\01！ はなしは きいたね\n\nミツルくんが ぶじに\nポケモンを つかまえられるか\\lみまもって あげるんだ",
     "translated": "爸爸『\\01！事情我都听\\n说了\\p你要好好守护满充，让\\n他能顺利抓到宝可梦"
+  },
+  {
+    "status": 200,
+    "original": "パパ『\\01！ よく きたな！\n\\01あての てがみが とどけられたぞ",
+    "translated": "爸爸『\\01！你来得正好！\\n\\01有封寄给你的信送到了哦"
   },
   {
     "status": 200,
@@ -48516,6 +51577,11 @@
   },
   {
     "status": 200,
+    "original": "パパ『わたしも みたことのない\nふねの チケット だな‥‥\\lミナモに いってみると いいだろう",
+    "translated": "爸爸『这是我也没见过的\\n船票呢……去凯那市看看吧"
+  },
+  {
+    "status": 200,
     "original": "パパ『ん？\n\n\\01じゃ ないか！\nそうか ひっこしが おわったんだね\n\nそれにしても\nよく ここまで ひとりで これたな\n\nなるほど‥‥\nポケモンと いっしょ なのか\n\nふむ‥‥ じゃあ \\01も\nわたしの ように\\lポケモントレーナーに なるのか\n\nそれは たのしみ だな！",
     "translated": "爸爸：「嗯？{\\p}\\01，这不是你嘛！{\\n}原来搬家已经结束啦。{\\p}话说回来，{\\n}你居然能一个人跑到这里来\\p啊。{\\p}哦……{\\n}是和宝可梦一起来的吗？{\\p}唔……这么说来，\\01也要像\\n我一样成为宝可梦训练家了\\p吗？{\\p}那可真让人期待啊！」"
   },
@@ -48538,6 +51604,11 @@
     "status": 200,
     "original": "パパ『ジムリーダーとして\nいいようが ないくらい くやしい‥‥\n\nだが おや としては\nうれしいような さびしいような\\lふしぎな きもち だ‥‥",
     "translated": "爸爸『作为道馆馆主\\n不甘心到无以言表……\\p但是作为父亲，又高兴\\n又寂寞真是复杂的心情\\p啊……"
+  },
+  {
+    "status": 200,
+    "original": "パパが おこづかい くれるの！",
+    "translated": "爸爸就会给我零花钱！"
   },
   {
     "status": 200,
@@ -48601,8 +51672,18 @@
   },
   {
     "status": 200,
+    "original": "パラパラ",
+    "translated": "哗啦哗啦"
+  },
+  {
+    "status": 200,
     "original": "パラボラチャージ",
     "translated": "抛物面充电"
+  },
+  {
+    "status": 200,
+    "original": "パラメータへんこう",
+    "translated": "参数变更"
   },
   {
     "status": 200,
@@ -48648,6 +51729,11 @@
     "status": 200,
     "original": "パレの並木道",
     "translated": "宫殿林荫道"
+  },
+  {
+    "status": 200,
+    "original": "パワフル マッスル\nハッスル ",
+    "translated": "强劲肌肉\\n干劲十足"
   },
   {
     "status": 200,
@@ -48773,6 +51859,11 @@
     "status": 200,
     "original": "パーツを うばうのに\nいつまで かかっているのかと おもえば\\lこんな こどもに じゃま されていたのか？",
     "translated": "抢个零件\\n要多久啊，没\\p想到被这种小孩子妨碍\\n了？"
+  },
+  {
+    "status": 200,
+    "original": "パーティー",
+    "translated": "派对"
   },
   {
     "status": 200,
@@ -49001,6 +52092,11 @@
   },
   {
     "status": 200,
+    "original": "ヒロイン",
+    "translated": "女主角"
+  },
+  {
+    "status": 200,
     "original": "ヒロキ",
     "translated": "希罗基"
   },
@@ -49103,6 +52199,11 @@
     "status": 200,
     "original": "ヒールボール",
     "translated": "治愈球"
+  },
+  {
+    "status": 200,
+    "original": "ヒーロー",
+    "translated": "英雄"
   },
   {
     "status": 200,
@@ -49541,6 +52642,11 @@
   },
   {
     "status": 200,
+    "original": "ファイト",
+    "translated": "加油"
+  },
+  {
+    "status": 200,
     "original": "ファイトアクセル",
     "translated": "格斗暴冲"
   },
@@ -49581,8 +52687,18 @@
   },
   {
     "status": 200,
+    "original": "ファッション",
+    "translated": "时尚"
+  },
+  {
+    "status": 200,
     "original": "ファッションスタイル　ゆびをふる",
     "translated": "挥指时尚精品馆"
+  },
+  {
+    "status": 200,
+    "original": "ファンが おおくて こまるわ",
+    "translated": "粉丝太多真让人困扰"
   },
   {
     "status": 200,
@@ -49608,6 +52724,11 @@
     "status": 200,
     "original": "フィルター",
     "translated": "过滤"
+  },
+  {
+    "status": 200,
+    "original": "フィーバー",
+    "translated": "狂热"
   },
   {
     "status": 200,
@@ -50336,6 +53457,11 @@
   },
   {
     "status": 200,
+    "original": "ブルブル",
+    "translated": "哆哆嗦嗦"
+  },
+  {
+    "status": 200,
     "original": "ブルンゲル",
     "translated": "胖嘟嘟"
   },
@@ -50431,6 +53557,11 @@
   },
   {
     "status": 200,
+    "original": "ブレロタン",
+    "translated": "布雷洛坦"
+  },
+  {
+    "status": 200,
     "original": "ブレンド だいすき トレーナー",
     "translated": "热爱混合的训练家"
   },
@@ -50458,6 +53589,11 @@
     "status": 200,
     "original": "ブロロン",
     "translated": "噗隆隆"
+  },
+  {
+    "status": 200,
+    "original": "ブロンズ",
+    "translated": "青铜"
   },
   {
     "status": 200,
@@ -50676,6 +53812,16 @@
   },
   {
     "status": 200,
+    "original": "プンプン",
+    "translated": "普恩普恩"
+  },
+  {
+    "status": 200,
+    "original": "プールが ありますのよ",
+    "translated": "游泳池哦"
+  },
+  {
+    "status": 200,
     "original": "ヘアサロン",
     "translated": "美发沙龙"
   },
@@ -50788,6 +53934,11 @@
     "status": 200,
     "original": "ベイク空洞",
     "translated": "焙固空洞"
+  },
+  {
+    "status": 200,
+    "original": "ベイベー",
+    "translated": "宝贝儿"
   },
   {
     "status": 200,
@@ -50946,6 +54097,11 @@
   },
   {
     "status": 200,
+    "original": "ペーター",
+    "translated": "彼得"
+  },
+  {
+    "status": 200,
     "original": "ホイップクリーム",
     "translated": "鲜奶油"
   },
@@ -51006,6 +54162,11 @@
   },
   {
     "status": 200,
+    "original": "ホウエンちほうの マップを みます   ",
+    "translated": "查看丰缘地区的地图"
+  },
+  {
+    "status": 200,
     "original": "ホウエンで あつめられる\nすべての ジムバッジを てにいれた\\lトレーナーが いくべき ばしょ\n\nそれが ポケモンリーグ\n\nポケモンリーグに いくならば\nホウエンちほうの さいはて\\lサイユウという しまに むかうと いい",
     "translated": "在丰缘地区收集\\n所有道馆徽章的训练家\\p应该前往的地方\\p那就是宝可梦联盟\\p要去宝可梦联盟的话，\\n就前往丰缘地区尽头的\\p岛屿彩幽市吧"
   },
@@ -51063,6 +54224,11 @@
     "status": 200,
     "original": "ホエルコドール",
     "translated": "吼吼鲸玩偶"
+  },
+  {
+    "status": 200,
+    "original": "ホエルコン",
+    "translated": "霍尔孔"
   },
   {
     "status": 200,
@@ -51361,8 +54527,18 @@
   },
   {
     "status": 200,
+    "original": "ボロボロ",
+    "translated": "破破烂烂"
+  },
+  {
+    "status": 200,
     "original": "ボンサクのちゃわん",
     "translated": "凡作茶碗"
+  },
+  {
+    "status": 200,
+    "original": "ボンチー",
+    "translated": "邦奇"
   },
   {
     "status": 200,
@@ -51373,6 +54549,11 @@
     "status": 200,
     "original": "ボーダー",
     "translated": "边境"
+  },
+  {
+    "status": 200,
+    "original": "ボーチャン",
+    "translated": "波酱"
   },
   {
     "status": 200,
@@ -51441,6 +54622,11 @@
   },
   {
     "status": 200,
+    "original": "ポイント",
+    "translated": "积分"
+  },
+  {
+    "status": 200,
     "original": "ポイントアップ",
     "translated": "ＰＰ提升剂"
   },
@@ -51496,6 +54682,11 @@
   },
   {
     "status": 200,
+    "original": "ポケットモンスター\n‥‥すなわち ポケモン\n\n",
+    "translated": "宝可梦\\n……也就是宝可梦\\p"
+  },
+  {
+    "status": 200,
     "original": "ポケトレ",
     "translated": "宝可追踪"
   },
@@ -51503,6 +54694,16 @@
     "status": 200,
     "original": "ポケナビ",
     "translated": "领航员"
+  },
+  {
+    "status": 200,
+    "original": "ポケナビの メニューに もどります   ",
+    "translated": "返回宝可导航的菜单"
+  },
+  {
+    "status": 200,
+    "original": "ポケナビを しまいます      ",
+    "translated": "收起宝可导航"
   },
   {
     "status": 200,
@@ -51556,8 +54757,18 @@
   },
   {
     "status": 200,
+    "original": "ポケモン そだてまくりじゃよ",
+    "translated": "一直在拼命培育宝可梦呢"
+  },
+  {
+    "status": 200,
     "original": "ポケモン たくさん つかまえよーっと！",
     "translated": "我要去捕捉好多好多\\n宝可梦！"
+  },
+  {
+    "status": 200,
+    "original": "ポケモン たのしく ねっ！",
+    "translated": "和宝可梦快乐相处吧！"
   },
   {
     "status": 200,
@@ -51586,6 +54797,11 @@
   },
   {
     "status": 200,
+    "original": "ポケモン ひとすじ‥‥",
+    "translated": "一心扑在宝可梦上……"
+  },
+  {
+    "status": 200,
     "original": "ポケモン コンテスト\nスーパーランク ステージ！",
     "translated": "宝可梦华丽大赛\\n超级组舞台！"
   },
@@ -51608,6 +54824,11 @@
     "status": 200,
     "original": "ポケモン バトル カップ",
     "translated": "宝可梦对战杯"
+  },
+  {
+    "status": 200,
+    "original": "ポケモン ベッドで ねてるのさ",
+    "translated": "宝可梦都睡在床上呢"
   },
   {
     "status": 200,
@@ -51648,6 +54869,11 @@
     "status": 200,
     "original": "ポケモンが かわいく なるように\nそだてて いたんだけど\n\nコンテストって かわいらしさも\nきそう ことが できるのね！\n\nだいじに そだてて よかった‥‥",
     "translated": "为了让宝可梦变得更可\\n爱{\\p}我一直精心培育着{\\p}原来华丽大赛还能比\\n拼可爱度啊！{\\p}好好培育真是太好了……"
+  },
+  {
+    "status": 200,
+    "original": "ポケモンが さいこう‥‥",
+    "translated": "的宝可梦最棒了……"
   },
   {
     "status": 200,
@@ -51851,6 +55077,16 @@
   },
   {
     "status": 200,
+    "original": "ポケモンで まけたら",
+    "translated": "要是输给宝可梦"
+  },
+  {
+    "status": 200,
+    "original": "ポケモンと いっしょに",
+    "translated": "和宝可梦一起"
+  },
+  {
+    "status": 200,
     "original": "ポケモンと いっしょに\nぼうけん するのも いいけど\n\nたまには おうちに かえって おかあさんに\nげんきな かおを みせてあげてね！\n\nこころの なかでは きっと\n\\01\\05の こと\\lしんぱい してる はずだから‥‥",
     "translated": "和宝可梦一起\\n去冒险也不错\\p不过偶尔也回家一趟，让妈妈\\n看看你精神的样子吧！\\p她心里一定很担心\\01\\05的事\\n情……"
   },
@@ -51888,6 +55124,11 @@
     "status": 200,
     "original": "ポケモンと こころを ひとつに できれば\nすばらしいことが できそうじゃの",
     "translated": "如果能和宝可梦心意相\\n通\\p感觉就能做到了不起的\\n事情呢"
+  },
+  {
+    "status": 200,
+    "original": "ポケモンと しんらいかんけいを",
+    "translated": "和宝可梦建立信赖关系"
   },
   {
     "status": 200,
@@ -52296,6 +55537,11 @@
   },
   {
     "status": 200,
+    "original": "ポケモンは じぶんの こども",
+    "translated": "宝可梦就是自己的孩子"
+  },
+  {
+    "status": 200,
     "original": "ポケモンは たいりょく まんたん\nどうぐも これで だいじょうぶ ‥‥か",
     "translated": "宝可梦的体力已经完全\\n恢复了\\p道具这样也就没问题了\\n吧……吗"
   },
@@ -52316,8 +55562,23 @@
   },
   {
     "status": 200,
+    "original": "ポケモンは つよくなるよ！",
+    "translated": "宝可梦会变强哦！"
+  },
+  {
+    "status": 200,
+    "original": "ポケモンは なんでも すき！",
+    "translated": "宝可梦我全都喜欢！"
+  },
+  {
+    "status": 200,
     "original": "ポケモンは にんげんの パートナーであって\nけっして にんげんの どうぐ じゃないよ\n\nそこを かんちがい しておる\nにんげんも たまに いるんだよ‥‥",
     "translated": "宝可梦是人类的伙伴，\\n绝不是人类的工具哦。\\p偶尔也会有人误解这一点呢\\n……"
+  },
+  {
+    "status": 200,
+    "original": "ポケモンは みんな すき",
+    "translated": "所有宝可梦我都喜欢"
   },
   {
     "status": 200,
@@ -52391,6 +55652,11 @@
   },
   {
     "status": 200,
+    "original": "ポケモンを くわしく しらべます   ",
+    "translated": "详细调查宝可梦"
+  },
+  {
+    "status": 200,
     "original": "ポケモンを こうかん",
     "translated": "交换宝可梦"
   },
@@ -52403,6 +55669,11 @@
     "status": 200,
     "original": "ポケモンを すでに ６ぴき もってるときに\nあたらしく ポケモンを つかまえる\n\nすると パソコン つうしんで じどうてきに\nボックスに おくられるのだよ！",
     "translated": "已经拥有6只宝可梦时，\\n新捉到宝可梦\\p的话，就会通过电脑通信自动\\n传送到盒子里哦！"
+  },
+  {
+    "status": 200,
+    "original": "ポケモンを そだてる コツは",
+    "translated": "培养宝可梦的诀窍"
   },
   {
     "status": 200,
@@ -52471,6 +55742,11 @@
   },
   {
     "status": 200,
+    "original": "ポケモンを てにいれたい！",
+    "translated": "宝可梦都想收入囊中！"
+  },
+  {
+    "status": 200,
     "original": "ポケモンを ひきとるかい？",
     "translated": "要领回宝可梦吗？"
   },
@@ -52483,6 +55759,11 @@
     "status": 200,
     "original": "ポケモンを マーキングすると ボックスが\nせいり しやすくなる ようにする\n\nボックスの なまえ かべがみを\nかえられる ようにして あずけられた\\lポケモンが よろこぶ ようにする\n\nつづきを よみますか？",
     "translated": "标记宝可梦可以让箱子\\n更整洁有序，并且可以\\p更换箱子的标签纸，让\\n被寄存的宝可梦感到开\\p心。继续阅读吗？"
+  },
+  {
+    "status": 200,
+    "original": "ポケモンアイコンセット",
+    "translated": "宝可梦图标设置"
   },
   {
     "status": 200,
@@ -52628,6 +55909,11 @@
     "status": 200,
     "original": "ポケモンボックス",
     "translated": "宝可梦盒"
+  },
+  {
+    "status": 200,
+    "original": "ポケモンリストへ",
+    "translated": "前往宝可梦列表"
   },
   {
     "status": 200,
@@ -53001,6 +56287,11 @@
   },
   {
     "status": 200,
+    "original": "ポロックを たくさん あたえて",
+    "translated": "会喂很多宝可方块"
+  },
+  {
+    "status": 200,
     "original": "ポロックを つかうと いつもより\nちょっぴり にげにくく なるみたい\n\nだから にげにくい ポケモンに つかっても\nあんまり いみが ないかもね",
     "translated": "使用宝可方块好像比平\\n时\\p稍微不容易逃跑一点\\p所以对本来就容易抓的\\n宝可梦用的话可能没什\\p么意义呢"
   },
@@ -53093,6 +56384,11 @@
     "status": 200,
     "original": "マイペースで じゆうきままな くらしを このむ。\nきのむくまま エサを たべたり ねむったり\nしているので １にちの リズムが バラバラだ。",
     "translated": "喜欢按照自己的节奏自\\n由随意的生活。随心所\\p欲地吃东西睡觉，所以\\n一天的节奏很混乱。"
+  },
+  {
+    "status": 200,
+    "original": "マオウくん",
+    "translated": "魔王君"
   },
   {
     "status": 200,
@@ -53476,6 +56772,11 @@
   },
   {
     "status": 200,
+    "original": "マッスグ",
+    "translated": "玛斯古"
+  },
+  {
+    "status": 200,
     "original": "マッスグマ",
     "translated": "直冲熊"
   },
@@ -53706,6 +57007,11 @@
   },
   {
     "status": 200,
+    "original": "マホとナホ",
+    "translated": "真穗和菜穗"
+  },
+  {
+    "status": 200,
     "original": "マホイップ",
     "translated": "霜奶仙"
   },
@@ -53913,6 +57219,11 @@
     "status": 200,
     "original": "マラカッチ",
     "translated": "沙铃仙人掌"
+  },
+  {
+    "status": 200,
+    "original": "マラソンは じぶんとの",
+    "translated": "马拉松就是与自己的"
   },
   {
     "status": 200,
@@ -54263,6 +57574,11 @@
     "status": 200,
     "original": "ミカ",
     "translated": "美香"
+  },
+  {
+    "status": 200,
+    "original": "ミカリン",
+    "translated": "米卡琳"
   },
   {
     "status": 200,
@@ -55351,6 +58667,11 @@
   },
   {
     "status": 200,
+    "original": "メッセージ",
+    "translated": "讯息"
+  },
+  {
+    "status": 200,
     "original": "メッセージを つくろう！",
     "translated": "来制作信息吧！"
   },
@@ -55418,6 +58739,11 @@
     "status": 200,
     "original": "メルメタル",
     "translated": "美录梅塔"
+  },
+  {
+    "status": 200,
+    "original": "メルメル",
+    "translated": "梅露梅露"
   },
   {
     "status": 200,
@@ -55601,6 +58927,11 @@
   },
   {
     "status": 200,
+    "original": "モノが みえてしまうの‥‥",
+    "translated": "总能看见些什么……"
+  },
+  {
+    "status": 200,
     "original": "モノズ",
     "translated": "单首龙"
   },
@@ -55608,6 +58939,11 @@
     "status": 200,
     "original": "モノマネ だいすきな ひとが\nあつまって つくった モノマネサークル！\n\nであった そのとき\nしょうぶが はじまる！",
     "translated": "喜欢模仿的人\\n聚集在一起创建的模仿\\p俱乐部！\\p相遇之时，对战开始！"
+  },
+  {
+    "status": 200,
+    "original": "モモちゃん",
+    "translated": "桃桃酱"
   },
   {
     "status": 200,
@@ -55711,6 +59047,16 @@
   },
   {
     "status": 200,
+    "original": "モーリン",
+    "translated": "莫琳"
+  },
+  {
+    "status": 200,
+    "original": "モーレツ",
+    "translated": "猛烈无比"
+  },
+  {
+    "status": 200,
     "original": "ヤエコ",
     "translated": "八重子"
   },
@@ -55748,6 +59094,11 @@
     "status": 200,
     "original": "ヤジロンドール",
     "translated": "天秤偶玩偶"
+  },
+  {
+    "status": 200,
+    "original": "ヤジロー",
+    "translated": "弥次郎"
   },
   {
     "status": 200,
@@ -55908,6 +59259,10 @@
     "status": 200,
     "original": "ヤーコンロード",
     "translated": "菊老大之路"
+  },
+  {
+    "status": 404,
+    "original": "ユいタくスつＫねｙや９わサぐギぞäぴ「エノタ"
   },
   {
     "status": 200,
@@ -56096,6 +59451,11 @@
   },
   {
     "status": 200,
+    "original": "ユカリ",
+    "translated": "由香里"
+  },
+  {
+    "status": 200,
     "original": "ユキ『どーして そんなに つよいの？\nあたちたち たたかって まけたの はじめて！",
     "translated": "ユキ：为什么你们这么强？\\n我们战斗输掉还是第一次！"
   },
@@ -56138,6 +59498,11 @@
     "status": 200,
     "original": "ユキハミ",
     "translated": "雪吞虫"
+  },
+  {
+    "status": 200,
+    "original": "ユキポン",
+    "translated": "由纪朋"
   },
   {
     "status": 200,
@@ -56286,6 +59651,11 @@
   },
   {
     "status": 200,
+    "original": "ヨシナリ",
+    "translated": "义成"
+  },
+  {
+    "status": 200,
     "original": "ヨシノシティ",
     "translated": "吉花市"
   },
@@ -56391,6 +59761,11 @@
   },
   {
     "status": 200,
+    "original": "ライガン",
+    "translated": "莱甘"
+  },
+  {
+    "status": 200,
     "original": "ライコウ",
     "translated": "雷公"
   },
@@ -56448,6 +59823,11 @@
     "status": 200,
     "original": "ライドギア",
     "translated": "骑行装置"
+  },
+  {
+    "status": 200,
+    "original": "ライバル",
+    "translated": "劲敌"
   },
   {
     "status": 200,
@@ -56586,6 +59966,11 @@
   },
   {
     "status": 200,
+    "original": "ラビビン",
+    "translated": "拉比宾"
+  },
+  {
+    "status": 200,
     "original": "ラビフット",
     "translated": "腾蹴小将"
   },
@@ -56608,6 +59993,11 @@
     "status": 200,
     "original": "ラブトロス",
     "translated": "眷恋云"
+  },
+  {
+    "status": 200,
+    "original": "ラブラブ ポケモン！",
+    "translated": "相亲相爱的宝可梦！"
   },
   {
     "status": 200,
@@ -57014,6 +60404,11 @@
   },
   {
     "status": 200,
+    "original": "リョウコ",
+    "translated": "凉子"
+  },
+  {
+    "status": 200,
     "original": "リョウタ",
     "translated": "亮太"
   },
@@ -57066,6 +60461,11 @@
     "status": 200,
     "original": "リーシャン",
     "translated": "铃铛响"
+  },
+  {
+    "status": 200,
+    "original": "リーダー",
+    "translated": "队长"
   },
   {
     "status": 200,
@@ -57529,6 +60929,11 @@
   },
   {
     "status": 200,
+    "original": "レッツラゴー",
+    "translated": "冲呀出发"
+  },
+  {
+    "status": 200,
     "original": "レッドカード",
     "translated": "红牌"
   },
@@ -57629,6 +61034,11 @@
   },
   {
     "status": 200,
+    "original": "レポートが こうしんされました！\n\nこれいじょうレポートが かききれないので\n\nバックアップカートリッジを\nこうかんしてください！\n\nくわしくは にんてんどう サービスセンター まで\nおといあわせ ください",
+    "translated": "记录已更新！\\p由于无法再写入更多记录\\p请更换备份卡带！\\p详情请咨询任天堂服务中心"
+  },
+  {
+    "status": 200,
     "original": "レポートが せいかくに かかれていないので\nそのまえのレポートを よみます！",
     "translated": "由于当前报告未正确保\\n存{\\p}将读取上一份报告！"
   },
@@ -57656,6 +61066,11 @@
     "status": 200,
     "original": "レポートの かきこみは しゅうりょうしました\n\\CC0102『Ａボタンを おしてください』",
     "translated": "记录写入完毕\n\\CC0102『请按下Ａ键』"
+  },
+  {
+    "status": 200,
+    "original": "レポートの こうしんは しっぱいしました！\n\nバックアップカートリッジを\nこうかんしてください！\n\nくわしくは にんてんどう サービスセンター まで\nおといあわせ ください",
+    "translated": "报告的更新失败了！\\p请更换备份卡带！\\p详情请咨询任天堂服务中心"
   },
   {
     "status": 200,
@@ -57706,6 +61121,11 @@
     "status": 200,
     "original": "レンズケース",
     "translated": "隐形眼镜盒"
+  },
+  {
+    "status": 200,
+    "original": "レンタル",
+    "translated": "租借"
   },
   {
     "status": 200,
@@ -57884,6 +61304,16 @@
   },
   {
     "status": 200,
+    "original": "ロードできました",
+    "translated": "读取成功"
+  },
+  {
+    "status": 200,
+    "original": "ロードできませんでした",
+    "translated": "无法读取"
+  },
+  {
+    "status": 200,
     "original": "ローブシン",
     "translated": "修建老匠"
   },
@@ -58046,6 +61476,11 @@
     "status": 200,
     "original": "ワールズエンドフォール",
     "translated": "毁天灭地巨岩坠"
+  },
+  {
+    "status": 200,
+    "original": "ワールド",
+    "translated": "世界"
   },
   {
     "status": 200,
@@ -60159,6 +63594,11 @@
   },
   {
     "status": 200,
+    "original": "５０まい  １０００円",
+    "translated": "50张 1000日元"
+  },
+  {
+    "status": 200,
     "original": "５００まい １００００円",
     "translated": "５００枚 １００００元"
   },
@@ -60263,6 +63703,10 @@
     "translated": "99次以上"
   },
   {
+    "status": 404,
+    "original": "：：しィ：ぃすャぃ：せョぃぃくギえ   ざＳょくはらはらｌロゅく？ぉひく    ．ぉひくあつ くブらブら７レゅく？ぉひく    ．ぉひく８ギきくホぇ  メイüセロラ"
+  },
+  {
     "status": 200,
     "original": "？？？？？ポケモン",
     "translated": "？？？？？宝可梦"
@@ -60289,6 +63733,11 @@
   },
   {
     "status": 200,
+    "original": "Ａボタンを おしてください",
+    "translated": "请按A键"
+  },
+  {
+    "status": 200,
     "original": "ＡＲシステム",
     "translated": "ＡＲ系统"
   },
@@ -60306,6 +63755,11 @@
     "status": 200,
     "original": "ＤＤラリアット",
     "translated": "ＤＤ金勾臂"
+  },
+  {
+    "status": 200,
+    "original": "ＤＭＡ ＯＶＥＲ\nＤＭＡてんそう\nリクエストテーブルが\nオーバーしました",
+    "translated": "DMA OVER\\nDMA传送\\p请求表\\n溢出了"
   },
   {
     "status": 200,
@@ -60371,6 +63825,16 @@
     "status": 200,
     "original": "Ｎの城",
     "translated": "Ｎ的城堡"
+  },
+  {
+    "status": 200,
+    "original": "ＯＢＪテキストセット",
+    "translated": "OBJ文本设置"
+  },
+  {
+    "status": 200,
+    "original": "ＯＢＪテキストＡＤＤ",
+    "translated": "OBJ文本添加"
   },
   {
     "status": 200,
@@ -60466,6 +63930,10 @@
     "status": 200,
     "original": "Ｖジェネレート",
     "translated": "Ｖ熱焰"
+  },
+  {
+    "status": 404,
+    "original": "ＺパほくＢネほく た」な」な「なＲパほく<F8>パほく    ．ぉひくぐャえくつァつァつァ"
   },
   {
     "status": 200,

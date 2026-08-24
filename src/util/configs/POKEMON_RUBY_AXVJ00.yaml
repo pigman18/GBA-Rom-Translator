@@ -607,3 +607,11 @@ gdb:
 - name: DrawMapNamePopup
   address: '0x0809F654'
   description: 地图名弹窗绘制入口（无 handler，仅通用日志）
+- name: InitWindowTileData
+  address: '0x08002A50'
+  description: 分区器入口（JP 与美版同址；r0=win/template 待运行时定身份, r1=startOffset）——字库预渲染+分区链输入
+  default: false
+- name: InitWindowTileDataRet
+  address: '0x08002AEA'
+  description: 分区器出口 pop{r4-r6} 处（r0=返回值=下一空闲 offset，r4=入口 r0）——与入口成对还原分区链
+  default: false

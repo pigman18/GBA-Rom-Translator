@@ -707,6 +707,57 @@ def _on_render_bold(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -
     ctx.log(f"  文本: {data[:48].hex(' ')} 内容={ctx.text_of(data)[:40]!r}")
 
 
+@handler("InitWindowTileData")
+def _on_iwtd(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """分区器入口（JP 0x08002A50，与美版同址；fontNum 跳表 7 项实证）。
+    r0=win 或 template（运行时定身份），r1=startOffset。
+    记录分区链输入 + r0 两种解释的内存现场。"""
+    r0 = regs.get("r0", 0)
+    off = regs.get("r1", 0) & 0xFFFF
+    r2 = regs.get("r2", 0) & 0xFFFFFFFF
+    r3 = regs.get("r3", 0) & 0xFF
+    if not ctx._hit(("iwtd", r0, off)):
+        return
+    ctx.log(
+        f"\n[IWTD] r0=0x{r0:08X} startOffset(r1)=0x{off:04X}"
+        f" r2=0x{r2:08X} r3=0x{r3:02X}"
+    )
+    b = _read_mem(gdb, r0, 0x14)
+    if not b:
+        ctx.log("  （r0 内存读取失败）")
+        return
+    ctx.log(
+        f"  [r0+8/9/A/B] font?=0x{b[8]:02X} textMode?=0x{b[9]:02X}"
+        f" +A=0x{b[0x0A]:02X} +B=0x{b[0x0B]:02X}"
+    )
+    ctx.log(f"  [r0+0xC..F] = 0x{u32(b, 0x0C):08X}（tileData 候选）")
+    tpl_ptr = u32(b, 0x00)
+    if 0x02000000 <= tpl_ptr < 0x03008000 or 0x08000000 <= tpl_ptr < 0x08800000:
+        tplt = _read_mem(gdb, tpl_ptr, 0x14)
+        if len(tplt) == 0x14:
+            ctx.log(
+                f"  [按win解释] 模板@0x{tpl_ptr:08X}: charBase={tplt[1]} font={tplt[8]}"
+                f" textMode={tplt[9]} spacing={tplt[10]}"
+                f" tileData=0x{u32(tplt, 0x0C):08X} tilemap=0x{u32(tplt, 0x10):08X}"
+            )
+    if len(b) >= 0x14:
+        ctx.log(
+            f"  [按template解释 r0] charBase={b[1]} font={b[8]} textMode={b[9]}"
+            f" spacing={b[10]} tileData=0x{u32(b, 0x0C):08X} tilemap=0x{u32(b, 0x10):08X}"
+        )
+
+
+@handler("InitWindowTileDataRet")
+def _on_iwtd_ret(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """分区器出口（JP 0x08002AEA pop{r4-r6} 前）：r0=返回值=下一空闲 offset，
+    r4=入口 r0。与入口成对即可还原场景分区链。"""
+    ret = regs.get("r0", 0) & 0xFFFFFFFF
+    r4 = regs.get("r4", 0)
+    if not ctx._hit(("iwtret", r4, ret)):
+        return
+    ctx.log(f"\n[IWTD-Ret] r0(下一空闲)=0x{ret:08X} r4=0x{r4:08X}")
+
+
 @handler("GetGlyphTilePointers")
 def _on_ggtp(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
     """美版 GetGlyphTilePointers(fontNum, language, glyph, &upper, &lower)。"""

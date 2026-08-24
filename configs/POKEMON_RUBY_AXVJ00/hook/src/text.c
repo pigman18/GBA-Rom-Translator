@@ -1,5 +1,5 @@
 ﻿/* =====================================================================================
- * text_ruby_jp.c — AXVJ 日版打印引擎（text_ruby_jp 全面接管版 v2）
+ * text.c — AXVJ 日版打印引擎（全面接管版）
  *
  * 架构：严格 pokeruby 数据流 + 日版语义（设计文档 docs/ruby_jp_design.md）：
  *   取码 → GetGlyph（唯一取址，逐字形字体属性）→ sPrintGlyphFuncs[textMode]
@@ -16,9 +16,13 @@
  *   常规（fn3 等）= FontChsNormal 12px；队伍等 fn4 = FontChsSmall 8px 沉底小字
  *   （与原生 font4 8×8 混排节奏一致）；同流混排由像素制光标自然处理。
  *
- * 订钉（不变）：P01@0x032F8→EngineEntry→PrintNextChar；
- *   P02 Hook3 / P05 箭头 / P04 地名 居维持；entry.s 跳板不变。
- * 本文件取代 text_jp2chs.c（后者冻结为备份，移出构建）。
+ * hook 面（2026-08-24 收敛定案）：本文件有且只有一个 ROM hook——
+ *   P01@0x032F8 → entry.s EngineEntry → PrintNextChar。
+ *   除 PrintNextChar 与导出工具 GetStringWidth_PCS 外全部 static（内部专用）：
+ *     Hook3/P02 已移除（GetGlyph 内部 static GetGlyphTilePointers 承担）；
+ *     P05 已折入 static DrawInitialDownArrow（pokeruby text.c 同名）；
+ *     P04 地名居中独立为 src/map_name_popup/（GetStringWidth_PCS 由本文件提供）。
+ * 本文件取代 text_jp2chs.c 及旧多文件引擎（归档于 src/bak/text/，移出构建）。
  * ===================================================================================== */
 #include "game.h"
 
@@ -62,10 +66,6 @@ enum {
 
 #define WIN_BUFFER_PTR   0x20
 
-#define MAPNAME_FIELD_PX    80u
-#define MAPNAME_BUF_BYTES   20
-#define MAPNAME_CELL_PX      8u
-
 #define GLYPH_SRC_CHS 0x01000000u
 
 struct ChsGlyphTiles {
@@ -83,11 +83,12 @@ static void PrintGlyph_TextMode2(
     TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth);
 static void PrintGlyph_Unknown(
     TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth);
-void PrintGlyph_TextMode1(
+static void PrintGlyph_TextMode1(
     TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth);
 int  PrintNextChar(TextPrinter *win);
-void PrintGlyph(TextPrinter *win, uint32_t gidx, unsigned glyphWidth);
-int  DrawGlyph(TextPrinter *win, uint32_t cur_char);
+static int  DrawMenuCursorEF(TextPrinter *win);
+static void PrintGlyph(TextPrinter *win, uint32_t gidx, unsigned glyphWidth);
+static int  DrawGlyph(TextPrinter *win, uint32_t cur_char);
 
 /* =====================================================================
  * §2 协议原语
@@ -123,7 +124,7 @@ static uint8_t pitch_capture_base_tx(TextPrinter *win)
     return win_u8(win, WIN_CURSOR_TILE_X);
 }
 
-volatile struct ChineseTileState *chs_bind_pitch_slot(TextPrinter *win, int *out_is_new)
+static volatile struct ChineseTileState *chs_bind_pitch_slot(TextPrinter *win, int *out_is_new)
 {
     volatile struct ChsPitchCtrl *ctrl =
         (volatile struct ChsPitchCtrl *)ADDR_CHS_PITCH_CTRL;
@@ -178,7 +179,7 @@ volatile struct ChineseTileState *chs_bind_pitch_slot(TextPrinter *win, int *out
     return &slots[best];
 }
 
-void Chinese_PitchReset(TextPrinter *win)
+static void Chinese_PitchReset(TextPrinter *win)
 {
     volatile struct ChineseTileState *st = chs_bind_pitch_slot(win, 0);
     st->chs_px = 0;
@@ -202,7 +203,7 @@ static void copy_tile32(void *dst_vram, const void *src_iwram)
     d[7] = s[7];
 }
 
-uint8_t *vram_tile(TextPrinter *win, uint16_t tile)
+static uint8_t *vram_tile(TextPrinter *win, uint16_t tile)
 {
     uint8_t *tpl = win_template(win);
     uint8_t *tile_data = (uint8_t *)(uintptr_t)win_u32(tpl, 0x0C);
@@ -229,21 +230,39 @@ static void put_px(uint8_t *tile, unsigned x, unsigned y, uint8_t ink)
 /* =====================================================================
  * §5 GetGlyph —— 字形源统一解析（每字形字体属性）
  * ===================================================================== */
+
+/* CHS 汉库字模取址（内部专用；旧 Hook3/P02 外部分发已移除）。
+ * glyph：低 15 位 = 字模号（CHS_GLYPH_IDX_MASK），bit15 = 右半（TR/BR），
+ * 其余标志位（GLYPH_SRC_CHS 等）被掩码忽略。返回一对 32B tile：
+ * 左半 → TL/BL，右半（+64B）→ TR/BR。队伍名等 fn4 窗走 Small 库。 */
+static void GetGlyphTilePointers(uint8_t fontNum, uint32_t glyph,
+                                 uint8_t **upperTilePtr, uint8_t **lowerTilePtr)
+{
+    /* 队伍名等 fn4 窗 = FontChsSmall；常规 = FontChsNormal（与 GetGlyph 同源） */
+    const uint8_t *base = (fontNum == 4u) ? (const uint8_t *)ADDR_FONT_CHS_SMALL
+                                          : (const uint8_t *)ADDR_FONT_CHS_NORMAL;
+
+    base += (uint32_t)(glyph & CHS_GLYPH_IDX_MASK) << 7;
+    if (glyph & CHS_GLYPH_HALF_BIT)
+        base += 64u;
+    *upperTilePtr = (uint8_t *)base;
+    *lowerTilePtr = (uint8_t *)base + 32u;
+}
+
 static int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth)
 {
     uint8_t fontNum = win_u8(win, WIN_FONTNUM_REAL);
-    /* 队伍名等 fn4 窗 = FontChsSmall 8px 沉底小字；常规 = FontChsNormal 12px */
-    const uint8_t *chsBase = (fontNum == 4u) ? (const uint8_t *)ADDR_FONT_CHS_SMALL
-                                             : (const uint8_t *)ADDR_FONT_CHS_NORMAL;
 
-    /* ---- CHS 汉库（128B 容器同构，仅基址不同） ---- */
+    /* ---- CHS 汉库（128B 容器同构：TL,BL | TR,BR 各 64B） ---- */
     if (code & GLYPH_SRC_CHS) {
-        const uint8_t *base = chsBase
-            + ((uint32_t)(code & CHS_GLYPH_IDX_MASK) << 7);
-        copy_tile32(out128 + 0x00, base + 0x00);
-        copy_tile32(out128 + 0x20, base + 0x20);
-        copy_tile32(out128 + 0x40, base + 0x40);
-        copy_tile32(out128 + 0x60, base + 0x60);
+        uint8_t *up;
+        uint8_t *lo;
+        GetGlyphTilePointers(fontNum, code, &up, &lo);
+        copy_tile32(out128 + 0x00, up);
+        copy_tile32(out128 + 0x20, lo);
+        GetGlyphTilePointers(fontNum, code | CHS_GLYPH_HALF_BIT, &up, &lo);
+        copy_tile32(out128 + 0x40, up);
+        copy_tile32(out128 + 0x60, lo);
         *outWidth = (fontNum == 4u) ? 8u : 12u;
         return 1;
     }
@@ -300,7 +319,7 @@ static int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *o
 /* =====================================================================
  * §6 渲染件：单 tile 合成（归一化源 → 窗口 C/E/D 终色）
  * ===================================================================== */
-void DrawGlyphTile(
+static void DrawGlyphTile_ShadowedFont(
     TextPrinter *win, struct GlyphTileInfo *info, uint8_t *spillTile)
 {
     uint32_t temp_words[8];
@@ -376,7 +395,7 @@ void DrawGlyphTile(
  * §6b tm0 Linear 核心（TILE_OFF 连续光栅；floor=4；无 UI 重映射——
  * tm0 场景（对话 0x90 起/详情页 0x290 起）实测不与保留带重叠）
  * ===================================================================== */
-static uint16_t GetCursorTileNum_Linear(
+static uint16_t GetCursorTileNum(
     TextPrinter *win, unsigned xOffset, unsigned yOffset)
 {
     uint16_t tile_base = win_u16(win, WIN_TILE_BASE);
@@ -384,10 +403,13 @@ static uint16_t GetCursorTileNum_Linear(
     return (uint16_t)(tile_base + off + 2u * xOffset + yOffset);
 }
 
-static void map_at(TextPrinter *win, uint8_t tx, uint16_t abs_u, uint16_t abs_l)
+/* pokeruby WriteGlyphTilemap：cursor 格落一对表项（upperTileNum/lowerTileNum）；
+ * tx 为像素制游标折算出的 tile 列（CHS 相位槽承载，原生无此参）。 */
+static void WriteGlyphTilemap(TextPrinter *win, uint8_t tx, uint16_t upperTileNum,
+                              uint16_t lowerTileNum)
 {
     win_set_u8(win, WIN_CURSOR_TILE_X, tx);
-    chs_update_tilemap(win, abs_u, abs_l);
+    chs_update_tilemap(win, upperTileNum, lowerTileNum);
 }
 
 static void DrawGlyphTiles(
@@ -418,23 +440,23 @@ static void DrawGlyphTiles(
 
     /* ---- 第一趟：宽 8（TL/BL，startPixel>0 时 spill 到右邻） ---- */
     off = win_u16(win, WIN_TILE_OFFSET);
-    up0 = GetCursorTileNum_Linear(win, 0, 0);
-    lo0 = GetCursorTileNum_Linear(win, 0, 1);
+    up0 = GetCursorTileNum(win, 0, 0);
+    lo0 = GetCursorTileNum(win, 0, 1);
     info.startPixel = (uint8_t)startPixel;
     info.width = 8;
     info.src = tiles->tl;
     info.dest = (uint32_t *)(uintptr_t)vram_tile(win, up0);
     if (startPixel > 0u)
-        DrawGlyphTile(win, &info, (uint8_t *)(uintptr_t)vram_tile(win, up0 + 2));
+        DrawGlyphTile_ShadowedFont(win, &info, (uint8_t *)(uintptr_t)vram_tile(win, up0 + 2));
     else
-        DrawGlyphTile(win, &info, 0);
+        DrawGlyphTile_ShadowedFont(win, &info, 0);
     info.src = tiles->bl;
     info.dest = (uint32_t *)(uintptr_t)vram_tile(win, lo0);
     if (startPixel > 0u)
-        DrawGlyphTile(win, &info, (uint8_t *)(uintptr_t)vram_tile(win, lo0 + 2));
+        DrawGlyphTile_ShadowedFont(win, &info, (uint8_t *)(uintptr_t)vram_tile(win, lo0 + 2));
     else
-        DrawGlyphTile(win, &info, 0);
-    map_at(win, map_tx, up0, lo0);
+        DrawGlyphTile_ShadowedFont(win, &info, 0);
+    WriteGlyphTilemap(win, map_tx, up0, lo0);
     win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
 
     st->chs_px = (uint16_t)(st->chs_px + 8u);
@@ -451,17 +473,17 @@ static void DrawGlyphTiles(
 
     /* ---- 第二趟：宽 w2（TR/BR，整列对齐） ---- */
     off = win_u16(win, WIN_TILE_OFFSET);
-    up0 = GetCursorTileNum_Linear(win, 0, 0);
-    lo0 = GetCursorTileNum_Linear(win, 0, 1);
+    up0 = GetCursorTileNum(win, 0, 0);
+    lo0 = GetCursorTileNum(win, 0, 1);
     info.startPixel = 0;
     info.width = (uint8_t)w2;
     info.src = tiles->tr;
     info.dest = (uint32_t *)(uintptr_t)vram_tile(win, up0);
-    DrawGlyphTile(win, &info, 0);
+    DrawGlyphTile_ShadowedFont(win, &info, 0);
     info.src = tiles->br;
     info.dest = (uint32_t *)(uintptr_t)vram_tile(win, lo0);
-    DrawGlyphTile(win, &info, 0);
-    map_at(win, map_tx, up0, lo0);
+    DrawGlyphTile_ShadowedFont(win, &info, 0);
+    WriteGlyphTilemap(win, map_tx, up0, lo0);
     win_set_u16(win, WIN_TILE_OFFSET,
                 (uint16_t)(off + ((startPixel == 0u) ? 2u : 0u)));
 
@@ -477,27 +499,27 @@ static void DrawGlyphTiles(
  * ===================================================================== */
 typedef void (*WriteGlyphTilemapFunc)(TextPrinter *, uint16_t, uint16_t);
 
-static void WriteTilemap_Unknown(TextPrinter *win, uint16_t up, uint16_t lo)
+static void WriteGlyphTilemap_Unknown(TextPrinter *win, uint16_t up, uint16_t lo)
 {
     (void)win;
     (void)up;
     (void)lo;    /* UNKNOWN：不写（缺字排查信号） */
 }
 
-static void WriteTilemap_Pair(TextPrinter *win, uint16_t up, uint16_t lo)
+static void WriteGlyphTilemap_Font3_Font4(TextPrinter *win, uint16_t up, uint16_t lo)
 {
     chs_update_tilemap(win, up, lo);
 }
 
 static const WriteGlyphTilemapFunc sWriteGlyphTilemapFuncs[8] = {
-    WriteTilemap_Unknown,   /* 0：未观测 */
-    WriteTilemap_Unknown,   /* 1：未观测 */
-    WriteTilemap_Unknown,   /* 2：未观测 */
-    WriteTilemap_Pair,      /* 3：对话/菜单/详情页（gdb 实证） */
-    WriteTilemap_Pair,      /* 4：队伍名（gdb 实证） */
-    WriteTilemap_Unknown,   /* 5 */
-    WriteTilemap_Unknown,   /* 6 */
-    WriteTilemap_Unknown,   /* 7 */
+    WriteGlyphTilemap_Unknown,   /* 0：未观测 */
+    WriteGlyphTilemap_Unknown,   /* 1：未观测 */
+    WriteGlyphTilemap_Unknown,   /* 2：未观测 */
+    WriteGlyphTilemap_Font3_Font4,   /* 3：对话/菜单/详情页（gdb 实证） */
+    WriteGlyphTilemap_Font3_Font4,   /* 4：队伍名（gdb 实证） */
+    WriteGlyphTilemap_Unknown,   /* 5 */
+    WriteGlyphTilemap_Unknown,   /* 6 */
+    WriteGlyphTilemap_Unknown,   /* 7 */
 };
 
 /* =====================================================================
@@ -576,7 +598,7 @@ static void PrintGlyph_TextMode0(
  * 不读写 TILE_OFFSET（tm0 专属状态，行间隔离）。
  * 两趟：第一趟 TL/BL 宽 8@startPixel（spill → 保留区第 2 对），
  *       第二趟 TR/BR 宽 w-8 整列对齐。 */
-void PrintGlyph_TextMode1(
+static void PrintGlyph_TextMode1(
     TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth)
 {
     volatile struct ChineseTileState *st;
@@ -618,10 +640,10 @@ void PrintGlyph_TextMode1(
     /* 第一趟：TL/BL（跨列 spill 到保留区第 2 对） */
     info.src = tiles->tl;
     info.dest = (uint32_t *)(uintptr_t)vram_tile(win, t);
-    DrawGlyphTile(win, &info, w2 ? (uint8_t *)(uintptr_t)vram_tile(win, t + 2) : 0);
+    DrawGlyphTile_ShadowedFont(win, &info, w2 ? (uint8_t *)(uintptr_t)vram_tile(win, t + 2) : 0);
     info.src = tiles->bl;
     info.dest = (uint32_t *)(uintptr_t)vram_tile(win, t + 1);
-    DrawGlyphTile(win, &info, w2 ? (uint8_t *)(uintptr_t)vram_tile(win, t + 3) : 0);
+    DrawGlyphTile_ShadowedFont(win, &info, w2 ? (uint8_t *)(uintptr_t)vram_tile(win, t + 3) : 0);
 
     /* 表项：首列 cursor 格 */
     win_set_u8(win, WIN_CURSOR_TILE_X,
@@ -634,10 +656,10 @@ void PrintGlyph_TextMode1(
         info.width = (uint8_t)w2;
         info.src = tiles->tr;
         info.dest = (uint32_t *)(uintptr_t)vram_tile(win, t + 2);
-        DrawGlyphTile(win, &info, 0);
+        DrawGlyphTile_ShadowedFont(win, &info, 0);
         info.src = tiles->br;
         info.dest = (uint32_t *)(uintptr_t)vram_tile(win, t + 3);
-        DrawGlyphTile(win, &info, 0);
+        DrawGlyphTile_ShadowedFont(win, &info, 0);
         /* 表项：溢出列 cursor+1 格 */
         win_set_u8(win, WIN_CURSOR_TILE_X,
                    (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
@@ -690,34 +712,9 @@ static const PrintGlyphFunc sPrintGlyphFuncs[8] = {
 #define PRINT_GLYPH_MODES 8u
 
 /* =====================================================================
- * §10 字库取址分发（Hook3 ABI，entry.s 依赖）
- * ===================================================================== */
-void GetGlyphBankTilePointers(uint32_t fontNum, uint32_t glyph,
-                              uint8_t **upperTilePtr, uint8_t **lowerTilePtr)
-{
-    uint32_t gidx = glyph & CHS_GLYPH_IDX_MASK;
-    uint8_t *base = (uint8_t *)(ADDR_FONT_CHS_NORMAL + (gidx << 7));
-
-    (void)fontNum;
-    if (glyph & CHS_GLYPH_HALF_BIT)
-        base += 64u;
-    *upperTilePtr = base;
-    *lowerTilePtr = base + 32u;
-}
-
-void GetGlyphTilePointers(uint32_t fontNum, uint32_t glyph,
-                            uint8_t **upperTilePtr, uint8_t **lowerTilePtr)
-{
-    if (glyph & CHS_GLYPH_HALF_BIT)
-        GetGlyphBankTilePointers(fontNum, glyph, upperTilePtr, lowerTilePtr);
-    else
-        GetGlyphTilePointers_Orig(fontNum, glyph, upperTilePtr, lowerTilePtr);
-}
-
-/* =====================================================================
  * §11 单字节分发（GetGlyph 薄壳）
  * ===================================================================== */
-int DrawGlyph(TextPrinter *win, uint32_t cur_char)
+static int DrawGlyph(TextPrinter *win, uint32_t cur_char)
 {
     uint8_t buf[128];
     uint8_t width = 8;
@@ -740,7 +737,7 @@ int DrawGlyph(TextPrinter *win, uint32_t cur_char)
 
 /* F9 汉字：gidx 经 GetGlyph（CHS 汉库，宽度随 fontNum 8/12）产出后进分发。
  * glyphWidth 形参仅为兼容旧签名——实际宽度以 GetGlyph 返回为准。 */
-void PrintGlyph(TextPrinter *win, uint32_t gidx, unsigned glyphWidth)
+static void PrintGlyph(TextPrinter *win, uint32_t gidx, unsigned glyphWidth)
 {
     uint8_t buf[128];
     uint8_t width = 8;
@@ -1039,8 +1036,53 @@ typedef void (*axv_fn1)(uint32_t a0);
 static void axv_play_bgm(uint16_t id) { ((axv_fn1)(ADDR_PLAY_BGM | 1u))(id); }
 static void axv_play_se(uint16_t id)  { ((axv_fn1)(ADDR_PLAY_SE | 1u))(id); }
 typedef void (*axv_win_fn)(TextPrinter *);
-static void axv_draw_down_arrow(TextPrinter *win) { ((axv_win_fn)(ADDR_DRAW_INITIAL_DOWN_ARROW | 1u))(win); }
 static void axv_clear_window(TextPrinter *win)    { ((axv_win_fn)(ADDR_TEXT_CLEAR_WINDOW | 1u))(win); }
+
+/* =====================================================================
+ * §14b 等 A 箭头前置同步（pokeruby text.c DrawInitialDownArrow 同名收敛）
+ * ---------------------------------------------------------------------
+ * 原 P05 补丁（0x08003F4C 桩 → WaitArrow_Prepare_Hook 跳板）折入本函数：
+ *   1) CHS 相位对齐：chs_px 折算 tile 列回写 CURSOR_TILE_X，半列相位
+ *      时 TILE_OFFSET +=2（防 FA/FB 翻页双▼，B04）；
+ *   2) downArrowCounter 清零（原跳板 strh [r0,#6]，见 game.h
+ *      WIN_DOWN_ARROW_COUNTER）；
+ *   3) 尾跳原版主体延续点 DrawInitialDownArrow_Body@0x08003DAD——
+ *      与旧跳板逐语义一致（跳过原生序言，延续点自含所需状态）。
+ * ===================================================================== */
+static void DrawInitialDownArrow(TextPrinter *win)
+{
+    volatile struct ChineseTileState *st;
+    uint16_t cols;
+    uint16_t off;
+    uint8_t want;
+    uint8_t cur_tx;
+
+    if (!win)
+        return;
+
+    st = chs_bind_pitch_slot(win, 0);
+    if (st->chs_px) {
+        cols = (uint16_t)((st->chs_px + 7u) >> 3);
+        want = (uint8_t)(st->base_tx + cols);
+        cur_tx = win_u8(win, WIN_CURSOR_TILE_X);
+
+        if (cur_tx == 0u && want > 0u) {
+            off = win_u16(win, WIN_TILE_OFFSET);
+            if (st->chs_px & 7u)
+                win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
+            Chinese_PitchReset(win);
+        } else {
+            win_set_u8(win, WIN_CURSOR_TILE_X, want);
+            off = win_u16(win, WIN_TILE_OFFSET);
+            if (st->chs_px & 7u)
+                win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
+            Chinese_PitchReset(win);
+        }
+    }
+
+    win_set_u16(win, WIN_DOWN_ARROW_COUNTER, 0);
+    ((axv_win_fn)(ADDR_DRAW_INITIAL_DOWN_ARROW_BODY | 1u))(win);
+}
 
 static int HandleExtCtrlCode(TextPrinter *win)
 {
@@ -1156,11 +1198,11 @@ int PrintNextChar(TextPrinter *win)
     if (c >= PCS_CTRL_BASE) {
         switch (c) {
         case 0xFA:
-            axv_draw_down_arrow(win);
+            DrawInitialDownArrow(win);
             win_set_u16(win, WIN_STATE, AXV_STATE_WAIT_SCROLL);
             return 2;
         case 0xFB:
-            axv_draw_down_arrow(win);
+            DrawInitialDownArrow(win);
             win_set_u16(win, WIN_STATE, AXV_STATE_WAIT_CLEAR);
             return 2;
         case 0xFC:
@@ -1242,42 +1284,11 @@ int PrintNextChar(TextPrinter *win)
 }
 
 /* =====================================================================
- * §16 过渡出口（外部订钉依赖）
+ * §16 内部出口与导出工具
+ * （旧过渡出口 WaitArrow_Prepare 已折入 §14b DrawInitialDownArrow；
+ *   MapNamePopup_CalcLeftPx 迁至 src/map_name_popup/MapNamePopup_hook.c）
  * ===================================================================== */
-void WaitArrow_Prepare(TextPrinter *win)
-{
-    volatile struct ChineseTileState *st;
-    uint16_t cols;
-    uint16_t off;
-    uint8_t want;
-    uint8_t cur_tx;
-
-    if (!win)
-        return;
-    st = chs_bind_pitch_slot(win, 0);
-    if (!st->chs_px)
-        return;
-
-    cols = (uint16_t)((st->chs_px + 7u) >> 3);
-    want = (uint8_t)(st->base_tx + cols);
-    cur_tx = win_u8(win, WIN_CURSOR_TILE_X);
-
-    if (cur_tx == 0u && want > 0u) {
-        off = win_u16(win, WIN_TILE_OFFSET);
-        if (st->chs_px & 7u)
-            win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
-        Chinese_PitchReset(win);
-        return;
-    }
-
-    win_set_u8(win, WIN_CURSOR_TILE_X, want);
-    off = win_u16(win, WIN_TILE_OFFSET);
-    if (st->chs_px & 7u)
-        win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
-    Chinese_PitchReset(win);
-}
-
-int DrawMenuCursorEF(TextPrinter *win)
+static int DrawMenuCursorEF(TextPrinter *win)
 {
     uint8_t buf[128];
     uint8_t width = 8;
@@ -1301,24 +1312,14 @@ int DrawMenuCursorEF(TextPrinter *win)
     info.width = 8;
     info.dest = (uint32_t *)(uintptr_t)du;
     info.src = buf + 0x00;
-    DrawGlyphTile(win, &info, 0);
+    DrawGlyphTile_ShadowedFont(win, &info, 0);
     info.dest = (uint32_t *)(uintptr_t)dl;
     info.src = buf + 0x20;
-    DrawGlyphTile(win, &info, 0);
+    DrawGlyphTile_ShadowedFont(win, &info, 0);
     chs_update_tilemap(win, CHS_MENU_CURSOR_TILE, CHS_MENU_CURSOR_TILE_HI);
     win_set_u8(win, WIN_CURSOR_TILE_X,
                (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
     return 1;
-}
-
-uint32_t MapNamePopup_CalcLeftPx(const uint8_t *buf)
-{
-    uint32_t width_px = GetStringWidth_PCS(buf, MAPNAME_BUF_BYTES);
-
-    if (width_px == 0 || width_px >= MAPNAME_FIELD_PX)
-        return 0;
-    return (((MAPNAME_FIELD_PX - width_px) / 2u) + (MAPNAME_CELL_PX / 2u))
-           / MAPNAME_CELL_PX;
 }
 
 /* ---- CHS 文本流像素宽度 ---- */

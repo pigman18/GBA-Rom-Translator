@@ -1,9 +1,12 @@
-# text_ruby_jp.c 设计文档（text_jp2chs 重构案）
+# text.c 设计文档（text_jp2chs 重构案）
 
-> 状态：设计稿（未实施）
+> 状态：已实施并收敛（2026-08-24：只 hook PrintNextChar，见文末 §九）
 > 前置阅读：`docs/ruby_jp_en_compare.md`（美日对照）、`docs/ruby_jp2chs_bug_review.md`（旧引擎复盘）
-> 目标文件：`configs/POKEMON_RUBY_AXVJ00/hook/src/text_ruby_jp.c`（新建）
-> 旧文件 `text_jp2chs.c` 保留作对照备份，**移出构建**
+> 目标文件：`configs/POKEMON_RUBY_AXVJ00/hook/src/text.c`
+>   （原名 `text_ruby_jp.c`，2026-08-24 改名；引擎只 hook PrintNextChar，
+>    除 `PrintNextChar` 与导出工具 `GetStringWidth_PCS` 外全部 static）
+> 旧文件 `text_jp2chs.c` 及旧多文件引擎（原 `hook/src/text/`）归档于
+> `src/text_jp2chs.c` / `src/bak/text/`，**移出构建**
 
 ---
 
@@ -126,3 +129,18 @@ C 静态变量（BSS 陷阱，复盘 Bug0）。
 4. tm3 行（开始菜单网格）→ 菜单验证
 5. tm2 行（缓冲）→ 待 battle_interface 研究后
 6. 每步只开一个场景；分游戏（美/日原盘 + 成品）日志对照
+
+## 九、2026-08-24 收敛记录（hook 面 = 只有 PrintNextChar）
+
+| 项 | 定案 | 缘由 |
+|----|------|------|
+| hook 面 | 仅 P01（PrintNextChar 整函数替换） | 「从这个函数入口，全面接管日版文字打印」 |
+| Hook3/P02 | 移除（ROM 桩 + entry.s 跳板 + `GetGlyphTilePointers_*` 声明） | 引擎内部 `static GetGlyphTilePointers`（fontNum==4 → Small 库，bit15 分半）取代外部分发；顺带修复 `_C` 符号无定义的断链 |
+| P05 箭头同步 | 折入 `text.c static DrawInitialDownArrow`（pokeruby 同名），删跳板与桩 | FA/FB 触发点本就在 PrintNextChar 内；反汇编实证原生包装 0x08003F4C ≡ `win[6]=0 + 尾调 0x08003DAC`，折入版逐语义等价 |
+| P04 地名居中 | 保留，独立域 `src/map_name_popup/`（三件套）；`GetStringWidth_PCS` 仍由 text.c 导出 | 挂点在 DrawMapNamePopup，无法折入；移除会复活 >10B 地名野写 crash |
+| 目录 | `src/entry.s`、`src/hooks_origin.s` 上移与 text.c 同级；旧引擎归档 `src/bak/text/` | 命名规范 `{域}/{方法}_hook.c + entry.s + hooks_origin.s` |
+| 方法名对齐 pokeruby text.c | `GetCursorTileNum_Linear→GetCursorTileNum`、`map_at→WriteGlyphTilemap`、`WriteTilemap_Pair→WriteGlyphTilemap_Font3_Font4`、`WriteTilemap_Unknown→WriteGlyphTilemap_Unknown`、`DrawGlyphTile→DrawGlyphTile_ShadowedFont` | 与 `tools/pokeruby/src/text.c` 同名同族 |
+| 构建纪律 | game_syms 流式直出：无拷贝变量、无默认回填（build.bat 与 Makefile 同规则） | 地址/常量只活在 game_addrs.asm / game.h / config.json；符号缺失时 armips 使用处响亮报错 |
+
+导出面（nm 实测）：文本域全局符号 = `EngineEntry` / `PrintNextChar` / `GetStringWidth_PCS`
+（+ map_name_popup 域的 `MapName_DisplayCellLength` / `MapNamePopup_CalcLeftPx`）。

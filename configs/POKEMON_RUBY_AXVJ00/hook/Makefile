@@ -10,7 +10,7 @@ CC       := $(PREFIX)gcc
 OBJCOPY  := $(PREFIX)objcopy
 
 SRC_ROOT := src
-TEXT     := $(SRC_ROOT)/text
+MAP_POPUP := $(SRC_ROOT)/map_name_popup
 BATTLE   := $(SRC_ROOT)/battle
 POKEDEX  := $(SRC_ROOT)/pokedex
 OPTION   := $(SRC_ROOT)/option
@@ -23,7 +23,9 @@ LDFLAGS := -mthumb -mcpu=arm7tdmi -nostdlib -T link/game.ld -Wl,-Map=$(OUT)/game
 
 OBJS := \
 	$(BUILD)/text_entry.o \
-	$(BUILD)/text_ruby_jp.o \
+	$(BUILD)/text.o \
+	$(BUILD)/MapNamePopup_entry.o \
+	$(BUILD)/MapNamePopup_hook.o \
 	$(BUILD)/UpdateNickInHealthbox_entry.o \
 	$(BUILD)/UpdateNickInHealthbox_hook.o \
 	$(BUILD)/UnusedPrintMonName_entry.o \
@@ -38,18 +40,18 @@ all: $(OUT)/game.bin $(OUT)/game_syms.asm
 $(BUILD):
 	mkdir -p $(BUILD)
 
-# text/entry.s 是跳板合集，链接必须排第一：
+# src/entry.s 是引擎入口跳板，链接必须排第一：
 # main.asm 的 JP2CHS_Entry 标签 = GameBinAddresses = game.bin 起点（EngineEntry）。
-$(BUILD)/text_entry.o: $(TEXT)/entry.s | $(BUILD)
+$(BUILD)/text_entry.o: $(SRC_ROOT)/entry.s | $(BUILD)
 	$(CC) $(ASFLAGS) $< -o $@
 
-$(BUILD)/text_ruby_jp.o: $(SRC_ROOT)/text_ruby_jp.c | $(BUILD)
+$(BUILD)/text.o: $(SRC_ROOT)/text.c | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@
 
-$(BUILD)/%.o: $(TEXT)/%.s | $(BUILD)
+$(BUILD)/MapNamePopup_entry.o: $(MAP_POPUP)/entry.s | $(BUILD)
 	$(CC) $(ASFLAGS) $< -o $@
 
-$(BUILD)/%.o: $(TEXT)/%.c | $(BUILD)
+$(BUILD)/MapNamePopup_hook.o: $(MAP_POPUP)/MapNamePopup_hook.c | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD)/%.o: $(BATTLE)/%.s | $(BUILD)
@@ -76,14 +78,14 @@ $(OUT)/game.elf: $(OBJS)
 $(OUT)/game.bin: $(OUT)/game.elf
 	$(OBJCOPY) -O binary $< $@
 
-# 与 build.bat 对齐：5 个符号（含 MapName_DisplayCellLength，地名居中钩跳板）
+# game_syms 流式生成（与 build.bat 对齐）：符号表内联、无拷贝变量、无默认回填——
+# 缺失符号该行不生成，armips 在使用处直接报错。
 $(OUT)/game_syms.asm: $(OUT)/game.map
-	@MPN=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'MapName_DisplayCellLength$$' | awk '{print $$1}'); \
- WTA=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'WaitArrow_Prepare_Hook$$$$' | awk '{print $$1}'); \
-	UPMN=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'UnusedPrintMonName_Hook$$' | awk '{print $$1}'); \
-	DOMC=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'DrawOptionMenuChoice_Hook$$' | awk '{print $$1}'); \
-	GGTPH=$$(tr -d '\r' < $(OUT)/game.map | grep -E 'GetGlyphTilePointers_Hook$$' | awk '{print $$1}'); \
- printf '; Auto-generated from out/game.map - do not edit\nMapName_DisplayCellLength               equ %s\nWaitArrow_Prepare_Hook                  equ %s\nUnusedPrintMonName_Hook                 equ %s\nDrawOptionMenuChoice_Hook               equ %s\nGetGlyphTilePointers_Hook               equ %s\n' "$${MPN:-0x08800000}" "$${WTA:-0x08800000}" "$${UPMN:-0x08800000}" "$${DOMC:-0x08800000}" "$${GGTPH:-0x08800000}" > $@
+	@printf '; Auto-generated from out/game.map - do not edit\n' > $@; \
+	for s in MapName_DisplayCellLength UnusedPrintMonName_Hook DrawOptionMenuChoice_Hook; do \
+		addr=`tr -d '\r' < $(OUT)/game.map | grep -E "$$s$$" | awk '{print $$1}'`; \
+		if [ -n "$$addr" ]; then printf '%s equ %s\n' "$$s" "$$addr" >> $@; fi; \
+	done
 
 clean:
 	rm -rf $(OUT)/obj $(OUT)/game.elf $(OUT)/game.bin $(OUT)/game.map $(OUT)/game_syms.asm

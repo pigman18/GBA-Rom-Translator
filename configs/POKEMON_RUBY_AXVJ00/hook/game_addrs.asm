@@ -19,6 +19,9 @@ GetGlyphTilePointers                   equ 0x08003730  ; C: ADDR_GET_GLYPH_TILE_
 UpdateTilemap                          equ 0x080036DC  ; C: ADDR_UPDATE_TILEMAP
 ; FA/FB → DrawInitialDownArrow：画等 A 的 ▼（再进 state 8/9）
 DrawInitialDownArrow                   equ 0x08003F4C  ; C: ADDR_DRAW_INITIAL_DOWN_ARROW
+; P05 桩已折入 text.c static DrawInitialDownArrow（2026-08-24，入口不再订址）：
+; 相位同步后尾跳原版主体延续点（原跳板 ldr r3,=0x08003DAD 同源；equ 取偶址）。
+DrawInitialDownArrow_Body              equ 0x08003DAC  ; C: ADDR_DRAW_INITIAL_DOWN_ARROW_BODY
 
 ; --- text_jp2chs.c 全面接管所需的其余原生态（2026-08-23 反汇编定案） ---
 Text_ClearWindow                       equ 0x08003BA8  ; C: ADDR_TEXT_CLEAR_WINDOW

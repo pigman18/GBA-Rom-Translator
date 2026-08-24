@@ -15,13 +15,18 @@ hook/
 │   ├── ui_dex.asm
 │   └── clean_suffix.asm
 ├── src/                      # 【复杂钩子】gcc 编入 out/game.bin + armips 订址桩
-│   ├── text/
-│   │   ├── entry.s           #    gcc：跳板合集（历史遗留的大文件，不再往里加新钩）
-│   │   ├── hooks_origin.s    #    armips：本域全部订址桩（固定文件名）
-│   │   └── *_hook.c          #    gcc：C 逻辑
+│   ├── entry.s               #    gcc：引擎入口跳板 EngineEntry（链接首位约束）
+│   ├── hooks_origin.s        #    armips：文本引擎订址桩（只 hook PrintNextChar/P01）
+│   ├── text.c                #    gcc：JP 全面接管引擎（2026-08-24 由 text_ruby_jp.c 改名；
+│   │                         #        除 PrintNextChar 与 GetStringWidth_PCS 全部 static）
+│   ├── map_name_popup/       #    P04 地名弹窗域三件套
+│   │   ├── entry.s           #      跳板 MapName_DisplayCellLength
+│   │   ├── MapNamePopup_hook.c
+│   │   └── hooks_origin.s
 │   ├── battle/hooks_origin.s #    同上；另有 {Name}_entry.s + {Name}_hook.c 成对
 │   ├── pokedex/hooks_origin.s
-│   └── option/hooks_origin.s
+│   ├── option/hooks_origin.s
+│   └── bak/text/             #    旧多文件引擎归档（2026-08-24，不参与任何构建）
 ├── link/game.ld              # gcc 链接脚本（VMA 0x08800000）
 ├── out/                      # 生成物：game.bin / game.map / game_syms.asm（勿手改）
 └── build.bat / Makefile      # Windows / WSL 两条等价构建路径
@@ -41,7 +46,7 @@ Q1 需要用 C 写逻辑吗？（查表 / 协议解析 / 寄存器编组 / 超�
  │
  └─ 否 → 再问：是跳到某个已存在符号吗？
           ├─ 是 →【JMP 桩】src/{域}/hooks_origin.s 里加订址桩即可
-          │   例：P04 地名弹窗居中（跳板 MapName_DisplayCellLength 也放 entry.s，
+          │   例：P04 地名弹窗居中（map_name_popup 域；跳板 MapName_DisplayCellLength，
           │       C 逻辑 MapNamePopup_hook.c 按引擎步进算留白、加大 MenuPrint x 起点）
           └─ 否 →【纯值】patches/{域名}.asm 里就地改写指令/数据
               例：P06 mov r2,#0x1D、P13~P15 NOP 组、P16 数据 FF
@@ -55,14 +60,16 @@ Q1 需要用 C 写逻辑吗？（查表 / 协议解析 / 寄存器编组 / 超�
 
 | 对象 | 规则 | 例 |
 |---|---|---|
-| 域名（目录） | 固定枚举：`text` / `battle` / `pokedex` / `option`；新域先在本文件登记 | `src/pokedex/` |
+| 域名（目录） | 固定枚举：`map_name_popup` / `battle` / `pokedex` / `option`；新域先在本文件登记（文本引擎本体在 `src/` 根：text.c + entry.s + hooks_origin.s） | `src/pokedex/` |
 | 纯值补丁文件 | `patches/{域}_{对象}.asm`，小写下划线 | `ui_starter.asm` |
-| 订址桩文件 | 固定名 `hooks_origin.s`，每域一个，不许拆散 | `src/text/hooks_origin.s` |
+| 订址桩文件 | 固定名 `hooks_origin.s`，每域一个，不许拆散 | `src/battle/hooks_origin.s` |
 | gcc 跳板/逻辑对 | `{Name}_entry.s` + `{Name}_hook.c` 同名成对（Name=官方函数名） | `UnusedPrintMonName_entry.s` / `UnusedPrintMonName_hook.c` |
 | 补丁 ID | Pxx 顺序号，分配后永不复用；写在节头 `[Pxx]` | `[P24] xxx` |
 
-> `src/text/entry.s` 是历史遗留的跳板合集（链接首位约束），维持现状；
-> **新的复杂钩一律走 `{Name}_entry.s` 成对模式**，不要再往里追加。
+> 文本引擎收敛后（2026-08-24）：引擎入口跳板上移为 `src/entry.s`、订址桩为
+> `src/hooks_origin.s`，与 `src/text.c` 同级；旧多文件引擎归档于 `src/bak/text/`
+> （只读历史，不参与构建）。
+> **新的复杂钩一律走 `{Name}_entry.s` 成对模式**。
 
 ## 4. 补丁节头模板（patches/ 与 hooks_origin.s 通用）
 

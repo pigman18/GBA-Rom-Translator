@@ -27,9 +27,9 @@
 
 | ID | 地址 | 改动 | 类型 | 目的 | pokeruby 对应 |
 |---|---|---|---|---|---|
-| P01 | `0x080032F8` | `ldr r1,=(JP2CHS_Entry\|1); bx r1`（6B+pool，r0=win 原样进 C） | JMP | **全面接管**（Phase C 换装）：原生 PrintNextChar 整函数替换——FA-FF 控制码 + FC 子类型 1-16 + EF/F9/slot/可印字形全由引擎消化，零回落 FontFunc；返回值契约 docs/ruby_jp_text.md §六A | `src/text.c` `PrintNextChar()`（AXVJ 同名函数入口；引擎=`hook/src/text_jp2chs.c` ProcessCurrentChar_C） |
-| P02 | `0x08003730` | `push {r4}; ldr r4,=(GetGlyphTilePointers_Hook\|1); bx r4`（6B+pool） | JMP | 字库取址分发：bit15=1 走 CHS 伪 glyph，否则重定位副本走原函数 | `src/text.c` `GetGlyphTilePointers()`（美版多 language 参数，日版 4 参） |
-| P05 | `0x08003F4C` | `ldr r3,=(WaitArrow_Prepare\|1); bx r3`（4B+pool） | JMP | 等 A 箭头前置同步 CHS 相位（防双▼），随后回落原版主体 `0x08003DAD` | `src/text.c` FA/FB 等 A 箭头绘制段（DrawInitialDownArrow，AXVJ 命名） |
+| P01 | `0x080032F8` | `ldr r1,=(JP2CHS_Entry\|1); bx r1`（6B+pool，r0=win 原样进 C） | JMP | **全面接管**（Phase C 换装）：原生 PrintNextChar 整函数替换——FA-FF 控制码 + FC 子类型 1-16 + EF/F9/slot/可印字形全由引擎消化，零回落 FontFunc；返回值契约 docs/ruby_jp_text.md §六A。2026-08-24 收敛后为文本域唯一 ROM hook（P02/P05 移除、P05 折入本钩 FA/FB 分支）；入口跳板=`hook/src/entry.s` EngineEntry | `src/text.c` `PrintNextChar()`（AXVJ 同名函数入口；引擎=`hook/src/text.c`） |
+| ~~P02~~ | `0x08003730` | （已移除 2026-08-24）原：`push {r4}; ldr r4,=(GetGlyphTilePointers_Hook\|1); bx r4` | ~~JMP~~ | **已移除**（只 hook PrintNextChar 收敛）：CHS 字模取址收归 `text.c` 内部 `static GetGlyphTilePointers`；原生函数恢复原样由 `chs_get_glyph_tile_pointers` 直调。ID 永不复用 | `src/text.c` `GetGlyphTilePointers()`（美版多 language 参数，日版 4 参） |
+| ~~P05~~ | `0x08003F4C` | （已移除 2026-08-24）原：`ldr r3,=(WaitArrow_Prepare_Hook\|1); bx r3` 回落主体 `0x08003DAD` | ~~JMP~~ | **已移除并折入 P01**：相位同步逻辑进 `text.c static DrawInitialDownArrow`（pokeruby 同名），FA/FB 分支直调；反汇编实证原生包装 ≡ `win[6]=0 + 尾调 0x08003DAC`，等价成立。ID 永不复用 | `src/text.c` FA/FB 等 A 箭头绘制段（DrawInitialDownArrow 同名折入） |
 
 ### B. 战斗
 
@@ -41,7 +41,7 @@
 
 | ID | 地址 | 改动 | 类型 | 目的 | pokeruby 对应 |
 |---|---|---|---|---|---|
-| P04 | `0x0809F67E` | `ldr r0,=(MapName_DisplayCellLength\|1); bx r0`（6B+pool）；trampoline 直跳 `0x0809F6CB`（MenuPrint 前置点） | JMP | 跳过 `StringLength→右对齐 pad→二次 GetMapName(fill=10)`。⚠️ 该路径用**字节长度**与硬编码 10 格右对齐：内联 F9 地名 >10 字节时 `10-len` 下溢至 ~0xFFFE → 野写 + 65534 次清零循环（模拟器报 0xA2A2F6A4 类飞 PC 的根因） | `src/map_name_popup.c` `DrawMapNamePopup()`；GetMapName 见 `strings.c` |
+| P04 | `0x0809F67E` | `ldr r3,=(MapName_DisplayCellLength\|1); bx r3`（只用 r3 转跳）；跳板在 `src/map_name_popup/entry.s`，C 钩 `MapNamePopup_hook.c` 返回留白格数、注入 `r1=1+留白` | JMP | 跳过 `StringLength→右对齐 pad→二次 GetMapName(fill=10)`。⚠️ 该路径用**字节长度**与硬编码 10 格右对齐：内联 F9 地名 >10 字节时 `10-len` 下溢至 ~0xFFFE → 野写 + 65534 次清零循环（模拟器报 0xA2A2F6A4 类飞 PC 的根因）。2026-08-24 起独立为 map_name_popup 域三件套 | `src/map_name_popup.c` `DrawMapNamePopup()`；GetMapName 见 `strings.c` |
 
 ### D. UI 布局微调（指令级小改）
 
@@ -88,10 +88,10 @@
 ## 3. 关键结论（影响后续去留决策）
 
 1. **P04 不能靠 GetStringWidth 替代**：弹窗路径不查像素宽度，用的是 `StringLength` 字节数 + 硬编码 10 格右对齐；中文内联 F9 地名普遍 13~17 字节 > 10 → `10-len` 下溢 → `sp+0xFFFE` 野写 + 65534 次清零（本次 0xA2A2F6A4 飞 PC 的根因）。要么保留 P04 旁路，要么重构原版逻辑本身。
-2. **P01/P02/P05 三钩互为前提**：都依赖 game.bin 内部符号布局（经 game_syms.asm 回填）。任何 game.bin 重编后必须同步重跑 armips。
+2. **P01 单钩自洽**（2026-08-24 起；P02 移除、P05 折入，见上表）：依赖 game.bin 内部符号布局（经 game_syms.asm 回填）。任何 game.bin 重编后必须同步重跑 armips。
 3. **P09~P12 是同一事务**：初始宠 label 四处改动必须同时存在，拆分时归并为一节。
 4. **P19~P23 共用一个常量**：DEX_NAME_COLUMN 定义在 game_addrs.asm，改值即可全局调整。
-5. 死代码（不影响运行，占 game.bin 空间）：GetGlyphWidthHook / GetStringWidthChinese（未订址）、HealthboxNickCpuset*（仅导出常量）、MapName_DisplayCellLength_C（trampoline 不再经过它）。
+5. 死代码：旧引擎死代码 GetGlyphWidthHook / GetStringWidthChinese 已随 2026-08-24 收敛彻底消失（text.c 内部化后 nm 无残留）；现存 HealthboxNickCpuset*（仅导出常量，占 game.bin 空间不影响运行）。
 
 ## 4. 已实施的拆分结构（2026-08-22）
 
@@ -105,10 +105,14 @@ hook/
 │   ├── ui_dex.asm                  # P19~P23（图鉴名字列 ×5）
 │   └── clean_suffix.asm            # P13 P14 P15 P16（ひき NOP / 徽章 FF）
 └── src/
-    ├── text/hooks_origin.s         # P01 P02 P04 P05（订址桩；逻辑在 ../entry.s + *_hook.c）
+    ├── entry.s                     # P01 跳板（EngineEntry，链接首位 = game.bin 起点）
+    ├── hooks_origin.s              # P01（订址桩；逻辑在 src/text.c，只 hook PrintNextChar）
+    ├── text.c                      # 文本引擎（2026-08-24 由 text_ruby_jp.c 改名收敛）
+    ├── map_name_popup/             # P04 三件套（entry.s / MapNamePopup_hook.c / hooks_origin.s）
     ├── battle/hooks_origin.s       # P03（池常量；原 UpdateNickInHealthbox_hook_origin.s 改名）
     ├── pokedex/hooks_origin.s      # P07
-    └── option/hooks_origin.s       # P08
+    ├── option/hooks_origin.s       # P08
+    └── bak/text/                   # 旧多文件引擎归档（2026-08-24，不参与构建）
 ```
 
 分层规则：

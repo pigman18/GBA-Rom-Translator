@@ -6,6 +6,8 @@
 ;   [符号] out/game_syms.asm         gcc 符号回填（build.bat / Makefile 生成）
 ;   [复杂钩] src/{域}/hooks_origin.s 订址桩；逻辑在 src/{域}/entry.s + *_hook.c
 ;                                    （gcc 编入 out/game.bin）
+;   [文本引擎] src/text.c 只 hook PrintNextChar：入口 src/entry.s（EngineEntry）+
+;                                    订址桩 src/hooks_origin.s（P01）
 ;   [纯值]   patches/*.asm           就地指令/数据改写，无 C 依赖
 ;   [装载]   game.bin @0x08800000 + fonts + slot 表
 ; 补丁 ID 索引与逐条说明：docs/PATCHES_INVENTORY.md
@@ -21,7 +23,8 @@
 .include "./out/game_syms.asm"
 
 ; ---- 复杂钩子订址桩（JMP 类） ----
-.include "./src/text/hooks_origin.s"
+.include "./src/hooks_origin.s"
+.include "./src/map_name_popup/hooks_origin.s"
 .include "./src/battle/hooks_origin.s"
 .include "./src/pokedex/hooks_origin.s"
 .include "./src/option/hooks_origin.s"

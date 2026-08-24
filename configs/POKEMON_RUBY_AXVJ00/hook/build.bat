@@ -1,6 +1,6 @@
-﻿@echo off
+@echo off
 REM build.bat - compile src/ -> out/game.bin (VMA 0x08800000)
-REM Naming: src/{domain}/{Method}_hook.c
+REM Naming: src/{domain}/{Method}_hook.c + entry.s + hooks_origin.s (armips side)
 REM Requires arm-none-eabi-gcc in PATH.
 
 set PREFIX=arm-none-eabi-
@@ -8,7 +8,7 @@ set CC=%PREFIX%gcc
 set OBJCOPY=%PREFIX%objcopy
 
 set SRC_ROOT=src
-set TEXT=%SRC_ROOT%\text
+set MAP_POPUP=%SRC_ROOT%\map_name_popup
 set BATTLE=%SRC_ROOT%\battle
 set POKEDEX=%SRC_ROOT%\pokedex
 set OPTION=%SRC_ROOT%\option
@@ -22,20 +22,29 @@ set LDFLAGS=-mthumb -mcpu=arm7tdmi -nostdlib -T %LINK_DIR%/game.ld -Wl,-Map=%OUT
 
 if not exist %BUILD% mkdir %BUILD%
 
-echo === Assembling text/entry.s ===
-%CC% %ASFLAGS% %TEXT%\entry.s -o %BUILD%\text_entry.o
+echo === Assembling entry.s ===
+%CC% %ASFLAGS% %SRC_ROOT%\entry.s -o %BUILD%\text_entry.o
 if errorlevel 1 exit /b 1
 
-echo === Compiling text_ruby_jp.c (jp2chs 全面接管引擎) ===
-%CC% %CFLAGS% %SRC_ROOT%\text_ruby_jp.c -o %BUILD%\text_ruby_jp.o
+echo === Compiling text.c (JP takeover engine) ===
+%CC% %CFLAGS% %SRC_ROOT%\text.c -o %BUILD%\text.o
+if errorlevel 1 exit /b 1
+
+echo === Assembling map_name_popup\entry.s ===
+%CC% %ASFLAGS% %MAP_POPUP%\entry.s -o %BUILD%\MapNamePopup_entry.o
+if errorlevel 1 exit /b 1
+
+echo === Compiling map_name_popup\MapNamePopup_hook.c ===
+%CC% %CFLAGS% %MAP_POPUP%\MapNamePopup_hook.c -o %BUILD%\MapNamePopup_hook.o
 if errorlevel 1 exit /b 1
 
 echo === Linking game.elf ===
-@rem text/entry.o 必须第一个：main.asm 的 JP2CHS_Entry 标签 = GameBinAddresses
-@rem = game.bin 起点 = EngineEntry 跳板（r0=win 直进 ProcessCurrentChar_C）。
+@rem text_entry.o must be FIRST: main.asm JP2CHS_Entry = GameBinAddresses = bin start.
 %CC% %LDFLAGS% -o %OUT%/game.elf ^
   %BUILD%/text_entry.o ^
-  %BUILD%/text_ruby_jp.o ^
+  %BUILD%/text.o ^
+  %BUILD%/MapNamePopup_entry.o ^
+  %BUILD%/MapNamePopup_hook.o ^
   %BUILD%/UpdateNickInHealthbox_entry.o ^
   %BUILD%/UpdateNickInHealthbox_hook.o ^
   %BUILD%/UnusedPrintMonName_entry.o ^
@@ -49,23 +58,13 @@ echo === Generating game.bin ===
 if errorlevel 1 exit /b 1
 
 echo === Generating game_syms.asm ===
-set MPN_ADDR=0x08800000
-set WTA_ADDR=0x08800000
-set UPMN_ADDR=0x08800000
-set DOMC_ADDR=0x08800000
-set GGTPH_ADDR=0x08800000
-for /f "tokens=1" %%a in ('findstr /R "MapName_DisplayCellLength$" %OUT%\game.map') do set MPN_ADDR=%%a
-for /f "tokens=1" %%a in ('findstr /R "WaitArrow_Prepare_Hook$" %OUT%\game.map') do set WTA_ADDR=%%a
-for /f "tokens=1" %%a in ('findstr /R "UnusedPrintMonName_Hook$" %OUT%\game.map') do set UPMN_ADDR=%%a
-for /f "tokens=1" %%a in ('findstr /R "DrawOptionMenuChoice_Hook$" %OUT%\game.map') do set DOMC_ADDR=%%a
-for /f "tokens=1" %%a in ('findstr /R "GetGlyphTilePointers_Hook$" %OUT%\game.map') do set GGTPH_ADDR=%%a
+rem Stream emit: no copy-vars, no silent fallback. Missing symbol -> no line ->
+rem armips errors at use site (loud failure beats jumping to 0x08800000).
 > %OUT%\game_syms.asm (
     echo ; Auto-generated from out/game.map - do not edit
-    echo MapName_DisplayCellLength               equ %MPN_ADDR%
-    echo WaitArrow_Prepare_Hook                 equ %WTA_ADDR%
-    echo UnusedPrintMonName_Hook                 equ %UPMN_ADDR%
-    echo DrawOptionMenuChoice_Hook               equ %DOMC_ADDR%
-    echo GetGlyphTilePointers_Hook               equ %GGTPH_ADDR%
+    for %%S in (MapName_DisplayCellLength UnusedPrintMonName_Hook DrawOptionMenuChoice_Hook) do (
+        for /f "tokens=1" %%a in ('findstr /R "%%S$" %OUT%\game.map') do @echo %%S equ %%a
+    )
 )
 
 echo Build OK: %OUT%\game.bin

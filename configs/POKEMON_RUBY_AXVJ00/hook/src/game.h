@@ -20,6 +20,7 @@
 #define ADDR_COPY_GLYPH_2BPP_4BPP          0x080038A0u
 #define ADDR_DEX_TEXT_UNKNOWN_POKE         0x083E9688u
 #define ADDR_DRAW_INITIAL_DOWN_ARROW       0x08003F4Cu
+#define ADDR_DRAW_INITIAL_DOWN_ARROW_BODY  0x08003DACu
 #define ADDR_FONT_CHS_NORMAL               0x09000000u
 #define ADDR_FONT_CHS_SMALL                0x09100000u
 #define ADDR_FONT_CHS_SYM                  0x091E0000u
@@ -102,6 +103,7 @@ struct GlyphBuffer {
 
 #define WIN_TEMPLATE        0x00
 #define WIN_STATE           0x04
+#define WIN_DOWN_ARROW_COUNTER 0x06  /* 等 A 箭头动画计数（原 P05 跳板 strh [r0,#6] 同源） */
 /* AXVJ TextPrinter 布局（偏移固定于 ROM；括号内为 pokeruby struct Window 语义名）：
  * +0x0A textMode(FontFuncTable 索引)  +0x0B fontNum  +0x10 text  +0x14 textIndex
  * +0x16 tileDataStartOffset(TILE_BASE)  +0x18 tileDataOffset(TILE_OFFSET)
@@ -257,8 +259,8 @@ typedef uint8_t TextPrinter;
 
 /* Bind/restore per-window pitch slot (JP+CN share CHS pool; never FontFunc dual-path).
  * out_is_new (optional, may be NULL): set to 1 when this bind created a fresh
- * slot for a new pitch key (换行/换窗), so caller can compensate TILE_OFFSET. */
-volatile struct ChineseTileState *chs_bind_pitch_slot(TextPrinter *win, int *out_is_new);
+ * slot for a new pitch key (换行/换窗), so caller can compensate TILE_OFFSET.
+ * 2026-08-24 收敛：定义于 src/text.c，static 内部专用——本头文件不再暴露。 */
 
 static inline uint8_t  win_u8(const TextPrinter *w, unsigned off)  { return w[off]; }
 static inline uint16_t win_u16(const TextPrinter *w, unsigned off)
@@ -331,17 +333,9 @@ static inline uint16_t chs_pitch_key(TextPrinter *win)
 }
 
 
-/* Hook3：CHS 字模取址（官方 GetGlyphTilePointers 的伪 glyph 分支）。
- * glyph bit15=右半 → upperTilePtr/lowerTilePtr 写入 FontChsNormal 内 TL/TR 与 BL/BR。
- * 订址：main.asm 8B 桩 → entry.s GetGlyphTilePointers_Hook → 本类 _C 分发器。 */
-void GetGlyphTilePointers_CHS(uint32_t fontNum, uint32_t glyph,
-                              uint8_t **upperTilePtr, uint8_t **lowerTilePtr);
-void GetGlyphTilePointers_C(uint32_t fontNum, uint32_t glyph,
-                            uint8_t **upperTilePtr, uint8_t **lowerTilePtr);
-void GetGlyphTilePointers_Hook(uint32_t fontNum, uint32_t glyph,
-                               uint8_t **upperTilePtr, uint8_t **lowerTilePtr);
-void GetGlyphTilePointers_Orig(uint32_t fontNum, uint32_t glyph,
-                               uint8_t **upperTilePtr, uint8_t **lowerTilePtr);
+/* Hook3（P02）已于 2026-08-24 移除：CHS 字模取址收归 src/text.c 内部
+ * static GetGlyphTilePointers；原生 GetGlyphTilePointers@0x08003730 不再订址，
+ * 由 chs_get_glyph_tile_pointers 直调原版。 */
 
 /* 官方 PrintGlyph_TextMode* 家族的 CHS 版：gidx 经 Hook3 解析字模。 */
 void PrintGlyph_CHS(TextPrinter *win, uint32_t gidx);
@@ -351,22 +345,18 @@ void PrintGlyph_Tiles_CHS_Adv(TextPrinter *win, const uint8_t *tiles128,
                               unsigned glyphWidth);
 /* 单字节可印字符（Sym/空白/JP PCS）→ CHS 同池绘制（DrawGlyph_CHS_hook.c）。 */
 int  DrawGlyph_CHS(TextPrinter *win, uint32_t cur_char);
-/* 绘制引擎内部件（DrawGlyphTiles_hook.c；供 EF 光标等钩复用）。 */
-uint8_t *vram_tile(TextPrinter *win, uint16_t tile);
-void DrawGlyphTile_CHS(TextPrinter *win, struct GlyphTileInfo *info,
-                       uint8_t *spillTile);
-/* Clear ChineseTileState pitch after FE/FB/FA (optional asm hook). */
-void Chinese_PitchReset(TextPrinter *win);
+/* 绘制引擎内部件（vram_tile / DrawGlyphTile / Chinese_PitchReset）已随
+ * 2026-08-24 收敛归入 src/text.c static——本头文件不再暴露。 */
 int  DrawGlyph_ShouldUseLinear(TextPrinter *win, uint8_t write_op);
-/* 地名弹窗居中（MapNamePopup_hook.c；P04 挂 0x0809F67E）：按本引擎真实步进
+/* 地名弹窗居中（src/map_name_popup/MapNamePopup_hook.c；P04 挂 0x0809F67E）：按本引擎真实步进
  * （空白/字面量 8px、汉字 12px）算居中起点。MenuPrint 的 left 是**格数**
  * （8px/格，Text_InitWindow 内 win->left = 8*left）；返回居中追加格数
  * （四舍五入，残差 ≤4px），0=维持原生位置。只读缓冲区，不改写。
  * ROM 补丁严禁占 r0（native mov r0,sp 的缓冲区指针必须原样进 C）。 */
 uint32_t MapNamePopup_CalcLeftPx(const uint8_t *buf);
-/* CHS 文本流像素宽度（GetStringWidth.c；纯工具无 hook）：遍历到 0xFF 或
- * max_bytes，字面量/空白 8px、F9 00 内联汉字 12px、F9 80 短语查表逐字累加、
- * FA~FE 控制码 0px。供地名弹窗等需要真实渲染宽度的场景复用。 */
+/* CHS 文本流像素宽度（来源 src/text.c；纯工具无 hook，唯一导出工具）：遍历到
+ * 0xFF 或 max_bytes，字面量/空白 8px、F9 00 内联汉字 12px、F9 80 短语查表逐字
+ * 累加、FA~FE 控制码 0px。供地名弹窗等需要真实渲染宽度的场景复用。 */
 uint32_t GetStringWidth_PCS(const uint8_t *buf, uint32_t max_bytes);
 
 int  scene_field_wants_linear(TextPrinter *win);
@@ -374,10 +364,9 @@ int  scene_menu_wants_mode2(TextPrinter *win);
 int  scene_is_shop_desc(TextPrinter *win);
 int  scene_is_shop_bag_list(TextPrinter *win);
 int  scene_is_party_footer(TextPrinter *win);
-/* PCS 0xEF ► → CHS_MENU_CURSOR_TILE pair. 1=drawn, 0=FontFunc. */
-int  DrawMenuCursorEF(TextPrinter *win);
-/* FA/FB 等 A 箭头：chs_px 对齐 TILE_X，必要时 TILE_OFFSET+=2（B04 双▼）。 */
-void WaitArrow_Prepare(TextPrinter *win);
+/* PCS 0xEF ► → CHS_MENU_CURSOR_TILE pair（text.c 内部 static，不再暴露）。
+ * FA/FB 等 A 箭头前置同步（原 WaitArrow_Prepare/P05）已折入 text.c
+ * static DrawInitialDownArrow（pokeruby 同名），跳板与声明一并移除。 */
 int  scene_jp_via_chs(TextPrinter *win);
 int  scene_is_battle_interface_dest(TextPrinter *win);
 /* 缓冲型打印机（dest=win[0x20]）：血条 textMode2 + RenderTextHandleBold textMode1+font4 */

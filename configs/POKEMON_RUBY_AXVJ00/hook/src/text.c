@@ -443,19 +443,17 @@ static void DrawGlyphTiles(
     WriteGlyphTilemap(win, map_tx, up0, lo0);
     win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
 
-    st->px = (uint16_t)(st->px + 8u);
-
     w2 = (glyphWidth > 8u) ? (glyphWidth - 8u) : 0u;
     if (w2 == 0u) {
         ChsAdvanceCursor(st, win, glyphWidth);
         return;
     }
 
-    map_tx = (uint8_t)(st->tx0 + (st->px >> 3));
-
-    /* ---- 第二趟：宽 w2（TR/BR）——startPixel 复用第一趟相位（bak 同款）：
-     * TR 写在本列 [startPixel, +w2)，与第一趟 spill [0,startPixel) 拼满
-     * 整列；置 0 会覆盖 spill → 相位 4 的字隔字错乱。 ---- */
+    /* px 不在此推进（ChsAdvanceCursor 统一 +w）；pass2 列 = 起始列+1：
+     * 12px 字形跨 2 列，pass2 落 tx0+((px+8)>>3)。双重推进（+8 再 +12）
+     * 会使 px 每字 +20 → px>>3 整列数每字多 1 → pass2 表项右移一列
+     * （2026-08-25 gdb 日志定案：px 序列 0/20/40/60，半字根因）。 */
+    map_tx = (uint8_t)(st->tx0 + ((st->px + 8u) >> 3));
     off = win_u16(win, WIN_TILE_OFFSET);
     up0 = GetCursorTileNum(win, 0, 0);
     lo0 = GetCursorTileNum(win, 0, 1);
@@ -730,14 +728,16 @@ static void PrintGlyph_TextMode1(
     info.dest = (uint32_t *)(uintptr_t)vram_tile(win, l1);
     DrawGlyphTile_ShadowedFont(win, &info, spilled ? (uint8_t *)(uintptr_t)vram_tile(win, l2) : 0);
 
-    st->px = (uint16_t)(st->px + 8u);
+    /* px 不在此推进（pass1 的 +8 已并入下方表项列公式，ChsAdvanceCursor
+     * 统一 +w）；双重推进会使 px 每字 +20 → 表项列右移一列（半字根因，
+     * 2026-08-25 gdb 日志定案：px 序列 0/20/40/60）。 */
 
     if (w2 == 0u) {
         /* 8px 字形（日文）：行尾半列 spill 也要落表项（bak 同款），
-         * 否则右半像素落在无表项的列上 → 丢半边。 */
+         * 否则右半像素落在无表项的列上 → 丢半边。spill 列 = 起始列+1。 */
         if (spilled) {
             win_set_u8(win, WIN_CURSOR_TILE_X,
-                       (uint8_t)(st->tx0 + (st->px >> 3)));
+                       (uint8_t)(st->tx0 + ((st->px + 8u) >> 3)));
             sWriteGlyphTilemapFuncs[fontNum](win, u2, l2);
         }
         ChsAdvanceCursor(st, win, w);
@@ -745,7 +745,8 @@ static void PrintGlyph_TextMode1(
     }
 
     /* 第二趟：TR/BR 宽 w-8，startPixel 复用（写第 2 对的
-     * [startPixel, +w2)，与第一趟 spill [0,startPixel) 拼满整列） */
+     * [startPixel, +w2)，与第一趟 spill [0,startPixel) 拼满整列）。
+     * pass2 表项列 = tx0+((px+8)>>3)（12px 字形的右半列）。 */
     info.width = (uint8_t)w2;
     info.src = tiles->tr;
     info.dest = (uint32_t *)(uintptr_t)vram_tile(win, u2);
@@ -753,12 +754,11 @@ static void PrintGlyph_TextMode1(
     info.src = tiles->br;
     info.dest = (uint32_t *)(uintptr_t)vram_tile(win, l2);
     DrawGlyphTile_ShadowedFont(win, &info, 0);
-    /* 表项：溢出列 cursor+1 格 */
     win_set_u8(win, WIN_CURSOR_TILE_X,
-               (uint8_t)(st->tx0 + (st->px >> 3)));
+               (uint8_t)(st->tx0 + ((st->px + 8u) >> 3)));
     sWriteGlyphTilemapFuncs[fontNum](win, u2, l2);
 
-    /* 相位推进 + cursorTileX 同步（行相位表承载） */
+    /* 相位推进 + cursorTileX 同步（行相位表承载，单次 +w） */
     ChsAdvanceCursor(st, win, w);
 }
 

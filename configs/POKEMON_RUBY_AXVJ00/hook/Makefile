@@ -82,7 +82,7 @@ $(OUT)/game.bin: $(OUT)/game.elf
 # 缺失符号该行不生成，armips 在使用处直接报错。
 $(OUT)/game_syms.asm: $(OUT)/game.map
 	@printf '; Auto-generated from out/game.map - do not edit\n' > $@; \
-	for s in MapName_DisplayCellLength UnusedPrintMonName_Hook DrawOptionMenuChoice_Hook; do \
+	for s in MapName_DisplayCellLength UnusedPrintMonName_Hook DrawOptionMenuChoice_Hook InitWindowTileData_Hook GlyphIwtdTramp; do \
 		addr=`tr -d '\r' < $(OUT)/game.map | grep -E "$$s$$" | awk '{print $$1}'`; \
 		if [ -n "$$addr" ]; then printf '%s equ %s\n' "$$s" "$$addr" >> $@; fi; \
 	done

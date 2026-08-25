@@ -20,6 +20,9 @@ UpdateTilemap                          equ 0x080036DC  ; C: ADDR_UPDATE_TILEMAP
 ; 原生 tm1 等宽打印（FontFuncTable[1] @0x081BB3AC[1]）：FontSubTable[fontNum]
 ; 写预渲染字体 tile 表项 + [win+0x1B](cursorTileX)+=1。PCS 字形分发专用。
 PrintGlyph_TextMode1_Origin            equ 0x0800360C  ; C: ADDR_PRINT_GLYPH_TM1_ORIGIN
+; 分区器（多帧字库加载 worker，(tpl, startOffset, glyphIdx)——gdb 采集 2656 命中
+; 实证 JP 与美版同址；窗体初始化=旧文本作废=CHS 页游标复位点）。
+InitWindowTileData                     equ 0x08002A50  ; C: ADDR_INIT_WINDOW_TILE_DATA
 ; FA/FB → DrawInitialDownArrow：画等 A 的 ▼（再进 state 8/9）
 DrawInitialDownArrow                   equ 0x08003F4C  ; C: ADDR_DRAW_INITIAL_DOWN_ARROW
 ; P05 桩已折入 text.c static DrawInitialDownArrow（2026-08-24，入口不再订址）：
@@ -84,6 +87,9 @@ ChsPitchSlots                          equ 0x0203FF90  ; C: ADDR_CHS_PITCH_SLOTS
 ;   mode1 动态 tile 分配游标（text_jp2chs AllocGlyphTiles）——引擎静态变量会落
 ;   BSS，而 game.bin 无运行时加载器（写 ROM 被忽略/读为垃圾），必须放 EWRAM。
 ChineseTileState                       equ 0x0203FFF8  ; C: ADDR_GLYPH_ALLOC_NEXT
+; CHS scratch 页游标表（2026-08-25）：{u16 tilemap_lo, u16 cursor} × 8。
+; 扫描实证 0x0203FFD2-0x0203FFF7 无游戏字面量引用（FFD0/D1 为调色板覆盖变量）。
+GlyphPageCurTab                        equ 0x0203FFD2  ; C: ADDR_GLYPH_PAGE_CURTAB
 ; DrawOptionMenuChoice 选中调色板覆盖（避开 FFF0/F7F8）
 OptPaletteOverride                     equ 0x0203FFD0  ; C: ADDR_OPT_PALETTE_OVERRIDE
 OptFgColor                             equ 0x0203FFD1  ; C: ADDR_OPT_FG_COLOR

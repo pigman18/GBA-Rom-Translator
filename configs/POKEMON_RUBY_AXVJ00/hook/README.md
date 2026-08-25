@@ -203,31 +203,30 @@ tm0:        原地画 + 表项（pokeruby DrawGlyph_TextMode0 同构）
 
 ### 10.3 CHS 绘制移植设计（pokeruby 结构 + 槽位分区表）
 
-**目标结构**（全部按 §3.1 命名）：
+**目标结构**（全部按 §3.1 命名；2026-08-25 深夜定稿 = **页游标制**）：
 
 ```
-PrintNextChar_Hook            # 入口（现 PrintNextChar 改名；hooks_origin.s 同步）
+PrintNextChar_Hook            # 入口（hooks_origin.s 用 game_addrs equ 不受改名影响）
  ├─ GetGlyph                  # 取字模（不变）
  ├─ 两级 PCS 分发表            # (1,4)=PrintGlyph_TextMode1_Origin（保留，实测✓）
- └─ PrintGlyph_TextMode1      # CHS/自绘：改位置式寻址（见下）
-     ├─ GetCursorTileNum      # pokeruby 名：tile = f(cursorTY,cursorTX,row,spill)
-     ├─ DrawGlyphTiles        # 两趟 8+(w-8) 核心（已存在，保留）
-     ├─ WriteGlyphTilemap     # 已存在
-     └─ GlyphScratchBase(cb)  # 新增：CHS scratch 基址表（见 10.4）
-InitWindowTileData_Hook       # 新增（预留）：分区链观测/干预点
-InitWindowTileData_Origin     # 新增（预留）：调原版 0x08002A50
+ └─ PrintGlyph_TextMode1      # CHS/自绘
+     ├─ GlyphScratchRange     # 自由区表（cb0/cb1/cb2，§10.4）
+     ├─ GlyphPageCur          # 页游标表：{u16 tilemap_lo, u16 cursor}×8
+     │                        #   @0x0203FFD2（扫描实证无游戏引用）
+     │                        #   同页块顺序 disjoint；异页互斥显示共享区间
+     ├─ DrawGlyphTiles 几何   # 两趟 8+(w-8)（不变）
+     └─ WriteGlyphTilemap     # 不变
+InitWindowTileData_Hook       # 预留未实现（新场景分区收口时再加）
+InitWindowTileData_Origin     # 预留未实现
 ```
 
-**CHS scratch 寻址 = 位置式**（pokeruby tm0/tm3 同构，零全局状态）：
-
-```
-tile = GlyphScratchBase(charBase) + (cursorTY*2 + row) * STRIDE + cursorTX*2 + spill
-```
-
-- 窗体自有字段 cursorTileX/Y 定位 → 多窗/多块**结构上不可能互踩**（不同块不同
-  cursor 位置 → 不同 tile）
-- 删除：`AllocGlyphTiles`、`MONO_TILE_NEXT`、`NEXT-2/-1` 共享列 hack、
-  `PcsPrint_NativeTm1` 之外的池逻辑
+**页游标制 vs 早期方案**：曾先后设计过「全局池」「charBase 水位线」「LRU 回收」，
+仿真全部复现互踩/回绕踩（能力页 3 窗体×4 块=288 tile > 201 自由区）。
+**根因是粒度错误**：能力/技能/情报页 = 同 charBase 的 3 个不同 tilemap（互斥显示），
+按 charBase 记账会把互斥页当并发页挤在一起。**按 tilemap 记账后**：
+- 同页块顺序 disjoint（页容量 = 自由区 201 tile ≈ 50 字/页，实测每页 ≤96 ✓）
+- 异页共享区间互相覆盖——不可见，无害；页重入游戏重印 → 重绘自愈
+- 仿真：3 窗体×4 块 + 页重入重绘 = 零重叠、幂等 ✓
 
 ### 10.4 场景盖章槽位表（实测 2026-08-25 第二轮，含能力页）
 
@@ -252,16 +251,17 @@ tile = GlyphScratchBase(charBase) + (cursorTY*2 + row) * STRIDE + cursorTX*2 + s
 的唯一解，表是 JP 场景分区的实测描述，不是补丁）。表的每一行都有 gdb 证据链
 （本节 F1-F10），新场景出乱码 = 表缺一行，补一行即收口。
 
-### 10.6 实施顺序
+### 10.6 实施顺序（2026-08-25 深夜定稿并完成 ✓）
 
-0. **战术修复（先行）**：cb2 池 [4,0x1FB] → **[0x100,0x1C8]**（§10.4 实测自由区）
-   ——修能力/技能页乱码；cb1/cb0 不动
-1. 改名（§3.1）：`PrintNextChar`→`PrintNextChar_Hook`、`chs_update_tilemap`→
-   `UpdateTilemap_Origin`、`chs_get_glyph_tile_pointers`→`GetGlyphTilePointers_Origin`、
-   `chs_copy_glyph_*`→`CopyGlyph*To4bpp_Origin`、`chs_print_glyph_tm1_origin`→
-   `PrintGlyph_TextMode1_Origin`、`chs_bind_pitch_slot`→`BindPitchSlot`（entry.s /
-   hooks_origin.s 同步）
-2. `GlyphScratchBase(cb)` + 位置式 `GetCursorTileNum` 替换 `AllocGlyphTiles` 全部
-   调用点；删池与共享列 hack（根治第一类 bug）
-3. 场景章表（§10.4）表驱动碰撞重映射，一处实现（第二类 bug 收口点）
-4. 构建 + 回归：队伍（HP标签/♂/Lv/铁哑铃）、图鉴、能力/技能页、弹窗、对话、开始菜单
+0. ✓ cb2 自由区 [0x100,0x1C8]（并入 `GlyphScratchRange`）
+1. ✓ 改名（§3.1 全表，entry.s / map_name_popup 同步）
+2. ✓ **页游标制**：`GlyphScratchRange` + `GlyphPageCur`（页游标表 @0x0203FFD2，
+   按 tilemap 低 16 位记账）+ `GlyphScratchAlloc`（槽记 `scratch_tx`/`tiles_drawn`，
+   重绘幂等）；删 `AllocGlyphTiles`/`MONO_TILE_NEXT`/共享列 hack/`PcsPrint_NativeTm1`；
+   struct 位域重排 8B 零迁移
+3. ✓ 场景章由自由区表编码；新场景出乱码 = §10.4 表补一行
+4. ✓ 构建 7888B；**P24 已实装**：`InitWindowTileData_Hook`（0x08002A50 入口桩 →
+   `entry.s GlyphIwtdTramp` 跳板：全现场保存→C 钩复位页游标→恢复→重执行
+   4 条 prologue→落回 0x2A58）——窗体初始化=页游标归零，跨场景累积清零
+   （修开始菜单"维纤设孟"/图鉴行互渗/能力页标签碎片的页游标回绕踩踏）
+5. 待回归六场景：队伍（HP标签/♂/铁哑铃）、图鉴、能力↔技能页、弹窗、对话、开始菜单

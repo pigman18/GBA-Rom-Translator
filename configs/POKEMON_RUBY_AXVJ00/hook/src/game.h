@@ -42,6 +42,8 @@
 #define ADDR_TEXT_CLEAR_WINDOW             0x08003BA8u
 #define ADDR_UPDATE_TILEMAP                0x080036DCu
 #define ADDR_PRINT_GLYPH_TM1_ORIGIN        0x0800360Cu
+#define ADDR_INIT_WINDOW_TILE_DATA         0x08002A50u
+#define ADDR_GLYPH_PAGE_CURTAB             0x0203FFD2u
 // <<<GEN_ADDR_END>>>
 /*
  * 短语表（PhraseTable）—— 固定长度字段突破字符数限制的方案。
@@ -133,15 +135,26 @@ struct GlyphBuffer {
 /* eBattleInterfaceGfxBuffer (AXVJ literal). Docs/ref only — gate is textMode==2. */
 #define BATTLE_IF_GFX_SIZE  0x1000u
 
-/* Per-window pitch slot (8B). Table @ ADDR_CHS_PITCH_SLOTS. */
+/* Per-window pitch slot (8B). Table @ ADDR_CHS_PITCH_SLOTS.
+ * meta 位域：char_base 2bit（0-3）| adv12 1bit（0=8px,1=12px）| base_tx 5bit（0-31）。
+ * scratch_tx = 本流 CHS scratch 起始偏移（自由区内，0xFF=未分配）；
+ * tiles_drawn = 本流已用 tile 数（随 chs_px 复位，重绘幂等覆盖自己的带）。 */
 struct ChineseTileState {
-    uint8_t  char_base;  /* +0 template charBaseBlock */
-    uint8_t  write_op;   /* +1 */
-    uint8_t  base_tx;    /* +2 pitch-run start CURSOR_TILE_X */
-    uint8_t  last_adv;   /* +3 last glyph advance (8 JP / 12 CN) */
-    uint16_t pitch_key;  /* +4 window fingerprint for pitch_reset */
-    uint16_t chs_px;     /* +6 pixel X in pitch run */
+    uint8_t  meta;        /* +0 char_base:2 | adv12:1 | base_tx:5 */
+    uint8_t  write_op;    /* +1 */
+    uint8_t  scratch_tx;  /* +2 scratch 起始偏移（0xFF=未分配） */
+    uint8_t  tiles_drawn; /* +3 本流已用 tile 数 */
+    uint16_t pitch_key;   /* +4 window fingerprint for pitch_reset */
+    uint16_t chs_px;      /* +6 pixel X in pitch run */
 };
+
+#define SLOT_CHAR_BASE(st)        ((st)->meta & 0x03u)
+#define SLOT_SET_CHAR_BASE(st, v)  ((st)->meta = (uint8_t)(((st)->meta & ~0x03u) | ((v) & 0x03u)))
+#define SLOT_ADV12(st)            (((st)->meta & 0x04u) != 0u)
+#define SLOT_SET_ADV12(st, v12)    ((st)->meta = (uint8_t)(((st)->meta & ~0x04u) | ((v12) ? 0x04u : 0x00u)))
+#define SLOT_LAST_ADV(st)         ((uint8_t)(SLOT_ADV12(st) ? 12u : 8u))
+#define SLOT_BASE_TX(st)          ((uint8_t)((st)->meta >> 3))
+#define SLOT_SET_BASE_TX(st, v)    ((st)->meta = (uint8_t)(((st)->meta & 0x07u) | ((((uint8_t)(v)) & 0x1Fu) << 3)))
 
 /* LRU control for pitch slots (16B @ ADDR_CHS_PITCH_CTRL). */
 struct ChsPitchCtrl {
@@ -296,7 +309,7 @@ static inline uint8_t *win_template(TextPrinter *w)
 typedef void (*chs_fn3)(void *a0, uint32_t a1, uint32_t a2);
 typedef void (*chs_fn5)(const void *src, void *dst, uint32_t c, uint32_t e, uint32_t d);
 
-static inline void chs_update_tilemap(TextPrinter *win, uint16_t upper, uint16_t lower)
+static inline void UpdateTilemap_Origin(TextPrinter *win, uint16_t upper, uint16_t lower)
 {
     uint8_t ov = *(volatile uint8_t *)ADDR_OPT_PALETTE_OVERRIDE;
     if (ov != 0u)
@@ -307,12 +320,12 @@ static inline void chs_update_tilemap(TextPrinter *win, uint16_t upper, uint16_t
 /* 原生 tm1 等宽打印（PCS 专用分发）：FontSubTable[fontNum](win, glyph) 写
  * 预渲染字体 tile 表项（font0/3 = base+2*glyph；font1/4 = base+FontType1Map）
  * + [win+0x1B](cursorTileX)+=1。零像素绘制、零池分配。 */
-static inline void chs_print_glyph_tm1_origin(TextPrinter *win, uint32_t glyph)
+static inline void PrintGlyph_TextMode1_Origin(TextPrinter *win, uint32_t glyph)
 {
     typedef void (*fn_t)(void *, uint32_t);
     ((fn_t)(ADDR_PRINT_GLYPH_TM1_ORIGIN | 1u))(win, glyph);
 }
-static inline void chs_copy_glyph_2bpp_to_4bpp(
+static inline void CopyGlyph2bppTo4bpp_Origin(
     const void *src, void *dst, uint32_t c, uint32_t e, uint32_t d)
 {
     ((chs_fn5)(ADDR_COPY_GLYPH_2BPP_4BPP | 1u))(src, dst, c, e, d);
@@ -320,13 +333,13 @@ static inline void chs_copy_glyph_2bpp_to_4bpp(
 
 typedef void (*chs_fn4)(const void *src, void *dst, uint32_t a, uint32_t b);
 
-static inline void chs_copy_glyph_1bpp_to_4bpp(
+static inline void CopyGlyph1bppTo4bpp_Origin(
     const void *src, void *dst, uint32_t fg, uint32_t bg)
 {
     ((chs_fn4)(ADDR_COPY_GLYPH_1BPP_4BPP | 1u))(src, dst, fg, bg);
 }
 
-static inline uint16_t chs_pitch_key(TextPrinter *win)
+static inline uint16_t PitchKey(TextPrinter *win)
 {
     /* Window identity — do NOT fold CURSOR_X (JP advances it each glyph).
      * XOR template + text stream so title vs SoftKeyboard (same WindowTemplate)
@@ -345,29 +358,22 @@ static inline uint16_t chs_pitch_key(TextPrinter *win)
 
 /* Hook3（P02）已于 2026-08-24 移除：CHS 字模取址收归 src/text.c 内部
  * static GetGlyphTilePointers；原生 GetGlyphTilePointers@0x08003730 不再订址，
- * 由 chs_get_glyph_tile_pointers 直调原版。 */
+ * 由 GetGlyphTilePointers_Origin 直调原版。 */
 
-/* 官方 PrintGlyph_TextMode* 家族的 CHS 版：gidx 经 Hook3 解析字模。 */
-void PrintGlyph_CHS(TextPrinter *win, uint32_t gidx);
-void PrintGlyph_CHS_Adv(TextPrinter *win, uint32_t gidx, unsigned glyphWidth);
-/* Sym 标点 / JP 组合缓冲（128B TL,BL,TR,BR 连续）入口。 */
-void PrintGlyph_Tiles_CHS_Adv(TextPrinter *win, const uint8_t *tiles128,
-                              unsigned glyphWidth);
-/* 单字节可印字符（Sym/空白/JP PCS）→ CHS 同池绘制（DrawGlyph_CHS_hook.c）。 */
-int  DrawGlyph_CHS(TextPrinter *win, uint32_t cur_char);
-/* 绘制引擎内部件（vram_tile / DrawGlyphTile / Chinese_PitchReset）已随
- * 2026-08-24 收敛归入 src/text.c static——本头文件不再暴露。 */
-int  DrawGlyph_ShouldUseLinear(TextPrinter *win, uint8_t write_op);
 /* 地名弹窗居中（src/map_name_popup/MapNamePopup_hook.c；P04 挂 0x0809F67E）：按本引擎真实步进
  * （空白/字面量 8px、汉字 12px）算居中起点。MenuPrint 的 left 是**格数**
  * （8px/格，Text_InitWindow 内 win->left = 8*left）；返回居中追加格数
  * （四舍五入，残差 ≤4px），0=维持原生位置。只读缓冲区，不改写。
  * ROM 补丁严禁占 r0（native mov r0,sp 的缓冲区指针必须原样进 C）。 */
 uint32_t MapNamePopup_CalcLeftPx(const uint8_t *buf);
-/* CHS 文本流像素宽度（来源 src/text.c；纯工具无 hook，唯一导出工具）：遍历到
+/* 文本流像素宽度（来源 src/text.c；纯工具无 hook，唯一导出工具）：遍历到
  * 0xFF 或 max_bytes，字面量/空白 8px、F9 00 内联汉字 12px、F9 80 短语查表逐字
  * 累加、FA~FE 控制码 0px。供地名弹窗等需要真实渲染宽度的场景复用。 */
-uint32_t GetStringWidth_PCS(const uint8_t *buf, uint32_t max_bytes);
+uint32_t GetStringWidth(const uint8_t *buf, uint32_t max_bytes);
+/* 分区器钩子（hooks_origin.s 桩 @InitWindowTileData 0x08002A50 → entry.s
+ * GlyphIwtdTramp 跳板）：复位该窗体 tilemap 的 CHS 页游标——窗体初始化=
+ * 旧文本作废；原版函数体由跳板重执行 prologue 后回退，不经本函数。 */
+void InitWindowTileData_Hook(uint32_t a0);
 
 int  scene_field_wants_linear(TextPrinter *win);
 int  scene_menu_wants_mode2(TextPrinter *win);
@@ -393,7 +399,7 @@ int  scene_keep_linear_16(TextPrinter *win);
  * pokeruby US has an extra language arg — do NOT pass LANGUAGE_JAPANESE here
  * or r1 becomes glyph=1 and r2 is treated as a pointer → blank text.
  */
-static inline void chs_get_glyph_tile_pointers(
+static inline void GetGlyphTilePointers_Origin(
     uint8_t font_num, uint16_t glyph,
     uint8_t **upper, uint8_t **lower)
 {
@@ -403,7 +409,7 @@ static inline void chs_get_glyph_tile_pointers(
 }
 
 /* Fonts 0/1/2/6 = 1bpp (8B/tile); 3/4/5 = shadowed 4bpp-index (32B/tile). */
-static inline int chs_font_is_shadowed(uint8_t font_num)
+static inline int FontIsShadowed(uint8_t font_num)
 {
     return font_num >= 3u && font_num <= 5u;
 }

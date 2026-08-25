@@ -30,6 +30,7 @@
 | P01 | `0x080032F8` | `ldr r1,=(JP2CHS_Entry\|1); bx r1`（6B+pool，r0=win 原样进 C） | JMP | **全面接管**（Phase C 换装）：原生 PrintNextChar 整函数替换——FA-FF 控制码 + FC 子类型 1-16 + EF/F9/slot/可印字形全由引擎消化，零回落 FontFunc；返回值契约 docs/ruby_jp_text.md §六A。2026-08-24 收敛后为文本域唯一 ROM hook（P02/P05 移除、P05 折入本钩 FA/FB 分支）；入口跳板=`hook/src/entry.s` EngineEntry | `src/text.c` `PrintNextChar()`（AXVJ 同名函数入口；引擎=`hook/src/text.c`） |
 | ~~P02~~ | `0x08003730` | （已移除 2026-08-24）原：`push {r4}; ldr r4,=(GetGlyphTilePointers_Hook\|1); bx r4` | ~~JMP~~ | **已移除**（只 hook PrintNextChar 收敛）：CHS 字模取址收归 `text.c` 内部 `static GetGlyphTilePointers`；原生函数恢复原样由 `chs_get_glyph_tile_pointers` 直调。ID 永不复用 | `src/text.c` `GetGlyphTilePointers()`（美版多 language 参数，日版 4 参） |
 | ~~P05~~ | `0x08003F4C` | （已移除 2026-08-24）原：`ldr r3,=(WaitArrow_Prepare_Hook\|1); bx r3` 回落主体 `0x08003DAD` | ~~JMP~~ | **已移除并折入 P01**：相位同步逻辑进 `text.c static DrawInitialDownArrow`（pokeruby 同名），FA/FB 分支直调；反汇编实证原生包装 ≡ `win[6]=0 + 尾调 0x08003DAC`，等价成立。ID 永不复用 | `src/text.c` FA/FB 等 A 箭头绘制段（DrawInitialDownArrow 同名折入） |
+| P24 | `0x08002A50` | `ldr r3,=(GlyphIwtdTramp|1); bx r3`（6B+pool，覆盖原 prologue 前 4 条指令） | JMP | **InitWindowTileData 页游标复位**：多帧字库加载 worker（gdb 采集 2656 命中实证 JP=US 同址）入口改跳 entry.s GlyphIwtdTramp 跳板——保存全现场、调 text.c InitWindowTileData_Hook（复位该 tilemap 的 CHS 页游标：窗体初始化=旧文本作废，跨场景累积清零，修能力/技能/开始菜单回绕互踩）、恢复现场、重执行被覆盖的 4 条 prologue、落回 0x2A58 原函数体（字库加载不受影响）。ARMv4T 远调用惯用法（mov lr,pc+bx，无 blx） | src/text.c InitWindowTileData()（AXVJ 同址同构，256 字模分帧加载） |
 
 ### B. 战斗
 

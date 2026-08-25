@@ -14,7 +14,7 @@
  *      返回居中起点**格数**（四舍五入，残差 ≤4px），跳板注入 r1 = 1 + 返回值。
  *   3) 文字区总宽 = 10 列 × 8px = 80px（v5/v6 实测反推）。
  *
- * 宽度计算 GetStringWidth_PCS 来源 src/text.c（导出工具），本文件只留 MAP 场景
+ * 宽度计算 GetStringWidth 来源 src/text.c（导出工具），本文件只留 MAP 场景
  * 常量与居中换算。入口 r0=sp 缓冲区（只读遍历），返回居中追加**格数**
  * （0 = 维持原生位置）。跳板落点 0x0809F6CE（跳过 movs r1,#1）。
  * 安全阀：宽 0 或 ≥ 文字区 80px → 返回 0 原样放行。
@@ -30,7 +30,7 @@
 
 uint32_t MapNamePopup_CalcLeftPx(const uint8_t *buf)
 {
-    uint32_t width_px = GetStringWidth_PCS(buf, MAPNAME_BUF_BYTES);
+    uint32_t width_px = GetStringWidth(buf, MAPNAME_BUF_BYTES);
 
     if (width_px == 0 || width_px >= MAPNAME_FIELD_PX)
         return 0;                       /* 空/满宽：原样放行 */

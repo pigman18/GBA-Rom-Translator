@@ -62,7 +62,7 @@ rem Stream emit: no copy-vars, no silent fallback. Missing symbol -> no line ->
 rem armips errors at use site (loud failure beats jumping to 0x08800000).
 > %OUT%\game_syms.asm (
     echo ; Auto-generated from out/game.map - do not edit
-    for %%S in (MapName_DisplayCellLength UnusedPrintMonName_Hook DrawOptionMenuChoice_Hook) do (
+    for %%S in (MapName_DisplayCellLength UnusedPrintMonName_Hook DrawOptionMenuChoice_Hook InitWindowTileData_Hook GlyphIwtdTramp) do (
         for /f "tokens=1" %%a in ('findstr /R "%%S$" %OUT%\game.map') do @echo %%S equ %%a
     )
 )

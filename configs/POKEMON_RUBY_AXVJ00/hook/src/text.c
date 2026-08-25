@@ -7,9 +7,9 @@
  *
  * 四行一分发（一行一原生语义，行间零共享可变状态）：
  *   tm0 = FontFunc[0] Linear 滚动光栅（TILE_BASE+TILE_OFF，对话/战斗/详情页）
- *   tm1 = FontFunc[1] 等宽：保留区像素 + cursor 格表项（队伍名/请选择/选项）
+ *   tm1 = FontFunc[1] 等宽：B3 分配器（流启动扫描定址+流内盲顺序+带尾回卷）
  *   tm2 = FontFunc[2] 指针缓冲（dst==0 幻影打印跳过）
- *   tm3 = 与 tm1 共用（网格"就地画"对 CHS 动态字模不可行，等价实现）
+ *   tm3 = 与 tm1 共用（菜单/对话主窗；font4 队伍窗走原生 Origin 路径）
  *   tm4..7 / 未验证 fontNum → UNKNOWN：消费返回 1、无绘制（缺字=排查信号）
  *
  * 字体为每字形属性（GetGlyph 返回 width/bank）：
@@ -78,8 +78,6 @@ struct ChsGlyphTiles {
 /* ---- 前置声明 ---- */
 static int  GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth);
 static void PrintGlyph_TextMode0(
-    TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth);
-static void PrintGlyph_TextMode2(
     TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth);
 static void PrintGlyph_Unknown(
     TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth);
@@ -510,7 +508,7 @@ static void DrawGlyphTiles(
 }
 
 /* =====================================================================
- * §6c 表项写入分发（sWriteGlyphTilemapFuncs[fontNum]）
+ * §6c 表项写入分发（sWriteGlyphTilemapFuncs[fontNum]，tm1/tm3 路径）
  * 已验证 fn3/fn4 = cursor 格成对写；未验证 fontNum → UNKNOWN 不写。
  * ===================================================================== */
 typedef void (*WriteGlyphTilemapFunc)(TextPrinter *, uint16_t, uint16_t);
@@ -605,43 +603,135 @@ static uint16_t GlyphPageCur(uint16_t tmap_lo, uint16_t span, unsigned n)
     return 0;                                   /* 新页从区首画 */
 }
 
-/* 槽记帐分配（⚠️ 2026-08-25 深夜回退定案：页游标表 @0x0203FFD2 引入
- * 背包/队伍进入黑屏（rr 静态修复后依旧，疑似该区游戏数据冲突），
- * 回退到全局单游标 + §10.4 自由区表 = 7732 基线（全部测试无崩溃）。
- * 已知遗留：菜单重入/能力页多页容量回绕互踩（页游标表待专轮排查后再启）。
- * GlyphPageCur/GlyphPageReset/InitWindowTileData_Hook 保留但停用
- * （P24 桩已断开）。 */
+/* B3 分配器（2026-08-25 定案，三轮迭代终版）：
+ * 流启动扫描定址（所有权）+ 流内盲顺序（相邻性）+ 带尾回卷本流带首（非塌缩）。
+ * ---------------------------------------------------------------------
+ * 三轮缺陷对应：
+ *  R1 全局游标回卷踩他窗 → 流启动扫 tilemap 定空闲隙（所有权查实）；
+ *  R2-v1 带满每字返回同对 → 塌缩 → 回卷本流带首顺序自踩（每字不同对）；
+ *  R2-v1 重定位破 t-2 相邻 → 流内禁重定位禁扫描，盲顺序 own-next 恒相邻；
+ *    own-next 被陈旧表项挡住也直写（挡板大概率死表项，误写代价=单字错，
+ *    换重定位=必破相邻=花屏，两害取轻）；
+ *  容量：8px 非溢出字形只占 2 tile（调用点按 (w2==0&&!spilled) 传 n），
+ *    cb=2 带扩至 [0x100,0x1DF)（223 tile）——背包一屏 216 ≤ 223 实证可装下。
+ * 流启动扫描带 16 tile 最小 run（防微碎片定址），无则退回 n，再无则本流带首。
+ * 残留风险：流超出所定空闲隙时顺写邻居（碎片场景）；带尾回卷点若恰为
+ *   spilled 字形，该字左半落本流带首前一对（单字风险）。
+ * A 案（tm1/tm3 转光栅）已证死：等宽窗 tileData = 多窗共享静态只读 atlas，
+ * 无私有可写区，就地画必互踩（2026-08-25 实测四截图）。
+ * GlyphScratchRange/GlyphPageCur/GlyphPageReset/InitWindowTileData_Hook
+ * 记账系死代码保留停用（P24 桩维持断开）。 */
+
+/* 引用位图：扫本窗 BG tilemap 全部 0x400 表项，标记 [lo,lo+span) 内
+ * 被引用 tile（bits[d>>5] 的 bit[d&31]，d=tile-lo）。 */
+static void GlyphScanRefs(uint8_t *tpl, uint16_t lo, uint16_t span, uint32_t *bits)
+{
+    const uint16_t *tmap = (const uint16_t *)(uintptr_t)win_u32(tpl, 0x10);
+    unsigned i;
+
+    for (i = 0; i < 8u; i++)
+        bits[i] = 0;
+    if (!tmap)
+        return;
+    for (i = 0; i < 0x400u; i++) {
+        uint32_t d = (uint32_t)(tmap[i] & 0x03FFu) - lo;
+        if (d < span)
+            bits[d >> 5] |= 1u << (d & 31u);
+    }
+}
+
+/* 位图内首个连续 n 空位：自 prefer 起扫到带尾再回卷带首，返回带内偏移；
+ * 无自由 run 返回 0xFFFF。 */
+static uint16_t GlyphScanRun(const uint32_t *bits, uint16_t span, unsigned n, uint16_t prefer)
+{
+    uint16_t off;
+    unsigned run = 0;
+
+    if (prefer >= span)
+        prefer = 0;
+    for (off = 0; off < span; off++) {
+        uint16_t idx = (uint16_t)(prefer + off);
+        if (idx >= span)
+            idx = (uint16_t)(idx - span);
+        if (bits[idx >> 5] & (1u << (idx & 31u))) {
+            run = 0;
+            continue;
+        }
+        if (++run == n) {
+            int first = (int)idx - (int)n + 1;
+            if (first < 0)
+                first += span;
+            return (uint16_t)first;
+        }
+    }
+    return 0xFFFFu;
+}
+
 static uint16_t GlyphScratchAlloc(TextPrinter *win, unsigned n)
 {
     uint8_t *tpl = win_template(win);
     uint8_t cb = tpl ? tpl[1] : 0;
-    uint16_t lo, hi;
-    /* 自由区表（gdb 两轮采集实测，README §10.4；charBlock 绝对 tile 号，
-     * TILE_BASE 恒 1）：
-     *  cb=1（font4 队伍窗）：font4 预渲染区 [2,0xD6] + 原生数字映射
-     *   [0x74,0xD5] + 图标章 [0x14C-0x151]/[0x18C-0x19B] → [0xD7,0x14B]。
-     *  cb=2（font3 菜单/对话/图鉴/能力页）：能力页自加载字库 [0x00,0x100)
-     *   + 场景映射 [0x1C9,0x1F7] + ▶/UI 章 → [0x100,0x1C8]。
-     *  cb=0（弹窗/对话）：现状保留 [0x101,0x1AB]。 */
+    volatile struct ChineseTileState *st;
+    uint32_t bits[8];
+    uint16_t lo, hi, span, base;
+    int have_origin;
+
+    /* 自由区表（gdb 两轮采集实测，README §10.4）——B3 扫描栅栏：
+     *  cb=1 → [0x0102,0x014B]；cb=2 → [0x0100,0x01DF]（B3 扩至 ▶/UI 章
+     *  0x1E0 之下，223 tile）；cb=0 → [0x0101,0x01AB]。 */
     if (cb == 1) {
-        lo = 0x0102u;                       /* 258：框体图形区 [0,257) 之上
-                                             * （旧池 [0x101,0x1FB] 跨全部测试
-                                             * 框体无损=实证），图标章 0x14C 之下 */
+        lo = 0x0102u;
         hi = 0x014Bu;
     } else if (cb == 2) {
         lo = 0x0100u;
-        hi = 0x01C8u;
+        hi = 0x01DFu;
     } else {
         lo = 0x0101u;
         hi = 0x01ABu;
     }
-    {
+    span = (uint16_t)(hi - lo + 1u);
+
+    if (!tpl || !win_u32(tpl, 0x10)) {
+        /* tilemap 缺失（防御）：退回旧全局游标路径（7732 基线行为） */
         uint16_t cur = *(volatile uint16_t *)ADDR_GLYPH_ALLOC_NEXT;
         if (cur < lo || (uint16_t)(cur + n - 1u) > hi)
-            cur = lo;                           /* 越区回卷（容量边界） */
+            cur = lo;
         *(volatile uint16_t *)ADDR_GLYPH_ALLOC_NEXT = (uint16_t)(cur + n);
         return cur;
     }
+
+    st = BindPitchSlot(win, 0);
+
+    have_origin = (st->scratch_tx != 0xFFu);
+    base = have_origin ? st->scratch_tx : 0;
+
+    if (!have_origin || st->tiles_drawn == 0u ||
+        (unsigned)st->tiles_drawn + n > 200u) {
+        /* 流启动/换行重启：扫描定空闲隙（prefer 本流带首，清屏后可复用；
+         * 16 tile 最小 run 防微碎片），无则退 n，再无则本流带首自踩 */
+        uint16_t got;
+        GlyphScanRefs(tpl, lo, span, bits);
+        got = GlyphScanRun(bits, span, 16u, base);
+        if (got == 0xFFFFu)
+            got = GlyphScanRun(bits, span, n, base);
+        st->tiles_drawn = 0;
+        if (got == 0xFFFFu)
+            got = base;
+        st->scratch_tx = (uint8_t)got;
+        base = got;
+    } else {
+        /* 流内盲顺序：own-next 恒相邻（t-2 约定成立），不扫描不重定位；
+         * 带尾回卷本流带首（自踩语义，非塌缩） */
+        uint16_t next = (uint16_t)(st->scratch_tx + st->tiles_drawn);
+        if ((uint16_t)(next + n) > span) {
+            next = st->scratch_tx;
+            st->tiles_drawn = 0;
+        }
+        base = next;
+    }
+
+    st->tiles_drawn = (uint8_t)(st->tiles_drawn + n);
+    return (uint16_t)(lo + base);
 }
 
 /* 页游标复位：窗体初始化（字库预渲染）= 该页旧文本作废 → 游标归零。
@@ -716,14 +806,16 @@ static void PrintGlyph_TextMode0(
     DrawGlyphTiles(win, tiles, 1, glyphWidth);
 }
 
-/* ---- tm1/tm3：等宽（保留区像素 + cursor 格表项）----
+/* ---- tm1/tm3：等宽（B3 分配器：流启动扫描定址+流内盲顺序+带尾回卷）----
  * 12px 汉字 = 2 列表项 + 1.5 列步进（半列相位由 pitch 槽 chs_px 承载，
  * 下一字形自动从半列续接）；8px 日文 = 1 列表项 + 整列步进（相位对齐）。
  * 不读写 TILE_OFFSET（tm0 专属状态，行间隔离）。
  * 两趟几何（bak DrawGlyphTiles_CHS_Core 同款）：第一趟 TL/BL 恒宽 8
  * @startPixel（跨列 spill → 保留区第 2 对）；第二趟 TR/BR 恒宽 w-8、
  * startPixel 复用（写第 2 对 [startPixel,+w2)，与 spill [0,startPixel)
- * 拼满整列）；8px 字形仅第一趟，行尾半列 spill 亦落表项。 */
+ * 拼满整列）；8px 字形仅第一趟，行尾半列 spill 亦落表项。
+ * B3 容量：分配 n = (w2==0 && !spilled) ? 2 : 4——8px 非溢出只占一对，
+ * 溢出对仅在真正 spill 时消耗（背包一屏 216 ≤ 223 的容量来源）。 */
 static void PrintGlyph_TextMode1(
     TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth)
 {
@@ -772,9 +864,10 @@ static void PrintGlyph_TextMode1(
     spilled = (startPixel > 0u);
 
     /* 共享列（bak 原地合成语义）：startPixel>0 ⇒ 首列即上一字形溢出列。
-     * 槽记帐下流内分配严格顺序（恒 4 tile/字），上一字形溢出对 = t-2/-1：
-     * pass1 在该对上 RMW 合成，[0,startPixel) 保留上一字右半像素。 */
-    t = GlyphScratchAlloc(win, 4u);         /* 恒 4：首列对 + 溢出列对 */
+     * 流内盲顺序下上一字形溢出对 = t-2/-1（n 链恒相邻，见分配器注）：
+     * pass1 在该对上 RMW 合成，[0,startPixel) 保留上一字右半像素。
+     * B3 容量：8px 非溢出只消耗一对（2 tile）。 */
+    t = GlyphScratchAlloc(win, (w2 == 0u && !spilled) ? 2u : 4u);
 
     if (spilled) {
         u1 = (uint16_t)(t - 2u);
@@ -868,9 +961,9 @@ typedef void (*PrintGlyphFunc)(
 
 static const PrintGlyphFunc sPrintGlyphFuncs[8] = {
     PrintGlyph_TextMode0,   /* 0：Linear 滚动光栅 */
-    PrintGlyph_TextMode1,   /* 1：等宽（保留区 + cursor 格表项） */
+    PrintGlyph_TextMode1,   /* 1：等宽（B3 分配器：扫描定址+盲顺序+带尾回卷） */
     PrintGlyph_TextMode2,   /* 2：缓冲（占位） */
-    PrintGlyph_TextMode1,   /* 3：对话主窗（高频；网格对 CHS 同构） */
+    PrintGlyph_TextMode1,   /* 3：对话/菜单主窗（font4 队伍窗经 Tm1 表走 Origin） */
     PrintGlyph_Unknown,     /* 4：UNKNOWN */
     PrintGlyph_Unknown,     /* 5：UNKNOWN */
     PrintGlyph_Unknown,     /* 6：UNKNOWN */

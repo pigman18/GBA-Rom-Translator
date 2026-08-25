@@ -16,7 +16,7 @@ set OUT=out
 set BUILD=%OUT%\obj
 set LINK_DIR=link
 
-set CFLAGS=-mthumb -mcpu=arm7tdmi -ffreestanding -O2 -fno-builtin -Wall -I%SRC_ROOT% -nostdlib -c
+set CFLAGS=-mthumb -mcpu=arm7tdmi -ffreestanding -O2 -fno-builtin -Wall -Iinclude -I%SRC_ROOT% -nostdlib -c
 set ASFLAGS=-mthumb -mcpu=arm7tdmi -ffreestanding -x assembler-with-cpp -c
 set LDFLAGS=-mthumb -mcpu=arm7tdmi -nostdlib -T %LINK_DIR%/game.ld -Wl,-Map=%OUT%/game.map
 
@@ -28,6 +28,14 @@ if errorlevel 1 exit /b 1
 
 echo === Compiling text.c (JP takeover engine) ===
 %CC% %CFLAGS% %SRC_ROOT%\text.c -o %BUILD%\text.o
+if errorlevel 1 exit /b 1
+
+echo === Compiling chinese_text.c (CHS content resolver, upstream port) ===
+%CC% %CFLAGS% %SRC_ROOT%\chinese_text.c -o %BUILD%\chinese_text.o
+if errorlevel 1 exit /b 1
+
+echo === Compiling text_translate.c (F9 protocol layer) ===
+%CC% %CFLAGS% %SRC_ROOT%\text_translate.c -o %BUILD%\text_translate.o
 if errorlevel 1 exit /b 1
 
 echo === Assembling map_name_popup\entry.s ===
@@ -43,6 +51,8 @@ echo === Linking game.elf ===
 %CC% %LDFLAGS% -o %OUT%/game.elf ^
   %BUILD%/text_entry.o ^
   %BUILD%/text.o ^
+  %BUILD%/chinese_text.o ^
+  %BUILD%/text_translate.o ^
   %BUILD%/MapNamePopup_entry.o ^
   %BUILD%/MapNamePopup_hook.o ^
   %BUILD%/UpdateNickInHealthbox_entry.o ^
@@ -62,7 +72,7 @@ rem Stream emit: no copy-vars, no silent fallback. Missing symbol -> no line ->
 rem armips errors at use site (loud failure beats jumping to 0x08800000).
 > %OUT%\game_syms.asm (
     echo ; Auto-generated from out/game.map - do not edit
-    for %%S in (MapName_DisplayCellLength UnusedPrintMonName_Hook DrawOptionMenuChoice_Hook InitWindowTileData_Hook GlyphIwtdTramp) do (
+    for %%S in (MapName_DisplayCellLength UnusedPrintMonName_Hook DrawOptionMenuChoice_Hook) do (
         for /f "tokens=1" %%a in ('findstr /R "%%S$" %OUT%\game.map') do @echo %%S equ %%a
     )
 )

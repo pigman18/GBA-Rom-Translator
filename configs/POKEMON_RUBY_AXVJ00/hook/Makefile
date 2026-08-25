@@ -17,13 +17,15 @@ OPTION   := $(SRC_ROOT)/option
 OUT      := out
 BUILD    := $(OUT)/obj
 
-CFLAGS  := -mthumb -mcpu=arm7tdmi -ffreestanding -O2 -fno-builtin -Wall -I$(SRC_ROOT) -nostdlib -c
+CFLAGS  := -mthumb -mcpu=arm7tdmi -ffreestanding -O2 -fno-builtin -Wall -Iinclude -I$(SRC_ROOT) -nostdlib -c
 ASFLAGS := -mthumb -mcpu=arm7tdmi -ffreestanding -x assembler-with-cpp -c
 LDFLAGS := -mthumb -mcpu=arm7tdmi -nostdlib -T link/game.ld -Wl,-Map=$(OUT)/game.map
 
 OBJS := \
 	$(BUILD)/text_entry.o \
 	$(BUILD)/text.o \
+	$(BUILD)/chinese_text.o \
+	$(BUILD)/text_translate.o \
 	$(BUILD)/MapNamePopup_entry.o \
 	$(BUILD)/MapNamePopup_hook.o \
 	$(BUILD)/UpdateNickInHealthbox_entry.o \
@@ -46,6 +48,12 @@ $(BUILD)/text_entry.o: $(SRC_ROOT)/entry.s | $(BUILD)
 	$(CC) $(ASFLAGS) $< -o $@
 
 $(BUILD)/text.o: $(SRC_ROOT)/text.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD)/chinese_text.o: $(SRC_ROOT)/chinese_text.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@
+
+$(BUILD)/text_translate.o: $(SRC_ROOT)/text_translate.c | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@
 
 $(BUILD)/MapNamePopup_entry.o: $(MAP_POPUP)/entry.s | $(BUILD)
@@ -82,7 +90,7 @@ $(OUT)/game.bin: $(OUT)/game.elf
 # 缺失符号该行不生成，armips 在使用处直接报错。
 $(OUT)/game_syms.asm: $(OUT)/game.map
 	@printf '; Auto-generated from out/game.map - do not edit\n' > $@; \
-	for s in MapName_DisplayCellLength UnusedPrintMonName_Hook DrawOptionMenuChoice_Hook InitWindowTileData_Hook GlyphIwtdTramp; do \
+	for s in MapName_DisplayCellLength UnusedPrintMonName_Hook DrawOptionMenuChoice_Hook; do \
 		addr=`tr -d '\r' < $(OUT)/game.map | grep -E "$$s$$" | awk '{print $$1}'`; \
 		if [ -n "$$addr" ]; then printf '%s equ %s\n' "$$s" "$$addr" >> $@; fi; \
 	done

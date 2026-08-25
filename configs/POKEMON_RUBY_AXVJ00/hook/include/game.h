@@ -52,7 +52,8 @@
  * 短语表将"文本存储"和"字段引用"解耦：
  *   字段槽（8B）：F9 <op> hi lo FF          → 4 字节引用
  *   PhraseTable：F9 00×N + FE/FB… + FF      → 展开侧载流（含控制符）
- * 查找路径：F9 80/op →
+ * 查找路径（实现在 src/text_translate.c）：
+ *   F9 80/op →
  *   PhraseOffsets[code]（u32 数组 @ 0x08810000）
  *   → PhraseTable + offset（字节流 @ 0x08820000）
  *   → 父串未结束 + 无 FE/FB/FA：内联绘制，INDEX+3 续父串（对齐 GetStringWidth）
@@ -60,8 +61,8 @@
  * layout: .org 0x08810000 → offsets （u32[code_max], sentinel = total_size）
  *         .org 0x08820000 → streams （PCS bytes ending in FF）
  *
- * 勿在 0x0203FFF0/F7F8 放 PhraseResume（崩/踩图）。
- * Pitch 多槽在 0x0203FF80..FFCF（避开 FFF0）；勿拆回 JP→FontFunc 双路径。
+ * 勿在 0x0203FFF0/F7F8 放 PhraseResume（崩/踩图）；0x0203FFD2 起为游戏
+ * 数据区（页游标表曾落此处 → 背包/队伍死机根因，已移除）。
  * 改 phrases 只重生 asm + armips，不必重编 game.bin。
  */
 /* Sym punct bank (9×64B), after Small @ 0x09100000+0xE0000.
@@ -79,7 +80,6 @@
 #ifndef OPT_FG_UNSELECTED
 #define OPT_FG_UNSELECTED   0u
 #endif
-#define CHS_PITCH_SLOT_COUNT       8u
 
 /* ---- pokeruby text.c 对齐的类型（字段名与官方一致）----
  * 官方 DrawGlyphTile_UnshadowedFont/ShadowedFont(struct GlyphTileInfo *)；
@@ -99,10 +99,8 @@ struct GlyphBuffer {
     uint32_t colors[16];
 };
 
-/* Hook3 伪 glyph 编码：bit15=右半(TR/BR)，bits0-14=gidx。
- * 官方调用方字形均 ≤0xFF，bit15 门控零冲突（全 ROM 仅 FontFunc[1]/[2] 两调用方）。 */
-#define CHS_GLYPH_HALF_BIT   0x8000u
-#define CHS_GLYPH_IDX_MASK   0x7FFFu
+/* Hook3 伪 glyph 编码（bit15=右半，bits0-14=gidx）已随 CHS 解压收编至
+ * src/chinese_text.c（内部专用）。 */
 
 #define WIN_TEMPLATE        0x00
 #define WIN_STATE           0x04
@@ -135,34 +133,23 @@ struct GlyphBuffer {
 /* eBattleInterfaceGfxBuffer (AXVJ literal). Docs/ref only — gate is textMode==2. */
 #define BATTLE_IF_GFX_SIZE  0x1000u
 
-/* Per-window pitch slot (8B). Table @ ADDR_CHS_PITCH_SLOTS.
- * meta 位域：char_base 2bit（0-3）| adv12 1bit（0=8px,1=12px）| base_tx 5bit（0-31）。
- * scratch_tx = 本流 CHS scratch 起始偏移（自由区内，0xFF=未分配）；
- * tiles_drawn = 本流已用 tile 数（随 chs_px 复位，重绘幂等覆盖自己的带）。 */
-struct ChineseTileState {
-    uint8_t  meta;        /* +0 char_base:2 | adv12:1 | base_tx:5 */
-    uint8_t  write_op;    /* +1 */
-    uint8_t  scratch_tx;  /* +2 scratch 起始偏移（0xFF=未分配） */
-    uint8_t  tiles_drawn; /* +3 本流已用 tile 数 */
-    uint16_t pitch_key;   /* +4 window fingerprint for pitch_reset */
-    uint16_t chs_px;      /* +6 pixel X in pitch run */
-};
-
-#define SLOT_CHAR_BASE(st)        ((st)->meta & 0x03u)
-#define SLOT_SET_CHAR_BASE(st, v)  ((st)->meta = (uint8_t)(((st)->meta & ~0x03u) | ((v) & 0x03u)))
-#define SLOT_ADV12(st)            (((st)->meta & 0x04u) != 0u)
-#define SLOT_SET_ADV12(st, v12)    ((st)->meta = (uint8_t)(((st)->meta & ~0x04u) | ((v12) ? 0x04u : 0x00u)))
-#define SLOT_LAST_ADV(st)         ((uint8_t)(SLOT_ADV12(st) ? 12u : 8u))
-#define SLOT_BASE_TX(st)          ((uint8_t)((st)->meta >> 3))
-#define SLOT_SET_BASE_TX(st, v)    ((st)->meta = (uint8_t)(((st)->meta & 0x07u) | ((((uint8_t)(v)) & 0x1Fu) << 3)))
-
-/* LRU control for pitch slots (16B @ ADDR_CHS_PITCH_CTRL). */
-struct ChsPitchCtrl {
-    uint8_t cur;                         /* +0 last bound slot */
-    uint8_t gen;                         /* +1 bump on each bind */
-    uint8_t pad[2];                      /* +2 */
-    uint8_t age[CHS_PITCH_SLOT_COUNT];   /* +4 last-used gen per slot */
-};
+/* ---- 行相位表（2026-08-25 反汇编定案的最小状态）----
+ * 原生 tm1 writer 只推 win[0x1B]（0x0800360C 实证），不维护任何像素相位；
+ * 12px 步进的半列相位必须自存。表落 0x0203FF80-FFCF（多轮验证安全区；
+ * 0x0203FFD2 起为游戏数据区，严禁占用——旧页表死机根因）。
+ * key = 行指纹（TILE_BASE^CURSOR_Y^CURSOR_TILE_Y^template^stream），
+ * 换行/换流自动换 key = 相位自动归零；失配检测（cursor 回退/跳列）防重印错位。 */
+#define CHS_PHASE_COUNT 8u
+struct ChsPhase {
+    uint16_t key;    /* +0 行指纹（PitchKey） */
+    uint16_t px;     /* +2 行内已绘像素（相位 = px&7） */
+    uint8_t  tx0;    /* +4 行首表项列（失配检测锚点） */
+    uint8_t  adv12;  /* +5 保留（旧失配期望值用；现期望 = tx0+(px>>3)） */
+    uint8_t  scr_org;/* +6 B3 本流 scratch 带首（带内偏移） */
+    uint8_t  scr_next;/* +7 B3 本流下一分配偏移（带内偏移） */
+};                    /* 8B × 8 = 64B @ ADDR_CHS_PITCH_SLOTS(0x0203FF90)
+                       * → 至 0x0203FFCF，实证安全区（0x0203FF80-FFCF）之内 */
+                      /* gen 字节 @ ADDR_CHS_PITCH_CTRL(0x0203FF80)，LRU 驱逐 */
 
 /*
  * GBA 硬件以 8×8 tile 为单位（4bpp / tile 32B）。中文字模存储为 16×16
@@ -170,9 +157,13 @@ struct ChsPitchCtrl {
  * CHS_GLYPH_ADVANCE_PX（12px），而非 16px。原理：drawGlyph12 分两趟写
  * VRAM——左 8px（TL+BL）→ 右 4px（TR+BR 的左边 4px），两趟共进 12px。
  * 右 4px 跨入下一 tile 列形成 spill；下一字模的 startPixel 为 4（累积
- * chs_px & 7），其左 4px 覆盖上一字的溢出像素。由于汉字笔画集中在字模
+ * px & 7），其左 4px 覆盖上一字的溢出像素。由于汉字笔画集中在字模
  * 中部，外缘空白区域被覆盖不影响视觉。字模保持 16px 宽可复用原生 tilemap
  * 寻址逻辑（每列 2 tile，index +0/+1），兼容所有 Gen3 文本窗口。
+ *
+ * 相位载体（2026-08-25 反汇编定案）：行相位表 struct ChsPhase（见上）。
+ * 原生引擎不维护像素相位——tm1 writer 只推 win[0x1B]（0x0800360C 实证），
+ * win[0x1A] 为窗口属性位域非游标，不可作相位。
  *
  * 12px = ink / advance / line metrics (product).
  * Hardware glyph container stays 8x16 (two 8x8 tiles) / 16x16 slot — do not change.
@@ -190,8 +181,9 @@ struct ChsPitchCtrl {
 #ifndef CHS_MODE2_PITCH12
 #define CHS_MODE2_PITCH12 0
 #endif
-/* FE/FB newline: DrawGlyph_Chinese_Adv clears chs_px when cur_tx returns to
- * line start or pitch_key (Y) changes — see DrawGlyphTiles_hook.c. */
+/* FE/FB newline：换行改 CURSOR_TILE_Y → 行相位 key 变化 = 相位自动归零；
+ * tm0 线性区跨行补偿（+2 tile）由 text.c PrintGlyph_TextMode0 的
+ * 新行信号（PhaseBind 新绑/失配重锚）承担。 */
 #ifndef CHS_LINE_FEED_PATCH
 #define CHS_LINE_FEED_PATCH 1
 #endif
@@ -265,16 +257,12 @@ struct ChsPitchCtrl {
 #define CHS_FONT_GLYPH_MAX      7168
 #define CHS_ESCAPE              0xF9
 #define CHS_PHRASE_DEFAULT      0x80
+#define PCS_CTRL_BASE           0xFAu   /* FA~FE 控制码基（text.c/text_translate.c 共用） */
 
 #define FONT_NORMAL_UNSHADOWED  0
 #define FONT_NORMAL_SHADOWED    3
 
 typedef uint8_t TextPrinter;
-
-/* Bind/restore per-window pitch slot (JP+CN share CHS pool; never FontFunc dual-path).
- * out_is_new (optional, may be NULL): set to 1 when this bind created a fresh
- * slot for a new pitch key (换行/换窗), so caller can compensate TILE_OFFSET.
- * 2026-08-24 收敛：定义于 src/text.c，static 内部专用——本头文件不再暴露。 */
 
 static inline uint8_t  win_u8(const TextPrinter *w, unsigned off)  { return w[off]; }
 static inline uint16_t win_u16(const TextPrinter *w, unsigned off)
@@ -339,25 +327,9 @@ static inline void CopyGlyph1bppTo4bpp_Origin(
     ((chs_fn4)(ADDR_COPY_GLYPH_1BPP_4BPP | 1u))(src, dst, fg, bg);
 }
 
-static inline uint16_t PitchKey(TextPrinter *win)
-{
-    /* Window identity — do NOT fold CURSOR_X (JP advances it each glyph).
-     * XOR template + text stream so title vs SoftKeyboard (same WindowTemplate)
-     * land in different pitch slots. Do NOT XOR TextPrinter* (often stack/
-     * recycled → thrash slots mid-string). */
-    uint8_t *tpl = win_template(win);
-    uint16_t w = tpl ? (uint16_t)(((uintptr_t)tpl >> 2) & 0xFFFFu) : 0;
-    uint16_t stream = (uint16_t)((win_u32(win, WIN_TEXT_PTR) >> 2) & 0xFFFFu);
-    return (uint16_t)(win_u16(win, WIN_TILE_BASE)
-                      ^ ((uint16_t)win_u8(win, WIN_CURSOR_Y) << 8)
-                      ^ (uint16_t)win_u8(win, WIN_CURSOR_TILE_Y)
-                      ^ w
-                      ^ stream);
-}
 
-
-/* Hook3（P02）已于 2026-08-24 移除：CHS 字模取址收归 src/text.c 内部
- * static GetGlyphTilePointers；原生 GetGlyphTilePointers@0x08003730 不再订址，
+/* Hook3（P02）已于 2026-08-24 移除：CHS 字模取址收归 src/chinese_text.c
+ * DecompressGlyph_Chinese；原生 GetGlyphTilePointers@0x08003730 不再订址，
  * 由 GetGlyphTilePointers_Origin 直调原版。 */
 
 /* 地名弹窗居中（src/map_name_popup/MapNamePopup_hook.c；P04 挂 0x0809F67E）：按本引擎真实步进
@@ -366,14 +338,12 @@ static inline uint16_t PitchKey(TextPrinter *win)
  * （四舍五入，残差 ≤4px），0=维持原生位置。只读缓冲区，不改写。
  * ROM 补丁严禁占 r0（native mov r0,sp 的缓冲区指针必须原样进 C）。 */
 uint32_t MapNamePopup_CalcLeftPx(const uint8_t *buf);
-/* 文本流像素宽度（来源 src/text.c；纯工具无 hook，唯一导出工具）：遍历到
+/* 文本流像素宽度（来源 src/text_translate.c；纯工具无 hook）：遍历到
  * 0xFF 或 max_bytes，字面量/空白 8px、F9 00 内联汉字 12px、F9 80 短语查表逐字
  * 累加、FA~FE 控制码 0px。供地名弹窗等需要真实渲染宽度的场景复用。 */
 uint32_t GetStringWidth(const uint8_t *buf, uint32_t max_bytes);
-/* 分区器钩子（hooks_origin.s 桩 @InitWindowTileData 0x08002A50 → entry.s
- * GlyphIwtdTramp 跳板）：复位该窗体 tilemap 的 CHS 页游标——窗体初始化=
- * 旧文本作废；原版函数体由跳板重执行 prologue 后回退，不经本函数。 */
-void InitWindowTileData_Hook(uint32_t a0);
+/* （原 P24 InitWindowTileData 分区器钩子已于 2026-08-25 随页游标表移除：
+ *  页表落 0x0203FFD2 游戏数据区，为背包/队伍死机根因。） */
 
 int  scene_field_wants_linear(TextPrinter *win);
 int  scene_menu_wants_mode2(TextPrinter *win);

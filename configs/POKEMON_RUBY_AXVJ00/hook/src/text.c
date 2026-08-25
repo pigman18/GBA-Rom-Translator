@@ -171,7 +171,9 @@ static volatile struct ChsPhase *PhaseBind(TextPrinter *win, int *out_is_new)
             /* 失配检测：win[0x1B]（下一绘制格）≠ tx0+(px>>3) 且 > 之
              * ⇒ 中间插了原生字形（(1,4) 路径，整格步进）→ 相位归零、
              * 行锚前移到当前格（原生 8px 整格后相位恒 0，衔接无缝）；
-             * ≤ 之 ⇒ 重印/换行残留 → 同样归零重锚。 */
+             * ≤ 之 ⇒ 重印/换行残留 → 同样归零重锚。
+             * out_is_new 语义（B3）：0=同行续接；1=新槽；2=同键重锚
+             * （=同内容重绘信号，分配器据此原地复用本流带首）。 */
             uint8_t want = (uint8_t)(tab[i].tx0 + (tab[i].px >> 3));
             if (cur_tx != want) {
                 tab[i].px = 0;
@@ -179,7 +181,7 @@ static volatile struct ChsPhase *PhaseBind(TextPrinter *win, int *out_is_new)
                 if (cur_tx > want && out_is_new)
                     *out_is_new = 0;   /* 原生插字：同行续接，非新行 */
                 else if (out_is_new)
-                    *out_is_new = 1;   /* 回退/跳列：按新行处理 */
+                    *out_is_new = 2;   /* 重印/回退：同键重锚 */
             }
             g = (uint8_t)(*gen + 1u);
             *gen = g;
@@ -581,7 +583,7 @@ static uint16_t GlyphScratchAlloc(TextPrinter *win,
     uint8_t *tpl = win_template(win);
     uint8_t cb = tpl ? tpl[1] : 0;
     uint16_t lo, hi, span, base;
-    int restart;
+    int restart, initialized, in_place;
 
     if (cb == 1) {
         lo = 0x0102u;
@@ -605,12 +607,20 @@ static uint16_t GlyphScratchAlloc(TextPrinter *win,
     }
 
     /* 流启动 = 新绑 / 失配重锚 / px==0（PhaseBind 重锚恒清 px；行内 px
-     * 单调递增不回 0）。重启扫描定空闲隙（prefer 本流带首：清屏后原地
-     * 复用；16 tile 最小 run 防微碎片，退 n，再退本流带首自踩）。 */
-    restart = (slot_new != 0) || (st->px == 0u) ||
-              (st->scr_org == 0u && st->scr_next == 0u);
+     * 单调递增不回 0）。
+     * slot_new 语义（PhaseBind）：0=同行续接；1=新槽（新流，扫描定隙）；
+     * 2=同键重锚（=同内容重绘，gdb 实证选项页 297 次/格三空隙轮转 =
+     * 闪烁根因）→ 原地复用 scr_org：同字形写同 tile、表项重写同值，
+     * 幂等零闪烁，且不再消耗自由带。FE 换行因 key 含 cursorY 必换槽。 */
+    initialized = (st->scr_org != 0u || st->scr_next != 0u);
+    in_place = (slot_new == 2) && initialized;
+    restart = !in_place &&
+              ((slot_new != 0) || (st->px == 0u) || !initialized);
 
-    if (restart) {
+    if (in_place) {
+        base = st->scr_org;                 /* 原地重画：表项已指向本带 */
+        st->scr_next = (uint8_t)(base + n);
+    } else if (restart) {
         uint32_t bits[8];
         uint16_t prefer = st->scr_org;
         uint16_t got;

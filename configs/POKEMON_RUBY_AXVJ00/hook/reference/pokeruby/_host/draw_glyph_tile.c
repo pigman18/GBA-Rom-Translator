@@ -13,7 +13,7 @@
  *           dest+32B 的物理右邻槽——调用方须保证 pair 相邻性。
  * 入口    : refpr_draw_tile_unshadowed / refpr_draw_tile_shadowed
  * ===================================================================================== */
-#include "../../include/text_render.h"
+#include "text_render.h"
 
 typedef uint8_t  u8;
 typedef uint16_t u16;

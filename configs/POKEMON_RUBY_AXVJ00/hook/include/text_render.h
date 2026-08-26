@@ -9,6 +9,11 @@
 #define TEXT_RENDER_H
 
 #include "game.h"
+
+/* 官方 DrawGlyphTile_* 的 ±32B 物理邻格视图开关：
+ * 置 UNKNOWN2 时溢出读写走 dest[8..15]/buffer[16..23]（正邻格），
+ * 配合 pair 化自由带布局。 */
+#define TEXT_MODE_UNKNOWN2_VIEW 2u
 #include "text.h"   /* struct TextGlyph（DecompressGlyph_Chinese 形参；避免前向不完整类型） */
 
 /* 字形载体：规范形四指针 + 缓存键基底（CHS=0x8000|gidx；JP/SYM=(fontNum<<8)|code） */

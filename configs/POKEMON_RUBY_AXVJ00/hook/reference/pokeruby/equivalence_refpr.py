@@ -159,3 +159,14 @@ if __name__=="__main__":
     ok_a=run("raw-bytes(no swap)",{"swap":False,"order":True})
     ok_b=run("byte-swizzled     ",{"swap":True ,"order":True})
     print("USE raw" if ok_a else ("USE swapped" if ok_b else "NEITHER MATCHES — deeper analysis required"))
+
+# =====================================================================================
+# 【状态 2026-08-27】host-oracle(clang 直跑 vendored C,_host/oracle*.exe)已证实:
+#   · 无溢出域(startPixel+width<=8)与本工程 draw_tile 逐位一致;
+#   · 有溢出域存在三处分歧待实机定位:
+#     (1) spill 回写分支疑似未触发(spill 保持底图);
+#     (2) gb.pixelRows 内容本身正确(mask/LUT/移位数学符合预期);
+#     (3) TM!=2 分支预读 buffer[16..23] 越界读——调用方须保证 dest 后 >=64B 可读。
+#   ⇒ 结论:剩余差异必须在 mGBA + gdb 断点会话内定位(HOOK_DEBUG_WORKFLOW),
+#     离线脚本推演已到能力边界。runtime 未切换。
+# =====================================================================================

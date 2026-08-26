@@ -345,22 +345,11 @@ uint32_t GetStringWidth(const uint8_t *buf, uint32_t max_bytes);
 /* （原 P24 InitWindowTileData 分区器钩子已于 2026-08-25 随页游标表移除：
  *  页表落 0x0203FFD2 游戏数据区，为背包/队伍死机根因。） */
 
-int  scene_field_wants_linear(TextPrinter *win);
-int  scene_menu_wants_mode2(TextPrinter *win);
-int  scene_is_shop_desc(TextPrinter *win);
-int  scene_is_shop_bag_list(TextPrinter *win);
-int  scene_is_party_footer(TextPrinter *win);
-/* PCS 0xEF ► → CHS_MENU_CURSOR_TILE pair（text.c 内部 static，不再暴露）。
- * FA/FB 等 A 箭头前置同步（原 WaitArrow_Prepare/P05）已折入 text.c
- * static DrawInitialDownArrow（pokeruby 同名），跳板与声明一并移除。 */
-int  scene_jp_via_chs(TextPrinter *win);
-int  scene_is_battle_interface_dest(TextPrinter *win);
-/* 缓冲型打印机（dest=win[0x20]）：血条 textMode2 + RenderTextHandleBold textMode1+font4 */
-int  scene_is_buffer_printer(TextPrinter *win);
-int  scene_is_battle_text_window(TextPrinter *win);
-void scene_mode2_apply(TextPrinter *win, int *x, int *y, int *band, int *origin);
-int  scene_battle_force_linear(TextPrinter *win);
-int  scene_keep_linear_16(TextPrinter *win);
+/* 场景布局门控（scene gates）已随 bak 渲染策略移入
+ * src/text_render_inplace12.c（static，仅该策略消费）。
+ * 缓冲型打印机（dest=win[0x20]：血条 textMode2 + RenderTextHandleBold
+ * textMode1+font4）由 text.c 分发层短路（PcsPrint_Tm1 font4 直通 +
+ * render 对 tm2 不绘制），不再需要引擎级门控。 */
 
 /*
  * AXVJ GetGlyphTilePointers @ 0x08003730 is 4-arg (JP ROM; language baked

@@ -57,6 +57,14 @@
 基于日志推算 → 实际应用。写完 hook 立刻跑一遍 build.bat（entry.s 的
 `.incbin ./baserom.gba` 是常驻依赖，缺失立刻暴露）。
 
+## 3.6 文字替换 BUG：已定案结论与挂起方案（不要再从零排查）
+
+替换/叠字/闪烁类问题的根因链、VRAM 实测占用图（cb2/cb3）、以及挂起的
+**路线 B（按字形共享存储 + 16px 整列步进）完整设计**，见
+**`docs/PLAN_GLYPH_CACHE_ROUTE_B.md`**（2026-08-26 定案，含已否决路线清单——
+12px 缓存、相位变体、私有区 48×8 等已证死路，勿重推）。勘验工具：
+`gdb_patcher.py log --functions UpdateTilemap --vram-survey`。
+
 ## 4. 两个活生生的反面教材（本仓库真实发生）
 
 1. 用户说「直接搜 ROM」→ 我 grep 符号表找 `gMenuSummaryGfx`、拿超 ROM 范围的地址做

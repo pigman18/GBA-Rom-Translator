@@ -38,6 +38,18 @@ echo === Compiling text_translate.c (F9 protocol layer) ===
 %CC% %CFLAGS% %SRC_ROOT%\text_translate.c -o %BUILD%\text_translate.o
 if errorlevel 1 exit /b 1
 
+echo === Compiling text_render.c (shared render primitives) ===
+%CC% %CFLAGS% %SRC_ROOT%\text_render.c -o %BUILD%\text_render.o
+if errorlevel 1 exit /b 1
+
+echo === Compiling text_render_inplace12.c (bak native-addressed inplace) ===
+%CC% %CFLAGS% %SRC_ROOT%\text_render_inplace12.c -o %BUILD%\text_render_inplace12.o
+if errorlevel 1 exit /b 1
+
+echo === Compiling text_render_band.c (B3 scratch band) ===
+%CC% %CFLAGS% %SRC_ROOT%\text_render_band.c -o %BUILD%\text_render_band.o
+if errorlevel 1 exit /b 1
+
 echo === Assembling map_name_popup\entry.s ===
 %CC% %ASFLAGS% %MAP_POPUP%\entry.s -o %BUILD%\MapNamePopup_entry.o
 if errorlevel 1 exit /b 1
@@ -53,6 +65,9 @@ echo === Linking game.elf ===
   %BUILD%/text.o ^
   %BUILD%/chinese_text.o ^
   %BUILD%/text_translate.o ^
+  %BUILD%/text_render.o ^
+  %BUILD%/text_render_inplace12.o ^
+  %BUILD%/text_render_band.o ^
   %BUILD%/MapNamePopup_entry.o ^
   %BUILD%/MapNamePopup_hook.o ^
   %BUILD%/UpdateNickInHealthbox_entry.o ^

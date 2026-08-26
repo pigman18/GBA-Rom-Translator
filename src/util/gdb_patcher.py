@@ -218,6 +218,7 @@ class Ctx:
         double: dict[int, str],
         origin: Optional[bytes],
         dedup: bool,
+        vram_survey: bool = False,
     ):
         self.gdb = gdb
         self.logpath = logpath
@@ -225,6 +226,8 @@ class Ctx:
         self.double = double
         self.origin = origin
         self.dedup = dedup
+        self.vram_survey = vram_survey
+        self._vram_sig: object = None
         self._last: object = None
         self._skipped = 0
 
@@ -623,8 +626,99 @@ def _on_win_dump(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> N
     ctx.log(f"  {_win_fields_us(wb) if us else _win_fields(wb)}")
 
 
+def _read_chunks(gdb: GdbClient, addr: int, n: int, step: int = 0x100) -> bytes:
+    """mGBA stub 对大读包回 E06（0x100 实测可通过），按小块拼接。"""
+    out = bytearray()
+    off = 0
+    while off < n:
+        k = min(step, n - off)
+        out += bytes(gdb.read_mem(addr + off, k))
+        off += k
+    return bytes(out)
+
+
+def _maybe_vram_survey(gdb: GdbClient, ctx: Ctx) -> None:
+    """cb3 勘验（--vram-survey）：场景签名（DISPCNT+BGxCNT×4）变化时勘一次。
+    报告：各层 charbase/screenbase/8bpp/启用位；各启用层 tilemap 引用直方图
+    （0x100 桶，看 charbase-2 层是否引用 ≥0x200）；cb3 (0x0600C000-
+    0x0600FFFF) 1KB×16 非零块图；cb2 尾 0x1F8-0x1FF 占用。"""
+    try:
+        dispcnt_b = bytes(gdb.read_mem(0x04000000, 2))
+        bgcnt_b = bytes(gdb.read_mem(0x04000008, 8))
+    except GdbError:
+        return
+    if len(dispcnt_b) < 2 or len(bgcnt_b) < 8:
+        return
+    dispcnt = u16(dispcnt_b, 0)
+    bgcnt = [u16(bgcnt_b, i * 2) for i in range(4)]
+    sig = (dispcnt, tuple(bgcnt))
+    if sig == ctx._vram_sig:
+        return
+    ctx._vram_sig = sig
+    mode = dispcnt & 7
+    en = (dispcnt >> 8) & 0x3F
+    ctx.log(f"\n[VRAM-SURVEY] mode={mode} BG启用位=0x{en:02X} DISPCNT=0x{dispcnt:04X}")
+    for layer in range(4):
+        cnt = bgcnt[layer]
+        ctx.log(
+            f"  BG{layer}: CNT=0x{cnt:04X} charBase={(cnt >> 2) & 3}"
+            f" screenBase={(cnt >> 8) & 0x1F} 8bpp={(cnt >> 7) & 1}"
+            f" 启用={(en >> layer) & 1}"
+        )
+    for layer in range(4):
+        cnt = bgcnt[layer]
+        if not ((en >> layer) & 1):
+            continue
+        if mode >= 3 and layer >= 2:
+            ctx.log(f"  BG{layer}: 位图模式 BG2/3 无 tilemap，跳过")
+            continue
+        affine = 1 if (mode in (1, 2) and layer >= 2) else 0
+        sb = (cnt >> 8) & 0x1F
+        base = 0x06000000 + sb * 0x800
+        hist = [0, 0, 0, 0]
+        mx = 0
+        try:
+            if affine:
+                data = _read_chunks(gdb, base, 0x400)
+                for b in data:
+                    idx = b * 2
+                    hist[min(idx >> 8, 3)] += 1
+                    mx = max(mx, idx)
+            else:
+                data = _read_chunks(gdb, base, 0x800)
+                for k in range(0, len(data) - 1, 2):
+                    idx = (data[k] | (data[k + 1] << 8)) & 0x3FF
+                    hist[idx >> 8] += 1
+                    mx = max(mx, idx)
+        except GdbError as e:
+            ctx.log(f"  BG{layer}: tilemap@0x{base:08X} 读取失败 {e}")
+            continue
+        cb = (cnt >> 2) & (0xF if affine else 3)
+        ctx.log(
+            f"  BG{layer}: tilemap@0x{base:08X} charBase={cb}"
+            f" 引用桶[0xx,1xx,2xx,3xx]={hist} maxIdx=0x{mx:03X}"
+        )
+    blocks = []
+    try:
+        for k in range(4):
+            data = _read_chunks(gdb, 0x0600C000 + k * 0x1000, 0x1000)
+            for j in range(4):
+                blk = data[j * 0x400:(j + 1) * 0x400]
+                blocks.append("X" if any(blk) else ".")
+        ctx.log(f"  cb3 0x0600C000-0x0600FFFF 1KBx16 非零块图 [{''.join(blocks)}] (X=有数据 .=全零)")
+    except GdbError as e:
+        ctx.log(f"  cb3@0x0600C000 读取失败 {e}")
+    try:
+        tail = bytes(gdb.read_mem(0x0600BF00, 0x100))
+        ctx.log(f"  cb2尾 0x1F8-0x1FF (0x0600BF00) 非零={'有' if any(tail) else '全零'}")
+    except GdbError:
+        pass
+
+
 @handler("UpdateTilemap")
 def _on_update_tilemap(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    if ctx.vram_survey:
+        _maybe_vram_survey(gdb, ctx)
     """BG 表项写入总入口。JP：r0=win, r1=upperTile, r2=lowerTile；
     US：r0=win, r1=tilesWidth（pokeruby UpdateTilemap(win, tilesWidth)）。
     记录目标格/写入前现值——定位乱码格来源。"""
@@ -1402,7 +1496,8 @@ def run_log(args: argparse.Namespace) -> int:
         print("无法连接 mGBA GDB stub（先 mGBA 开 ROM + Start GDB stub + Pause）", file=sys.stderr)
         return 2
 
-    ctx = Ctx(gdb, logpath, single, double, origin, dedup=not args.no_dedup)
+    ctx = Ctx(gdb, logpath, single, double, origin, dedup=not args.no_dedup,
+              vram_survey=bool(getattr(args, "vram_survey", False)))
 
     global _TILES_HARVESTER
     _TILES_HARVESTER = None
@@ -1510,6 +1605,9 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--limit", type=int, default=3000, help="最多命中次数")
     ap.add_argument("--cont-timeout", type=float, default=600.0, help="每次 continue 等待秒数")
     ap.add_argument("--no-dedup", action="store_true", help="关闭连续重复去重")
+    ap.add_argument(
+        "--vram-survey", action="store_true",
+        help="cb3 勘验：场景签名变化时自动报告 BG 层 charbase/tilemap 引用/cb3 占用")
     ap.add_argument(
         "--no-tiles",
         action="store_true",

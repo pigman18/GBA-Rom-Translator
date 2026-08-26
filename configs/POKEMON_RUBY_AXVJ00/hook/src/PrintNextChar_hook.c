@@ -27,15 +27,13 @@
  *   跨模块 API（PrintGlyph/DrawGlyph/TranslateHandleEscape）见 include/text.h。
  *
  * 模块划分（include/src 布局）：
- *   本文件 = 引擎；src/chinese_text.c = 中文内容解析（upstream 移植）；
- *   src/text_translate.c = F9 翻译链路（F900/F980/slot）；
- *   src/text_render.c = 共享渲染原语库；src/text_render_<策略>.c = 各渲染策略
- *   （inplace12 = bak 原生寻址原地写；band = scratch 带；选择器 0x0203FF8C）。
+ *   本文件 = 引擎；src/text_translter.c = F9 翻译链路（F900/F980/slot）；
+ *   src/text_render.c = 共享渲染原语 + GetGlyph 字形源解析；
+ *   src/text_render_inplace12.c = 渲染策略。
  * 本文件取代 text_jp2chs.c 及旧多文件引擎（归档于 src/bak/text/，移出构建）。
  * ===================================================================================== */
 #include "text.h"
 #include "text_render.h"
-#include "chinese_text.h"
 
 /* =====================================================================
  * §1 常量与布局
@@ -79,69 +77,8 @@ enum {
 /* struct ChsGlyphTiles（含 glyph_id）→ include/text_render.h */
 
 /* ---- 前置声明（跨模块 API 见 include/text.h）---- */
-static int  GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth);
 int  PrintNextChar_Hook(TextPrinter *win);
 static int  DrawMenuCursorEF(TextPrinter *win);
-
-/* =====================================================================
- * §4 GetGlyph —— 字形源统一解析（每字形字体属性）
- * （CHS 汉库解压已移交 src/chinese_text.c DecompressGlyph_Chinese，
- *  经 gCurGlyph 直供 PrintGlyph；本函数只管 空白/SYM 标点带/日文。）
- * ===================================================================== */
-static int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth)
-{
-    uint8_t fontNum = win_u8(win, WIN_FONTNUM_REAL);
-    if (fontNum > 6u)
-        fontNum = 3u;    /* bak DrawGlyph_JP_ViaCHS 钳制：非法 fontNum 回落 font3 */
-
-    /* ---- 空白 ---- */
-    if (code == 0) {
-        unsigned i;
-        for (i = 0; i < 128u; i++)
-            out128[i] = 0;
-        *outWidth = 8u;
-        return 1;
-    }
-
-    /* ---- Sym 标点带 ---- */
-    if (code >= SYM_GLYPH_BASE && code < SYM_GLYPH_BASE + SYM_GLYPH_COUNT) {
-        const uint8_t *src = (const uint8_t *)(ADDR_FONT_CHS_SYM
-                                               + (code - SYM_GLYPH_BASE) * 64u);
-        unsigned i;
-        for (i = 0; i < 32u; i++) {
-            out128[0x00 + i] = src[i];
-            out128[0x20 + i] = src[32u + i];
-        }
-        for (i = 0; i < 64u; i++)
-            out128[0x40 + i] = 0;
-        *outWidth = 8u;
-        return 1;
-    }
-
-    /* ---- 日文 fontNum 字库（官方 GGTP；宽度恒 8px） ---- */
-    {
-        uint8_t *upper = 0;
-        uint8_t *lower = 0;
-
-        if (code >= 0xF7)
-            return 0;
-        GetGlyphTilePointers_Origin(fontNum, (uint16_t)code, &upper, &lower);
-        if (!upper || !lower)
-            return 0;
-
-        for (unsigned i = 0; i < 64u; i++)
-            out128[0x40 + i] = 0;
-        if (FontIsShadowed(fontNum)) {
-            copy_tile32(out128 + 0x00, upper);
-            copy_tile32(out128 + 0x20, lower);
-        } else {
-            CopyGlyph1bppTo4bpp_Origin(upper, (uint32_t *)(uintptr_t)(out128 + 0x00), 0xFu, 0x0u);
-            CopyGlyph1bppTo4bpp_Origin(lower, (uint32_t *)(uintptr_t)(out128 + 0x20), 0xFu, 0x0u);
-        }
-        *outWidth = 8u;
-        return 1;
-    }
-}
 
 /* =====================================================================
  * §11 单字节分发（PCS 两级表，镜像原生 sPrintGlyphFuncs × sWriteGlyphTilemapFuncs）
@@ -169,7 +106,7 @@ static void PcsPrint_Custom(TextPrinter *win, uint32_t cur_char)
     t.bl = buf + 0x20;
     t.tr = buf + 0x40;
     t.br = buf + 0x60;
-    render_active(render_vfw12)(win, &t, width);
+    render_inplace12(win, &t, width);
 }
 
 /* 第二级 [fontNum]，镜像原生 sWriteGlyphTilemapFuncs——每格对应日志实证窗口：
@@ -247,7 +184,7 @@ void PrintGlyph(TextPrinter *win, uint32_t gidx, unsigned glyphWidth)
     t.tr = (uint8_t *)&glyph.gfxBufferTop[8];
     t.bl = (uint8_t *)&glyph.gfxBufferBottom[0];
     t.br = (uint8_t *)&glyph.gfxBufferBottom[8];
-    render_active(render_vfw12)(win, &t, width);
+    render_inplace12(win, &t, width);
 }
 
 
@@ -275,11 +212,7 @@ static void DrawInitialDownArrow(TextPrinter *win)
 {
     if (!win)
         return;
-    /* 相位同步随 render 选择（各自适配自家相位状态） */
-    if (render_active(render_vfw12) == render_band)
-        arrow_band(win);
-    else
-        arrow_inplace12(win);
+    arrow_inplace12(win);
     win_set_u16(win, WIN_DOWN_ARROW_COUNTER, 0);
     ((axv_win_fn)(ADDR_DRAW_INITIAL_DOWN_ARROW_BODY | 1u))(win);
 }
@@ -427,7 +360,7 @@ int PrintNextChar_Hook(TextPrinter *win)
             return 1;
     }
 
-    /* ---- 翻译链路（F9 协议 + slot 替换，src/text_translate.c）---- */
+    /* ---- 翻译链路（F9 协议 + slot 替换，src/text_translter.c）---- */
     if (TranslateHandleChar(win, c))
         return 1;
 

@@ -1,24 +1,11 @@
 /* =====================================================================================
  * text_render.c — render 家族共享原语库（纯机制、零策略）
  *
- * 内容：VRAM tile 寻址 / 32B 拷贝 / nibble 像素件 / 单 tile 合成器 / 实验选择器。
- * 策略（状态、落点、表项模式）在各 text_render_<策略>.c。
+ * 内容：VRAM tile 寻址 / 32B 拷贝 / nibble 像素件 / 单 tile 合成器。
+ * 策略 = render_inplace12（text_render_inplace12.c）。
  * ===================================================================================== */
 #include "text_render.h"
-
-/* ------------------------------------------------------------------
- * 实验选择器：0x0203FF8C（bak ChsPitchCtrl 的 pad 后、age[8] 之后的
- * 公共空闲字节；现行 ChsPhase 布局亦不占用）。0=默认(inplace12)。
- * ------------------------------------------------------------------ */
-render_fn render_active(render_fn dflt)
-{
-    switch (*(volatile uint8_t *)RENDER_SEL_ADDR) {
-    case 1:  return render_band;
-    case 2:  return render_inplace12;
-    case 3:  return render_vfw12;
-    default: return dflt;
-    }
-}
+#include "text.h"   /* struct TextGlyph（CHS 直拷区）*/
 
 void copy_tile32(void *dst_vram, const void *src_iwram)
 {
@@ -132,4 +119,113 @@ void draw_tile(TextPrinter *win, struct GlyphTileInfo *info, uint8_t *spillTile)
     copy_tile32(dest, dest_l);
     if (need_spill)
         copy_tile32(spillTile, spill_l);
+}
+
+/* ---- CHS 字库参数（自 chinese_text.h 并入）---- */
+#define CHS_GLYPH_HALF_BIT   0x8000u
+#define CHS_GLYPH_IDX_MASK   0x7FFFu
+#define CHS_FONT_GLYPH_MAX   7168
+
+/* =====================================================================
+ * §glyph —— 字形源统一解析（每字形字体属性）+ CHS 汉库直拷
+ *
+ * heritage：CHS 两函数来自 rh-hideout-chinese/pokeemerald-expansion
+ * src/chinese_text.c（原 hook/src/chinese_text.c，2026-08-27 并入注销）。
+ * 与 upstream 三处差异维持不变：
+ *   1) IsChineseChar/IsChinesePunctuation 不移植——汉字由 F9 帧定界状态机隔离；
+ *   2) 字库源为 armips 侧载 ADDR_FONT_CHS_NORMAL/SMALL（4bpp 预展开直拷）；
+ *   3) 显式传参替代 upstream 全局 gCurGlyph（game.bin 无 .bss）。
+ * ===================================================================== */
+int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth)
+{
+    uint8_t fontNum = win_u8(win, WIN_FONTNUM_REAL);
+    if (fontNum > 6u)
+        fontNum = 3u;    /* bak DrawGlyph_JP_ViaCHS 钳制：非法 fontNum 回落 font3 */
+
+    /* ---- 空白 ---- */
+    if (code == 0) {
+        unsigned i;
+        for (i = 0; i < 128u; i++)
+            out128[i] = 0;
+        *outWidth = 8u;
+        return 1;
+    }
+
+    /* ---- Sym 标点带 ---- */
+    if (code >= SYM_GLYPH_BASE && code < SYM_GLYPH_BASE + SYM_GLYPH_COUNT) {
+        const uint8_t *src = (const uint8_t *)(ADDR_FONT_CHS_SYM
+                                               + (code - SYM_GLYPH_BASE) * 64u);
+        unsigned i;
+        for (i = 0; i < 32u; i++) {
+            out128[0x00 + i] = src[i];
+            out128[0x20 + i] = src[32u + i];
+        }
+        for (i = 0; i < 64u; i++)
+            out128[0x40 + i] = 0;
+        *outWidth = 8u;
+        return 1;
+    }
+
+    /* ---- 日文 fontNum 字库（官方 GGTP；宽度恒 8px） ---- */
+    {
+        uint8_t *upper = 0;
+        uint8_t *lower = 0;
+
+        if (code >= 0xF7)
+            return 0;
+        GetGlyphTilePointers_Origin(fontNum, (uint16_t)code, &upper, &lower);
+        if (!upper || !lower)
+            return 0;
+
+        for (unsigned i = 0; i < 64u; i++)
+            out128[0x40 + i] = 0;
+        if (FontIsShadowed(fontNum)) {
+            copy_tile32(out128 + 0x00, upper);
+            copy_tile32(out128 + 0x20, lower);
+        } else {
+            CopyGlyph1bppTo4bpp_Origin(upper, (uint32_t *)(uintptr_t)(out128 + 0x00), 0xFu, 0x0u);
+            CopyGlyph1bppTo4bpp_Origin(lower, (uint32_t *)(uintptr_t)(out128 + 0x20), 0xFu, 0x0u);
+        }
+        *outWidth = 8u;
+        return 1;
+    }
+}
+
+void DecompressGlyph_Chinese(struct TextGlyph *glyph, uint16_t ChineseChar, uint8_t fontId)
+{
+    const uint8_t *base;
+    const uint8_t *g;
+
+    if (ChineseChar >= CHS_FONT_GLYPH_MAX)
+        ChineseChar = 0;
+
+    /* 根据字体类别选择字库（upstream 同款分支；fontId 语义对齐原生 fontNum）：
+     * font4（队伍名等小字窗）→ FontChsSmall 8px；其余 → FontChsNormal 12px。 */
+    base = (fontId == 4u) ? (const uint8_t *)ADDR_FONT_CHS_SMALL
+                          : (const uint8_t *)ADDR_FONT_CHS_NORMAL;
+    g = base + ((uint32_t)(ChineseChar & CHS_GLYPH_IDX_MASK) << 7);
+    if (ChineseChar & CHS_GLYPH_HALF_BIT)
+        g += 64u;
+
+    /* 本工程字模布局：TL+0 / BL+32 / TR+64 / BR+96（各 32B tile）。
+     * 填入 upstream struct TextGlyph 行主序：Top = TL|TR，Bottom = BL|BR。 */
+    copy_tile32(&glyph->gfxBufferTop[0], g + 0u);
+    copy_tile32(&glyph->gfxBufferTop[8], g + 64u);
+    copy_tile32(&glyph->gfxBufferBottom[0], g + 32u);
+    copy_tile32(&glyph->gfxBufferBottom[8], g + 96u);
+
+    glyph->width = GetChineseFontWidthFunc(ChineseChar, fontId);
+    glyph->height = (fontId == 4u) ? 8u : 12u;
+}
+
+/* 根据字体类别返回字宽（upstream 同名；本工程汉字宽 = 库定宽，无逐字表）。 */
+uint8_t GetChineseFontWidthFunc(uint16_t ChineseChar, uint8_t fontId)
+{
+    (void)ChineseChar;
+    switch (fontId) {
+    case 4u:
+        return 8u;   /* FontChsSmall：与原生 font4 半角小字同节奏 */
+    default:
+        return 12u;  /* FontChsNormal：12px 产品字宽 */
+    }
 }

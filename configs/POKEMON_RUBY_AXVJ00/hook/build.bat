@@ -26,16 +26,13 @@ echo === Assembling entry.s ===
 %CC% %ASFLAGS% %SRC_ROOT%\entry.s -o %BUILD%\text_entry.o
 if errorlevel 1 exit /b 1
 
-echo === Compiling text.c (JP takeover engine) ===
-%CC% %CFLAGS% %SRC_ROOT%\text.c -o %BUILD%\text.o
+echo === Compiling PrintNextChar_hook.c (JP takeover engine) ===
+%CC% %CFLAGS% %SRC_ROOT%\PrintNextChar_hook.c -o %BUILD%\PrintNextChar_hook.o
 if errorlevel 1 exit /b 1
 
-echo === Compiling chinese_text.c (CHS content resolver, upstream port) ===
-%CC% %CFLAGS% %SRC_ROOT%\chinese_text.c -o %BUILD%\chinese_text.o
-if errorlevel 1 exit /b 1
 
-echo === Compiling text_translate.c (F9 protocol layer) ===
-%CC% %CFLAGS% %SRC_ROOT%\text_translate.c -o %BUILD%\text_translate.o
+echo === Compiling text_translter.c (F9 protocol layer) ===
+%CC% %CFLAGS% %SRC_ROOT%\text_translter.c -o %BUILD%\text_translter.o
 if errorlevel 1 exit /b 1
 
 echo === Compiling text_render.c (shared render primitives) ===
@@ -46,12 +43,12 @@ echo === Compiling text_render_inplace12.c (bak native-addressed inplace) ===
 %CC% %CFLAGS% %SRC_ROOT%\text_render_inplace12.c -o %BUILD%\text_render_inplace12.o
 if errorlevel 1 exit /b 1
 
-echo === Compiling text_vfw12.c (variable-width 12px) ===
-%CC% %CFLAGS% %SRC_ROOT%\\text_vfw12.c -o %BUILD%\\text_vfw12.o
+echo === Compiling reference/pokeemerald (vendored GLYPH_COPY) ===
+%CC% %CFLAGS% -Ireference reference\pokeemerald\copy_glyph_to_tiles.c -o %BUILD%\ref_pokeemerald.o
 if errorlevel 1 exit /b 1
 
-echo === Compiling text_render_band.c (B3 scratch band) ===
-%CC% %CFLAGS% %SRC_ROOT%\text_render_band.c -o %BUILD%\text_render_band.o
+echo === Compiling reference/pokeruby (vendored DrawGlyphTile prims) ===
+%CC% %CFLAGS% -Ireference reference\pokeruby\draw_glyph_tile.c -o %BUILD%\ref_pokeruby.o
 if errorlevel 1 exit /b 1
 
 echo === Assembling map_name_popup\entry.s ===
@@ -66,13 +63,12 @@ echo === Linking game.elf ===
 @rem text_entry.o must be FIRST: main.asm JP2CHS_Entry = GameBinAddresses = bin start.
 %CC% %LDFLAGS% -o %OUT%/game.elf ^
   %BUILD%/text_entry.o ^
-  %BUILD%/text.o ^
-  %BUILD%/chinese_text.o ^
-  %BUILD%/text_translate.o ^
+  %BUILD%/PrintNextChar_hook.o ^
+  %BUILD%/text_translter.o ^
   %BUILD%/text_render.o ^
   %BUILD%/text_render_inplace12.o ^
-  %BUILD%/text_render_band.o ^
-  %BUILD%/text_vfw12.o ^
+  %BUILD%/ref_pokeemerald.o ^
+  %BUILD%/ref_pokeruby.o ^
   %BUILD%/MapNamePopup_entry.o ^
   %BUILD%/MapNamePopup_hook.o ^
   %BUILD%/UpdateNickInHealthbox_entry.o ^

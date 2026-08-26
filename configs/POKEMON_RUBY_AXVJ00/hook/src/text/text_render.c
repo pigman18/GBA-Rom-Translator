@@ -523,17 +523,16 @@ static void ensure_linear_dest_floor(TextPrinter *win)
         return;
 
     tpl = win_template(win);
-    /* OFF 现以「槽」计数（pair 化），旧常数按「列」计 → 一律 ×2 */
     if (scene_is_party_footer(win))
-        floor = CHS_PARTY_FOOTER_LINEAR_FLOOR * 2u;
+        floor = CHS_PARTY_FOOTER_LINEAR_FLOOR;
     else if (scene_is_shop_bag_list(win))
-        floor = CHS_SHOP_LIST_LINEAR_FLOOR * 2u;
+        floor = CHS_SHOP_LIST_LINEAR_FLOOR;
     else if (scene_is_shop_desc(win))
-        floor = CHS_SHOP_DESC_LINEAR_FLOOR * 2u;
+        floor = CHS_SHOP_DESC_LINEAR_FLOOR;
     else if (tpl && tpl[1] == 2)
-        floor = CHS_MENU_LINEAR_FLOOR * 2u;
+        floor = CHS_MENU_LINEAR_FLOOR;
     else
-        floor = 8u;
+        floor = 4;
 
     if (off < floor)
         win_set_u16(win, WIN_TILE_OFFSET, floor);
@@ -544,11 +543,8 @@ static uint16_t GetCursorTileNum_Linear(
 {
     uint16_t tile_base = win_u16(win, WIN_TILE_BASE);
     uint16_t off = win_u16(win, WIN_TILE_OFFSET);
-    /* pair 化布局（pokeRS-parity）：同行相邻列物理 +32B，上下行 +64B；
-     * 每字形恒占连续四槽 {n,n+1,n+2,n+3}，满足官方 DrawGlyphTile_* 的
-     * 「溢出写 dest+32B」契约。 */
     return avoid_dex_ui_tile(
-        win, (uint16_t)(tile_base + off + xOffset + 2u * yOffset));
+        win, (uint16_t)(tile_base + off + 2u * xOffset + yOffset));
 }
 
 static void GetCursorTileNum_Mode2(
@@ -593,42 +589,7 @@ static int DrawGlyph_ShouldUseLinear(TextPrinter *win, uint8_t write_op)
     return 1;
 }
 
-/* ---- refpr 桥接：tile-pair 写入（pokeRS-parity）----
- * stage = [主槽 32B | 邻格 32B] 连续视图，官方 ±32B 邻格契约成立；
- * 行源经 nibble-swap 进入官方消费序；LUT 直通（CopyGlyph2bpp 展开产物
- * 已含终端色；清底由 LUT[0] 在写入区内表达，区外底图由 mask 保留）。 */
-static void draw_pair_refpr(TextPrinter *win, struct GlyphBuffer *gb,
-                            const uint8_t *src, uint8_t *du, uint8_t *du_sp,
-                            unsigned sp, unsigned w)
-{
-    struct GlyphTileInfo info;
-    uint8_t tmp[32];
-    uint8_t stage[64];
-    unsigned i;
-    uint8_t fg_ov = *(volatile uint8_t *)ADDR_OPT_FG_COLOR;
-    uint8_t color_c = (fg_ov != 0u) ? fg_ov : win_u8(win, WIN_COLOR_C);
-    uint8_t color_d = win_u8(win, WIN_COLOR_D);
-    uint8_t color_e = win_u8(win, WIN_COLOR_E);
-
-    CopyGlyph2bppTo4bpp_Origin(src, tmp, color_c, color_e, color_d);
-    for (i = 0; i < 32u; i++)
-        tmp[i] = (uint8_t)((tmp[i] >> 4) | (tmp[i] << 4));
-
-    copy_tile32(stage, du);
-    copy_tile32(stage + 32, du_sp);
-    info.textMode   = TEXT_MODE_UNKNOWN2_VIEW;
-    info.startPixel = (uint8_t)sp;
-    info.width      = (uint8_t)w;
-    info.src        = tmp;
-    info.dest       = (uint32_t *)(uintptr_t)stage;
-    info.colors     = &gb->colors[0];
-    refpr_draw_tile_shadowed(gb, &info);
-    copy_tile32(du, stage);
-    copy_tile32(du_sp, stage + 32);
-}
-
-
-/* ---- 两趟核心（pokeRS-parity：pair 化四槽 + 官方 DrawGlyphTile_ShadowedFont）---- */
+/* ---- 两趟核心（bak DrawGlyphTiles_CHS_Core 逐值原样；合成器走共享 draw_tile）---- */
 static void inplace12_core(
     TextPrinter *win, const struct ChsGlyphTiles *tiles, int linear,
     unsigned glyphWidth)
@@ -641,7 +602,6 @@ static void inplace12_core(
     uint8_t map_tx;
     int spilled;
     struct GlyphTileInfo info;
-    struct GlyphBuffer gbuf;               /* 官方原语工作区（linear 分支）*/
     if (glyphWidth < 8u)
         glyphWidth = 8u;
     if (glyphWidth > 12u)
@@ -658,30 +618,37 @@ static void inplace12_core(
     map_tx = (uint8_t)(st->base_tx + (st->chs_px >> 3));
 
     info.startPixel = (uint8_t)startPixel;
-    info.textMode = TEXT_MODE_UNKNOWN2_VIEW;   /* 官方 ±32B 邻格视图 */
+    info.textMode = 0;
     info.colors = 0;
 
     /* ---- pass width 8: TL + BL ---- */
     if (linear) {
         if (st->chs_px == 0)
             ensure_linear_dest_floor(win);
-        if (st->chs_px == 0)
-            ensure_linear_dest_floor(win);
         off = win_u16(win, WIN_TILE_OFFSET);
         abs_u = GetCursorTileNum_Linear(win, 0, 0);
         abs_l = GetCursorTileNum_Linear(win, 0, 1);
-        su    = GetCursorTileNum_Linear(win, 1, 0);
-        sl    = GetCursorTileNum_Linear(win, 1, 1);
-        du    = vram_tile(win, abs_u);
-        dl    = vram_tile(win, abs_l);
-        du_sp = vram_tile(win, su);
-        dl_sp = vram_tile(win, sl);
-        spilled = 1;
-        draw_pair_refpr(win, &gbuf, tiles->tl, du, du_sp, startPixel, 8u);
-        draw_pair_refpr(win, &gbuf, tiles->bl, dl, dl_sp, startPixel, 8u);
+        du = vram_tile(win, abs_u);
+        dl = vram_tile(win, abs_l);
+        if (startPixel + 8u > 8u) {
+            su = GetCursorTileNum_Linear(win, 1, 0);
+            sl = GetCursorTileNum_Linear(win, 1, 1);
+            du_sp = vram_tile(win, su);
+            dl_sp = vram_tile(win, sl);
+            spilled = 1;
+        } else {
+            du_sp = 0;
+            dl_sp = 0;
+        }
+        info.src = tiles->tl;
+        info.dest = (uint32_t *)(uintptr_t)du;
+        info.width = 8;
+        draw_tile(win, &info, du_sp);
+        info.src = tiles->bl;
+        info.dest = (uint32_t *)(uintptr_t)dl;
+        draw_tile(win, &info, dl_sp);
         map_at(win, map_tx, abs_u, abs_l);
-        map_at(win, (uint8_t)(map_tx + 1u), su, sl);
-        win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 4u));
+        win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
     } else {
         GetCursorTileNum_Mode2(win, (int)map_tx, &abs_u, &abs_l);
         du = vram_tile(win, abs_u);
@@ -722,20 +689,30 @@ static void inplace12_core(
 
     /* ---- pass width pass2_w: TR + BR ---- */
     if (linear) {
-        /* 第二列对（quad 右半）＝第一趟的邻格对，OFF 已在 pass1 推进完毕 */
-        abs_u = GetCursorTileNum_Linear(win, 1, 0);
-        abs_l = GetCursorTileNum_Linear(win, 1, 1);
-        su    = abs_u;
-        sl    = abs_l;
-        du    = vram_tile(win, abs_u);
-        dl    = vram_tile(win, abs_l);
-        du_sp = vram_tile(win, su);
-        dl_sp = vram_tile(win, sl);
-        draw_pair_refpr(win, &gbuf, tiles->tr, du, du_sp, startPixel,
-                        (unsigned)pass2_w);
-        draw_pair_refpr(win, &gbuf, tiles->br, dl, dl_sp, startPixel,
-                        (unsigned)pass2_w);
+        off = win_u16(win, WIN_TILE_OFFSET);
+        abs_u = GetCursorTileNum_Linear(win, 0, 0);
+        abs_l = GetCursorTileNum_Linear(win, 0, 1);
+        du = vram_tile(win, abs_u);
+        dl = vram_tile(win, abs_l);
+        if (startPixel + pass2_w > 8u) {
+            su = GetCursorTileNum_Linear(win, 1, 0);
+            sl = GetCursorTileNum_Linear(win, 1, 1);
+            du_sp = vram_tile(win, su);
+            dl_sp = vram_tile(win, sl);
+        } else {
+            du_sp = 0;
+            dl_sp = 0;
+        }
+        info.src = tiles->tr;
+        info.dest = (uint32_t *)(uintptr_t)du;
+        info.width = (uint8_t)pass2_w;
+        draw_tile(win, &info, du_sp);
+        info.src = tiles->br;
+        info.dest = (uint32_t *)(uintptr_t)dl;
+        draw_tile(win, &info, dl_sp);
         map_at(win, map_tx, abs_u, abs_l);
+        win_set_u16(win, WIN_TILE_OFFSET,
+                    (uint16_t)(off + (startPixel == 0u ? 0u : 2u)));
     } else {
         GetCursorTileNum_Mode2(win, (int)map_tx, &abs_u, &abs_l);
         du = vram_tile(win, abs_u);
@@ -810,8 +787,7 @@ static void inplace12_common(
 
     if (newline_reset && linear) {
         uint16_t off = win_u16(win, WIN_TILE_OFFSET);
-        /* pair 布局：每列＝两物理槽；换行补齐当前字残列（12px=1.5 列 → +2） */
-        win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 4u));
+        win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
     }
 
     inplace12_core(win, tiles, linear, glyphWidth);
@@ -857,7 +833,7 @@ void arrow_inplace12(TextPrinter *win)
     if (cur_tx == 0u && want > 0u) {
         off = win_u16(win, WIN_TILE_OFFSET);
         if (st->chs_px & 7u)
-            win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 4u));
+            win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
         pitch_reset(win);
         return;
     }
@@ -866,7 +842,7 @@ void arrow_inplace12(TextPrinter *win)
 
     off = win_u16(win, WIN_TILE_OFFSET);
     if (st->chs_px & 7u)
-        win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 4u));
+        win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
 
     pitch_reset(win);
 }

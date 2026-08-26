@@ -23,25 +23,22 @@ set LDFLAGS=-mthumb -mcpu=arm7tdmi -nostdlib -T %LINK_DIR%/game.ld -Wl,-Map=%OUT
 if not exist %BUILD% mkdir %BUILD%
 
 echo === Assembling entry.s ===
-%CC% %ASFLAGS% %SRC_ROOT%\entry.s -o %BUILD%\text_entry.o
+%CC% %ASFLAGS% %SRC_ROOT%\text\entry.s -o %BUILD%\text_entry.o
 if errorlevel 1 exit /b 1
 
 echo === Compiling PrintNextChar_hook.c (JP takeover engine) ===
-%CC% %CFLAGS% %SRC_ROOT%\PrintNextChar_hook.c -o %BUILD%\PrintNextChar_hook.o
+%CC% %CFLAGS% %SRC_ROOT%\text\PrintNextChar_hook.c -o %BUILD%\PrintNextChar_hook.o
 if errorlevel 1 exit /b 1
 
 
 echo === Compiling text_translter.c (F9 protocol layer) ===
-%CC% %CFLAGS% %SRC_ROOT%\text_translter.c -o %BUILD%\text_translter.o
+%CC% %CFLAGS% %SRC_ROOT%\text\text_translter.c -o %BUILD%\text_translter.o
 if errorlevel 1 exit /b 1
 
 echo === Compiling text_render.c (shared render primitives) ===
-%CC% %CFLAGS% %SRC_ROOT%\text_render.c -o %BUILD%\text_render.o
+%CC% %CFLAGS% %SRC_ROOT%\text\text_render.c -o %BUILD%\text_render.o
 if errorlevel 1 exit /b 1
 
-echo === Compiling text_render_inplace12.c (bak native-addressed inplace) ===
-%CC% %CFLAGS% %SRC_ROOT%\text_render_inplace12.c -o %BUILD%\text_render_inplace12.o
-if errorlevel 1 exit /b 1
 
 echo === Compiling reference/pokeemerald (vendored GLYPH_COPY) ===
 %CC% %CFLAGS% -Ireference reference\pokeemerald\copy_glyph_to_tiles.c -o %BUILD%\ref_pokeemerald.o
@@ -66,7 +63,6 @@ echo === Linking game.elf ===
   %BUILD%/PrintNextChar_hook.o ^
   %BUILD%/text_translter.o ^
   %BUILD%/text_render.o ^
-  %BUILD%/text_render_inplace12.o ^
   %BUILD%/ref_pokeemerald.o ^
   %BUILD%/ref_pokeruby.o ^
   %BUILD%/MapNamePopup_entry.o ^

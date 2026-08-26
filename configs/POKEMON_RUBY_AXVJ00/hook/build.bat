@@ -46,6 +46,10 @@ echo === Compiling text_render_inplace12.c (bak native-addressed inplace) ===
 %CC% %CFLAGS% %SRC_ROOT%\text_render_inplace12.c -o %BUILD%\text_render_inplace12.o
 if errorlevel 1 exit /b 1
 
+echo === Compiling text_vfw12.c (variable-width 12px) ===
+%CC% %CFLAGS% %SRC_ROOT%\\text_vfw12.c -o %BUILD%\\text_vfw12.o
+if errorlevel 1 exit /b 1
+
 echo === Compiling text_render_band.c (B3 scratch band) ===
 %CC% %CFLAGS% %SRC_ROOT%\text_render_band.c -o %BUILD%\text_render_band.o
 if errorlevel 1 exit /b 1
@@ -68,6 +72,7 @@ echo === Linking game.elf ===
   %BUILD%/text_render.o ^
   %BUILD%/text_render_inplace12.o ^
   %BUILD%/text_render_band.o ^
+  %BUILD%/text_vfw12.o ^
   %BUILD%/MapNamePopup_entry.o ^
   %BUILD%/MapNamePopup_hook.o ^
   %BUILD%/UpdateNickInHealthbox_entry.o ^

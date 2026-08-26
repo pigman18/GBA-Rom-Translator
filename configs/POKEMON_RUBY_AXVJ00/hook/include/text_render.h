@@ -24,6 +24,7 @@ typedef void (*render_fn)(TextPrinter *win, const struct ChsGlyphTiles *t, unsig
 /* ---- 策略实现（各自内部按 textMode 分发；不支持的 tm 不绘制）---- */
 void render_inplace12(TextPrinter *win, const struct ChsGlyphTiles *t, unsigned w);
 void render_band(TextPrinter *win, const struct ChsGlyphTiles *t, unsigned w);
+void render_vfw12(TextPrinter *win, const struct ChsGlyphTiles *t, unsigned w);
 
 /* ---- FA/FB 箭头前置同步（随 render 选择，各自适配自家相位状态）---- */
 void arrow_inplace12(TextPrinter *win);
@@ -35,7 +36,7 @@ uint8_t *vram_tile(TextPrinter *win, uint16_t tile);
 void draw_tile(TextPrinter *win, struct GlyphTileInfo *info, uint8_t *spillTile);
 
 /* ---- 实验选择器 @0x0203FF8C（两代 pitch 布局的公共空闲字节）----
- * 0=调用点默认（inplace12）  1=band  2=inplace12
+ * 0=调用点默认（vfw12） 1=band 2=inplace12 3=vfw12
  * mGBA 改该内存字节即同 ROM 切策略。 */
 #define RENDER_SEL_ADDR 0x0203FF8Cu
 render_fn render_active(render_fn dflt);

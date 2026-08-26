@@ -15,6 +15,7 @@ render_fn render_active(render_fn dflt)
     switch (*(volatile uint8_t *)RENDER_SEL_ADDR) {
     case 1:  return render_band;
     case 2:  return render_inplace12;
+    case 3:  return render_vfw12;
     default: return dflt;
     }
 }

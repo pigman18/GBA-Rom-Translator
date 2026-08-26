@@ -18,6 +18,12 @@
 /* ---- pitch 状态（bak game.h 原样）---- */
 #define CHS_PITCH_SLOT_COUNT 8u
 
+/* TILE_OFFSET 高水位记录 @0x0203FF82（ChsPitchCtrl pad[2]，两代布局均空闲）：
+ * 游戏把说明文本拆成多个 print 调用、每次重置 TILE_OFFSET——检测到回退即
+ * 接续高水位，防止新块覆写前块 tile（缺口/重复字根因，2026-08-26 日志定案：
+ * hover1 行12 格 386-388 与 389-391 写入完全相同的 tile 116/118/11A）。 */
+#define CHS_LAST_OFF_ADDR 0x0203FF82u
+
 struct ChineseTileState {
     uint8_t  char_base;  /* +0 template charBaseBlock */
     uint8_t  write_op;   /* +1 */
@@ -531,12 +537,27 @@ static void inplace12_common(
     }
 
     linear = DrawGlyph_ShouldUseLinear(win, st->write_op);
+
+    /* ---- 分块 print 检测（仅 Linear；行中 chs_px 续跑时 off 回退 =
+     * 游戏开了新 print 调用并重置 TILE_OFFSET）→ 接续我方高水位，
+     * 新块拿新 tile，不覆写前块（缺口/重复字根因修复）---- */
+    if (linear && st->chs_px != 0u) {
+        uint16_t off_now = win_u16(win, WIN_TILE_OFFSET);
+        uint16_t off_last = *(volatile uint16_t *)CHS_LAST_OFF_ADDR;
+        if (off_last != 0u && off_now < off_last)
+            win_set_u16(win, WIN_TILE_OFFSET, off_last);
+    }
+
     if (newline_reset && linear) {
         uint16_t off = win_u16(win, WIN_TILE_OFFSET);
         win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
     }
 
     inplace12_core(win, tiles, linear, glyphWidth);
+
+    /* 记录 TILE_OFFSET 高水位（仅 Linear；供分块检测） */
+    if (linear)
+        *(volatile uint16_t *)CHS_LAST_OFF_ADDR = win_u16(win, WIN_TILE_OFFSET);
 }
 
 /* ---- render 入口：内部 textMode 分发（tm2/未验证不绘制）---- */

@@ -169,7 +169,7 @@ static void PcsPrint_Custom(TextPrinter *win, uint32_t cur_char)
     t.bl = buf + 0x20;
     t.tr = buf + 0x40;
     t.br = buf + 0x60;
-    render_active(render_inplace12)(win, &t, width);
+    render_active(render_vfw12)(win, &t, width);
 }
 
 /* 第二级 [fontNum]，镜像原生 sWriteGlyphTilemapFuncs——每格对应日志实证窗口：
@@ -247,7 +247,7 @@ void PrintGlyph(TextPrinter *win, uint32_t gidx, unsigned glyphWidth)
     t.tr = (uint8_t *)&glyph.gfxBufferTop[8];
     t.bl = (uint8_t *)&glyph.gfxBufferBottom[0];
     t.br = (uint8_t *)&glyph.gfxBufferBottom[8];
-    render_active(render_inplace12)(win, &t, width);
+    render_active(render_vfw12)(win, &t, width);
 }
 
 
@@ -276,7 +276,7 @@ static void DrawInitialDownArrow(TextPrinter *win)
     if (!win)
         return;
     /* 相位同步随 render 选择（各自适配自家相位状态） */
-    if (render_active(render_inplace12) == render_band)
+    if (render_active(render_vfw12) == render_band)
         arrow_band(win);
     else
         arrow_inplace12(win);

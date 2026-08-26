@@ -119,3 +119,33 @@ win->cursorX, win->cursorY, &glyph, glyph.width, glyph.height)` 后接现有 Upd
 - `REMOVE_F980_HOOK_REFACTOR_REQ.md` 于 2026-08-27 应用户指令移除:
   F980/PhraseTable 通道**保留**(全走 slot 实测太卡);slot/relocate 主链不变,
   slot key 字节边界(A/B 口径)遗留开放,实施 text_translter 时一并定。
+
+
+---
+
+## 附:2026-08-27 V4' pokeruby 接入中期发现(runtime 未切换)
+
+### 已落地(build 绿,零行为变化)
+- `reference/pokeruby/draw_glyph_tile.c`(~700行):sGlyphMasks/sGlyphShiftAmounts/
+  ApplyColors_*/ShiftGlyphTile_*Width0..8 双族+分发表/DrawGlyphTile_* 两主函数,
+  机械参数化(sGlyphBuffer 全局→首参 gb);refpr_colors_init(LUT 构建官方形态)。
+- golden 基线:`reference/pokeruby/equivalence_test.py`
+  (指纹 24907a8f…;锁定现役 draw_tile 契约域)。
+
+### 三条布局限硬事实(勿凭印象推翻)
+1. tm0 linear CHS 流:字间 WIN_TILE_OFFSET 步进 +2 ⇒ 溢出目标 = t+2,
+   ≠ 官方假设的 dest+32B(t+1)。
+2. tm1/tm3 mode2 门控窗:spill=map_tx+1 → 物理相邻(+32B)✔ 唯一吻合;
+   行首折断处 startPixel 归零,天然无跨带 spill。
+3. upstream DrawGlyphTile 家族的 mask/OR 数学**不含背景清扫**
+   ——emerald/pokeruby 均由 ClearTextSpan/FillBitmapRect4Bit 先铺底;
+   本工程等价物 = draw_tile 清底段。桥接时必须补 span-clear 预填,
+   且 pass2(width<8)需 tile 序→高位对齐 nibble 重排。
+
+### 待用户拍板(三选一)
+- 甲:封存(ref 件永久仅作参照)
+- 乙:仅 mode2 门控窗成对连续化后切换(推荐;tm0 保持手写并注明理由)
+- 丙:双带改造,tm0 一并切换
+
+> 同会话产物:`equivalence_refpr.py`(两万 case 对照器骨架,当前 NEITHER MATCHES,
+> 复跑前须按附注 §3 的 span-clear/tail-clean 差异重建期望模型)。

@@ -93,6 +93,7 @@ static uint16_t chs_pitch_key(TextPrinter *win)
 
     return (uint16_t)(win_u16(win, WIN_TILE_BASE)
                       ^ ((uint16_t)win_u8(win, WIN_CURSOR_Y) << 8)
+                      ^ ((uint16_t)win_u8(win, WIN_CURSOR_X) << 4)
                       ^ (uint16_t)win_u8(win, WIN_CURSOR_TILE_Y)
                       ^ w);
 }
@@ -431,8 +432,10 @@ static void DrawGlyphTiles_common(
     int linear;
     int newline_reset = 0;
 
-    if (slot_new && st->chs_px == 0)
+    if (slot_new && st->chs_px == 0) {
         newline_reset = 1;
+        *(volatile uint16_t *)CHS_LAST_OFF_ADDR = 0;
+    }
 
     if (st->chs_px != 0 && cur_tx <= st->base_tx) {
         st->chs_px = 0;

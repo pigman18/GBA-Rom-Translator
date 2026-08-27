@@ -15,6 +15,7 @@ int scene_jp_via_chs(TextPrinter *win);
 
 /* ---- Layer B：探测器 ---- */
 int scene_is_party_footer(TextPrinter *win);
+int scene_is_summary_screen(TextPrinter *win);
 int scene_field_wants_linear(TextPrinter *win);
 int scene_menu_wants_mode2(TextPrinter *win);
 int scene_is_shop_desc(TextPrinter *win);

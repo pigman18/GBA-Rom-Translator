@@ -212,11 +212,14 @@ struct ChsPhase {
 /*
  * Menu ▶ (0xEF): fixed pair in-charblock (<0x200), below UI icons 0x1E8.
  * Do NOT use 0x3E4 (screenblock stomp) or remap CHS → 0x1D0 (summary 串字).
- * CHS hitting this pair wraps into menu Linear pool 0x168.. (not 0x1D0).
+ * ALT 曾用 0x168：能力页 Mode2 (27,11) 正当字模址，经验行 y=14 的 lower
+ * (idx+30→0x1E0) 被映到 0x168 → 速度「２０」叠进经验「１７２０」末两字
+ * （gdb 2026-08-27 UTM l=0x0168/0x0169）。改到 0x3E6（图标 ALT 0x3E8 前两格）。
+ * 能力页本身跳过本 remap（0x1E0 是其 Mode2 字模，不是 ▶）。
  */
 #define CHS_MENU_CURSOR_TILE        0x1E0u
 #define CHS_MENU_CURSOR_TILE_HI     0x1E1u
-#define CHS_MENU_CURSOR_TILE_ALT    0x168u
+#define CHS_MENU_CURSOR_TILE_ALT    0x3E6u
 
 #define CHS_TILE_GRID_W         30
 #define CHS_TILE_POOL_END            0x180
@@ -244,6 +247,8 @@ struct ChsPhase {
 #define CHS_PARTY_MENU_TOP           13
 #define CHS_PARTY_FOOTER_TOP_TILE    17
 #define CHS_PARTY_FOOTER_TOP_PX      (17 * 8)
+/* PSS 能力/详情数值窗（tm1+font3+cb2,tilemap=0x0600F000；gdb 081BB5BC） */
+#define CHS_SUMMARY_TEMPLATE         0x081BB5BCu
 /*
  * Battle BG text (not healthbox textMode==2) uses MULTIPLE tile bases:
  *   dialogue/招式台词 TILE_BASE=0x90 (AXVJ 0x0802D766, left=2 top=15)

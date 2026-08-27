@@ -156,6 +156,7 @@ if scene_route_delegate(win):
 
 ```yaml
 layout.pick:   # true=Linear, false=Mode2(GetCursorTileNum_Mode2)
+  - if: textMode == 0         -> linear   # 详情页字段 / 对话 FontFunc[0]（优先于 menu_mode2）
   - if: battle_text          -> linear
   - if: shop_desc            -> linear
   - if: shop_bag_list        -> linear
@@ -237,6 +238,7 @@ tile.remap:
 
 | 实机现象 | 优先查的规则 id |
 |----------|----------------|
+| 能力页速度 20 叠到经验 1720 末位 | **cursor remap**：y=14 lower→0x1E0 被映到 ALT 0x168，与速度行 Mode2 格撞 VRAM（UTM `l=0x0168`）；能力页跳过 ▶ remap，ALT→0x3E6 |
 | 标题/continue 叠字、软键盘串行 | `menu_mode2` 未生效 → 误 Linear |
 | 战斗招式说明黑块 | `battle_text` 未 force Linear |
 | 商店描述与列表互串 | `shop_desc` / `shop_bag_list` |

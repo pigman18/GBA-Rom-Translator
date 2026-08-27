@@ -53,6 +53,15 @@ int scene_jp_via_chs(TextPrinter *win)
  * 探测器（Layer B）
  * ============================================================================= */
 
+int scene_is_summary_screen(TextPrinter *win)
+{
+    uint8_t *tpl = win_template(win);
+
+    if (!tpl)
+        return 0;
+    return ((uintptr_t)tpl & ~1u) == (uintptr_t)CHS_SUMMARY_TEMPLATE;
+}
+
 int scene_is_party_footer(TextPrinter *win)
 {
     uint8_t *tpl = win_template(win);
@@ -82,6 +91,8 @@ int scene_field_wants_linear(TextPrinter *win)
         return 1;
     if (scene_is_party_footer(win))
         return 0;
+    if (scene_is_summary_screen(win))
+        return 1;
     if (scene_is_shop_desc(win))
         return 1;
     return 0;
@@ -98,6 +109,8 @@ int scene_menu_wants_mode2(TextPrinter *win)
         return 0;
     char_base = tpl[1];
     if (char_base != 0 && char_base != 2)
+        return 0;
+    if (scene_is_summary_screen(win))
         return 0;
     if (scene_is_shop_desc(win))
         return 0;
@@ -180,7 +193,13 @@ uint16_t scene_remap_tile(TextPrinter *win, uint16_t tile)
 {
     if (scene_is_battle_text_window(win))
         return tile;
-    if (tile >= CHS_MENU_CURSOR_TILE && tile <= CHS_MENU_CURSOR_TILE_HI)
+    /*
+     * 能力页 Mode2：y=14 字形 lower=idx+30 会落到 0x1E0/0x1E1（正当字模），
+     * 不可当菜单 ▶ 避让；映走会与速度行 (27,11) 等格撞 VRAM。
+     * 仍保留 0x1E8.. 图标避让（详情 A/B）。
+     */
+    if (!scene_is_summary_screen(win)
+        && tile >= CHS_MENU_CURSOR_TILE && tile <= CHS_MENU_CURSOR_TILE_HI)
         return (uint16_t)(CHS_MENU_CURSOR_TILE_ALT
                           + (tile - CHS_MENU_CURSOR_TILE));
     if (tile >= CHS_UI_ICON_TILE_LO && tile <= CHS_UI_ICON_TILE_HI)
@@ -261,6 +280,12 @@ void scene_mode2_apply(TextPrinter *win, int *x, int *y, int *band, int *origin)
         }
         return;
     }
+    /*
+     * PSS 能力页 081BB5BC：left≥20 且 curY≥13 会误触队伍菜单 band，
+     * 经验行 tile 池错位 → 速度 ２０ 叠到经验 1789（gdb 2026-08-27）。
+     */
+    if (scene_is_summary_screen(win))
+        return;
     if (op != 0)
         return;
     if (*y <= 20 && (*y & 1) == 0)
@@ -275,6 +300,13 @@ void scene_mode2_apply(TextPrinter *win, int *x, int *y, int *band, int *origin)
 
 int scene_should_use_linear(TextPrinter *win, uint8_t write_op)
 {
+    /*
+     * tm=0 = FontFunc[0] Linear（详情页各字段独立 TILE_BASE=0x290/0x2A2…；
+     * gdb 2026-08-24 + ruby_jp_en_compare §七）。必须在 menu_mode2 之前，
+     * 否则 font3+charBase2 详情数值误进 Mode2 → 速度 20 叠到经验 1789。
+     */
+    if ((win_u8(win, WIN_TEXTMODE) & 7u) == 0u)
+        return 1;
     if (scene_battle_force_linear(win))
         return 1;
     if (scene_is_shop_desc(win) || scene_is_shop_bag_list(win))

@@ -66,16 +66,20 @@ def collect_slot_entries(entries: Iterable[dict]) -> list[dict]:
 
 def render_slot_table_asm(entries: list[dict], *, org: int = SLOT_TABLE_ADDR) -> str:
     # 逐条编码（与 v1 条目编码完全一致），并按首字节分桶（保持原表相对顺序）
-    buckets: list[list[bytes]] = [[] for _ in range(SLOT_TABLE_N_BUCKETS)]
+    bucket_items: list[list[tuple[bytes, bytes]]] = [[] for _ in range(SLOT_TABLE_N_BUCKETS)]
     max_jp_len = 1
     for e in entries:
         jp, cn = e["_jp"], e["_cn"]
-        h = _fnv1a(jp)
-        kb = h.to_bytes(4, "little")
-        lb = len(jp).to_bytes(2, "little")
-        entry = kb + lb + jp + cn
-        buckets[jp[0]].append(entry)
+        bucket_items[jp[0]].append((jp, cn))
         max_jp_len = max(max_jp_len, len(jp))
+
+    buckets: list[list[bytes]] = [[] for _ in range(SLOT_TABLE_N_BUCKETS)]
+    for b, items in enumerate(bucket_items):
+        for jp, cn in sorted(items, key=lambda pair: len(pair[0]), reverse=True):
+            h = _fnv1a(jp)
+            kb = h.to_bytes(4, "little")
+            lb = len(jp).to_bytes(2, "little")
+            buckets[b].append(kb + lb + jp + cn)
 
     # 桶偏移表：header 之后依次排放各桶；offsets 相对 SlotTable 标签
     header_size = 8 + 4 * (SLOT_TABLE_N_BUCKETS + 1)

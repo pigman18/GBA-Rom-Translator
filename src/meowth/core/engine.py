@@ -1432,13 +1432,7 @@ class TranslationEngine:
             self._custom_translations = load_custom_translations(self.config.game)
 
             self._fonts_from_bdf = False
-            if self.config.bdf_font_path and is_cjk_language(self.config.target_lang):
-                self._build_font_from_bdf(work_dir)
-                self._ensure_default_fonts(
-                    work_dir, overwrite_bins=not bool(self._fonts_from_bdf)
-                )
-            elif is_cjk_language(self.config.target_lang):
-                self._ensure_default_fonts(work_dir)
+            # Font bins rebuilt in build_rom (hook) from BDF + charmap; not here.
 
             try:
                 translated_path = texts_translated_path(self.config.game)
@@ -1785,8 +1779,32 @@ class TranslationEngine:
         _, n_ph, nbytes = write_phrase_data_asm(phrases, sideload_encode, phrase_asm)
         self._log("info", f"[短语] PhraseTable {n_ph} 条流, {nbytes}B -> {phrase_asm.name}")
 
+    def _resolve_bdf_font_path(self, explicit: Path | None = None) -> Path | None:
+        """Resolve CJK BDF: CLI ``--bdf`` > known defaults > ``fonts/**/*.bdf``."""
+        if explicit is not None:
+            p = Path(explicit)
+            if p.is_file():
+                return p
+        root = Path(__file__).resolve().parents[3]
+        candidates: list[Path] = []
+        for rel in (
+            "fonts/meowth/Meowth-Normal.bdf",
+            "fonts/fusion-pixel/12px-proportional/fusion-pixel-12px-proportional-zh_hans.bdf",
+            "fonts/shortcuts/fusion-12px-proportional-fusion-pixel-12px-proportional-zh_hans.bdf",
+        ):
+            p = root / rel
+            if p.is_file():
+                candidates.append(p)
+        fonts_root = root / "fonts"
+        if fonts_root.is_dir():
+            for pat in ("*zh_hans*.bdf", "*zh_cn*.bdf", "*.bdf"):
+                for p in sorted(fonts_root.rglob(pat)):
+                    if p.is_file() and p not in candidates:
+                        candidates.append(p)
+        return candidates[0] if candidates else None
+
     def _build_font_from_bdf(self, work_dir: Path | None = None):
-        """Generate font .bin from config's BDF path or auto-detect."""
+        """Generate font .bin from BDF + ``charmap.txt`` (always refresh before armips)."""
         import shutil
         from ..config_loader import load_game_config
 
@@ -1798,12 +1816,8 @@ class TranslationEngine:
         game_work = (work_dir or Path("work")) / self.config.game
         game_work.mkdir(parents=True, exist_ok=True)
 
-        bdf_path = self.config.bdf_font_path
-        if not bdf_path or not bdf_path.exists():
-            for f in sorted(Path("fonts").glob("*.bdf")):
-                bdf_path = f
-                break
-        if not bdf_path or not bdf_path.exists():
+        bdf_path = self._resolve_bdf_font_path(self.config.bdf_font_path)
+        if bdf_path is None:
             self._log("warning", "No BDF font found, skipping font build")
             return
 
@@ -1814,12 +1828,13 @@ class TranslationEngine:
 
             fonts_dir = game_work / "graphic" / "fonts"
             fonts_dir.mkdir(parents=True, exist_ok=True)
+            prefix = fp_cfg.get("font_bin_prefix", "PokeRSFontChs")
+            self._restore_unshadow_if_synced_from_primary(fonts_dir, prefix=prefix)
 
             slots = fp_cfg.get("font_slots", [])
             labels = [s.get("label", "Unknown") for s in slots]
             sizes = [s.get("slot_size", s.get("glyph_count", 7168) * s.get("bytes_per_glyph", 128)) for s in slots]
             bpg = int(slots[0].get("bytes_per_glyph", 128)) if slots else 128
-            prefix = fp_cfg.get("font_bin_prefix", "PokeRSFontChs")
 
             _scripts_dir = Path(__file__).resolve().parents[3] / "scripts"
             args = [
@@ -1860,6 +1875,8 @@ class TranslationEngine:
                         else:
                             _bdf_punct = None
                     for _bin in sorted(fonts_dir.glob("*.bin")):
+                        if "_unshadow" in _bin.name:
+                            continue
                         _args_patch = [
                             sys.executable,
                             str(_scripts_dir / "patch_font_punct.py"),
@@ -1873,6 +1890,49 @@ class TranslationEngine:
                             _args_patch.append("--no-shadow")
                         subprocess.run(_args_patch, capture_output=True, text=True, timeout=60)
                     self._log("info", "Punctuation glyphs patched (baseline + no right spill)")
+                    if _no_shadow:
+                        from ..font_patch import (
+                            patch_primary_missing_glyphs_from_reference,
+                            patch_unshadow_missing_glyphs,
+                            seed_unshadow_banks_from_reference,
+                        )
+
+                        n_primary = patch_primary_missing_glyphs_from_reference(
+                            fonts_dir,
+                            game_id=self.config.game,
+                            prefix=prefix,
+                            bytes_per_glyph=bpg,
+                        )
+                        if n_primary:
+                            self._log(
+                                "info",
+                                f"[font] patched {n_primary} empty primary slot(s) "
+                                f"from hook/work reference",
+                            )
+                        n_seed = seed_unshadow_banks_from_reference(
+                            fonts_dir,
+                            game_id=self.config.game,
+                            prefix=prefix,
+                        )
+                        if n_seed:
+                            self._log(
+                                "info",
+                                f"[font] seeded {n_seed} *_unshadow bin(s) from hook/work reference",
+                            )
+                        n_patch = patch_unshadow_missing_glyphs(
+                            fonts_dir,
+                            prefix=prefix,
+                            bytes_per_glyph=bpg,
+                            game_id=self.config.game,
+                        )
+                        if n_patch:
+                            self._log(
+                                "info",
+                                f"[font] patched {n_patch} empty unshadow slot(s) from primary",
+                            )
+                        self._patch_unshadow_from_supplement_bdf(
+                            fonts_dir, fp_cfg, prefix=prefix, bytes_per_glyph=bpg
+                        )
             except Exception as _e:
                 self._log("warning", f"Punctuation patch failed: {_e}")
         except (FileNotFoundError, OSError) as e:
@@ -1881,6 +1941,96 @@ class TranslationEngine:
         except RuntimeError:
             self._fonts_from_bdf = False
             raise
+
+    def _restore_unshadow_if_synced_from_primary(self, fonts_dir: Path, *, prefix: str) -> None:
+        """Recover tuned ``*_unshadow`` banks after mistaken full primary mirror."""
+        ref_dir = get_game_patch_dir(self.config.game) / "work" / self.config.game / "graphic" / "fonts"
+        if not ref_dir.is_dir():
+            return
+        restored = 0
+        for ref in sorted(ref_dir.glob(f"{prefix}*_unshadow*.bin")):
+            dst = fonts_dir / ref.name
+            primary_name = ref.name.replace("_unshadow", "", 1)
+            primary = fonts_dir / primary_name
+            if not dst.is_file() or not primary.is_file():
+                continue
+            if dst.read_bytes() != primary.read_bytes():
+                continue
+            if ref.read_bytes() == primary.read_bytes():
+                continue
+            shutil.copy2(ref, dst)
+            restored += 1
+        if restored:
+            self._log(
+                "info",
+                f"[font] restored {restored} *_unshadow bin(s) from hook/work reference",
+            )
+
+    def _patch_unshadow_from_supplement_bdf(
+        self,
+        fonts_dir: Path,
+        fp_cfg: dict,
+        *,
+        prefix: str,
+        bytes_per_glyph: int,
+    ) -> None:
+        """Fill still-empty unshadow slots from fusion-pixel (e.g. 祐 not in Meowth BDF)."""
+        root = Path(__file__).resolve().parents[3]
+        supplement = root / "fonts/fusion-pixel/12px-proportional/fusion-pixel-12px-proportional-zh_hans.bdf"
+        if not supplement.is_file():
+            return
+        primary_bdf = self._resolve_bdf_font_path(self.config.bdf_font_path)
+        if primary_bdf and primary_bdf.resolve() == supplement.resolve():
+            return
+        game_work = fonts_dir.parent.parent
+        tmp_dir = game_work / "_font_supplement" / "graphic" / "fonts"
+        if tmp_dir.exists():
+            shutil.rmtree(tmp_dir.parent)
+        tmp_dir.mkdir(parents=True, exist_ok=True)
+        slots = fp_cfg.get("font_slots", [])
+        labels = [s.get("label", "Unknown") for s in slots]
+        sizes = [
+            s.get("slot_size", s.get("glyph_count", 7168) * s.get("bytes_per_glyph", 128))
+            for s in slots
+        ]
+        _scripts_dir = root / "scripts"
+        args = [
+            sys.executable,
+            str(_scripts_dir / "build_chinese_font.py"),
+            "--bdf",
+            str(supplement),
+            "--charmap",
+            str(game_work / "charmap.txt"),
+            "--output-dir",
+            str(tmp_dir),
+            "--slot-labels",
+            *labels,
+            "--slot-sizes",
+            *(str(s) for s in sizes),
+            "--prefix",
+            prefix,
+            "--bytes-per-glyph",
+            str(bytes_per_glyph),
+            "--no-shadow",
+        ]
+        r = subprocess.run(args, capture_output=True, text=True, timeout=120)
+        if r.returncode != 0:
+            self._log("warning", f"Supplement font build failed: {r.stderr[:400]}")
+            return
+        from ..font_patch import patch_unshadow_missing_glyphs
+
+        n = patch_unshadow_missing_glyphs(
+            fonts_dir,
+            source_dir=tmp_dir,
+            prefix=prefix,
+            bytes_per_glyph=bytes_per_glyph,
+            game_id=self.config.game,
+        )
+        if n:
+            self._log(
+                "info",
+                f"[font] patched {n} empty unshadow slot(s) from {supplement.name}",
+            )
 
     def _rebuild_data_from_build_plan(self, cache: dict[str, dict]) -> dict:
         """从 translate.build.json 重建注入数据，用 status 缓存覆盖翻译。"""
@@ -2105,11 +2255,14 @@ class TranslationEngine:
         if is_cjk_language(self.config.target_lang):
             self._log("info", Messages.APPLYING_FONT_PATCH)
 
-            # Ensure fonts + phrase_data.asm exist; do not clobber BDF-built bins.
+            # BDF + charmap → work/graphic/fonts/*.bin (must run every pack; charmap
+            # edits do not auto-update stale bins).
             if fp_cfg and fp_cfg.get("font_slots"):
+                self._fonts_from_bdf = False
+                self._build_font_from_bdf(Path(self.config.work_dir))
                 self._ensure_default_fonts(
                     Path(self.config.work_dir),
-                    overwrite_bins=not bool(getattr(self, "_fonts_from_bdf", False)),
+                    overwrite_bins=not bool(self._fonts_from_bdf),
                 )
 
             temp_in = output_path.parent / "temp_fontpatch_in.gba"

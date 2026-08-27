@@ -271,25 +271,34 @@ static int slot_lookup_v2(TextPrinter *win, uint32_t cur_char,
     if (cnt == 0)
         return 0;
 
-    for (i = beg; i < end;) {
-        uint16_t len = (uint16_t)(table[i + 4] | (table[i + 5] << 8));
-        if (len >= 1u && len <= cnt && slot_rd_le32(table + i) == ph[len]) {
-            unsigned k, match = 1;
-            for (k = 0; k < len; k++) {
-                if (table[i + 6 + k] != stream_buf[k]) {
-                    match = 0;
-                    break;
+    {
+        uint16_t best_len = 0;
+        const uint8_t *best_cn = 0;
+        uint16_t best_next = 0;
+
+        for (i = beg; i < end;) {
+            uint16_t len = (uint16_t)(table[i + 4] | (table[i + 5] << 8));
+            if (len >= 1u && len <= cnt && slot_rd_le32(table + i) == ph[len]) {
+                unsigned k, match = 1;
+                for (k = 0; k < len; k++) {
+                    if (table[i + 6 + k] != stream_buf[k]) {
+                        match = 0;
+                        break;
+                    }
+                }
+                if (match && len >= best_len) {
+                    best_len = len;
+                    best_cn = table + i + 6u + len;
+                    best_next = (uint16_t)(index - 1 + len);
                 }
             }
-            if (match)
-                return slot_draw_chinese(
-                    win, table + i + 6u + len,
-                    (uint16_t)(index - 1 + len));
-        }
-        i += 6u + len;
-        while (i < end && table[i] != 0xFF)
+            i += 6u + len;
+            while (i < end && table[i] != 0xFF)
+                i++;
             i++;
-        i++;
+        }
+        if (best_len > 0)
+            return slot_draw_chinese(win, best_cn, best_next);
     }
     return 0;
 }
@@ -322,35 +331,44 @@ static int slot_lookup_legacy(TextPrinter *win, uint32_t cur_char,
     if (stream_len == 0)
         return 0;
 
-    while (table[i] != 0 || table[i + 1] != 0 || table[i + 2] != 0 || table[i + 3] != 0) {
-        uint32_t entry_key;
-        uint16_t entry_len;
-        entry_key = (uint32_t)table[i] | ((uint32_t)table[i + 1] << 8)
-                  | ((uint32_t)table[i + 2] << 16) | ((uint32_t)table[i + 3] << 24);
-        i += 4;
-        entry_len = (uint16_t)table[i] | ((uint16_t)table[i + 1] << 8);
-        i += 2;
+    {
+        uint16_t best_len = 0;
+        const uint8_t *best_cn = 0;
+        uint16_t best_next = 0;
 
-        if (entry_len > 0 && entry_len <= stream_len) {
-            uint32_t h = fnv1a_hash(stream_buf, entry_len);
-            if (h == entry_key) {
-                unsigned match = 1;
-                for (k = 0; k < entry_len; k++) {
-                    if (table[i + k] != stream_buf[k]) {
-                        match = 0;
-                        break;
+        while (table[i] != 0 || table[i + 1] != 0 || table[i + 2] != 0 || table[i + 3] != 0) {
+            uint32_t entry_key;
+            uint16_t entry_len;
+            entry_key = (uint32_t)table[i] | ((uint32_t)table[i + 1] << 8)
+                      | ((uint32_t)table[i + 2] << 16) | ((uint32_t)table[i + 3] << 24);
+            i += 4;
+            entry_len = (uint16_t)table[i] | ((uint16_t)table[i + 1] << 8);
+            i += 2;
+
+            if (entry_len > 0 && entry_len <= stream_len) {
+                uint32_t h = fnv1a_hash(stream_buf, entry_len);
+                if (h == entry_key) {
+                    unsigned match = 1;
+                    for (k = 0; k < entry_len; k++) {
+                        if (table[i + k] != stream_buf[k]) {
+                            match = 0;
+                            break;
+                        }
+                    }
+                    if (match && entry_len >= best_len) {
+                        best_len = entry_len;
+                        best_cn = &table[i + entry_len];
+                        best_next = (uint16_t)(index - 1 + entry_len);
                     }
                 }
-                if (match)
-                    return slot_draw_chinese(
-                        win, &table[i + entry_len],
-                        (uint16_t)(index - 1 + entry_len));
             }
-        }
-        i += entry_len;
-        while (table[i] != 0xFF)
+            i += entry_len;
+            while (table[i] != 0xFF)
+                i++;
             i++;
-        i++;
+        }
+        if (best_len > 0)
+            return slot_draw_chinese(win, best_cn, best_next);
     }
     return 0;
 }

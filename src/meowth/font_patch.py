@@ -64,6 +64,330 @@ def _normalize_font_slots(cfg: dict[str, Any], game_id: str = "") -> list[dict[s
     return slots
 
 
+def _glyph_slot_slice(data: bytes | bytearray, gidx: int, bpg: int) -> memoryview:
+    off = gidx * bpg
+    return memoryview(data)[off : off + bpg]
+
+
+def _glyph_slot_empty(data: bytes | bytearray, gidx: int, bpg: int = 128) -> bool:
+    return all(b == 0 for b in _glyph_slot_slice(data, gidx, bpg))
+
+
+def _glyph_slot_has_ink(data: bytes | bytearray, gidx: int, bpg: int = 128) -> bool:
+    return any(b != 0 for b in _glyph_slot_slice(data, gidx, bpg))
+
+
+def _unshadow_name_for_primary_name(primary_name: str) -> str | None:
+    parts = primary_name.split("(", 1)
+    if len(parts) != 2:
+        return None
+    return f"{parts[0]}_unshadow({parts[1]}"
+
+
+def _unshadow_path_for_primary(primary: Path, *, dest_dir: Path | None = None) -> Path | None:
+    name = _unshadow_name_for_primary_name(primary.name)
+    if name is None:
+        return None
+    return (dest_dir or primary.parent) / name
+
+
+def _glyph_index_from_charmap(charmap_path: Path, char: str) -> int | None:
+    """Return packed gidx for ``charmap.txt`` entry (same as ``build_chinese_font``)."""
+    import importlib.util
+
+    scripts = Path(__file__).resolve().parents[2] / "scripts"
+    spec = importlib.util.spec_from_file_location(
+        "build_chinese_font", scripts / "build_chinese_font.py"
+    )
+    if spec is None or spec.loader is None:
+        return None
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    mapping = mod.parse_charmap(charmap_path)
+    for idx, ch in mapping.items():
+        if ch == char:
+            return idx
+    return None
+
+
+def _reference_unshadow_pair(
+    primary_name: str,
+    *,
+    game_id: str,
+    ref_char: str = "佑",
+) -> tuple[bytes, bytes] | None:
+    """Load tuned primary/unshadow 128B pair for ``ref_char`` from hook/work reference."""
+    ref_dir = get_game_patch_dir(game_id) / "work" / game_id / "graphic" / "fonts"
+    if not ref_dir.is_dir():
+        return None
+    charmap = get_charmap_path(game_id)
+    gidx = _glyph_index_from_charmap(charmap, ref_char) if charmap.is_file() else None
+    if gidx is None:
+        return None
+    primary_path = ref_dir / primary_name
+    unshadow_name = _unshadow_name_for_primary_name(primary_name)
+    if unshadow_name is None:
+        return None
+    unshadow_path = ref_dir / unshadow_name
+    if not primary_path.is_file() or not unshadow_path.is_file():
+        return None
+    primary = primary_path.read_bytes()
+    unshadow = unshadow_path.read_bytes()
+    off = gidx * 128
+    if off + 128 > len(primary) or off + 128 > len(unshadow):
+        return None
+    ref_p = primary[off : off + 128]
+    ref_u = unshadow[off : off + 128]
+    if not _glyph_slot_has_ink(ref_p, 0, 128) or not _glyph_slot_has_ink(ref_u, 0, 128):
+        return None
+    return ref_p, ref_u
+
+
+def _load_font_slot_codec():
+    """Import decompress_slot + pack_slot16_4bpp from offline font scripts."""
+    import importlib.util
+
+    scripts = Path(__file__).resolve().parents[2] / "scripts"
+    spec_blit = importlib.util.spec_from_file_location(
+        "sim_gba_font_blit", scripts / "sim_gba_font_blit.py"
+    )
+    spec_bcf = importlib.util.spec_from_file_location(
+        "build_chinese_font", scripts / "build_chinese_font.py"
+    )
+    if (
+        spec_blit is None
+        or spec_blit.loader is None
+        or spec_bcf is None
+        or spec_bcf.loader is None
+    ):
+        raise RuntimeError("font slot codec scripts missing under scripts/")
+    blit = importlib.util.module_from_spec(spec_blit)
+    bcf = importlib.util.module_from_spec(spec_bcf)
+    spec_blit.loader.exec_module(blit)
+    spec_bcf.loader.exec_module(bcf)
+    return blit.decompress_slot, bcf.pack_slot16_4bpp
+
+
+def morph_primary_glyph_to_unshadow_display(
+    primary_glyph: bytes,
+    ref_primary_glyph: bytes,
+    ref_unshadow_glyph: bytes,
+) -> bytes:
+    """Map a primary-bank glyph into tuned ``*_unshadow`` tile packing.
+
+    AXVJ ``*_unshadow`` bins use a different byte layout than primary. Pixel-diff
+    morph against a tuned pair (default ``佑``) round-trips all 6657+ hook slots;
+    raw primary bytes or byte-blend leave new glyphs like ``祐`` torn in-game.
+    """
+    if len(primary_glyph) != 128 or len(ref_primary_glyph) != 128 or len(ref_unshadow_glyph) != 128:
+        raise ValueError("glyph slots must be 128 bytes")
+    decompress_slot, pack_slot16_4bpp = _load_font_slot_codec()
+    target_px = decompress_slot(primary_glyph)
+    ref_px = decompress_slot(ref_primary_glyph)
+    out_px = list(decompress_slot(ref_unshadow_glyph))
+    for i in range(256):
+        if target_px[i] and not ref_px[i]:
+            out_px[i] = 15
+        elif not target_px[i] and ref_px[i]:
+            out_px[i] = 0
+    slot = bytearray(256)
+    for i, val in enumerate(out_px):
+        slot[i] = 15 if val else 0
+    return pack_slot16_4bpp(slot)
+
+
+def convert_primary_glyph_to_unshadow_display(
+    primary_glyph: bytes,
+    ref_primary_glyph: bytes,
+    ref_unshadow_glyph: bytes,
+) -> bytes:
+    """Backward-compatible alias — always use pixel morph."""
+    return morph_primary_glyph_to_unshadow_display(
+        primary_glyph, ref_primary_glyph, ref_unshadow_glyph
+    )
+
+
+def seed_unshadow_banks_from_reference(
+    fonts_dir: Path,
+    *,
+    game_id: str,
+    prefix: str = "PokeRSFontChs",
+) -> int:
+    """Overlay tuned ``*_unshadow`` banks from hook/work before morph fill."""
+    ref_dir = get_game_patch_dir(game_id) / "work" / game_id / "graphic" / "fonts"
+    if not ref_dir.is_dir():
+        return 0
+    seeded = 0
+    for ref in sorted(ref_dir.glob(f"{prefix}*_unshadow*.bin")):
+        dst = fonts_dir / ref.name
+        ref_data = ref.read_bytes()
+        if dst.is_file() and dst.read_bytes() == ref_data:
+            continue
+        dst.parent.mkdir(parents=True, exist_ok=True)
+        shutil.copy2(ref, dst)
+        seeded += 1
+    return seeded
+
+
+def _reference_unshadow_bin(primary_name: str, *, game_id: str) -> bytes | None:
+    ref_dir = get_game_patch_dir(game_id) / "work" / game_id / "graphic" / "fonts"
+    unshadow_name = _unshadow_name_for_primary_name(primary_name)
+    if unshadow_name is None or not ref_dir.is_dir():
+        return None
+    path = ref_dir / unshadow_name
+    if not path.is_file():
+        return None
+    return path.read_bytes()
+
+
+def _reference_fonts_dir(game_id: str) -> Path | None:
+    ref_dir = get_game_patch_dir(game_id) / "work" / game_id / "graphic" / "fonts"
+    return ref_dir if ref_dir.is_dir() else None
+
+
+def _charmap_glyph_indices(game_id: str) -> set[int]:
+    charmap = get_charmap_path(game_id)
+    if not charmap.is_file():
+        return set()
+    import importlib.util
+
+    scripts = Path(__file__).resolve().parents[2] / "scripts"
+    spec = importlib.util.spec_from_file_location(
+        "build_chinese_font", scripts / "build_chinese_font.py"
+    )
+    if spec is None or spec.loader is None:
+        return set()
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    return set(mod.parse_charmap(charmap).keys())
+
+
+def patch_primary_missing_glyphs_from_reference(
+    fonts_dir: Path,
+    *,
+    game_id: str,
+    prefix: str = "PokeRSFontChs",
+    bytes_per_glyph: int = 128,
+) -> int:
+    """Fill empty primary slots from hook/work tuned bins.
+
+    Meowth BDF may omit charmap entries (e.g. ``祐`` / U+7950). Those slots stay
+    blank after ``build_chinese_font``; copy only per-glyph from hook/work primary
+    when the destination slot is still empty.
+    """
+    ref_dir = _reference_fonts_dir(game_id)
+    if ref_dir is None:
+        return 0
+    charmap_gidx = _charmap_glyph_indices(game_id)
+    if not charmap_gidx:
+        return 0
+    patched = 0
+    for dst_path in sorted(fonts_dir.glob(f"{prefix}*.bin")):
+        if "_unshadow" in dst_path.name:
+            continue
+        ref_path = ref_dir / dst_path.name
+        if not ref_path.is_file():
+            continue
+        ref_data = ref_path.read_bytes()
+        dst_data = bytearray(dst_path.read_bytes())
+        if len(dst_data) < len(ref_data):
+            dst_data.extend(b"\x00" * (len(ref_data) - len(dst_data)))
+        file_patched = 0
+        for gidx in charmap_gidx:
+            end = gidx * bytes_per_glyph + bytes_per_glyph
+            if end > len(dst_data) or end > len(ref_data):
+                continue
+            if not _glyph_slot_empty(dst_data, gidx, bytes_per_glyph):
+                continue
+            if not _glyph_slot_has_ink(ref_data, gidx, bytes_per_glyph):
+                continue
+            off = gidx * bytes_per_glyph
+            dst_data[off:end] = ref_data[off:end]
+            file_patched += 1
+        if file_patched:
+            dst_path.write_bytes(dst_data)
+            patched += file_patched
+    return patched
+
+
+def patch_unshadow_missing_glyphs(
+    fonts_dir: Path,
+    *,
+    source_dir: Path | None = None,
+    prefix: str = "PokeRSFontChs",
+    bytes_per_glyph: int = 128,
+    game_id: str = "",
+) -> int:
+    """Fill empty ``*_unshadow`` slots from a source bin — never full-file overwrite.
+
+    AXVJ ``shadow: false`` embeds ``*_unshadow*.bin`` in ``fonts.s``. Those bins are
+    tuned display assets (often != primary). Only write per-glyph when hook/work
+    reference still has a blank slot (new charmap entries like ``祐``), or when a
+    prior bad primary copy must be repaired. Glyphs are morphed via tuned ``佑``.
+    """
+    src_root = source_dir or fonts_dir
+    patched = 0
+    for primary in sorted(src_root.glob(f"{prefix}*.bin")):
+        if "_unshadow" in primary.name:
+            continue
+        unshadow = _unshadow_path_for_primary(primary, dest_dir=fonts_dir)
+        if unshadow is None:
+            continue
+        primary_path = primary if source_dir is None else (fonts_dir / primary.name)
+        if not primary_path.is_file():
+            continue
+        ref_pair = (
+            _reference_unshadow_pair(primary.name, game_id=game_id) if game_id else None
+        )
+        ref_unshadow = (
+            _reference_unshadow_bin(primary.name, game_id=game_id) if game_id else None
+        )
+        if not unshadow.is_file():
+            if ref_unshadow is not None:
+                unshadow.write_bytes(ref_unshadow)
+            else:
+                shutil.copy2(primary_path, unshadow)
+            continue
+        src = bytearray(primary.read_bytes() if source_dir is not None else primary_path.read_bytes())
+        dst = bytearray(unshadow.read_bytes())
+        if len(dst) < len(src):
+            dst.extend(b"\x00" * (len(src) - len(dst)))
+        slot_count = len(src) // bytes_per_glyph
+        file_patched = 0
+        for gidx in range(slot_count):
+            if not _glyph_slot_has_ink(src, gidx, bytes_per_glyph):
+                continue
+            ref_has_ink = ref_unshadow is not None and not _glyph_slot_empty(
+                ref_unshadow, gidx, bytes_per_glyph
+            )
+            dst_empty = _glyph_slot_empty(dst, gidx, bytes_per_glyph)
+            if not dst_empty and ref_has_ink:
+                continue
+            if dst_empty and ref_has_ink:
+                off = gidx * bytes_per_glyph
+                dst[off : off + bytes_per_glyph] = ref_unshadow[off : off + bytes_per_glyph]
+                file_patched += 1
+                continue
+            if ref_pair is None:
+                continue
+            off = gidx * bytes_per_glyph
+            slot = morph_primary_glyph_to_unshadow_display(
+                bytes(src[off : off + bytes_per_glyph]),
+                *ref_pair,
+            )
+            dst[off : off + bytes_per_glyph] = slot
+            file_patched += 1
+        if file_patched:
+            unshadow.write_bytes(dst)
+            patched += file_patched
+    return patched
+
+
+def sync_unshadow_font_bins(fonts_dir: Path, prefix: str = "PokeRSFontChs") -> int:
+    """Deprecated: full primary→unshadow copy destroys tuned ``*_unshadow`` banks."""
+    return patch_unshadow_missing_glyphs(fonts_dir, prefix=prefix)
+
+
 def _generate_fonts_s(cfg: dict[str, Any], work_font_dir: Path, output_path: Path, game_id: str = "") -> None:
     """生成 graphic/fonts.s：字库 .incbin + phrase data include。"""
     slots = _normalize_font_slots(cfg, game_id=game_id)
@@ -172,6 +496,20 @@ def apply_font_patch(
         shutil.copytree(root_tools, build_dir / "tools")
 
     fonts_build_dir.mkdir(parents=True, exist_ok=True)
+    prefix = font_patch_cfg.get("font_bin_prefix", "PokeRSFontChs")
+    if font_patch_cfg.get("shadow") is False and fonts_src.exists():
+        n_primary = patch_primary_missing_glyphs_from_reference(
+            fonts_src, game_id=game_id, prefix=prefix
+        )
+        if n_primary:
+            print(
+                f"[font] patched {n_primary} empty primary glyph slot(s) "
+                f"from hook/work reference"
+            )
+        seed_unshadow_banks_from_reference(fonts_src, game_id=game_id, prefix=prefix)
+        n_patch = patch_unshadow_missing_glyphs(fonts_src, prefix=prefix, game_id=game_id)
+        if n_patch:
+            print(f"[font] patched {n_patch} empty unshadow glyph slot(s) from primary")
     if fonts_src.exists():
         for bin_file in fonts_src.glob("*.bin"):
             shutil.copy2(bin_file, fonts_build_dir / bin_file.name)

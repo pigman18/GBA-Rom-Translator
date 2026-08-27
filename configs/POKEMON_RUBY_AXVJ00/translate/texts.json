@@ -195729,8 +195729,8 @@
       "module": "补漏剧情",
       "address": "0x083E9640",
       "byte_length": 4,
-      "original": "リクヤ",
-      "original_hex": "78 58 74 ff",
+      "original": "ユウキ",
+      "original_hex": "75 53 57 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -195777,8 +195777,8 @@
       "module": "补漏剧情",
       "address": "0x083E9658",
       "byte_length": 4,
-      "original": "ムツミ",
-      "original_hex": "71 62 70 ff",
+      "original": "ハルカ",
+      "original_hex": "6a 79 56 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [

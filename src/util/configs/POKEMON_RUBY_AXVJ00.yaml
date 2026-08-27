@@ -278,6 +278,18 @@ texts:
     read:
       entry_size: 40
       desc_ptr_offset: 16
+  - id: 树果名
+    label: 词条·树果名
+    group: 词条
+    default: true
+    description: 树果数据表（クラボ..ナゾ）；name@0，desc_ptr@12 指向说明池 （说明池由 剧情 语料通道收录，故不设独立说明模块）
+    start: '0x3A1050'
+    end: '0x3A14E8'
+    type: struct
+    read:
+      entry_size: 56
+      name_offset: 0
+      desc_ptr_offset: 12
   - id: 道具说明
     label: 说明·道具
     group: 说明
@@ -361,7 +373,7 @@ texts:
     word_count: 16
     wrap_pages: false
     max_lines: 3
-  - id: 其他UI界面
+  - id: UI界面
     label: UI界面
     group: 文本
     default: true
@@ -376,6 +388,10 @@ texts:
       value:
         file: reference_corpus/ui.txt
         mapping: {}
+    write:
+      relocate: false
+      replace: true
+      slot: true
   - id: 剧情
     label: 文本·剧情
     group: 文本
@@ -389,16 +405,11 @@ texts:
       value:
         file: reference_corpus/RubySapphire/ja-Hrkt_msg.txt
         mapping:
-          　: ' '
-          \n: '
-
-            '
-          \c: '
-
-
-            '
-          \r: \l
-          \e: ''
+          "　": " "
+          "\\n": "\n"
+          "\\c": "\n\n"
+          "\\r": "\\l"
+          "\\e": ""
           '[PLAYER]': \01
           '[STR_VAR_1]': \02
           '[STR_VAR_2]': \03
@@ -437,18 +448,24 @@ texts:
     - id: fb_garbage
       type: garbage_heuristic_filter
       value: true
-  - id: 树果名
-    label: 词条·树果名
-    group: 词条
+  - id: 补漏剧情
+    label: 文本·补漏剧情
+    group: 文本
     default: true
-    description: 树果数据表（クラボ..ナゾ）；name@0，desc_ptr@12 指向说明池 （说明池由 剧情 语料通道收录，故不设独立说明模块）
-    start: '0x3A1050'
-    end: '0x3A14E8'
-    type: struct
-    read:
-      entry_size: 56
-      name_offset: 0
-      desc_ptr_offset: 12
+    description: 全 ROM；execute_filter（ShowFieldMessage + 脚本 op message/trainerbattle）
+    start: '0x0'
+    end: '0xFFFFFF'
+    type: scan
+    filters:
+      - id: extra_story_pointer_filter
+        type: require_pointer_filter
+        value: true
+    write:
+      relocate: false
+      replace: false
+      ## 纯slot，防止污染
+      slot: true
+
 gdb:
 - name: InitTextPrinter
   address: '0x08002C68'

@@ -13,7 +13,7 @@ class UnsupportedGameError(RuntimeError):
 class GameBackend(ABC):
     """One ROM family (e.g. AXVJ Japanese Ruby)."""
 
-    #: Internal id used in config / JSON (``ruby_jp``, ``emerald_jp``, …)
+    #: Internal id used in config / JSON (``POKEMON_RUBY_AXVJ00``, ``POKEMON_SAPP_AXPJ00``, …)
     id: str
     #: Human label
     name: str

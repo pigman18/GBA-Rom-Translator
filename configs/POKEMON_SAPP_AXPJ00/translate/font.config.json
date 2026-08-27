@@ -1,0 +1,29 @@
+{
+  "escape": true,
+  "escape_bytes": [249, 0],
+  "ideospace_bytes": [1, 247],
+  "chinese_leads": [[1, 5], [7, 26], [28, 30]],
+  "shadow": false,
+  "embed_primary": false,
+  "font_slots": [
+    {
+      "label": "Normal",
+      "addr": 150994944,
+      "glyph_count": 7168,
+      "bytes_per_glyph": 128
+    },
+    {
+      "label": "Small",
+      "addr": 152043520,
+      "glyph_count": 7168,
+      "bytes_per_glyph": 128
+    },
+    {
+      "label": "Sym",
+      "addr": 152961024,
+      "glyph_count": 9,
+      "bytes_per_glyph": 64,
+      "slot_size": 576
+    }
+  ]
+}

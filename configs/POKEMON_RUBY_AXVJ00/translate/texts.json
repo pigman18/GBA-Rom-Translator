@@ -38,6 +38,11 @@
       "type": "stride_ptr",
       "read": {
         "stride": 4
+      },
+      "write": {
+        "relocate": false,
+        "replace": false,
+        "slot": true
       }
     },
     "特性名": {
@@ -50,6 +55,11 @@
       "type": "stride",
       "read": {
         "stride": 8
+      },
+      "write": {
+        "relocate": false,
+        "replace": false,
+        "slot": true
       }
     },
     "宝可梦名": {

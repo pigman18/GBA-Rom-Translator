@@ -9,6 +9,7 @@ from __future__ import annotations
 
 import copy
 import json
+import struct
 import sys
 from pathlib import Path
 
@@ -77,6 +78,8 @@ TYPE_ICONS_BANK_LIST = [
     2,
     0,
 ]
+
+GBA_BASE = 0x08000000
 
 
 def _load_yaml(path: Path) -> dict:
@@ -210,12 +213,121 @@ def _scan_type_icons_preset(rom_path: Path) -> dict | None:
     return None
 
 
-def _build_tiles(cfg: dict, family: str, rom_path: Path, template: dict) -> None:
+def _scan_rs_title_presets(rom_path: Path, template: dict) -> dict:
+    """RS 日版：按 ROM 扫描标题 LZ + 指针，勿整段复制 AXVJ 地址。"""
+    sys.path.insert(0, str(UTIL_DIR))
+    from _scan_tiles import scan, pal_near  # noqa: WPS433
+    from tiles_patcher import (  # noqa: WPS433
+        detect_palette_bank_table,
+        lz77_decompress,
+        offset_to_gba_address,
+        _detect_bpp,
+        _infer_sprite_size,
+    )
+
     tiles = copy.deepcopy(template.get("tiles") or {})
+    presets_tpl = {p.get("id"): p for p in (template.get("tiles") or {}).get("presets") or []}
+    rom = rom_path.read_bytes() if rom_path.is_file() else b""
+
+    logo_off = banner_off = tilemap_off = None
+    logo_comp = banner_comp = "lz77_swap"
+    title_lo = 0x08360000 - GBA_BASE
+    title_hi = 0x08370000 - GBA_BASE
+    for off, _cs, dsize, comp in scan(rom, min_dst=256):
+        if off < title_lo or off > title_hi:
+            continue
+        dec = lz77_decompress(rom[off:], swap=(comp == "lz77_swap"))
+        bpp = _detect_bpp(dec)
+        if bpp == 8 and dsize > 8000 and logo_off is None:
+            logo_off, logo_comp = off, comp
+        if dsize in (3072, 3088) and banner_off is None:
+            banner_off, banner_comp = off, comp
+        if bpp == 8 and dsize == 1024 and tilemap_off is None:
+            tilemap_off = off
+
+    type_icons_off = None
+    bank_list = TYPE_ICONS_BANK_LIST
+    type_pal_gba = None
+    for off, _cs, dsize, comp in scan(rom):
+        if dsize != 5888:
+            continue
+        dec = lz77_decompress(rom[off:], swap=(comp == "lz77_swap"))
+        bpp = _detect_bpp(dec)
+        w, h, cnt = _infer_sprite_size(dsize, bpp)
+        if w == 32 and h == 16 and cnt == 23 and bpp == 4:
+            type_icons_off = off
+            _bo, _base, bl = detect_palette_bank_table(rom, cnt, 3)
+            if bl:
+                bank_list = bl
+            pb = pal_near(rom, off)
+            if pb:
+                type_pal_gba = f"0x{offset_to_gba_address(pb[1]):08X}"
+            break
+
+    ptr_gba = None
+    if type_icons_off is not None:
+        target = struct.pack("<I", offset_to_gba_address(type_icons_off))
+        hits = []
+        pos = 0
+        while True:
+            idx = rom.find(target, pos)
+            if idx < 0:
+                break
+            gba = offset_to_gba_address(idx)
+            if 0x08390000 <= gba <= 0x083A0000:
+                hits.append(gba)
+            pos = idx + 1
+        ptr_gba = min(hits) if hits else None
+
+    presets: list[dict] = []
+    if banner_off is not None:
+        p = copy.deepcopy(presets_tpl.get("title_banner") or {})
+        p.setdefault("id", "title_banner")
+        p["address"] = f"0x{offset_to_gba_address(banner_off):08X}"
+        p["compression"] = banner_comp
+        pb = pal_near(rom, banner_off)
+        if pb:
+            p["palette"] = f"0x{offset_to_gba_address(pb[1]):08X}"
+        presets.append(p)
+    if logo_off is not None:
+        p = copy.deepcopy(presets_tpl.get("title_logo") or {})
+        p.setdefault("id", "title_logo")
+        p["address"] = f"0x{offset_to_gba_address(logo_off):08X}"
+        p["compression"] = logo_comp
+        pb = pal_near(rom, logo_off)
+        if pb:
+            p["palette"] = f"0x{offset_to_gba_address(pb[1]):08X}"
+        comp = p.get("compose") or {}
+        if tilemap_off is not None:
+            comp = dict(comp)
+            comp["tilemap_address"] = f"0x{offset_to_gba_address(tilemap_off):08X}"
+            p["compose"] = comp
+        presets.append(p)
+    if type_icons_off is not None:
+        p = copy.deepcopy(presets_tpl.get("type_icons") or {})
+        p.setdefault("id", "type_icons")
+        p["address"] = f"0x{offset_to_gba_address(type_icons_off):08X}"
+        p["bank_list"] = bank_list
+        tpl_pal = (presets_tpl.get("type_icons") or {}).get("palette")
+        if tpl_pal and type_icons_off == (0x087EE9C8 - GBA_BASE):
+            p["palette"] = tpl_pal
+        elif type_pal_gba:
+            p["palette"] = type_pal_gba
+        if ptr_gba:
+            p["pointers"] = [f"0x{ptr_gba:08X}"]
+        presets.append(p)
+
+    if presets:
+        tiles["presets"] = presets
+    return tiles
+
+
+def _build_tiles(cfg: dict, family: str, rom_path: Path, template: dict) -> None:
     if family == "RS":
-        cfg["tiles"] = tiles
+        cfg["tiles"] = _scan_rs_title_presets(rom_path, template)
         return
 
+    tiles = copy.deepcopy(template.get("tiles") or {})
     presets: list[dict] = []
     # 非 RS：仅保留扫描到的 type_icons + 待人工 compose 占位说明
     scanned = _scan_type_icons_preset(rom_path)

@@ -171,10 +171,13 @@
       "label": "说明·招式",
       "group": "说明",
       "default": true,
-      "description": "招式说明",
-      "start": "0x383001",
-      "end": "0x397F20",
-      "type": "scan",
+      "description": "招式说明（定长槽 0x38；非指针表）",
+      "start": "0x3923f8",
+      "end": "0x397167",
+      "type": "stride",
+      "read": {
+        "stride": 56
+      },
       "relocate": false,
       "hook": false
     },

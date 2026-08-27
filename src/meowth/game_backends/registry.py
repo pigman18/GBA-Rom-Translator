@@ -46,7 +46,7 @@ def detect_game_code(rom_path: Path) -> str:
 
 
 def detect_game(rom_path: Path, *, reject_us: bool = True) -> str:
-    """Return backend id (``ruby_jp``, …) or ``unknown``.
+    """Return backend id (``POKEMON_RUBY_AXVJ00``, …) or ``unknown``.
 
     If ``reject_us`` and the ROM is a US Gen3 title, raises
     ``UnsupportedGameError`` (this tree targets JP ROMs in ``roms/origin``).

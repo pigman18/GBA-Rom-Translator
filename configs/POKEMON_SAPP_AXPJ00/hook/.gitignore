@@ -1,0 +1,8 @@
+out/
+*.map
+*.elf
+*.o
+game.bin
+build_game/
+# staged from ../charmap.txt for local armips; canonical file is beside game.json
+charmap.txt

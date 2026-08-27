@@ -8,10 +8,10 @@ tiles:
   - id: title_banner
     label: 标题横幅
     default: true
-    address: '0x0836EC6C'
+    address: '0x0836ECF0'
     format: 8bpp
     compression: lz77_swap
-    palette: '0x0836D148'
+    palette: '0x0836ECEE'
     compose:
       type: banner
       left:
@@ -23,13 +23,13 @@ tiles:
   - id: title_logo
     label: 标题 Logo
     default: true
-    address: '0x0836D268'
+    address: '0x0836D1F8'
     format: 8bpp
     compression: lz77_swap
-    palette: '0x0836D148'
+    palette: '0x0836D1F6'
     compose:
       type: logo
-      tilemap_address: '0x0836D030'
+      tilemap_address: '0x0836CFC0'
       tilemap_size: 1024
       width: 32
       height: 32
@@ -42,108 +42,32 @@ tiles:
     sprite_size: 32x16
     count: 23
     palette: '0x087EF450'
-    bank_list: 0,0,1,1,0,0,2,1,0,2,0,1,2,0,1,1,2,0,0,1,1,2,0
+    bank_list:
+    - 0
+    - 0
+    - 1
+    - 1
+    - 0
+    - 0
+    - 2
+    - 1
+    - 0
+    - 2
+    - 0
+    - 1
+    - 2
+    - 0
+    - 1
+    - 1
+    - 2
+    - 0
+    - 0
+    - 1
+    - 1
+    - 2
+    - 0
     pointers:
-    - '0x0839747C'
-  - id: rt_083E1A98
-    label: rt tag=0x07D0 LoadCompressedObjectPic
-    default: false
-    address: '0x083E1A98'
-    format: 4bpp
-    compression: lz77_swap
-    sprite_size: 32x32
-    count: 10
-    raw_size: 5120
-    source: gdb_patcher
-    md5: 037ff00cd858fdd27c30322e6ea7e45a
-  - id: rt_083E6414
-    label: rt tag=0x07D2 LoadCompressedObjectPic
-    default: false
-    address: '0x083E6414'
-    format: 4bpp
-    compression: lz77_swap
-    sprite_size: 64x32
-    count: 1
-    raw_size: 1024
-    source: gdb_patcher
-    md5: 12e82cacd3f005ca1d4ae143a0b40576
-  - id: rt_0836FBD4
-    label: rt tag=0x03EA LoadCompressedObjectPic
-    default: false
-    address: '0x0836FBD4'
-    format: 4bpp
-    compression: lz77_swap
-    sprite_size: 64x64
-    count: 1
-    raw_size: 2048
-    source: gdb_patcher
-    md5: 27cc80a8382c5f5b9f6cec6e98077124
-  - id: rt_0836CDA4
-    label: rt tag=0x03E9 LoadCompressedObjectPic
-    default: false
-    address: '0x0836CDA4'
-    format: 4bpp
-    compression: lz77_swap
-    sprite_size: 32x8
-    count: 10
-    raw_size: 1312
-    source: gdb_patcher
-    md5: dd06beabde46cb5d39c9e8a9c931b1b3
-  - id: rt_083501F0
-    label: rt tag=0xD750 LoadSpriteSheet
-    default: false
-    address: '0x083501F0'
-    format: 4bpp
-    compression: none
-    sprite_size: 8x8
-    count: 2
-    raw_size: 64
-    source: gdb_patcher
-    md5: 3b2a71d745ba2d355c452c567011cc9b
-  - id: rt_083BC6C4
-    label: rt tag=0x7533 LoadSpriteSheet
-    default: false
-    address: '0x083BC6C4'
-    format: 4bpp
-    compression: none
-    sprite_size: 32x8
-    count: 16
-    raw_size: 2048
-    source: gdb_patcher
-    md5: 995d3f7799d88005bb98cc725453dc33
-  - id: rt_0837CB34
-    label: rt tag=0x1000 LoadCompressedObjectPic
-    default: false
-    address: '0x0837CB34'
-    format: 4bpp
-    compression: lz77_swap
-    sprite_size: 16x8
-    count: 76
-    raw_size: 4864
-    source: gdb_patcher
-    md5: 0e28a111c3dcf3265638136ccf827561
-  - id: rt_0869C31C
-    label: rt tag=0xD6FF LoadCompressedObjectPic
-    default: false
-    address: '0x0869C31C'
-    format: 4bpp
-    compression: lz77_swap
-    sprite_size: 64x32
-    count: 4
-    raw_size: 4096
-    source: gdb_patcher
-    md5: 3add5a60f6896d8269ae4aaf7ade1e2a
-  - id: rt_0869C5DC
-    label: rt tag=0xD701 LoadCompressedObjectPic
-    default: false
-    address: '0x0869C5DC'
-    format: 4bpp
-    compression: lz77_swap
-    sprite_size: 64x32
-    count: 2
-    raw_size: 2048
-    source: gdb_patcher
-    md5: 04f106e120187f1ca98535e80b2f4d00
+    - '0x08397460'
 texts:
   filters:
   - id: global_anim_cmd_filter
@@ -163,8 +87,8 @@ texts:
     group: 词条
     default: true
     description: 属性名短表（单字注入需谨慎）
-    start: '0x1cbb0c'
-    end: '0x1cbb65'
+    start: '0x1cba9c'
+    end: '0x1cbaf5'
     type: stride
     read:
       stride: 5
@@ -182,9 +106,9 @@ texts:
     label: 词条·性格
     group: 词条
     default: true
-    description: 性格名表/指针体
-    start: '0x3971e8'
-    end: '0x39724b'
+    description: 性格名表/相遇与蛋描述
+    start: '0x39714c'
+    end: '0x3984bf'
     type: stride_ptr
     read:
       stride: 4
@@ -193,18 +117,18 @@ texts:
     group: 词条
     default: true
     description: 特性名固定表
-    start: '0x1cbc44'
-    end: '0x1cbeb3'
+    start: '0x1cbbd4'
+    end: '0x1cbe43'
     type: stride
     read:
       stride: 8
   - id: 宝可梦名
     label: 词条·物种
     group: 词条
-    default: false
+    default: true
     description: 物种名固定表
-    start: '0x1ca354'
-    end: '0x1cacfb'
+    start: '0x1ca2e4'
+    end: '0x1cac8b'
     type: stride
     read:
       stride: 6
@@ -222,8 +146,8 @@ texts:
     group: 词条
     default: true
     description: 招式名固定表
-    start: '0x1cacfc'
-    end: '0x1cb813'
+    start: '0x1cac8c'
+    end: '0x1cb7a3'
     type: stride
     read:
       stride: 8
@@ -241,11 +165,16 @@ texts:
     label: 训练家·名称
     group: 训练家
     default: true
-    description: 训练家个体名（若与类名分表）
-    start: '0x0'
-    end: '0x0'
+    description: 训练家个体名表（含主角/劲敌默认名）
+    start: '0x1c7208'
+    end: '0x1ca34d'
     type: scan
     min_byte_length: 3
+    ranges:
+    - start: '0x1C4A10'
+      end: '0x1C4C8F'
+    - start: '0x3E944C'
+      end: '0x3E9453'
     filters:
     - id: name_min_byte_length_filter
       type: min_byte_length_filter
@@ -274,9 +203,9 @@ texts:
     label: 词条·地点
     group: 词条
     default: true
-    description: 地图/地区名表（若独立）
-    start: '0x0'
-    end: '0x0'
+    description: 地图/地区名表
+    start: '0x3b91e5'
+    end: '0x3ca07c'
     type: scan
     min_byte_length: 5
     max_byte_length: 20
@@ -302,8 +231,8 @@ texts:
     group: 词条
     default: true
     description: 道具结构内名称字段
-    start: '0x39a648'
-    end: '0x39dca7'
+    start: '0x39a62c'
+    end: '0x39dc8b'
     type: struct
     read:
       entry_size: 40
@@ -325,8 +254,8 @@ texts:
     group: 说明
     default: true
     description: 道具描述指针目标
-    start: '0x3984dc'
-    end: '0x39a643'
+    start: '0x3984c0'
+    end: '0x39a62b'
     type: scan
     word_count: 9
     wrap_pages: false
@@ -335,9 +264,9 @@ texts:
     label: 说明·招式
     group: 说明
     default: true
-    description: 招式说明
-    start: '0x0'
-    end: '0x0'
+    description: 招式说明（定长槽 0x38；非指针表）
+    start: '0x3923dc'
+    end: '0x39714b'
     type: stride
     read:
       stride: 56
@@ -363,8 +292,8 @@ texts:
     group: 说明
     default: true
     description: 特性说明
-    start: '0x0'
-    end: '0x0'
+    start: '0x1cbe44'
+    end: '0x1cc40d'
     type: stride
     read:
       stride: 19

@@ -4,11 +4,30 @@
 
 | 文件 / 目录 | 作用 |
 |-------------|------|
-| `config.json` | `protect`（折行等）+ `skip`（强制留日） |
+| `config.json` | `placeholders`（运行时占位串，保留 ROM 原字节）+ `protect`/`skip`/`rejects` |
 | `texts.json` | 语料 entries + modules（含 write/read/word_count；由 util yaml export 晋升） |
 | `texts_translated.json` | 翻译缓存（status 200/404 数组） |
 | `lexicon/` | 短语与词表精确译文（构建时覆盖） |
 | **本 README** | `skip` 原文 ↔ 中文对照 + 原因 |
+
+### placeholders（运行时覆写占位）
+
+图鉴分类等串形如「？？？？？ポケモン」：ROM 里前缀是 ``AC``×N，游戏会用物种分类名覆写。  
+注入时**不得**把「？」编成中文 ``3D``/F9，也不得整句 F980 吃掉前缀。
+
+`config.json` 示例：
+
+```json
+"placeholders": ["？？？？？"]
+```
+
+规划期（`translate_plan`）检测到原文以此开头时：
+
+- 前缀字节原样取自 `original_hex`
+- 只编码后缀译文（如「宝可梦」）
+- 槽内放不下则：`AC…` + `F9 80 … FF`（短语仅绑后缀）
+
+---
 
 注入闸门读法：`config.json` → `skip` → `load_policy` → `should_skip_zh_inject`。  
 **有本文件的 `skip` 时，以本配置为准**；`policy.py` 仅作无配置时的空兜底。

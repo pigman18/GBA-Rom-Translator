@@ -109,6 +109,17 @@ tiles:
     raw_size: 2048
     source: gdb_patcher
     md5: 995d3f7799d88005bb98cc725453dc33
+  - id: rt_0837CB34
+    label: rt tag=0x1000 LoadCompressedObjectPic
+    default: false
+    address: '0x0837CB34'
+    format: 4bpp
+    compression: lz77_swap
+    sprite_size: 16x8
+    count: 76
+    raw_size: 4864
+    source: gdb_patcher
+    md5: 0e28a111c3dcf3265638136ccf827561
 texts:
   filters:
   - id: global_anim_cmd_filter
@@ -405,11 +416,16 @@ texts:
       value:
         file: reference_corpus/RubySapphire/ja-Hrkt_msg.txt
         mapping:
-          "　": " "
-          "\\n": "\n"
-          "\\c": "\n\n"
-          "\\r": "\\l"
-          "\\e": ""
+          　: ' '
+          \n: '
+
+            '
+          \c: '
+
+
+            '
+          \r: \l
+          \e: ''
           '[PLAYER]': \01
           '[STR_VAR_1]': \02
           '[STR_VAR_2]': \03
@@ -457,15 +473,13 @@ texts:
     end: '0xFFFFFF'
     type: scan
     filters:
-      - id: extra_story_pointer_filter
-        type: require_pointer_filter
-        value: true
+    - id: extra_story_pointer_filter
+      type: require_pointer_filter
+      value: true
     write:
       relocate: false
       replace: false
-      ## 纯slot，防止污染
       slot: true
-
 gdb:
 - name: InitTextPrinter
   address: '0x08002C68'

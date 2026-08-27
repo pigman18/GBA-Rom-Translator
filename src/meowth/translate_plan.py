@@ -311,12 +311,68 @@ def resolve_usable_pointers(
     return [f"0x{p:X}" if isinstance(p, int) else str(p) for p in offs]
 
 
+def _placeholder_text_variants(ph: str) -> tuple[str, ...]:
+    """全角/半角问号互通，匹配 extract 与 config 写法差异。"""
+    alts = {
+        ph,
+        ph.replace("？", "?"),
+        ph.replace("?", "？"),
+    }
+    return tuple(a for a in alts if a)
+
+
+def _split_runtime_placeholder(
+    original: str,
+    translated: str,
+    original_hex: str,
+    placeholders: tuple[str, ...],
+) -> tuple[bytes, str] | None:
+    """若原文以配置占位符开头：返回 (占位原字节, 译文后缀)。
+
+    占位字节必须取自 ``original_hex``（如 ``AC``×N），不可经 charmap 重编码
+    （全角「？」会编成 ``3D``，运行时无法被物种分类覆写）。
+    """
+    if not placeholders or not original or not original_hex:
+        return None
+    try:
+        raw = bytes.fromhex(str(original_hex).replace(" ", ""))
+    except ValueError:
+        return None
+    body = raw[:-1] if raw.endswith(b"\xff") else raw
+
+    for ph in placeholders:
+        matched: str | None = None
+        for variant in _placeholder_text_variants(ph):
+            if original.startswith(variant):
+                matched = variant
+                break
+        if matched is None:
+            continue
+        # 本工程问号占位均为单字节 PCS（AC）；按字符数切前缀
+        n = len(matched)
+        if n <= 0 or n > len(body):
+            continue
+        ph_bytes = body[:n]
+        zh = translated
+        for variant in _placeholder_text_variants(ph):
+            if zh.startswith(variant):
+                zh = zh[len(variant) :]
+                break
+        return ph_bytes, zh
+    return None
+
+
 def _prepare_encoded(
     entry: dict,
     charmap: Any,
     game_id: str,
-) -> tuple[str, str, bytes] | dict:
-    """返回 (sanitized, to_encode, encoded)；失败则返回 keep plan dict。"""
+) -> tuple[str, str, bytes, bytes] | dict:
+    """返回 (sanitized, to_encode, encoded, runtime_ph_prefix)；失败则 keep plan。
+
+    ``runtime_ph_prefix``：须原样写入槽头的运行时占位字节（无则 ``b\"\"``）。
+    有占位时 ``to_encode`` / 短语键仅为后缀（如「宝可梦」），
+    ``encoded == prefix + encode(suffix)``。
+    """
     from .config_loader import module_wrap_kwargs
     from .text_wrap import wrap_text
 
@@ -345,6 +401,28 @@ def _prepare_encoded(
         }
 
     translated = normalize_zh_punct(translated)
+    ph_prefix = b""
+    try:
+        from .policy import runtime_placeholders
+
+        split = _split_runtime_placeholder(
+            original,
+            translated,
+            original_hex,
+            runtime_placeholders(game_id),
+        )
+    except Exception:
+        split = None
+    if split is not None:
+        ph_prefix, translated = split
+        if not (translated or "").strip():
+            # 仅占位、无后缀译文 → 保持原槽
+            return {
+                "type": "keep",
+                "target_hex": original_hex,
+                "reason": "占位符条目无后缀译文",
+            }
+
     s = normalize_zh_punct(charmap._sanitize(translated))
     to_encode = wrap_text(
         s,
@@ -352,15 +430,20 @@ def _prepare_encoded(
         **module_wrap_kwargs(game_id, module_id),
     )
     try:
-        encoded = charmap.encode(to_encode)
+        encoded_rest = charmap.encode(to_encode)
     except Exception:
         return {
             "type": "keep",
             "target_hex": original_hex,
             "reason": "译文编码失败",
         }
+    # 去掉后缀自带 EOS，由前缀 + 后缀重新拼一条 FF 结尾流
+    rest = bytes(encoded_rest)
+    while rest.endswith(bytes([F9_EOS])):
+        rest = rest[:-1]
+    encoded = ph_prefix + rest + bytes([F9_EOS])
     # F901/F981 已移除：短语恒 F9 80，不再重写通道字节。
-    return s, to_encode, encoded
+    return s, to_encode, encoded, ph_prefix
 
 
 def _ensure_phrase_code(phrase_codes: dict[str, int], text: str) -> int:
@@ -559,7 +642,7 @@ def plan_entry(
     prepared = _prepare_encoded(entry, charmap, game_id)
     if isinstance(prepared, dict):
         return prepared
-    _s, to_encode, encoded = prepared
+    _s, to_encode, encoded, ph_prefix = prepared
 
     byte_length = entry.get("byte_length", 0) or 0
     original_hex = entry.get("original_hex") or ""
@@ -612,7 +695,7 @@ def plan_entry(
             "pointer_sources": list(usable_ptrs),
         })
 
-    # --- 通路 2: replace（原地写入 F900 / F980）--- 放不下则整句统一升为 F9 80
+    # --- 通路 2: replace（原地写入 F900 / F980）--- 放不下则后缀升 F9 80，占位前缀保留
     if allow_replace:
         if len(encoded) <= slot_cap:
             plan = {
@@ -622,13 +705,13 @@ def plan_entry(
             if slot_cap != byte_length:
                 plan["byte_length"] = slot_cap
             return _with_write_meta(plan)
-        if slot_cap >= 5:
+        # 运行时占位 + 短语引用：AC… + F9 80 xx xx FF（须 ≥ prefix+5）
+        if slot_cap >= len(ph_prefix) + 5:
             code = _ensure_phrase_code(phrase_codes, to_encode)
+            combined = ph_prefix + _encode_phrase_ref(code, channel)
             plan = {
                 "type": "replace",
-                "target_hex": pad_inplace_to_slot(
-                    _encode_phrase_ref(code, channel), slot_cap
-                ).hex(" "),
+                "target_hex": pad_inplace_to_slot(combined, slot_cap).hex(" "),
                 "phrase_code": code,
             }
             if slot_cap != byte_length:

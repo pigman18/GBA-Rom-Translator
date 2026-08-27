@@ -117,6 +117,28 @@ def rejects_ids(game_id: str = "") -> frozenset[str]:
     return frozenset(str(x) for x in raw)
 
 
+def runtime_placeholders(game_id: str = "") -> tuple[str, ...]:
+    """translate/config.json ``placeholders``：运行时会被游戏覆写的占位串。
+
+    例：图鉴分类 ``？？？？？ポケモン`` 的 ``？？？？？`` 在 ROM 中为 ``AC``×N，
+    注入时须原样保留这些字节，只编码后缀译文（见 translate_plan）。
+    """
+    raw = _policy(game_id).get("placeholders")
+    if not raw:
+        return ()
+    out: list[str] = []
+    seen: set[str] = set()
+    for item in raw:
+        s = str(item or "").strip()
+        if not s or s in seen:
+            continue
+        seen.add(s)
+        out.append(s)
+    # 长串优先，避免短占位误切长模板
+    out.sort(key=len, reverse=True)
+    return tuple(out)
+
+
 def skip_zh_inject_originals(game_id: str = "") -> frozenset[str]:
     block = _policy(game_id).get("skip_zh_inject") or {}
     raw = block.get("originals")

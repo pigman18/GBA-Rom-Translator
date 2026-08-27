@@ -15,6 +15,62 @@
  * 槽位机制一并移除）。协议常量 CHS_ESCAPE/CHS_PHRASE_DEFAULT/ADDR_* 见 game.h。
  * ===================================================================================== */
 #include "text.h"
+#include "text_render.h"
+
+/* =====================================================================
+ * §glyph — 字形源统一解析（自 text_render.c 迁入）
+ * ===================================================================== */
+int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth)
+{
+    uint8_t fontNum = win_u8(win, WIN_FONTNUM_REAL);
+    if (fontNum > 6u)
+        fontNum = 3u;
+
+    if (code == 0) {
+        unsigned i;
+        for (i = 0; i < 128u; i++)
+            out128[i] = 0;
+        *outWidth = 8u;
+        return 1;
+    }
+
+    if (code >= SYM_GLYPH_BASE && code < SYM_GLYPH_BASE + SYM_GLYPH_COUNT) {
+        const uint8_t *src = (const uint8_t *)(ADDR_FONT_CHS_SYM
+                                               + (code - SYM_GLYPH_BASE) * 64u);
+        unsigned i;
+        for (i = 0; i < 32u; i++) {
+            out128[0x00 + i] = src[i];
+            out128[0x20 + i] = src[32u + i];
+        }
+        for (i = 0; i < 64u; i++)
+            out128[0x40 + i] = 0;
+        *outWidth = 8u;
+        return 1;
+    }
+
+    {
+        uint8_t *upper = 0;
+        uint8_t *lower = 0;
+
+        if (code >= 0xF7)
+            return 0;
+        GetGlyphTilePointers_Origin(fontNum, (uint16_t)code, &upper, &lower);
+        if (!upper || !lower)
+            return 0;
+
+        for (unsigned i = 0; i < 64u; i++)
+            out128[0x40 + i] = 0;
+        if (FontIsShadowed(fontNum)) {
+            copy_tile32(out128 + 0x00, upper);
+            copy_tile32(out128 + 0x20, lower);
+        } else {
+            CopyGlyph1bppTo4bpp_Origin(upper, (uint32_t *)(uintptr_t)(out128 + 0x00), 0xFu, 0x0u);
+            CopyGlyph1bppTo4bpp_Origin(lower, (uint32_t *)(uintptr_t)(out128 + 0x20), 0xFu, 0x0u);
+        }
+        *outWidth = 8u;
+        return 1;
+    }
+}
 
 /* =====================================================================
  * §T1 协议原语（原 text.c §2）

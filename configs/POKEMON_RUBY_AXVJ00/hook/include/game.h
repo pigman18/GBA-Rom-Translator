@@ -305,6 +305,17 @@ static inline void UpdateTilemap_Origin(TextPrinter *win, uint16_t upper, uint16
     ((chs_fn3)(ADDR_UPDATE_TILEMAP | 1u))(win, upper, lower);
 }
 
+/* 原生 UpdateTilemap 会推进 win[0x1A]（窗左缘，Init 后恒定）。
+ * CHS 两趟 pass1/pass2 共用 map_tx；若让 curX 漂移，表项格=(curX+curTX) 错位 → 竖条花屏。 */
+static inline void UpdateTilemap_PreserveCursorX(
+    TextPrinter *win, uint16_t upper, uint16_t lower)
+{
+    uint8_t saved_cx = win_u8(win, WIN_CURSOR_X);
+
+    UpdateTilemap_Origin(win, upper, lower);
+    win_set_u8(win, WIN_CURSOR_X, saved_cx);
+}
+
 /* 原生 tm1 等宽打印（PCS 专用分发）：FontSubTable[fontNum](win, glyph) 写
  * 预渲染字体 tile 表项（font0/3 = base+2*glyph；font1/4 = base+FontType1Map）
  * + [win+0x1B](cursorTileX)+=1。零像素绘制、零池分配。 */

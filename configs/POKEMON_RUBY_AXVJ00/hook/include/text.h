@@ -32,7 +32,10 @@ struct TextGlyph {
     uint8_t height;
 };
 
-/* ---- 引擎渲染件（src/text.c 提供，text_translate.c 消费）---- */
+/* ---- 字形取字（text_translter.c 提供，PrintNextChar 消费）---- */
+int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth);
+
+/* ---- 引擎渲染件（PrintNextChar_hook.c 提供，text_translate.c 消费）---- */
 
 /* F9 00 汉字渲染：gidx = pack_glyph_index(lead, trail)，宽度随 fontNum
  * （font4 → FontChsSmall 8px，其余 → FontChsNormal 12px）。 */

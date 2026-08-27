@@ -43,7 +43,50 @@ tiles:
     bank_list: 0,0,1,1,0,0,2,1,0,2,0,1,2,0,1,1,2,0,0,1,1,2,0
     pointers:
     - '0x0839747C'
- 
+  - id: rt_083E1A98
+    label: rt tag=0x07D0 LoadCompressedObjectPic
+    default: false
+    address: '0x083E1A98'
+    format: 4bpp
+    compression: lz77_swap
+    sprite_size: 32x32
+    count: 10
+    raw_size: 5120
+    source: gdb_patcher
+    md5: 037ff00cd858fdd27c30322e6ea7e45a
+  - id: rt_083E6414
+    label: rt tag=0x07D2 LoadCompressedObjectPic
+    default: false
+    address: '0x083E6414'
+    format: 4bpp
+    compression: lz77_swap
+    sprite_size: 64x32
+    count: 1
+    raw_size: 1024
+    source: gdb_patcher
+    md5: 12e82cacd3f005ca1d4ae143a0b40576
+  - id: rt_0836FBD4
+    label: rt tag=0x03EA LoadCompressedObjectPic
+    default: false
+    address: '0x0836FBD4'
+    format: 4bpp
+    compression: lz77_swap
+    sprite_size: 64x64
+    count: 1
+    raw_size: 2048
+    source: gdb_patcher
+    md5: 27cc80a8382c5f5b9f6cec6e98077124
+  - id: rt_0836CDA4
+    label: rt tag=0x03E9 LoadCompressedObjectPic
+    default: false
+    address: '0x0836CDA4'
+    format: 4bpp
+    compression: lz77_swap
+    sprite_size: 32x8
+    count: 10
+    raw_size: 1312
+    source: gdb_patcher
+    md5: dd06beabde46cb5d39c9e8a9c931b1b3
 texts:
   filters:
   - id: global_anim_cmd_filter

@@ -17,10 +17,8 @@
  *   常规（fn3 等）= FontChsNormal 12px；队伍等 fn4 = FontChsSmall 8px 沉底小字
  *   （与原生 font4 8×8 混排节奏一致）；同流混排由像素制光标自然处理。
  *
- * 相位载体（2026-08-25 原生化定案）：12px 步进的半列相位存 win[0x1A]
- * （原生 cursorX，native 换行自动复位），表项列 = win[0x1B]（cursorTileX）
- * 直接增量推进——pitch 槽表/失配检测/页游标表全部移除（原 0x0203FFD2 页表
- * 落入游戏数据区，为背包/队伍死机根因）。
+ * 相位载体：12px 半列相位存 pitch 槽 chs_px；win[0x1A]=窗左缘（Init 后恒定，
+ * 原生 UpdateTilemap 会误推它 → map_at 用 PreserveCursorX）；表项列 = win[0x1B]。
  *
  * hook 面：本文件有且只有一个 ROM hook——P01@0x032F8 → entry.s EngineEntry
  *   → PrintNextChar_Hook。除 PrintNextChar_Hook 与导出工具外全部 static；
@@ -29,7 +27,7 @@
  * 模块划分（include/src 布局）：
  *   本文件 = 引擎；src/text_translter.c = F9 翻译链路（F900/F980/slot）；
  *   src/text_render.c = 共享渲染原语 + GetGlyph 字形源解析；
- *   src/text_render_inplace12.c = 渲染策略。
+ *   src/text_render.c = refpr + pitch + 日版 GetCursorTileNum（薄路径）。
  * 本文件取代 text_jp2chs.c 及旧多文件引擎（归档于 src/bak/text/，移出构建）。
  * ===================================================================================== */
 #include "text.h"
@@ -106,7 +104,7 @@ static void PcsPrint_Custom(TextPrinter *win, uint32_t cur_char)
     t.bl = buf + 0x20;
     t.tr = buf + 0x40;
     t.br = buf + 0x60;
-    render_inplace12(win, &t, width);
+    DrawGlyphTiles(win, &t, width);
 }
 
 /* 第二级 [fontNum]，镜像原生 sWriteGlyphTilemapFuncs——每格对应日志实证窗口：
@@ -184,7 +182,7 @@ void PrintGlyph(TextPrinter *win, uint32_t gidx, unsigned glyphWidth)
     t.tr = (uint8_t *)&glyph.gfxBufferTop[8];
     t.bl = (uint8_t *)&glyph.gfxBufferBottom[0];
     t.br = (uint8_t *)&glyph.gfxBufferBottom[8];
-    render_inplace12(win, &t, width);
+    DrawGlyphTiles(win, &t, width);
 }
 
 
@@ -378,9 +376,9 @@ static int DrawMenuCursorEF(TextPrinter *win)
 {
     uint8_t buf[128];
     uint8_t width = 8;
+    struct GlyphTileInfo info;
     uint8_t *du;
     uint8_t *dl;
-    struct GlyphTileInfo info;
 
     if (!win)
         return 0;
@@ -396,13 +394,9 @@ static int DrawMenuCursorEF(TextPrinter *win)
     info.colors = 0;
     info.startPixel = 0;
     info.width = 8;
-    info.dest = (uint32_t *)(uintptr_t)du;
-    info.src = buf + 0x00;
-    draw_tile(win, &info, 0);
-    info.dest = (uint32_t *)(uintptr_t)dl;
-    info.src = buf + 0x20;
-    draw_tile(win, &info, 0);
-    UpdateTilemap_Origin(win, CHS_MENU_CURSOR_TILE, CHS_MENU_CURSOR_TILE_HI);
+    DrawGlyphTile_refpr(win, &info, buf + 0x00, du, 0);
+    DrawGlyphTile_refpr(win, &info, buf + 0x20, dl, 0);
+    UpdateTilemap_PreserveCursorX(win, CHS_MENU_CURSOR_TILE, CHS_MENU_CURSOR_TILE_HI);
     win_set_u8(win, WIN_CURSOR_TILE_X,
                (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
     return 1;

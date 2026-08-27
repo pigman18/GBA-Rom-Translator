@@ -209,35 +209,95 @@ static void map_at(TextPrinter *win, uint8_t tx, uint16_t abs_u, uint16_t abs_l)
     UpdateTilemap_PreserveCursorX(win, abs_u, abs_l);
 }
 
-static void refpr_colors_from_win(TextPrinter *win, struct GlyphBuffer *gb)
+static uint8_t tile_get_px(const uint8_t *tile, unsigned x, unsigned y)
 {
-    uint8_t fg_ov = *(volatile uint8_t *)ADDR_OPT_FG_COLOR;
-    uint8_t fg = (fg_ov != 0u) ? fg_ov : win_u8(win, WIN_COLOR_C);
-    uint8_t shadow = win_u8(win, WIN_COLOR_D);
-    uint8_t bg = win_u8(win, WIN_COLOR_E);
+    unsigned bi = y * 4u + x / 2u;
 
-    refpr_colors_init(gb, fg, shadow, bg);
+    if (x & 1u)
+        return (uint8_t)(tile[bi] & 0x0Fu);
+    return (uint8_t)(tile[bi] >> 4);
+}
+
+static void tile_put_px(uint8_t *tile, unsigned x, unsigned y, uint8_t ink)
+{
+    unsigned bi = y * 4u + x / 2u;
+
+    if (x & 1u)
+        tile[bi] = (uint8_t)((tile[bi] & 0xF0u) | (ink & 0x0Fu));
+    else
+        tile[bi] = (uint8_t)((tile[bi] & 0x0Fu) | ((ink & 0x0Fu) << 4));
 }
 
 void DrawGlyphTile_refpr(
     TextPrinter *win, struct GlyphTileInfo *info,
     const uint8_t *src32, uint8_t *dest, uint8_t *spillTile)
 {
-    struct GlyphBuffer gb;
-    uint8_t stage[64];
-    int need_spill = (spillTile != 0) && (info->startPixel + info->width > 8u);
+    uint32_t temp_words[8];
+    uint32_t dest_words[8];
+    uint32_t spill_words[8];
+    uint8_t *temp = (uint8_t *)temp_words;
+    uint8_t *dest_l = (uint8_t *)dest_words;
+    uint8_t *spill_l = (uint8_t *)spill_words;
+    unsigned startPixel = info->startPixel;
+    unsigned width = info->width;
+    unsigned gw_end = startPixel + width;
+    unsigned r, c;
+    uint8_t fg_ov = *(volatile uint8_t *)ADDR_OPT_FG_COLOR;
+    uint8_t color_c = (fg_ov != 0u) ? fg_ov : win_u8(win, WIN_COLOR_C);
+    uint8_t color_d = win_u8(win, WIN_COLOR_D);
+    uint8_t color_e = win_u8(win, WIN_COLOR_E);
+    int need_spill = (spillTile != 0) && (gw_end > 8u);
 
-    refpr_colors_from_win(win, &gb);
-    copy_tile32(stage, dest);
+    /* CopyGlyph(C,E,D) + 清列盖字：与 bak DrawGlyphTile_CHS 同构，保缩进/相位 */
+    CopyGlyph2bppTo4bpp_Origin(src32, temp, color_c, color_e, color_d);
+
+    if (spillTile == 0 && startPixel == 0u && width == 8u) {
+        copy_tile32(dest, temp);
+        return;
+    }
+
+    {
+        const uint32_t *dv = (const uint32_t *)dest;
+        for (c = 0; c < 8u; c++)
+            dest_words[c] = dv[c];
+    }
+    if (need_spill) {
+        const uint32_t *sv = (const uint32_t *)spillTile;
+        for (c = 0; c < 8u; c++)
+            spill_words[c] = sv[c];
+    }
+
+    for (r = 0; r < 8u; r++) {
+        for (c = startPixel; c < gw_end && c < 8u; c++)
+            tile_put_px(dest_l, c, r, color_d);
+        if (need_spill) {
+            unsigned from = (startPixel > 8u) ? (startPixel - 8u) : 0u;
+            unsigned to = gw_end - 8u;
+
+            for (c = from; c < to && c < 8u; c++)
+                tile_put_px(spill_l, c, r, color_d);
+        }
+        for (c = 0; c < width; c++) {
+            unsigned dc = startPixel + c;
+
+            if (dc < 8u)
+                tile_put_px(dest_l, dc, r, tile_get_px(temp, c, r));
+            else if (need_spill)
+                tile_put_px(spill_l, dc - 8u, r, tile_get_px(temp, c, r));
+        }
+        if (gw_end < 8u) {
+            for (c = gw_end; c < 8u; c++)
+                tile_put_px(dest_l, c, r, color_d);
+        }
+        if (need_spill && gw_end > 8u) {
+            for (c = gw_end - 8u; c < 8u; c++)
+                tile_put_px(spill_l, c, r, color_d);
+        }
+    }
+
+    copy_tile32(dest, dest_l);
     if (need_spill)
-        copy_tile32(stage + 32, spillTile);
-    info->src = (uint8_t *)(uintptr_t)src32;
-    info->dest = (uint32_t *)(uintptr_t)stage;
-    info->colors = gb.colors;
-    refpr_draw_tile_shadowed(&gb, info);
-    copy_tile32(dest, stage);
-    if (need_spill)
-        copy_tile32(spillTile, stage + 32);
+        copy_tile32(spillTile, spill_l);
 }
 
 unsigned GetGlyphWidthChinese(TextPrinter *win, uint32_t gidx_or_code, unsigned glyphWidth)

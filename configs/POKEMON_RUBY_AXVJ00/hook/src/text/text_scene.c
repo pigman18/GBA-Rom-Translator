@@ -20,9 +20,8 @@ int scene_is_buffer_printer(TextPrinter *win)
 
 int scene_delegate_buffer_print(TextPrinter *win)
 {
-    typedef int (*pnc_t)(TextPrinter *win);
-
-    return ((pnc_t)((uintptr_t)PrintNextChar_Origin | 1u))(win);
+    /* 跳板 → ROM 0x08003300（entry.s）；勿再对旧 incbin 副本取址 */
+    return PrintNextChar_Origin(win);
 }
 
 int scene_jp_via_chs(TextPrinter *win)

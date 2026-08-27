@@ -36,9 +36,23 @@ EngineEntry:
     bx  r1
     .pool
 
-@ PrintNextChar @0x080032F8, size 0xA0 (docs/ruby_jp_text.md VERIFIED)
+@ -----------------------------------------------------------------------------
+@ PrintNextChar_Origin — 血条/缓冲打印机（tm2）交还官方用。
+@
+@ 禁止 .incbin 整函数到 0x0880xxxx：函数内 bl（如 → FontFunc / 0x081B12DC）
+@ 为 PC 相对，搬家后跳飞 → PC=0x00000004（gdb 进战斗 win=0x020231CC 实证）。
+@
+@ P01 只盖 8B（ldr+bx+pool @0x080032F8..FF），从 0x08003300 起仍是原指令。
+@ 跳板重放被覆盖的 4 条序言，再 bx 回 ROM 续跑（BL 目标正确）。
+@ -----------------------------------------------------------------------------
 PrintNextChar_Origin:
-    .incbin "./baserom.gba", 0x32F8, 0xA0
+    push    {r4, lr}
+    adds    r4, r0, #0
+    ldrh    r0, [r4, #0x14]
+    adds    r1, r0, #1
+    ldr     r2, =0x08003301
+    bx      r2
+    .pool
     .size PrintNextChar_Origin, .-PrintNextChar_Origin
 
 .end

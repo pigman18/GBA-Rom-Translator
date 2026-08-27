@@ -4,7 +4,8 @@
 
 #include "game.h"
 
-extern const uint8_t PrintNextChar_Origin[];
+/* 序言跳板 → ROM PrintNextChar@0x08003300（entry.s）；非数据表 */
+int PrintNextChar_Origin(TextPrinter *win);
 
 int scene_is_buffer_printer(TextPrinter *win);
 int scene_delegate_buffer_print(TextPrinter *win);

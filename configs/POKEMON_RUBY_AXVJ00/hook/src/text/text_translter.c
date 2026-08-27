@@ -373,7 +373,7 @@ static int slot_lookup_and_draw(TextPrinter *win, uint32_t cur_char)
 
 /* =====================================================================
  * §T4 翻译层单字符入口（原 text.c §15 PrintNextChar_Hook 的
- * F9 分支 + slot 分支；pitch 槽 write_op 记账随槽位机制移除）
+ * F9 分支 + slot 分支；F9 短语 op → pitch 槽 write_op（scene_mode2_apply 消费）
  * ===================================================================== */
 int TranslateHandleChar(TextPrinter *win, uint32_t c)
 {
@@ -394,6 +394,11 @@ int TranslateHandleChar(TextPrinter *win, uint32_t c)
         uint8_t lead = p[1];
         uint8_t trail = p[2];
         uint16_t gidx;
+        uint32_t tptr = win_u32(win, WIN_TEXT_PTR);
+
+        if (idx2 == 1u
+            && (tptr < ADDR_PHRASE_TABLE || tptr >= ADDR_FONT_CHS_NORMAL))
+            chs_pitch_set_write_op(win, 0);
         if (!lead_trail_ok(lead, trail)) {
             win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(idx2 + 3));
             return 1;
@@ -408,6 +413,11 @@ int TranslateHandleChar(TextPrinter *win, uint32_t c)
     {
         uint16_t code = (uint16_t)((p[1] << 8) | p[2]);
         int parent_cont = phrase_parent_continues(text, idx2);
+
+        if (op == CHS_PHRASE_DEFAULT || parent_cont)
+            chs_pitch_set_write_op(win, 0);
+        else
+            chs_pitch_set_write_op(win, op);
 
         if (parent_cont && inline_phrase_no_controls(win, idx2, code))
             return 1;

@@ -32,6 +32,7 @@
  * ===================================================================================== */
 #include "text.h"
 #include "text_render.h"
+#include "text_scene.h"
 
 /* =====================================================================
  * §1 常量与布局
@@ -320,6 +321,9 @@ int PrintNextChar_Hook(TextPrinter *win)
     uint32_t tptr;
     uint16_t index;
     uint8_t c;
+
+    if (scene_is_buffer_printer(win))
+        return scene_delegate_buffer_print(win);
 
     /* 复刻原生前 8 条指令：u16 回绕推进 + 取字符 */
     index = win_u16(win, WIN_TEXT_INDEX);

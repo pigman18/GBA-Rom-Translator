@@ -22,6 +22,9 @@
     .global EngineEntry
     .thumb_func
     .type EngineEntry, %function
+    .global PrintNextChar_Origin
+    .thumb_func
+    .type PrintNextChar_Origin, %function
     .extern PrintNextChar_Hook
 
 @ -----------------------------------------------------------------------------
@@ -32,5 +35,10 @@ EngineEntry:
     ldr r1, =PrintNextChar_Hook
     bx  r1
     .pool
+
+@ PrintNextChar @0x080032F8, size 0xA0 (docs/ruby_jp_text.md VERIFIED)
+PrintNextChar_Origin:
+    .incbin "./baserom.gba", 0x32F8, 0xA0
+    .size PrintNextChar_Origin, .-PrintNextChar_Origin
 
 .end

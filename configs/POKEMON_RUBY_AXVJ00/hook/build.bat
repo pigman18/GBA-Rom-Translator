@@ -35,6 +35,10 @@ echo === Compiling text_translter.c (F9 protocol layer) ===
 %CC% %CFLAGS% %SRC_ROOT%\text\text_translter.c -o %BUILD%\text_translter.o
 if errorlevel 1 exit /b 1
 
+echo === Compiling text_scene.c (scene layout gates) ===
+%CC% %CFLAGS% %SRC_ROOT%\text\text_scene.c -o %BUILD%\text_scene.o
+if errorlevel 1 exit /b 1
+
 echo === Compiling text_render.c (shared render primitives) ===
 %CC% %CFLAGS% %SRC_ROOT%\text\text_render.c -o %BUILD%\text_render.o
 if errorlevel 1 exit /b 1
@@ -62,6 +66,7 @@ echo === Linking game.elf ===
   %BUILD%/text_entry.o ^
   %BUILD%/PrintNextChar_hook.o ^
   %BUILD%/text_translter.o ^
+  %BUILD%/text_scene.o ^
   %BUILD%/text_render.o ^
   %BUILD%/ref_pokeemerald.o ^
   %BUILD%/ref_pokeruby.o ^

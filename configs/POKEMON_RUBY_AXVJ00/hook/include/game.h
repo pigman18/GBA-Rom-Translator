@@ -127,6 +127,9 @@ struct GlyphBuffer {
 #define WIN_CURSOR_TILE_X   0x1B
 #define WIN_CURSOR_Y        0x1C
 #define WIN_CURSOR_TILE_Y   0x1D
+/* WindowTemplate（win_template 指向）：+0x0C tileData +0x10 tilemap（NULL=缓冲直绘） */
+#define TPL_TILE_DATA       0x0C
+#define TPL_TILEMAP         0x10
 /* JP RenderTextHandleBold (0x08002CC0): dest buffer ptr (FontFunc[2] blit). */
 #define WIN_TILE_DATA       0x20
 
@@ -356,11 +359,7 @@ uint32_t GetStringWidth(const uint8_t *buf, uint32_t max_bytes);
 /* （原 P24 InitWindowTileData 分区器钩子已于 2026-08-25 随页游标表移除：
  *  页表落 0x0203FFD2 游戏数据区，为背包/队伍死机根因。） */
 
-/* 场景布局门控（scene gates）已随 bak 渲染策略移入
- * src/text_render_inplace12.c（static，仅该策略消费）。
- * 缓冲型打印机（dest=win[0x20]：血条 textMode2 + RenderTextHandleBold
- * textMode1+font4）由 text.c 分发层短路（PcsPrint_Tm1 font4 直通 +
- * render 对 tm2 不绘制），不再需要引擎级门控。 */
+/* 场景布局门控 → include/text_scene.h + src/text/text_scene.c */
 
 /*
  * AXVJ GetGlyphTilePointers @ 0x08003730 is 4-arg (JP ROM; language baked

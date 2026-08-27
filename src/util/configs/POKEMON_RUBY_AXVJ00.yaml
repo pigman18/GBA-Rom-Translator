@@ -87,6 +87,28 @@ tiles:
     raw_size: 1312
     source: gdb_patcher
     md5: dd06beabde46cb5d39c9e8a9c931b1b3
+  - id: rt_083501F0
+    label: rt tag=0xD750 LoadSpriteSheet
+    default: false
+    address: '0x083501F0'
+    format: 4bpp
+    compression: none
+    sprite_size: 8x8
+    count: 2
+    raw_size: 64
+    source: gdb_patcher
+    md5: 3b2a71d745ba2d355c452c567011cc9b
+  - id: rt_083BC6C4
+    label: rt tag=0x7533 LoadSpriteSheet
+    default: false
+    address: '0x083BC6C4'
+    format: 4bpp
+    compression: none
+    sprite_size: 32x8
+    count: 16
+    raw_size: 2048
+    source: gdb_patcher
+    md5: 995d3f7799d88005bb98cc725453dc33
 texts:
   filters:
   - id: global_anim_cmd_filter

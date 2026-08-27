@@ -1,4 +1,4 @@
-/* text_render.h — refpr + pitch + 日版 GetCursorTileNum（薄路径） */
+/* text_render.h — refpr + pitch + GCTN（布局门控见 text_scene.h） */
 #ifndef TEXT_RENDER_H
 #define TEXT_RENDER_H
 
@@ -30,5 +30,8 @@ void refpr_colors_init(struct GlyphBuffer *gb, uint8_t fg, uint8_t shadow, uint8
 
 void copy_tile32(void *dst_vram, const void *src_iwram);
 uint8_t *vram_tile(TextPrinter *win, uint16_t tile);
+
+uint8_t chs_pitch_write_op(TextPrinter *win);
+void chs_pitch_set_write_op(TextPrinter *win, uint8_t op);
 
 #endif /* TEXT_RENDER_H */

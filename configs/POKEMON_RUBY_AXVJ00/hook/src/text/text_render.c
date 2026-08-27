@@ -1,5 +1,6 @@
-/* text_render.c — refpr + pitch + GCTN（Font3→Mode2 为原生布局，非 scene；scene 待 text_scene.c） */
+/* text_render.c — refpr + pitch + GCTN（布局门控见 text_scene.c） */
 #include "text_render.h"
+#include "text_scene.h"
 
 #define CHS_GLYPH_HALF_BIT   0x8000u
 #define CHS_GLYPH_IDX_MASK   0x7FFFu
@@ -159,53 +160,35 @@ static void pitch_reset(TextPrinter *win)
     st->base_tx = pitch_capture_base_tx(win);
 }
 
+uint8_t chs_pitch_write_op(TextPrinter *win)
+{
+    return chs_bind_pitch_slot(win, 0)->write_op;
+}
+
+void chs_pitch_set_write_op(TextPrinter *win, uint8_t op)
+{
+    chs_bind_pitch_slot(win, 0)->write_op = op;
+}
+
 static int draw_use_linear(TextPrinter *win, uint8_t write_op)
 {
-    /*
-     * 原生 FontFunc 布局分叉（非 scene）：tm0=Linear，Font3=Mode2(y*30+x)。
-     * 删此分支会误用 Linear → 标题/菜单叠字、踩 UI tile（品红碎字）。
-     * 战斗/商店/队伍等 scene 规则见 docs/SCENE_GATES_AXVJ.md → text_scene.c。
-     */
-    (void)write_op;
-    if ((win_u8(win, WIN_TEXTMODE) & 7u) == 0u)
-        return 1;
-    if (win_u8(win, WIN_FONTNUM_REAL) == FONT_NORMAL_SHADOWED)
-        return 0;
-    return 1;
+    return scene_should_use_linear(win, write_op);
 }
 
 static void ensure_linear_dest_floor(TextPrinter *win)
 {
-    uint16_t off = win_u16(win, WIN_TILE_OFFSET);
-
-    if (off < 4u)
-        win_set_u16(win, WIN_TILE_OFFSET, 4u);
+    scene_apply_linear_floor(win);
 }
 
 static uint16_t GetCursorTileNum_Linear(TextPrinter *win, unsigned xOff, unsigned yOff)
 {
-    uint16_t tile_base = win_u16(win, WIN_TILE_BASE);
-    uint16_t off = win_u16(win, WIN_TILE_OFFSET);
-
-    return (uint16_t)(tile_base + off + 2u * xOff + yOff);
+    return scene_gctn_linear(win, xOff, yOff);
 }
 
 static void GetCursorTileNum_Mode2(
     TextPrinter *win, int tile_x, uint16_t *upper, uint16_t *lower)
 {
-    int x = (int)win_u8(win, WIN_CURSOR_X) + tile_x;
-    int y = (int)win_u8(win, WIN_CURSOR_Y) + (int)win_u8(win, WIN_CURSOR_TILE_Y);
-    uint32_t origin = 0;
-    uint8_t *tpl = win_template(win);
-    uint32_t idx;
-
-    if (tpl && tpl[1] == 2u)
-        origin = CHS_MODE2_ORIGIN_SHOP;
-    idx = (uint32_t)(y * CHS_TILE_GRID_W + x);
-    idx += win_u16(win, WIN_TILE_BASE);
-    idx += origin;
-    *upper = (uint16_t)idx;
-    *lower = (uint16_t)(idx + CHS_TILE_GRID_W);
+    scene_gctn_mode2(win, tile_x, upper, lower);
 }
 
 static void map_at(TextPrinter *win, uint8_t tx, uint16_t abs_u, uint16_t abs_l)

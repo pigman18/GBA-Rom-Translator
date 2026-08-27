@@ -68,10 +68,10 @@
 
 | ID | 地址 | 改动 | 类型 | 目的 | pokeruby 对应 |
 |---|---|---|---|---|---|
-| P13 | `0x08090EF0` | NOP×6（12B） | NOP | 图鉴计数函数1：去掉硬编码「ひき」后缀 | `src/pokedex.c` 计数显示族（配合 `string_util.c` ConvertIntToFullwidthBytes） |
-| P14 | `0x08090F3C` | NOP×6 | NOP | 函数2（AXVJ 注：GetNationalPokedexCount） | 同上 |
-| P15 | `0x08090FAA` | NOP×6 | NOP | 函数3（AXVJ 注：GetHoennPokedexCount，用 R0） | 同上 |
-| P16 | `0x081BC164` | `.byte 0xFF,0xFF`（2B） | DATA | 徽章屏文字后缀置空 | 徽章相关数据串（pokeruby 无独立符号） |
+| P13 | `0x08090EF0` | `bl AppendZhi_R0` | JMP | 图鉴计数后追加「只」（`.strn`） | ConvertIntToFullwidth 后缀 |
+| P14 | `0x08090F3C` | 同上 | JMP | 同上 | 同上 |
+| P15 | `0x08090FAA` | `bl AppendZhi_R4` | JMP | 同上（R4 游标） | 同上 |
+| P16 | `0x080077A0`→`SuffixGe`；`0x081BC164` 置空 | `.strn "个$"` | DATA | 徽章后缀「个」 | 原「こ」静态串 |
 
 ## 2. 被 C 层直接调用的官方函数（不在 main.asm，但同属依赖面）
 
@@ -104,7 +104,7 @@ hook/
 │   ├── ui_starter.asm              # P06 P09 P10 P11 P12（初始宠 label 整组）
 │   ├── ui_pss.asm                  # P17 P18（PSS 图标列）
 │   ├── ui_dex.asm                  # P19~P23（图鉴名字列 ×5）
-│   └── clean_suffix.asm            # P13 P14 P15 P16（ひき NOP / 徽章 FF）
+│   └── clean_suffix.asm            # P13–P16（ひき→只 / こ→个，F9 cave）
 └── src/
     ├── entry.s                     # P01 跳板（EngineEntry，链接首位 = game.bin 起点）
     ├── hooks_origin.s              # P01（订址桩；逻辑在 src/text.c，只 hook PrintNextChar）

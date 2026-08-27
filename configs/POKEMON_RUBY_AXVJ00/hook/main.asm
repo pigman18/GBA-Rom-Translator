@@ -31,7 +31,6 @@
 
 ; ---- 纯值补丁（INS/DATA/NOP 类） ----
 .include "./patches/ui_starter.asm"
-.include "./patches/ui_pss.asm"
 .include "./patches/ui_dex.asm"
 .include "./patches/clean_suffix.asm"
 

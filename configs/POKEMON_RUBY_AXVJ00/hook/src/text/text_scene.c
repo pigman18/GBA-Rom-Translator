@@ -196,7 +196,6 @@ uint16_t scene_remap_tile(TextPrinter *win, uint16_t tile)
     /*
      * 能力页 Mode2：y=14 字形 lower=idx+30 会落到 0x1E0/0x1E1（正当字模），
      * 不可当菜单 ▶ 避让；映走会与速度行 (27,11) 等格撞 VRAM。
-     * 仍保留 0x1E8.. 图标避让（详情 A/B）。
      */
     if (!scene_is_summary_screen(win)
         && tile >= CHS_MENU_CURSOR_TILE && tile <= CHS_MENU_CURSOR_TILE_HI)
@@ -204,6 +203,13 @@ uint16_t scene_remap_tile(TextPrinter *win, uint16_t tile)
                           + (tile - CHS_MENU_CURSOR_TILE));
     if (tile >= CHS_UI_ICON_TILE_LO && tile <= CHS_UI_ICON_TILE_HI)
         return (uint16_t)(CHS_UI_ICON_TILE_ALT + (tile - CHS_UI_ICON_TILE_LO));
+    /*
+     * PSS only：Mode2 lower 踩 B 图标字模 0x20A..0x20D（gdb l=0x20C）。
+     * 禁止全局映 0x206..0x21D（会误伤开始菜单/队伍菜单正当 lower）。
+     */
+    if (scene_is_summary_screen(win)
+        && tile >= CHS_PSS_B_VRAM_LO && tile <= CHS_PSS_B_VRAM_HI)
+        return (uint16_t)(CHS_PSS_B_VRAM_ALT + (tile - CHS_PSS_B_VRAM_LO));
     return tile;
 }
 

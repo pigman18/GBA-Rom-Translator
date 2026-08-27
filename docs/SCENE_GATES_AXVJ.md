@@ -244,6 +244,7 @@ tile.remap:
 | 商店描述与列表互串 | `shop_desc` / `shop_bag_list` |
 | 队伍 DoWhat 底栏错位 | `party_footer` + `mode2.apply.party_footer` |
 | 能力页/图鉴图标变字 | `tile.remap` 0x1E8–0x1FF |
+| PSS 顶栏 B 图标旁乱码 | **B07**：Mode2 lower→`0x20A..0x20D`；PSS 仅护 `CHS_PSS_B_VRAM_*`→`0x3E0`（勿全局映 0x206..0x21D） |
 | 菜单 ▶ 被中文覆盖 | `tile.remap` 0x1E0–0x1E1 |
 | 血条/概览名乱码 | `buffer_battle_tm2` / `buffer_bold_tm1_font4` 路由 |
 

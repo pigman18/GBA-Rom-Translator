@@ -199,12 +199,19 @@ struct ChsPhase {
 
 /* Shared low UI icon tiles (AXVJ JP) — Chinese Mode2/Linear must not blit here.
  * - Dex list No/ball: 0x1FC..0x1FF (CreateMonDexNum / CreateCaughtBall)
- * - Summary A/B prompt icons: 0x1E8..0x1FB (cancel/切换 still stomped at 0x1E8..1EF)
+ * - Summary A/B prompt icons: 0x1E8..0x1FB
  * Remap into US dex range 0x3E8.. — unused on JP for these screens.
- * (Old ALT=0x1F0 was inside the protect band → cancelled the icons.) */
+ *
+ * PSS B 图标字模（AXVJ PlaceTextTile(5/6)→0x200+tile*2，无 +0x80）：
+ * 0x20A..0x20D。Mode2 lower=idx+30 可落到此处（gdb：u=0x3EE l=0x20C）。
+ * 只护这 4 格、且仅 PSS（见 scene_remap_tile）；勿映整段 0x206..0x21D——
+ * 会误伤开始菜单/队伍「携带物品」等正当 Mode2 lower。 */
 #define CHS_UI_ICON_TILE_LO     0x1E8u
 #define CHS_UI_ICON_TILE_HI     0x1FFu
 #define CHS_UI_ICON_TILE_ALT    0x3E8u
+#define CHS_PSS_B_VRAM_LO       0x20Au
+#define CHS_PSS_B_VRAM_HI       0x20Du
+#define CHS_PSS_B_VRAM_ALT      0x3E0u
 /* Aliases kept for call sites / docs */
 #define CHS_DEX_UI_TILE_LO      CHS_UI_ICON_TILE_LO
 #define CHS_DEX_UI_TILE_HI      CHS_UI_ICON_TILE_HI

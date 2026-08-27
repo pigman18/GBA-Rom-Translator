@@ -15,7 +15,7 @@
 | B04 | 对话等 A（▼/♥）位置偏左 | 进行中 |
 | B05 | 地名细项 / 血条名 | 未修 |
 | B06 | 开场选初始宝可梦：宝可梦名重复打印 | **已验收** |
-| B07 | PSS 宝可梦详情页 B 按钮图标被中文乱码覆盖 | 待修 |
+| B07 | PSS 宝可梦详情页 B 按钮图标被中文乱码覆盖 | 已修（lower 溢出段） |
 | B08 | 队伍画面宝可梦昵称显示为错误字符 | 待修 |
 
 ## B02g — 已验收
@@ -73,38 +73,19 @@
 
 
 
-## B07 — PSS B 按钮图标被中文乱码覆盖（待修）
+## B07 — PSS B 按钮图标被中文乱码覆盖（2026-08-27 日志定案）
 
-**现象**（bug/20260819/3.PNG 为 CN、4.PNG 为 JP 对照）：
+**现象**：PSS 右上角 B 图标左侧/上方出现汉字碎块。
 
-宝可梦状态画面（PSS）右上角的 B 按钮图标，在含中文左侧标题的子页面上被**乱码字符覆盖**：
-- 主人页：显示"小葫芦"形状乱码盖住 B 图标一半
-- 技能页：显示"上E下口"乱码盖住 B 图标
-- 详情页（无 B 按钮）无此问题
+**根因（gdb 2026-08-27）**：
+- AXVJ `PlaceTextTile(tile)` → VRAM 字模号 **`0x200+tile*2`**（无美版 `+0x80`）→ B 用 **0x20A..0x20D**。
+- 旧文档误写「tile 5/6」为字模号；5/6 只是 PlaceTextTile 形参。
+- 正文 `curY=16` Mode2：`upper∈[0x1E8,0x1FF]` 已映到 `0x3E8+`，但 **`lower=idx+30`∈[0x206,0x21D]` 未映** → 实测 `u=0x3EE l=0x20C` 仍写 B 字模。
 
-**根因（静态分析确认）**：
+**修复**：PSS 下仅映 `0x20A..0x20D` → `CHS_PSS_B_VRAM_ALT`（0x3E0+）。  
+曾误全局映 `0x206..0x21D`→`0x406`，开始菜单/队伍「携带物品」等误伤（2026-08-27）。
 
-PSS 顶行 y=0 使用同一个 TextPrinter 窗口（0x0202E658），WIN_TILE_OFFSET 在多次 Menu_PrintText 调用间**不重置**。
-
-打印顺序：
-1. 页面类别短语（F980，如"主人"/"たたかうわざ"等）→ x=1，1 个字 → tile slot 1,2 → OFF+=2
-2. 左侧标题中文 → x=11，从 OFF=2 开始
-3. 操作文字"取消" → x=26
-
-左侧标题的第 2 个汉字从 **tile slot 5,6** 开始渲染，而 B 按钮图标恰好使用 **tile slot 5,6** 的图形数据。中文渲染将汉字字形写入 VRAM 的 tile slot 5,6，覆盖了 B 图标的 tile 图形。
-
-随后 `SummaryScreen_PlaceTextTile_White(5, x, 0)` 只写 **tilemap entry**（引用 tile 5/6），不重写 tile 图形数据 → 屏幕显示乱码汉字而非 B 图标。
-
-**修复方向**（任选其一）：
-1. 在 `avoid_dex_ui_tile()` 中增加对 tile slot 5,6 的保护，将其重映射到备用范围（需改 C 代码）
-2. 在左侧标题渲染完毕后、PlaceTextTile_White 之前，从 ROM 重新加载 B 图标的 tile 图形数据到 slot 5,6
-3. 修改 B 图标使用更高的 tile index（如 20,21），避开中文渲染的 slot 范围
-
-**证据**：
-- 截图：bug/20260819/3.PNG（CN）、bug/20260819/4.PNG（JP 对照）
-- GDB 日志：work/gdb_patcher_log.log，y=0 行的 InitTextPrinter 条目
-- 代码：DrawGlyphTiles_hook.c linear_cursor_tile() → avoid_dex_ui_tile() 未保护 slot 5,6
-- 代码：pokeruby src/pokemon_summary_screen.c PrintSummaryWindowHeaderText() 打印顺序
+**证据**：`gdb_patcher_log` UTM `(11,16) u=0x3EE l=0x20C`；`PlaceTextTile` @0x0809C310。
 
 
 ## B08 — 队伍画面宝可梦昵称显示错误（待修）

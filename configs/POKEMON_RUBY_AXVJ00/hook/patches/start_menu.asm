@@ -9,7 +9,7 @@
 ; Badge (static string; was hiragana ko @ 0x081BC164, ptr @ 0x080077A0)
 ; =============================================================================
 
-.loadtable "./patches/chs_unit_charmap.txt"
+.loadtable "./patches/unit_charmap.txt"
 
 .org 0x081DA780
 .align 2

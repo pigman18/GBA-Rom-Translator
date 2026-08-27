@@ -30,9 +30,10 @@
 .include "./src/option/hooks_origin.s"
 
 ; ---- 纯值补丁（INS/DATA/NOP 类） ----
-.include "./patches/ui_starter.asm"
-.include "./patches/ui_dex.asm"
-.include "./patches/clean_suffix.asm"
+.include "./patches/player.asm"
+.include "./patches/initialpoke.asm"
+.include "./patches/pokedex.asm"
+.include "./patches/start_menu.asm"
 
 ; ---- C 文本引擎（jp2chs 全面接管）/ 字库 / slot 表 ----
 .org GameBinAddresses

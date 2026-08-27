@@ -1875,7 +1875,7 @@ class TranslationEngine:
                         else:
                             _bdf_punct = None
                     for _bin in sorted(fonts_dir.glob("*.bin")):
-                        if "_unshadow" in _bin.name:
+                        if "_unshadow" in _bin.name or "Sym" in _bin.name:
                             continue
                         _args_patch = [
                             sys.executable,
@@ -1893,8 +1893,7 @@ class TranslationEngine:
                     if _no_shadow:
                         from ..font_patch import (
                             patch_primary_missing_glyphs_from_reference,
-                            patch_unshadow_missing_glyphs,
-                            seed_unshadow_banks_from_reference,
+                            restore_tuned_font_bins_from_reference,
                         )
 
                         n_primary = patch_primary_missing_glyphs_from_reference(
@@ -1909,30 +1908,22 @@ class TranslationEngine:
                                 f"[font] patched {n_primary} empty primary slot(s) "
                                 f"from hook/work reference",
                             )
-                        n_seed = seed_unshadow_banks_from_reference(
+                        n_restore = restore_tuned_font_bins_from_reference(
                             fonts_dir,
                             game_id=self.config.game,
                             prefix=prefix,
                         )
-                        if n_seed:
+                        if n_restore:
                             self._log(
                                 "info",
-                                f"[font] seeded {n_seed} *_unshadow bin(s) from hook/work reference",
+                                f"[font] restored {n_restore} tuned unshadow/Sym bin(s) "
+                                f"from hook/work reference",
                             )
-                        n_patch = patch_unshadow_missing_glyphs(
-                            fonts_dir,
-                            prefix=prefix,
-                            bytes_per_glyph=bpg,
-                            game_id=self.config.game,
-                        )
-                        if n_patch:
+                        elif fp_cfg.get("embed_primary"):
                             self._log(
                                 "info",
-                                f"[font] patched {n_patch} empty unshadow slot(s) from primary",
+                                "[font] embed_primary=true → fonts.s uses primary bins",
                             )
-                        self._patch_unshadow_from_supplement_bdf(
-                            fonts_dir, fp_cfg, prefix=prefix, bytes_per_glyph=bpg
-                        )
             except Exception as _e:
                 self._log("warning", f"Punctuation patch failed: {_e}")
         except (FileNotFoundError, OSError) as e:

@@ -4,6 +4,7 @@
   "ideospace_bytes": [1, 247],
   "chinese_leads": [[1, 5], [7, 26], [28, 30]],
   "shadow": false,
+  "embed_primary": false,
   "font_slots": [
     {
       "label": "Normal",

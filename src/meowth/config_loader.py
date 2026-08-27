@@ -616,6 +616,8 @@ def load_game_config(game_id: str) -> dict[str, Any]:
         fp["font_slots"] = font_cfg["font_slots"]
     if "shadow" in font_cfg:
         fp["shadow"] = font_cfg["shadow"]
+    if "embed_primary" in font_cfg:
+        fp["embed_primary"] = font_cfg["embed_primary"]
     if fp:
         profile["font_patch"] = fp
 

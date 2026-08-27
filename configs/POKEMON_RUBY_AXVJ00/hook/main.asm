@@ -31,6 +31,7 @@
 
 ; ---- 纯值补丁（INS/DATA/NOP 类） ----
 .include "./patches/player.asm"
+.include "./patches/player_pc.asm"
 .include "./patches/initialpoke.asm"
 .include "./patches/pokedex.asm"
 .include "./patches/start_menu.asm"

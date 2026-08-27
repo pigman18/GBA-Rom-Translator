@@ -176,10 +176,12 @@ void PrintGlyph(TextPrinter *win, uint32_t gidx, unsigned glyphWidth)
     uint8_t fn;
 
     (void)glyphWidth;
-    /* 血条 tm2 也用 Normal 12px（双列缓冲），与对话一致，不强制 Small */
     fn = win_u8(win, WIN_FONTNUM_REAL);
-    if (win_u8(win, WIN_TEXTMODE) == 2u)
+    if (fn > 6u)
         fn = 3u;
+    /* tm2 缓冲（战斗顶栏名/Lv 等）：原生 8px 槽，中文须 FontChsSmall */
+    if (win_u8(win, WIN_TEXTMODE) == 2u)
+        fn = 4u;
     DecompressGlyph_Chinese(&glyph, (uint16_t)(gidx & 0xFFFFu), fn);
     width = glyph.width;
     t.glyph_id = (uint16_t)(0x8000u | (gidx & 0x1FFFu));

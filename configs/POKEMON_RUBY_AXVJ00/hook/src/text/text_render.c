@@ -1,4 +1,4 @@
-/* text_render.c — refpr + pitch + 日版 GetCursorTileNum（薄路径，无 scene 门控） */
+/* text_render.c — refpr + pitch + GCTN（Font3→Mode2 为原生布局，非 scene；scene 待 text_scene.c） */
 #include "text_render.h"
 
 #define CHS_GLYPH_HALF_BIT   0x8000u
@@ -161,6 +161,11 @@ static void pitch_reset(TextPrinter *win)
 
 static int draw_use_linear(TextPrinter *win, uint8_t write_op)
 {
+    /*
+     * 原生 FontFunc 布局分叉（非 scene）：tm0=Linear，Font3=Mode2(y*30+x)。
+     * 删此分支会误用 Linear → 标题/菜单叠字、踩 UI tile（品红碎字）。
+     * 战斗/商店/队伍等 scene 规则见 docs/SCENE_GATES_AXVJ.md → text_scene.c。
+     */
     (void)write_op;
     if ((win_u8(win, WIN_TEXTMODE) & 7u) == 0u)
         return 1;

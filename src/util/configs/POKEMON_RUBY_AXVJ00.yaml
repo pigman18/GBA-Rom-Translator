@@ -142,6 +142,94 @@ tiles:
     raw_size: 2048
     source: gdb_patcher
     md5: 04f106e120187f1ca98535e80b2f4d00
+  - id: rt_083A2E78
+    label: rt tag=0x0007 LoadSpriteSheet
+    default: false
+    address: '0x083A2E78'
+    format: 4bpp
+    compression: none
+    sprite_size: 16x16
+    count: 1
+    raw_size: 128
+    source: gdb_patcher
+    md5: 7918a18de399d989d8554ddde55b63aa
+  - id: rt_083A2A18
+    label: rt tag=0x0002 LoadSpriteSheet
+    default: false
+    address: '0x083A2A18'
+    format: 4bpp
+    compression: none
+    sprite_size: 8x8
+    count: 20
+    raw_size: 640
+    source: gdb_patcher
+    md5: a0a2f7fd70064bb775b185e0e5599806
+  - id: rt_083A2D98
+    label: rt tag=0x0004 LoadSpriteSheet
+    default: false
+    address: '0x083A2D98'
+    format: 4bpp
+    compression: none
+    sprite_size: 8x8
+    count: 2
+    raw_size: 64
+    source: gdb_patcher
+    md5: 4e39f2203c17645f5a2bb3537602143c
+  - id: rt_083A2C98
+    label: rt tag=0x0003 LoadSpriteSheet
+    default: false
+    address: '0x083A2C98'
+    format: 4bpp
+    compression: none
+    sprite_size: 32x16
+    count: 1
+    raw_size: 256
+    source: gdb_patcher
+    md5: 954574d3efc5e3c4969d171561ece0e6
+  - id: rt_083A2618
+    label: rt tag=0x0000 LoadSpriteSheet
+    default: false
+    address: '0x083A2618'
+    format: 4bpp
+    compression: none
+    sprite_size: 8x8
+    count: 15
+    raw_size: 480
+    source: gdb_patcher
+    md5: d2ed285cfccdec3dbf52781dcdb05bbd
+  - id: rt_083A2818
+    label: rt tag=0x0001 LoadSpriteSheet
+    default: false
+    address: '0x083A2818'
+    format: 4bpp
+    compression: none
+    sprite_size: 8x8
+    count: 15
+    raw_size: 480
+    source: gdb_patcher
+    md5: 08471b763c164adf346f8353c2131fe4
+  - id: rt_083A27F8
+    label: rt tag=0x000A LoadSpriteSheet
+    default: false
+    address: '0x083A27F8'
+    format: 4bpp
+    compression: none
+    sprite_size: 8x8
+    count: 1
+    raw_size: 32
+    source: gdb_patcher
+    md5: 20ed7178d6690a3ec09f4b4882d4d597
+  - id: rt_083A29F8
+    label: rt tag=0x000B LoadSpriteSheet
+    default: false
+    address: '0x083A29F8'
+    format: 4bpp
+    compression: none
+    sprite_size: 8x8
+    count: 1
+    raw_size: 32
+    source: gdb_patcher
+    md5: 36e8131bc3016bd0218ed49bd9b0bdbd
 texts:
   filters:
   - id: global_anim_cmd_filter

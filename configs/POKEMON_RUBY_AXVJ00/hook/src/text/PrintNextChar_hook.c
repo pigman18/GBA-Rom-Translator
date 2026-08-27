@@ -9,7 +9,7 @@
  *   tm0 = FontFunc[0] Linear 滚动光栅（TILE_BASE+TILE_OFF，对话/战斗/详情页）
  *   tm1 = FontFunc[1] 等宽：全局游标 scratch（7732 基线；等宽窗 tileData=共享
  *         只读 atlas，像素必须落自由区，表项经 UpdateTilemap 指向 scratch）
- *   tm2 = FontFunc[2] 指针缓冲（dst==0 幻影打印跳过）
+ *   tm2 = FontFunc[2] 指针缓冲（dst==0 幻影跳过；血条走 slot+缓冲绘制）
  *   tm3 = 与 tm1 共用（菜单/对话主窗；font4 队伍窗走原生 Origin 路径）
  *   tm4..7 / 未验证 fontNum → UNKNOWN：消费返回 1、无绘制（缺字=排查信号）
  *
@@ -141,7 +141,7 @@ static void PcsPrint_Tm1(TextPrinter *win, uint32_t cur_char)
 static const PcsPrintFunc sPcsPrintFuncs[8] = {
     PcsPrint_Custom,       /* 0：tm0 自绘 */
     PcsPrint_Tm1,          /* 1：二级查 fontNum */
-    PcsPrint_Custom,       /* 2：tm2 占位 */
+    PcsPrint_Custom,       /* 2：tm2 缓冲自绘（血条 slot/JP） */
     PcsPrint_Custom,       /* 3：tm3 自绘（原生 tm3 未 RE） */
     PcsPrint_Custom,       /* 4 */
     PcsPrint_Custom,       /* 5 */
@@ -322,7 +322,8 @@ int PrintNextChar_Hook(TextPrinter *win)
     uint16_t index;
     uint8_t c;
 
-    if (scene_is_buffer_printer(win))
+    /* tm1+font4+tilemap0 等仍交 Origin；tm2 血条缓冲要走 slot，不能整窗委托 */
+    if (scene_is_buffer_printer(win) && win_u8(win, WIN_TEXTMODE) != 2u)
         return scene_delegate_buffer_print(win);
 
     /* 复刻原生前 8 条指令：u16 回绕推进 + 取字符 */

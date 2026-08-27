@@ -478,6 +478,45 @@ static void DrawGlyphTiles_common(
         *(volatile uint16_t *)CHS_LAST_OFF_ADDR = win_u16(win, WIN_TILE_OFFSET);
 }
 
+/* FontFunc[2] 血条缓冲：对齐原生 BlitGlyph + dst+=0x40（每列 upper|lower）。
+ * dst==0 为幻影打印，消费字符但不写。 */
+static void DrawGlyphTiles_buffer(
+    TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth)
+{
+    uint32_t dst_u = win_u32(win, WIN_TILE_DATA);
+    uint8_t *dst;
+    struct GlyphTileInfo info;
+    unsigned cols;
+    unsigned i;
+
+    if (dst_u == 0u)
+        return;
+
+    dst = (uint8_t *)(uintptr_t)dst_u;
+    if (glyphWidth < 8u)
+        glyphWidth = 8u;
+    if (glyphWidth > 12u)
+        glyphWidth = 12u;
+
+    cols = (glyphWidth <= 8u) ? 1u : 2u;
+    info.startPixel = 0;
+
+    for (i = 0; i < cols; i++) {
+        const uint8_t *src_u = (i == 0u) ? tiles->tl : tiles->tr;
+        const uint8_t *src_l = (i == 0u) ? tiles->bl : tiles->br;
+
+        info.width = (i == 0u) ? 8u : (uint8_t)(glyphWidth - 8u);
+        if (info.width == 0u)
+            break;
+        if (info.width > 8u)
+            info.width = 8u;
+        DrawGlyphTile_refpr(win, &info, src_u, dst, 0);
+        DrawGlyphTile_refpr(win, &info, src_l, dst + 0x20, 0);
+        dst += 0x40;
+    }
+    win_set_u32(win, WIN_TILE_DATA, (uint32_t)(uintptr_t)dst);
+}
+
 void DrawGlyphTiles(TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth)
 {
     uint8_t tm;
@@ -491,6 +530,10 @@ void DrawGlyphTiles(TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigne
     case 1:
     case 3:
         DrawGlyphTiles_common(win, tiles, glyphWidth);
+        break;
+    case 2:
+        /* FontFunc[2]：写 win[0x20] 缓冲，每列 +0x40（血条 OBJ 刷走） */
+        DrawGlyphTiles_buffer(win, tiles, glyphWidth);
         break;
     default:
         break;

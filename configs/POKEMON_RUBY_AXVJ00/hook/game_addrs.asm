@@ -99,7 +99,7 @@ GMenu                                  equ 0x03000618  ; C: ADDR_GMENU
 BattleIfGfx                            equ 0x02020004  ; C: ADDR_BATTLE_IF_GFX
 
 ; --- Healthbox ---
-; JP nick 遮罩：CpuSet 共享长度池 0x04000008→0x04000006（见 HookInOrigin/UpdateNickInHealthbox.s）
+; JP nick 遮罩：池→0x04000006（chrome）；OBJ LDR 旁路仍用 0x04000008（见 battle/hooks_origin.s）
 ; 勿用美版 0x080451A0 / 错误 Δ 0x08045138（JP 上该址不是本函数）
 UpdateNickInHealthbox                  equ 0x08042B14
 UpdateNickInHealthbox_Pool             equ 0x08042C38

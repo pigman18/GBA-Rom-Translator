@@ -723,3 +723,32 @@ gdb:
   address: '0x08002AEA'
   description: 分区器出口 pop{r4-r6} 处（r0=返回值=下一空闲 offset，r4=入口 r0）——与入口成对还原分区链
   default: false
+# --- 血条昵称绘制链（UpdateNick Alt2 @0x08042408 / pokeruby sub_80451A0）---
+# 抓法：进战斗出昵称后 Ctrl-C；日志 src/util/work/POKEMON_RUBY_AXVJ00/gdb_patcher_log.log
+#   --functions UpdateNickAlt2,RenderTextHandleBold,HealthboxNickAfterRender,HealthboxNickChromeElem,HealthboxNickObjCopy,PrintNextChar --no-dedup
+- name: UpdateNickAlt2
+  address: '0x08042408'
+  description: 真昵称 Alt2 入口（JP）；对照 pokeruby UpdateNick/sub_80451A0
+  default: false
+  cfg:
+    charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
+- name: RenderTextHandleBold
+  address: '0x08002CC0'
+  description: JP RenderTextHandleBold（r0=像素缓冲 dest, r1=串）；血条/HP 数字共用
+  default: false
+  cfg:
+    charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
+- name: HealthboxNickAfterRender
+  address: '0x08042536'
+  description: Alt2 RenderText 返回后、chrome 循环前（r6=buf r4=str r8=StringLength-6）；dump 每列墨水行距
+  default: false
+  cfg:
+    charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
+- name: HealthboxNickChromeElem
+  address: '0x08040EF8'
+  description: GetHealthboxElementGfxPtr 入口（r0=元件 id 0x2B/2C/2D）；chrome 盖上半时必经
+  default: false
+- name: HealthboxNickObjCopy
+  address: '0x080425CC'
+  description: Alt2 我方单打 OBJ 拷贝循环入口（r6=buf r8=列数 r5=0）；看拷几列、缓冲是否已被 chrome 改
+  default: false

@@ -1,12 +1,10 @@
-/* UpdateNickInHealthbox — healthbox nick mask tile copy size (Font Patch).
+/* UpdateNickInHealthbox — healthbox nick chrome length (Font Patch idea).
  *
- * After TextPrintBattleInterface writes the nick into eBattleInterfaceGfxBuffer,
- * JP overlays kana/blank healthbox elements (0x2B/0x2C/0x2D) via CpuSet.
- * Control word 0x04000008 = 8 words = 32B covers the upper half of 10/12px
- * glyphs; Font Patch / 增益版 use 0x04000006 = 6 words = 24B.
- *
- * Origin pools are patched in hook_origin.s (armips). This unit exports the
- * constant for map/debug and future BL helpers — not called from origin yet.
+ * JP chrome (elem 0x2B/2C/2D) and column→OBJ CpuSet shared one literal pool.
+ * Patching the pool alone to 0x04000006 shortens chrome AND starves OBJ of the
+ * last 8B/half-column (glyph rows 6–7) — looks like a white bar over Chinese.
+ * hooks_origin.s keeps pools at 06 for chrome LDRs only; OBJ LDRs retarget to
+ * other ROM literals that stay 0x04000008.
  */
 #include "game.h"
 

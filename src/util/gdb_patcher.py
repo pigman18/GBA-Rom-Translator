@@ -610,6 +610,10 @@ def _on_pnc_entry(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> 
     )
     ctx.log(f"  {_win_fields_us(wb) if us else _win_fields(wb)}")
     ctx.log(f"  字节流: {data.hex(' ')}")
+    # 血条缓冲打印机：tm2 + dest 在 eBattleInterfaceGfxBuffer 一带
+    if not us and len(wb) > 0x0A and wb[0x0A] == 2:
+        dst = u32(wb, 0x20) if len(wb) >= 0x24 else 0
+        ctx.log(f"  ※ tm2 缓冲打印机 dest@+0x20=0x{dst:08X}")
 
 
 @handler("WinDump")
@@ -781,24 +785,39 @@ def _on_update_tilemap(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]
 
 @handler("RenderTextHandleBold")
 def _on_render_bold(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
-    """美版 RenderTextHandleBold 链（Text_InitWindow8004E3C）：
-    r0=winTemplate, r1=tileData(dest), r2=text。详情页/血条缓冲观测。"""
-    tpl = regs.get("r0", 0)
-    dst = regs.get("r1", 0)
-    text = regs.get("r2", 0)
-    data = _read_ff_text(gdb, text)
-    tplt = _read_mem(gdb, tpl, 0x18) if tpl else b""
+    """RenderTextHandleBold：
+    - US（cfg.layout=us）：r0=winTemplate, r1=tileData, r2=text
+    - JP AXVJ（默认）：r0=像素缓冲 dest, r1=串（血条昵称/数字）
+    """
     lr = regs.get("r14", 0) & ~1
-    if not ctx._hit((dst, data[:32])):
+    if cfg.get("layout") == "us":
+        tpl = regs.get("r0", 0)
+        dst = regs.get("r1", 0)
+        text = regs.get("r2", 0)
+        data = _read_ff_text(gdb, text)
+        tplt = _read_mem(gdb, tpl, 0x18) if tpl else b""
+        if not ctx._hit((dst, data[:32])):
+            return
+        ctx.log(f"\n[RenderBold-US] dest=0x{dst:08X} text=0x{text:08X} LR=0x{lr:08X}")
+        if len(tplt) >= 0x18:
+            ctx.log(
+                f"  模板@0x{tpl:08X}: charBase={tplt[1]} font={tplt[8]} textMode={tplt[9]}"
+                f" fg/bg/sh={tplt[5]}/{tplt[6]}/{tplt[7]} pal={tplt[4]}"
+                f" tileData=0x{u32(tplt, 0x10):08X} tilemap=0x{u32(tplt, 0x14):08X}"
+            )
+        ctx.log(f"  文本: {data[:48].hex(' ')} 内容={ctx.text_of(data)[:40]!r}")
         return
-    ctx.log(f"\n[RenderBold] dest=0x{dst:08X} text=0x{text:08X} LR=0x{lr:08X}")
-    if len(tplt) >= 0x18:
-        ctx.log(
-            f"  模板@0x{tpl:08X}: charBase={tplt[1]} font={tplt[8]} textMode={tplt[9]}"
-            f" fg/bg/sh={tplt[5]}/{tplt[6]}/{tplt[7]} pal={tplt[4]}"
-            f" tileData=0x{u32(tplt, 0x10):08X} tilemap=0x{u32(tplt, 0x14):08X}"
-        )
-    ctx.log(f"  文本: {data[:48].hex(' ')} 内容={ctx.text_of(data)[:40]!r}")
+
+    dst = regs.get("r0", 0)
+    text = regs.get("r1", 0)
+    data = _read_ff_text(gdb, text)
+    if not ctx._hit(("jp-bold", dst, data[:32], lr)):
+        return
+    ctx.log(f"\n[RenderBold-JP] dest=0x{dst:08X} text=0x{text:08X} LR=0x{lr:08X}")
+    ctx.log(f"  文本: {data[:64].hex(' ')} 内容={ctx.text_of(data)[:48]!r}")
+    # 昵称链 LR 落在 Alt2/Main 附近时多打一行提示
+    if 0x08042400 <= lr <= 0x08042C80:
+        ctx.log("  ※ LR 在 UpdateNick 域 → 血条昵称 Render")
 
 
 @handler("InitWindowTileData")
@@ -899,6 +918,109 @@ def _on_buf_glyph(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> 
     )
     ctx.log(f"  写前dst头16B: {dst_head.hex(' ')}")
     ctx.log(f"  源tl头16B:    {src_head.hex(' ')}")
+
+
+def _hb_col_ink_rows(col64: bytes, bg: int = 2) -> tuple[int, int, int]:
+    """扫 64B 列（上32+下32）：返回 (first_ink_row, last_ink_row, ink_px)。无墨水则 (-1,-1,0)。"""
+    if len(col64) < 64:
+        return -1, -1, 0
+    first, last, n = -1, -1, 0
+    for y in range(16):
+        row = col64[y * 4 : y * 4 + 4] if y < 8 else col64[32 + (y - 8) * 4 : 32 + (y - 8) * 4 + 4]
+        for b in row:
+            for nib in ((b >> 4) & 0xF, b & 0xF):
+                if nib != 0 and nib != bg:
+                    n += 1
+                    if first < 0:
+                        first = y
+                    last = y
+    return first, last, n
+
+
+def _hb_dump_buf_cols(gdb: GdbClient, buf: int, cols: int = 7, bg: int = 2) -> list[str]:
+    lines: list[str] = []
+    if not buf:
+        return ["  （buf=0）"]
+    raw = _read_mem(gdb, buf, cols * 0x40)
+    if len(raw) < cols * 0x40:
+        return [f"  （读缓冲失败 len={len(raw)} @0x{buf:08X}）"]
+    for i in range(cols):
+        col = raw[i * 0x40 : (i + 1) * 0x40]
+        fi, li, n = _hb_col_ink_rows(col, bg)
+        top8 = col[:8].hex(" ")
+        bot8 = col[32:40].hex(" ")
+        lines.append(
+            f"  col{i}: ink_rows={fi}..{li} ink_px={n} top8={top8} bot8={bot8}"
+        )
+        # 整列 64B，供 sim_healthbox_nick.py 仿真「上半是否挡住中文」
+        lines.append(f"  col{i}_raw64: {col.hex()}")
+    return lines
+
+
+@handler("UpdateNickAlt2")
+def _on_update_nick_alt2(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """JP UpdateNick Alt2 入口 0x08042408。"""
+    lr = regs.get("r14", 0) & ~1
+    r0 = regs.get("r0", 0) & 0xFF
+    if not ctx._hit(("nick-alt2", r0, lr)):
+        return
+    ctx.log(f"\n[NickAlt2] 入口 spriteId?=r0={r0} LR=0x{lr:08X}")
+
+
+@handler("HealthboxNickAfterRender")
+def _on_hb_nick_after_render(
+    gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]
+) -> None:
+    """Alt2 @0x08042536：RenderText 刚返回，chrome 尚未跑。
+    r6=eBattleInterfaceGfxBuffer 列基址，r4=gDisplayedStringBattle，r8=StringLength-6。
+    关键：每列墨水落在 row0-15 的哪一段——证明字是贴顶还是已在下半。"""
+    buf = regs.get("r6", 0)
+    s = regs.get("r4", 0)
+    r8 = regs.get("r8", 0) & 0xFFFF
+    data = _read_ff_text(gdb, s)
+    if not ctx._hit(("nick-after", buf, data[:24], r8)):
+        return
+    ctx.log(
+        f"\n[NickAfterRender] buf=0x{buf:08X} str=0x{s:08X} r8(len-6)={r8}"
+        f" LR=0x{(regs.get('r14', 0) & ~1):08X}"
+    )
+    ctx.log(f"  串: {data[:64].hex(' ')} 内容={ctx.text_of(data)[:48]!r}")
+    for line in _hb_dump_buf_cols(gdb, buf, 7, bg=2):
+        ctx.log(line)
+
+
+@handler("HealthboxNickChromeElem")
+def _on_hb_nick_chrome_elem(
+    gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]
+) -> None:
+    """GetHealthboxElementGfxPtr @0x08040EF8：r0=元件 id。
+    昵称 chrome 会反复打 0x2B/2C/2D；计数可见盖了几列上半。"""
+    eid = regs.get("r0", 0) & 0xFF
+    lr = regs.get("r14", 0) & ~1
+    # 只关心从 UpdateNick 域打来的
+    if not (0x08042400 <= lr <= 0x08042C80):
+        return
+    if not ctx._hit(("nick-elem", eid, lr)):
+        return
+    ctx.log(f"\n[NickChromeElem] id=0x{eid:02X} LR=0x{lr:08X}")
+
+
+@handler("HealthboxNickObjCopy")
+def _on_hb_nick_obj_copy(
+    gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]
+) -> None:
+    """Alt2 @0x080425CC：chrome/pad 已结束，开始拷 OBJ。再 dump 一次缓冲对比 AfterRender。"""
+    buf = regs.get("r6", 0)
+    r8 = regs.get("r8", 0) & 0xFFFF
+    r5 = regs.get("r5", 0) & 0xFFFF
+    if not ctx._hit(("nick-obj", buf, r8)):
+        return
+    ctx.log(
+        f"\n[NickObjCopy] buf=0x{buf:08X} r8(cols)={r8} r5={r5}"
+        f" （chrome 之后；对照 NickAfterRender 看上半是否被 0x2B 盖掉）"
+    )
+    for line in _hb_dump_buf_cols(gdb, buf, 7, bg=2):
+        ctx.log(line)
 
 
 _TILES_HARVESTER: Optional["TilesHarvester"] = None  # run_log 构造后由 handler 运行时读取

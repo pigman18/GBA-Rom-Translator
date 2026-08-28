@@ -1533,11 +1533,13 @@ class TranslationEngine:
         tiles_dir = self.config.tiles_dir or self._default_tiles_dir(rom_path)
         if not tiles_dir.is_dir():
             self._log("info", f"tiles dir not found, skipping: {tiles_dir}")
+            self._align_rom_file(rom_path)
             return rom_path
         meta_dir = tiles_dir / "meta" if (tiles_dir / "meta").is_dir() else tiles_dir
         meta_files = sorted(meta_dir.glob("*_meta.json"))
         if not meta_files:
             self._log("info", f"no *_meta.json in tiles dir, skipping: {meta_dir}")
+            self._align_rom_file(rom_path)
             return rom_path
 
         tmp_out = Path(work_dir) / f"{Path(rom_path).stem}_tiles{Path(rom_path).suffix}"
@@ -1578,7 +1580,7 @@ class TranslationEngine:
         self._log("info", f"tiles patched from {tiles_dir}")
         try:
             shutil.copy2(tmp_out, rom_path)
-            return Path(rom_path)
+            out = Path(rom_path)
         except OSError as exc:
             # mGBA 等占用目标文件时保留 *_tiles 产物，避免整次 full 失败
             self._log(
@@ -1586,7 +1588,34 @@ class TranslationEngine:
                 f"tiles: cannot overwrite {rom_path.name} ({exc}); "
                 f"left {tmp_out.name}",
             )
-            return Path(tmp_out)
+            out = Path(tmp_out)
+        # tiles_patcher 会往 ROM 尾部追加图形数据，发生在 build_rom 对齐之后，
+        # 因此成品必须再对齐一次，否则又退回非 2 的幂、尾部无空白。
+        self._align_rom_file(out)
+        return out
+
+    def _align_rom_file(self, path: Path) -> None:
+        """Pad a finished ROM file up to a power-of-two size, in place.
+
+        Shared tail step for every path that yields a shippable ROM, so the
+        artifact handed to a flash cart is always power-of-two sized with
+        trailing free space for the cart's own patch injection.
+        """
+        try:
+            data = bytearray(Path(path).read_bytes())
+            before = len(data)
+            # NB: align_rom pads in place and returns the *same* object, so the
+            # size comparison must be against a length captured up front.
+            aligned = RomWriter.align_rom(data)
+            if len(aligned) != before:
+                Path(path).write_bytes(aligned)
+                self._log(
+                    "info",
+                    f"ROM aligned to {len(aligned) // (1024 * 1024)}MB "
+                    f"({before:,} -> {len(aligned):,} bytes)",
+                )
+        except Exception as exc:  # alignment is an enhancement, never fatal
+            self._log("warning", f"[align] skipped for {path.name}: {exc}")
 
     def extract_texts(
         self,
@@ -2487,6 +2516,10 @@ class TranslationEngine:
                     self._log("info", "AXVJ name tables: " + " | ".join(parts))
 
         # Save (if emulator locks the file, write sibling *_new.gba)
+        # NOTE: do NOT pad to a power of two here. The tiles stage allocates
+        # past the current ROM end (_tiles_safe_alloc_base), so padding now
+        # would push tiles data past 32MB. Alignment happens once at the very
+        # end instead — see _align_rom_file / _run_tiles.
         output_path.parent.mkdir(parents=True, exist_ok=True)
         try:
             writer.save_rom(rom, output_path)

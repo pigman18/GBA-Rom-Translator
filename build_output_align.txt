@@ -1,0 +1,450 @@
+﻿[配置] 扫描配置目录: C:\code\GBA-Rom-Translator\configs
+[配置]   发现游戏: POKEMON_RUBY_AXVJ00 -> C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\game.json
+[配置] 扫描配置目录: C:\code\GBA-Rom-Translator\configs
+[配置] 读取模块: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
+[配置]   模块数: 22
+[配置] 读取: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
+[配置] 读取: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
+[配置] 读取: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\font.config.json
+[配置] 读取: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\hook\config.json
+[配置] 读取游戏配置: POKEMON_RUBY_AXVJ00
+[配置] 读取: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[配置] 读取: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\font.config.json
+[配置] charmap: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\charmap.txt
+[texts] 读取 C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
+[配置] 读取自定义翻译目录: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\lexicon (9 个文件)
+[配置]   UI.json: 22 条
+[配置]   图鉴.json: 1025 条
+[配置]   地点.json: 915 条
+[配置]   属性.json: 17 条
+[配置]   性格.json: 25 条
+[配置]   招式.json: 935 条
+[配置]   特性.json: 313 条
+[配置]   短语.json: 362 条
+[配置]   道具.json: 1470 条
+[配置] 自定义翻译总计: 5084 条
+[翻译缓存] 加载 C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts_translated.json: 14572 条
+[配置] 读取自定义翻译目录: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\lexicon (9 个文件)
+[配置]   UI.json: 22 条
+[配置]   图鉴.json: 1025 条
+[配置]   地点.json: 915 条
+[配置]   属性.json: 17 条
+[配置]   性格.json: 25 条
+[配置]   招式.json: 935 条
+[配置]   特性.json: 313 条
+[配置]   短语.json: 362 条
+[配置]   道具.json: 1470 条
+[配置] 自定义翻译总计: 5084 条
+[翻译缓存] 翻译前 lexicon 无变更，跳过写入 texts_translated.json
+[配置] 读取: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[配置] 读取: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[配置] 读取: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[配置] 读取: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[校验] rejects/allows: 拒绝 0/9894 条（候选 模块内 9894/12697）
+[翻译] seed_only：跳过 API（流程 1→2→5）
+[翻译缓存] 落盘 texts_translated.json: 14572 条
+[翻译缓存] 回填 entries 11003 条
+[翻译通路] 按勾选模块收窄 build: 12697 → 9894 （去掉未勾选 2803）[modules=['UI界面', '剧情', '图鉴说明', '地点名', '宝可梦名', '属性名', '性格名', '招式名', '招式说明', '特性名', '特性说明', '训练家名', '道具名', '道具说明']]
+[翻译通路] translate.build.json → replace=6630, relocate=2322, slot=491, keep=451
+Detected game: POKEMON_RUBY_AXVJ00
+从 translate.build.json 重建 9894 条注入数据，缓存覆盖 9443 条翻译
+[配置] 读取自定义翻译目录: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\lexicon (9 个文件)
+[配置]   UI.json: 22 条
+[配置]   图鉴.json: 1025 条
+[配置]   地点.json: 915 条
+[配置]   属性.json: 17 条
+[配置]   性格.json: 25 条
+[配置]   招式.json: 935 条
+[配置]   特性.json: 313 条
+[配置]   短语.json: 362 条
+[配置]   道具.json: 1470 条
+[配置] 自定义翻译总计: 5084 条
+[配置] lexicon 已加载: 5084 条
+[配置] charmap: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\charmap.txt
+[短语] 复用 translate.build.json 码表: 10159 条
+[短语] 自动进 F9 80: 279 条 (仅定长槽 stride/struct 越槽)
+Loading ROM...
+Applying font patch...
+Font generated from Meowth-Normal.bdf -> work\POKEMON_RUBY_AXVJ00\graphic\fonts
+Punctuation glyphs patched (baseline + no right spill)
+[font] patched 4 empty primary slot(s) from hook/work reference
+[font] restored 1 tuned unshadow/Sym bin(s) from hook/work reference
+Keep BDF-built fonts: 6 existing bin(s); synced 0 missing -> work\POKEMON_RUBY_AXVJ00\graphic\fonts
+[短语] PhraseTable 10438 条流, 496971B -> phrase_data.asm
+[data] from translate.build.json → phrases=10159/475579B
+[slot] translated_slot.asm: 472 type=slot entries
+Font patch applied
+[自定义翻译] 精确匹配: 1801, 子串替换: 6, 总计: 1807/9894 条
+[自定义翻译] 精确匹配: 1801, 子串替换: 6, 总计: 1807/9894 条
+[自定义翻译] 注入过滤: 9894 -> 9752 (去掉 142 条空/未翻译/跳过)
+[自定义翻译] 注入过滤: 9894 -> 9752 (去掉 142 条空/未翻译/跳过)
+AXVJ build inject set: 9752/9894 entries [modules=['属性名', '性格名', '特性名', '宝可梦名', '招式名', '训练家名', '地点名', '道具名', '道具说明', '招式说明', '特性说明', '图鉴说明', 'UI界面', '剧情']]
+Injecting 9752 translated texts...
+Scanning LZ bands once (a few seconds), then injecting…
+[翻译通路] 载入 translate.build.json: 9894 条决策（条目去重后 9752）
+Expansion region start: 0x01200000 (floor=0x01200000, available=14,495,744)
+Inject progress 1/9752
+Inject progress 201/9752
+  KEEP axvj_b8cb36f24e56 @ 0x1CA93C (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_a8da5ceea3e9 @ 0x1CA942 (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_963ec6c14bf2 @ 0x1CA948 (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_0a67dbcf73b2 @ 0x1CA94E (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_3954bbbc2eec @ 0x1CA954 (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_fead36b2ab32 @ 0x1CA95A (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_bd221e1b84f0 @ 0x1CA960 (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_5cc79872f42f @ 0x1CA966 (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_4b56a507b167 @ 0x1CA96C (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_b89fae8fcdad @ 0x1CA972 (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_17a62f905d44 @ 0x1CA978 (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_d5b119b65992 @ 0x1CA97E (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_52f5a3f3df22 @ 0x1CA984 (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_9ca0cb0d9879 @ 0x1CA98A (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_cb16f654e8eb @ 0x1CA990 (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_0a5c2800d034 @ 0x1CA996 (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_8dcfbec50fdf @ 0x1CA99C (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_e499863a08e3 @ 0x1CA9A2 (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_400490158ce8 @ 0x1CA9A8 (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_2c3ec1bcb2bd @ 0x1CA9AE (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_ebfbd0279cc4 @ 0x1CA9B4 (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_f084436af584 @ 0x1CA9BA (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_8a1788d86ef0 @ 0x1CA9C0 (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_32aab0932069 @ 0x1CA9C6 (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+Inject progress 401/9752
+  KEEP axvj_95e1615dd47a @ 0x1CA9CC (cat=宝可梦名): 保留原文（无翻译或译文与原文相同）
+Inject progress 601/9752
+Inject progress 801/9752
+Inject progress 1001/9752
+Inject progress 1201/9752
+Inject progress 1401/9752
+Inject progress 1601/9752
+Inject progress 1801/9752
+Inject progress 2001/9752
+Inject progress 2201/9752
+Inject progress 2401/9752
+  KEEP axvj_bfac93a561dc @ 0x39DE83 (cat=UI界面): 保留原文（无翻译或译文与原文相同）
+Inject progress 2601/9752
+Inject progress 2801/9752
+Inject progress 3001/9752
+Inject progress 3201/9752
+Inject progress 3401/9752
+Inject progress 3601/9752
+Inject progress 3801/9752
+Inject progress 4001/9752
+Inject progress 4201/9752
+Inject progress 4401/9752
+Inject progress 4601/9752
+Inject progress 4801/9752
+Inject progress 5001/9752
+Inject progress 5201/9752
+Inject progress 5401/9752
+Inject progress 5601/9752
+Inject progress 5801/9752
+Inject progress 6001/9752
+Inject progress 6201/9752
+Inject progress 6401/9752
+Inject progress 6601/9752
+Inject progress 6801/9752
+  KEEP axvj_ab5c006d25f8 @ 0x195879 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+Inject progress 7001/9752
+  KEEP axvj_fe6a02139d98 @ 0x1D4094 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_031c7ce3eeab @ 0x1DC5FC (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_31729feb1cbe @ 0x1EC1B4 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_a24488190e52 @ 0x1EC1BA (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_de43cad6b458 @ 0x1EC1C0 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+Inject progress 7201/9752
+Inject progress 7401/9752
+  KEEP axvj_a4a59825e4f5 @ 0x3A33DC (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_fd7d1b9d309a @ 0x3A33F0 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_8877cbe1faf2 @ 0x3A3404 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_6ba20a0d2d6c @ 0x3A57BA (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_6f01b898037e @ 0x3A57FB (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_396db3c3a415 @ 0x3A5805 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_40e561b57083 @ 0x3A580F (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_e4500135136e @ 0x3A5819 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_efc755820864 @ 0x3A5823 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_e6a95ff7e36d @ 0x3A582D (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_29412a1fb5c1 @ 0x3A5837 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_5575998c2093 @ 0x3A5841 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_67adfd1e684f @ 0x3A584B (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_88e6eb2ca64e @ 0x3A58E2 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_c4031daaef12 @ 0x3A58E7 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_ddf2d8ba9f36 @ 0x3A58EF (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_f7cd2dc0dd34 @ 0x3A58F7 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_493f814aded6 @ 0x3A58FF (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_ec9f57223635 @ 0x3A5906 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_66dc87656947 @ 0x3A590D (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_88cec4dba1f7 @ 0x3A5918 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_12b3420afde6 @ 0x3A591D (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_64c89a41deb0 @ 0x3A5924 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_a4f4eb4fb4bf @ 0x3A5953 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_5803fe4becf8 @ 0x3A595C (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_07f4fb01b63c @ 0x3A5962 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_43f02b5f4046 @ 0x3A5979 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_4911724ff8de @ 0x3A5980 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_4d5867024891 @ 0x3A598F (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_021d427257b2 @ 0x3A59B3 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_996c33fa3b47 @ 0x3A59C4 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_9f529e699235 @ 0x3A59CE (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_1228c3c25907 @ 0x3A59D5 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_1f1018409e7f @ 0x3A59E4 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_c8d664f207cd @ 0x3A59F4 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_69d2cc236c0c @ 0x3A59FC (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_92642442eb4b @ 0x3A5A3A (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_58d75c8d1f9e @ 0x3A5A40 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_ee5939590f39 @ 0x3A5A46 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_7c15bea8cd1a @ 0x3A5A4C (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_edb544b2b7a7 @ 0x3A5A52 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_92099bed95c0 @ 0x3A5A57 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_88570dd63bec @ 0x3A5A60 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_8a9d60ebd61d @ 0x3A5A67 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_3192f3509db6 @ 0x3A5A6F (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_0301b20cd147 @ 0x3A5A78 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_23721c7588a7 @ 0x3A5A81 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_338cdf7d39a4 @ 0x3A5A89 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_614df4d53d2e @ 0x3A5A92 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_b7f667dd4692 @ 0x3A5A9A (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_189f61f35ee6 @ 0x3A5AA0 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_69504203a25f @ 0x3A5AA8 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_85038358e958 @ 0x3A5AAF (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_8978801bcf53 @ 0x3A5AB7 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_302687258fb2 @ 0x3A5ABE (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_ea74c5cbc8d3 @ 0x3A5AC7 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_1cd78af6aaaf @ 0x3A5ACE (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_4c8e2ed95266 @ 0x3A5AD5 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_3f4008ee42ca @ 0x3A5AE4 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_e851fd82a7a5 @ 0x3A5AED (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_95bb2f59b3cd @ 0x3A5AF5 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_1de5dd5cb5ea @ 0x3A5B04 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_dd50f996eb90 @ 0x3A5B15 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_6b46dde06fd5 @ 0x3A5B1D (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_3f5da60c0aaf @ 0x3A5B24 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_691f90e33be0 @ 0x3A5B2B (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_6b01da4235b3 @ 0x3A5B33 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_d45e671d7258 @ 0x3A5B3A (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_941535d15c08 @ 0x3A5B43 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_3a7985e09fe4 @ 0x3A5B51 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_3aa5cfa5c92a @ 0x3A5B67 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_97fabd63b105 @ 0x3A5B70 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_0d4fb3cd95c4 @ 0x3A5B81 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_9a43e3b1cd45 @ 0x3A5B88 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_52c0d50034d0 @ 0x3A5B91 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_5105e723cd17 @ 0x3A5BA2 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_22d5dc184487 @ 0x3A5BAB (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_6454ef351494 @ 0x3A5BB9 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_43241ae52bf6 @ 0x3A5BBF (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_53707de8f45a @ 0x3A5BC6 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_fbb119cb13b0 @ 0x3A5BDD (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_ad9f7b43e33f @ 0x3A5BE6 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_d6ec7e2af847 @ 0x3A5BED (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_b12540955c0b @ 0x3A5BFF (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_09c1478be0b1 @ 0x3A5C10 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_b51b392e616c @ 0x3A5C16 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_6cfec3833c20 @ 0x3A5C23 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_7353ba45b5f9 @ 0x3A5C2C (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_a3a21b4f5256 @ 0x3A5C35 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_c64d9f9bb69b @ 0x3A5C3E (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_98fd7c670166 @ 0x3A5C47 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_453c5e597839 @ 0x3A5C50 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_5784afa5b8ec @ 0x3A5C59 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_525160b09b48 @ 0x3A5C62 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_15a9ef9cc0fa @ 0x3A5C6B (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_2048561a51fc @ 0x3A5C74 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_ce68451f6dd2 @ 0x3A5E58 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_9d79f4ce74ae @ 0x3A5E5D (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_6732181505ec @ 0x3A5E7B (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_cbdee64466e0 @ 0x3A5E94 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_3ab451c4da6f @ 0x3A5E99 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_1a46ce442256 @ 0x3A5EA0 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_ec076a6e6cd3 @ 0x3A5EA6 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_717c686907f3 @ 0x3A5EC7 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_6b07224fcb85 @ 0x3A5ED7 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_1e091339f069 @ 0x3A5EE7 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_6164e3a890fe @ 0x3A5EFC (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_96f8d53a8eb3 @ 0x3A5F01 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_29aa5e01fc4f @ 0x3A5F13 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_dbe1c49dbf2c @ 0x3A5F1A (cat=剧情): 保留原文（无翻译或译文与原文相同）
+Inject progress 7601/9752
+  KEEP axvj_16e3947d59e3 @ 0x3A5FDC (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_8971594c777a @ 0x3A5FE2 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_38f2c8d5e5fb @ 0x3A5FE7 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_2d7577caa297 @ 0x3A5FF0 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_3aafb7c6c145 @ 0x3A5FF5 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_03253713f405 @ 0x3A5FFA (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_980d08602391 @ 0x3A5FFF (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_247713284125 @ 0x3A6007 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_b5dd4abf8c91 @ 0x3A603F (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_11a39f9c8c17 @ 0x3A6044 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_cae753b9a196 @ 0x3A604A (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_fd78238bc688 @ 0x3A6050 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_46846ed73b91 @ 0x3A6057 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_194208925eef @ 0x3A605F (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_8debe613fbec @ 0x3A6067 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_e37d8290eefa @ 0x3A6082 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_cf7ac05c7fe4 @ 0x3A6087 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_6571bf31d937 @ 0x3A60CE (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_d2893fab0135 @ 0x3A60D6 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_b4843ab40903 @ 0x3A60DC (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_3f1050a39fc3 @ 0x3A60E3 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_29189a8194aa @ 0x3A60F7 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_a9eae3f46e31 @ 0x3A6100 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_01ee887ace24 @ 0x3A6133 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_4a1284b29507 @ 0x3A614D (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_4b3871b906ec @ 0x3A6154 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_4b104f0f2dca @ 0x3A615C (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_14114ebaa06a @ 0x3A6187 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_b9fea1e6be65 @ 0x3A61A6 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_9927386e70bf @ 0x3A61AD (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_92d747f62d30 @ 0x3A61B2 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_df9bdb678618 @ 0x3A61B8 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_8ab5c922cdb1 @ 0x3A61BD (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_3b47c0fdecb2 @ 0x3A61C2 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_f9ce69ed1100 @ 0x3A61C7 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_f4b5c2cccb8b @ 0x3A61CD (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_c5c76a65d60f @ 0x3A61D2 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_9da8de04c1e1 @ 0x3A61D8 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_1d8ea3f3c2a5 @ 0x3A61DE (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_b8dac61dd11c @ 0x3A61E3 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_f816abbcc18d @ 0x3A61E8 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_ede55eebede0 @ 0x3A61ED (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_a285ecab26e2 @ 0x3A61F3 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_7bb96811d9df @ 0x3A61F8 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_cdf8dffa5513 @ 0x3A61FD (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_8b16d7e1929c @ 0x3A6203 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_b1f87b90af63 @ 0x3A6208 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_617d14fe0a54 @ 0x3A620D (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_1e37abafbb51 @ 0x3A6212 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_8a48d67155f7 @ 0x3A6217 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_f38a0b3797aa @ 0x3A621C (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_269614131e3e @ 0x3A6221 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_9c693eb448fc @ 0x3A6226 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_436fc775e14a @ 0x3A622C (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_5f9e9f3c8bdc @ 0x3A6231 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_8f5157f68d62 @ 0x3A6236 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_4278a4f6427e @ 0x3A623B (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_2812fefd5401 @ 0x3A6241 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_77e347c22eb3 @ 0x3A6246 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_992b66d767e7 @ 0x3A624B (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_ab145bf5d3bc @ 0x3A6250 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_53f9a477cd02 @ 0x3A6255 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_cab8bc2829b6 @ 0x3A625B (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_18b2ca379b20 @ 0x3A6260 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_356b690e1e36 @ 0x3A6265 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_f486da4d1bb9 @ 0x3A626A (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_0c4623d139ea @ 0x3A6270 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_3bd9a1112cc9 @ 0x3A6275 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_26deaf5d0be1 @ 0x3A627A (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_5ba9f5a577c1 @ 0x3A627F (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_5d310163753d @ 0x3A6284 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_8e4dbf8534e3 @ 0x3A6289 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_8217043f3306 @ 0x3A628F (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_a2940120f502 @ 0x3A6294 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_1f80910d5fe1 @ 0x3A6299 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_6a73fe101d2f @ 0x3A629E (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_194958fa14b4 @ 0x3A62A3 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_567fb26213ec @ 0x3A62A8 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_65967426e1ee @ 0x3A62AD (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_f416444e5442 @ 0x3A62B2 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_66957117bcff @ 0x3A62B7 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_604a5fa817f6 @ 0x3A62BC (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_c801800306ac @ 0x3A62C1 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_32b6cf3c012b @ 0x3A62C6 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_b9b9851d64bb @ 0x3A62CB (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_63067f3797f3 @ 0x3A62D0 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_b35d746fb7b9 @ 0x3A62D5 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_de5b8094888d @ 0x3A62DA (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_04095bb4e554 @ 0x3A62DF (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_4e7106fe8d6e @ 0x3A62E4 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_82c2410767ab @ 0x3A62E9 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_dcfe1c023466 @ 0x3A62EF (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_b78cefb7da2c @ 0x3A62F4 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_2a9c8b3dd622 @ 0x3A62F9 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_04a75d6d690a @ 0x3A62FE (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_192a89ec7f15 @ 0x3A6304 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_7fd5922888b6 @ 0x3A6309 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_b69ff6aa3c99 @ 0x3A630E (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_d0011c99c6b6 @ 0x3A6313 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_8de03db09e46 @ 0x3A6318 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_648a2f5b6e45 @ 0x3A631D (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_1a07a42356f2 @ 0x3A6322 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_143d4bcf2985 @ 0x3A6327 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_f993723b3ec4 @ 0x3A632C (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_31f4420dbb47 @ 0x3A6331 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_179dd84e78ed @ 0x3A6336 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_82fc70b37b42 @ 0x3A633C (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_5022aded05bb @ 0x3A6341 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_98f5ecac6f74 @ 0x3A6346 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_eefa8090bcf1 @ 0x3A634B (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_2a0bc89fc78a @ 0x3A6350 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_21cb3f825d09 @ 0x3A6355 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_3005b47e9d9c @ 0x3A635B (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_6b41411a1bd9 @ 0x3A6360 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_5f96e37c3c8a @ 0x3A6365 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_0dbb3a1ace8a @ 0x3A636A (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_f8dc224d7531 @ 0x3A636F (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_08412d94e467 @ 0x3A6374 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_f3ca24d30b88 @ 0x3A6379 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_124c295c6de3 @ 0x3A637E (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_6db3f74329b5 @ 0x3A6383 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_fa07ac85c291 @ 0x3A6388 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_440f5d578407 @ 0x3A638D (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_0fb15dd4ebd4 @ 0x3A6392 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_7ec2e5734291 @ 0x3A6397 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_2e12ac4d653b @ 0x3A639C (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_7cd6b54addf2 @ 0x3A63A1 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_c94bd94115f9 @ 0x3A63A6 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_ca31058704ce @ 0x3A63AB (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_f133f8e8f81e @ 0x3A63B0 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_9588bb3b45b8 @ 0x3A63B5 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_340da46fcb9f @ 0x3A63BA (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_1e357ffb2870 @ 0x3A63BF (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_0ed05d3d9b42 @ 0x3A63C5 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_f2889936417b @ 0x3A63CA (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_b13799cc7240 @ 0x3A63D0 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_55dcfeb7141c @ 0x3A63D5 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_ff73bbd00051 @ 0x3A63DA (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_0a2914b92370 @ 0x3A63DF (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_5453393bd88b @ 0x3A63E5 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_511d4c779cc0 @ 0x3A63EA (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_452da823ac2d @ 0x3A63EF (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_84f6c3ee489f @ 0x3A63F4 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_c2d5df72f312 @ 0x3A63F9 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_b5ec5f0c4db5 @ 0x3A63FE (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_8077e8087a8d @ 0x3A6403 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_2e1c3fddcc8a @ 0x3A6408 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_4fac7f8a0cab @ 0x3A640D (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_910335cebc83 @ 0x3A6412 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_1c89969206e5 @ 0x3A6417 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_8aa0ec9529a5 @ 0x3A641C (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_b976e7b0b0a6 @ 0x3A6421 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_fc5fae8bb5df @ 0x3A6426 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_7c645d5be79b @ 0x3A642B (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_dd6731f2dec9 @ 0x3A6430 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_6b26f98a5e55 @ 0x3A6435 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_3268a1f4aab1 @ 0x3A643A (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_2a38fc0fe88c @ 0x3A6440 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_4ef25701df94 @ 0x3A6445 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+Inject progress 7801/9752
+Inject progress 8001/9752
+Inject progress 8201/9752
+  KEEP axvj_510cc1c6face @ 0x3B3BBA (cat=剧情): 保留原文（无翻译或译文与原文相同）
+Inject progress 8401/9752
+Inject progress 8601/9752
+Inject progress 8801/9752
+Inject progress 9001/9752
+  KEEP axvj_593c63b6025e @ 0x3DCA59 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+Inject progress 9201/9752
+  KEEP axvj_5f34780aa096 @ 0x3E9692 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_5bfcc712a5b4 @ 0x3E9699 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_2bd576924a26 @ 0x3E9A20 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_ca8c0955182b @ 0x3E9A2B (cat=剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_3b38d010349e @ 0x3E9E04 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+Inject progress 9401/9752
+Inject progress 9601/9752
+  KEEP axvj_fdd94a805582 @ 0x3EB34E (cat=剧情): 保留原文（无翻译或译文与原文相同）
+Inject progress 9752/9752
+Done: 6630 replaced, 2322 relocated, 0 skipped, 0 partial-ptr skipped, 0 unsafe ptrs filtered
+Saved: roms\outputs\POKEMON_RUBY_AXVJ00_translated.gba
+[短语] 自动进 F9 80 记录 → work\POKEMON_RUBY_AXVJ00\lexicon.extra.json (279 条)
+tiles: 3 meta(s) from C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\tiles -> POKEMON_RUBY_AXVJ00_translated_tiles.gba, new_palette=0x09EA3100 (ignore yaml 0x09200000)
+tiles patched from C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\tiles
+ROM aligned to 32MB (32,126,904 -> 33,554,432 bytes)

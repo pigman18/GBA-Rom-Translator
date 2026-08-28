@@ -26,7 +26,12 @@
  *                         `scripts/check_tm1_scene.py --search-base`
  *                         搜一个不踩引用字形且不越界的 grid_base
  * ==========================================================================*/
-#define OPTION_MODE   TM1_MODE_GRID
+/* ⚠ 2026-08-29：GRID 连测两轮未通过（v12 Ｌ/Ｒ 乱码、v13 连数字也乱）。
+ *   已排除矩形/槽位问题：gdb 实测设置窗口 tm1 的 curTY 恒为 0、
+ *   row 0..16 / col 0..22 → 足迹 40..453，与保护区矩形一致，镜像槽未被压。
+ *   剩下只能是"镜像没有命中"，需 gdb 实证 —— 见 src/util/configs/*.yaml
+ *   的 IwtdHook / IwtdMirror 断点。定位之前默认回退 PARTITION（已实测通过）。 */
+#define OPTION_MODE   TM1_MODE_PARTITION
 
 /* ============================================================================
  * 设置（选项）窗口 — 模板 0x081BB874
@@ -70,11 +75,19 @@ static const uint8_t kOptRowSpans[7] = {
     28u, 28u, 28u, 28u, 28u, 28u, 8u,
 };
 
-static const uint16_t kOptGlyphAvoid[24] = {
+/* 不得被中文占用、也不得被镜像槽占用的 tile（各占 2 格）。两类：
+ *   ① gdb 实测被引用的字形
+ *   ② 已知特殊用途的保留区
+ * ⚠ 清单不完整是这类方案的主要风险：漏一个就表现为某个非中文字符变乱码。
+ *   发现新的乱码字符 → 反推其 tile（= 1 + PCS*2）→ 加进来 → 重跑自检
+ *   → 用 --search-base 重算镜像表。 */
+static const uint16_t kOptGlyphAvoid[26] = {
     0x001u, 0x021u, 0x031u, 0x06Fu, 0x077u, 0x08Bu, 0x0FFu, /* 1 33 49 111 119 139 255 */
     0x143u, 0x145u, 0x147u, 0x149u, 0x14Bu, 0x14Du, 0x14Fu, /* 323 325 327 329 331 333 335 */
     0x151u, 0x153u, 0x159u, 0x15Du, 0x171u, 0x18Du, 0x199u, /* 337 339 345 349 369 397 409 */
     0x1B7u, 0x1BFu, 0x1C3u,                                  /* 439 447 451 */
+    0x1DFu, 0x1E1u,                                          /* ② 479 ▶字形 / 481 菜单光标
+                                                              *    （落镜像槽区，必须避开） */
 };
 
 /* GRID 模式参数（OPTION_MODE = TM1_MODE_GRID 时生效）：
@@ -86,25 +99,64 @@ static const uint16_t kOptGlyphAvoid[24] = {
 #define OPT_GRID_X0      4u
 #define OPT_GRID_Y0      1u
 
+/* 中文保护区矩形（行/列下标，闭区间）。
+ *   行 0..16 ← curY 1..17（标题 + 7 个菜单行）
+ *   列 0..22 ← curX 4..26 且 stride=23 ⇒ col 满格
+ * 取满格是刻意的：这是中文可能触及的**上界**，与具体字数无关，
+ * 改翻译不会失效。代价是要镜像 19 个字形，空间仍然够（槽在矩形之上）。 */
+#define OPT_PROT_ROW0    0u
+#define OPT_PROT_ROW1    17u   /* ⚠ +1：lower 表项在下一行(+stride)，
+                                *   最末行 curY=17 的 lower 落在 row=17 */
+#define OPT_PROT_COL0    0u
+#define OPT_PROT_COL1    22u   /* stride-1；spill 的 col+1 已被 clamp */
+
 /* 字形镜像表（仅 GRID 模式需要）。
  *
  * GRID 穷举证明：stride 20..32 × x0 0..6 × base 1..512，**无解**——
- * 位置式足迹必然压到引用字形。加镜像后 base=40 成为最优：
- *   中文足迹 148 tile / max=433（≤511，不越 charblock2），
- *   只有 4 个字形被压住，镜像槽取 3/5/7/9（均不在足迹与引用字形内）。
+ * 位置式足迹必然压到引用字形。加镜像后 base=40 可用：中文足迹 148 tile，
+ * 保护区矩形 391 格（40..430），落在其中的引用字形 19 个 → 全部镜像。
  *
- * ⚠ 镜像槽 3..10 与 PARTITION 的 title_base [3,19) 重叠 —— 故用 #if 门控，
- *   PARTITION 下 mirror_n = 0，钩子完全不执行，零副作用。
- * ⚠ 改 grid_base 后必须重跑 `check_tm1_scene.py`，它会重算冲突集并核对本表。 */
+ * ⚠ 冲突集按**保护区矩形**算，不按"每个会话精确字数"——后者依赖一份手抄
+ *   字数表，漏一条就漏镜像（2026-08-29 实测：漏了按键模式行的「普通」
+ *   → 它压住的 327/329/331 没有镜像 → Ｌ/Ｒ 变乱码）。矩形与文本无关，
+ *   改翻译不会失效。
+ * ⚠ 镜像槽 431..474 与 PARTITION 的布局无关，但仍用 #if 门控：
+ *   PARTITION 下 mirror_n = 0，钩子完全不执行，零副作用。 */
 #if OPTION_MODE == TM1_MODE_GRID
-static const struct Tm1Mirror kOptMirrors[4] = {
-    { 0x14Fu, 0x003u },   /* 335,336 → 3,4 */
-    { 0x151u, 0x005u },   /* 337,338 → 5,6 */
-    { 0x153u, 0x007u },   /* 339,340 → 7,8 */
-    { 0x199u, 0x009u },   /* 409,410 → 9,10 */
+/* 22 条：矩形 [40,453] 内所有已实测引用的字形（各占 2 格）。
+ * 镜像槽放在矩形**之上**（454..497，余 14 tile 缓冲）——既不压中文，
+ * 也不压 1..39 的常用字形区。
+ *
+ * ⚠ dst 的**奇偶无关紧要**：表项改写是 upper→dst、lower→dst+1，
+ *   与源 tile 的奇偶无关；只要 (dst, dst+1) 都空闲即可。
+ * ⚠ 由 `check_tm1_scene.py` 按保护区矩形自动生成。改 grid_base / stride /
+ *   矩形范围后必须重跑并整体替换本表。 */
+static const struct Tm1Mirror kOptMirrors[22] = {
+    { 0x031u, 0x1C6u },   /*  49, 50 → 454,455 */
+    { 0x06Fu, 0x1C8u },   /* 111,112 → 456,457 */
+    { 0x077u, 0x1CAu },   /* 119,120 → 458,459 */
+    { 0x08Bu, 0x1CCu },   /* 139,140 → 460,461 */
+    { 0x0FFu, 0x1CEu },   /* 255,256 → 462,463 */
+    { 0x143u, 0x1D0u },   /* 323,324 → 464,465 */
+    { 0x145u, 0x1D2u },   /* 325,326 → 466,467 */
+    { 0x147u, 0x1D4u },   /* 327,328 → 468,469 */
+    { 0x149u, 0x1D6u },   /* 329,330 → 470,471 */
+    { 0x14Bu, 0x1D8u },   /* 331,332 → 472,473 */
+    { 0x14Du, 0x1DAu },   /* 333,334 → 474,475 */
+    { 0x14Fu, 0x1DCu },   /* 335,336 → 476,477 */
+    { 0x151u, 0x1E4u },   /* 337,338 → 484,485   ← 跳过 479 ▶ / 480-481 光标 */
+    { 0x153u, 0x1E6u },   /* 339,340 → 486,487 */
+    { 0x159u, 0x1E8u },   /* 345,346 → 488,489 */
+    { 0x15Du, 0x1EAu },   /* 349,350 → 490,491 */
+    { 0x171u, 0x1ECu },   /* 369,370 → 492,493 */
+    { 0x18Du, 0x1EEu },   /* 397,398 → 494,495 */
+    { 0x199u, 0x1F0u },   /* 409,410 → 496,497 */
+    { 0x1B7u, 0x1F2u },   /* 439,440 → 498,499 */
+    { 0x1BFu, 0x1F4u },   /* 447,448 → 500,501 */
+    { 0x1C3u, 0x1F6u },   /* 451,452 → 502,503 */
 };
 #define OPT_MIRRORS   kOptMirrors
-#define OPT_MIRROR_N  4u
+#define OPT_MIRROR_N  22u
 #else
 #define OPT_MIRRORS   ((const struct Tm1Mirror *)0)
 #define OPT_MIRROR_N  0u
@@ -131,8 +183,9 @@ static const struct Tm1WinCfg kOptWindow = {
     kOptSlots,  3u,
     OPT_CAND_FONT,          /* GRID=0(12px) / PARTITION=4(8px) —— 见上 */
     OPT_GRID_BASE, OPT_GRID_STRIDE, OPT_GRID_X0, OPT_GRID_Y0,
+    OPT_PROT_ROW0, OPT_PROT_ROW1, OPT_PROT_COL0, OPT_PROT_COL1,
     OPT_MIRRORS, OPT_MIRROR_N,
-    kOptGlyphAvoid, 24u,
+    kOptGlyphAvoid, 26u,
 };
 
 /* ---- 登记表：新增窗口在此追加 ---- */

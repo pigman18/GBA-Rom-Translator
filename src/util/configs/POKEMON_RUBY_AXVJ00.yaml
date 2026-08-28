@@ -753,8 +753,24 @@ gdb:
   description: Alt2 我方单打 OBJ 拷贝循环入口（r6=buf r8=列数 r5=0）；看拷几列、缓冲是否已被 chrome 改
   default: false
 - name: ChsFontFunc
-  address: '0x08801978'
-  description: 新管线每字符入口 Chs_FontFunc_hook（r0=win,r1=glyph,r2=is_chs）；含相位 px/base_tx。逐字符断点量大，建议 --functions 按需启用。地址取 out/game.map 的 Chs_FontFunc_hook，game.bin 重编后必须同步（旧值 0x088019b0 = 8槽LRU 版，已过期）
+  address: '0x08801BD4'
+  description: 新管线每字符入口 Chs_FontFunc_hook（r0=win,r1=glyph,r2=is_chs）；含相位 px/base_tx。逐字符断点量大，建议 --functions 按需启用。地址取 out/game.map 的 Chs_FontFunc_hook，game.bin 重编后必须同步（旧值 0x08801978/0x088019b0 均已过期）
+  default: false
+# --- 字形镜像诊断链（定位 GRID 模式"镜像有没有命中"）---
+# 用法：python src/util/gdb_patcher.py log \
+#         --functions IwtdHook,IwtdMirrorRet,Tm1MirrorRet --no-dedup
+# 进设置菜单再退出即可。判读见 gdb_patcher.py 中对应 handler 的注释。
+- name: IwtdHook
+  address: '0x08801DF8'
+  description: '镜像诊断① 每 glyph 一次；tile0=startOffset+glyph*2（重编须按 game.map 同步）'
+  default: false
+- name: IwtdMirrorRet
+  address: '0x08801E2C'
+  description: '镜像诊断② mirror_src 返回：r0=镜像dst，0=未命中'
+  default: false
+- name: Tm1MirrorRet
+  address: '0x08801D3E'
+  description: '镜像诊断③ mirror_of 返回：r0=镜像dst，0=未命中'
   default: false
 - name: SlotDrawChs
   address: '0x08800450'

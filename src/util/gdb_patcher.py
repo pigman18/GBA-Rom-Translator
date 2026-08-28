@@ -503,6 +503,70 @@ JP_PAL_UNFADED = 0x0202E7E8     # gPlttBufferUnfaded（LoadPalette 目标 1）
 JP_PAL_DECOMP_BUF = 0x0202F0BC  # sPaletteDecompressionBuffer（LoadCompressedPalette 中转）
 
 
+# --- 字形镜像（Glyph Mirror）诊断链 ------------------------------------------
+# 用于定位"镜像到底有没有命中"。三个点成对使用：
+#   IwtdHook       InitWindowTileData_Hook 入口   r0=tpl r1=startOffset r2=glyph
+#   IwtdMirrorRet  scene_tm1_mirror_src 返回后    r0=镜像dst(0=未命中)
+#   Tm1MirrorRet   scene_tm1_mirror_of  返回后    r0=镜像dst(0=未命中)
+# 判读：IwtdHook 与 IwtdMirrorRet 成对出现（每 glyph 一对）。
+#   若所有 IwtdMirrorRet 都是"未命中" → tile0 与 kOptMirrors.src 对不上；
+#   若命中了但显示仍错 → 查拷贝 / 表项改写时机。
+# ⚠ 计数用模块级 _MIRROR_STAT：Ctx 没有 stats 属性（用过一次，直接 AttributeError）。
+#   未命中也必须留痕，否则"从未命中"和"根本没跑到"在日志里分不清。
+
+_MIRROR_STAT: dict[str, int] = {"iwtd_hit": 0, "iwtd_miss": 0,
+                                "tm1_hit": 0, "tm1_miss": 0}
+
+
+@handler("IwtdHook")
+def _on_iwtd_hook(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    tpl = regs.get("r0", 0)
+    so = regs.get("r1", 0) & 0xFFFF
+    g = regs.get("r2", 0) & 0xFF
+    ctx.log(f"[IwtdHook] tpl=0x{tpl:08X} startOffset=0x{so:X} glyph={g}"
+            f" tile0={so + g * 2}")
+
+
+@handler("IwtdMirrorRet")
+def _on_iwtd_mirror_ret(gdb: GdbClient, regs: dict, ctx: Ctx,
+                        cfg: dict[str, Any]) -> None:
+    dst = regs.get("r0", 0) & 0xFFFF
+    if dst:
+        _MIRROR_STAT["iwtd_hit"] += 1
+        ctx.log(f"[IwtdMirrorRet] 命中 → dst=0x{dst:03X} ({dst})"
+                f"  [累计 命中{_MIRROR_STAT['iwtd_hit']}"
+                f" / 未命中{_MIRROR_STAT['iwtd_miss']}]")
+    else:
+        _MIRROR_STAT["iwtd_miss"] += 1
+        # 每 32 次打一条，避免刷屏又能证明"确实跑到了、只是没命中"
+        if _MIRROR_STAT["iwtd_miss"] % 32 == 0:
+            ctx.log(f"[IwtdMirrorRet] …未命中累计 {_MIRROR_STAT['iwtd_miss']} 次"
+                    f"（命中 {_MIRROR_STAT['iwtd_hit']}）")
+
+
+@handler("Tm1MirrorRet")
+def _on_tm1_mirror_ret(gdb: GdbClient, regs: dict, ctx: Ctx,
+                       cfg: dict[str, Any]) -> None:
+    dst = regs.get("r0", 0) & 0xFFFF
+    # r5 此时仍指向 tilemap 表项；读回原生写入的原始值
+    raw = "-"
+    try:
+        b = bytes(gdb.read_mem(regs.get("r5", 0), 2))
+        raw = f"0x{(b[0] | (b[1] << 8)) & 0xFFF:03X}"
+    except Exception:
+        pass
+    if dst:
+        _MIRROR_STAT["tm1_hit"] += 1
+        ctx.log(f"[Tm1MirrorRet] 表项原值={raw} → 改写为 0x{dst:03X}"
+                f"  [累计 命中{_MIRROR_STAT['tm1_hit']}"
+                f" / 未命中{_MIRROR_STAT['tm1_miss']}]")
+    else:
+        _MIRROR_STAT["tm1_miss"] += 1
+        if _MIRROR_STAT["tm1_miss"] % 32 == 0:
+            ctx.log(f"[Tm1MirrorRet] …未命中累计 {_MIRROR_STAT['tm1_miss']} 次"
+                    f"（命中 {_MIRROR_STAT['tm1_hit']}）")
+
+
 @handler("InitTextPrinter")
 def _on_init_text(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
     win = regs.get("r0", 0)

@@ -38,10 +38,14 @@ SESSIONS = {
         (23, 5, 1, "快"), (4, 7, 4, "战斗动画"), (15, 7, 1, "看"), (23, 7, 2, "不看"),
         (4, 9, 4, "对战规则"), (15, 9, 2, "替换"), (22, 9, 3, "打到底"),
         (4, 11, 2, "声音"), (15, 11, 3, "单声道"), (22, 11, 3, "立体声"),
-        (4, 13, 4, "按键模式"), (23, 13, 2, "类型"),
-        (4, 15, 2, "窗口"), (18, 15, 1, "慢"), (4, 17, 2, "关闭"),
+        (4, 13, 4, "按键模式"), (15, 13, 2, "普通"),
+        (4, 15, 2, "窗口"), (15, 15, 2, "类型"), (4, 17, 2, "关闭"),
     ],
 }
+# ⚠ 上面这份几何是**手抄**的，仅用于估算"实际足迹"（ informational）。
+#   镜像冲突集不依赖它（改按保护区矩形算），因为它漏一条就会漏镜像 ——
+#   2026-08-29 实测：漏了 (15,13,2,"普通")，导致 Ｌ/Ｒ 变乱码。
+#   数据来源：configs/.../translate/texts_translated.json 的译文 + 实测截图。
 
 
 # ---------------------------------------------------------------- 解析工具
@@ -140,6 +144,7 @@ FIELDS = ["name", "tpl", "mode", "row_tab", "row_span_tab", "row_tab_n",
           "row_y0", "row_shift", "title_base", "col_label_max",
           "lbl_off", "lbl_span", "slots", "slot_n", "cand_font",
           "grid_base", "grid_stride", "grid_x0", "grid_y0",
+          "prot_row0", "prot_row1", "prot_col0", "prot_col1",
           "mirrors", "mirror_n", "glyph_avoid", "glyph_avoid_n"]
 N_FIELDS = len(FIELDS)
 
@@ -324,13 +329,24 @@ def sim_grid(c, sessions, cand_wide, base_override=None, stride=None):
 
 # ---------------------------------------------------------------- 主流程
 
-def report(tag, occ, avoid_pairs, mirrors=None):
+def prot_tiles(c):
+    """中文保护区矩形的 tile 集合。
+    冲突集按它算，而不是按实际足迹 occ —— 矩形与文本字数无关，是结构性上界。"""
+    out = set()
+    for r in range(c["prot_row0"], c["prot_row1"] + 1):
+        for col in range(c["prot_col0"], c["prot_col1"] + 1):
+            out.add(c["grid_base"] + r * c["grid_stride"] + col)
+    return out
+
+
+def report(tag, occ, avoid_pairs, mirrors=None, prot=None):
     """mirrors: [(src, dst), ...] —— 被镜像兜住的 tile 不算真踩踏。
+    prot: 保护区矩形；给了就按它判冲突（GRID），否则按实际足迹 occ（PARTITION）。
     返回 (越界数, 未兜住的踩踏数, 需镜像数)"""
     mirrors = mirrors or []
     tiles = sorted(occ)
     over = [t for t in tiles if t > CHARBLOCK2_MAX]
-    hit = [t for t in tiles if t in avoid_pairs]
+    hit = sorted((prot if prot else set(occ)) & avoid_pairs)
 
     def mirrored(t):
         for s, _d in mirrors:
@@ -353,8 +369,8 @@ def report(tag, occ, avoid_pairs, mirrors=None):
     return len(over), len(real), len(hit)
 
 
-def check_mirrors(c, mirrors, occ, avoid_pairs):
-    """镜像表自身的合法性。返回错误数。"""
+def check_mirrors(c, mirrors, prot, avoid_pairs):
+    """镜像表自身的合法性。prot = 保护区矩形（冲突集按它算）。返回错误数。"""
     bad = 0
     if len(mirrors) != c["mirror_n"]:
         print("  ✗ mirror_n=%d 但实际表有 %d 条" % (c["mirror_n"], len(mirrors)))
@@ -366,15 +382,13 @@ def check_mirrors(c, mirrors, occ, avoid_pairs):
     used_dst = set()
     for s, d in mirrors:
         notes = []
-        if s % 2 == 0:
-            notes.append("src 应为奇数(字形起点 = startOffset+glyph*2)")
-            bad += 1
-        if d % 2 == 0:
-            notes.append("dst 应为奇数（须与 src 同奇偶，lower 才对得上）")
-            bad += 1
+        # 注：src/dst 的奇偶都无关紧要。表项改写是 upper→dst、lower→dst+1，
+        # 只要 (dst, dst+1) 两格连续空闲即可；src 由 startOffset+glyph*2 决定。
+        if s not in prot:
+            notes.append("src %d 不在保护区矩形内（冗余镜像）" % s)
         for t in (s, s + 1):
             if t not in avoid_pairs:
-                notes.append("src %d 并非引用字形（冗余镜像）" % t)
+                notes.append("src %d 并非引用字形" % t)
         for t in (d, d + 1):
             if t > CHARBLOCK2_MAX:
                 notes.append("dst %d 越出 charblock2" % t)
@@ -382,8 +396,8 @@ def check_mirrors(c, mirrors, occ, avoid_pairs):
             if t in avoid_pairs:
                 notes.append("dst %d 压在引用字形上" % t)
                 bad += 1
-            if t in occ:
-                notes.append("dst %d 落在中文足迹内（会被中文覆盖）" % t)
+            if t in prot:
+                notes.append("dst %d 落在保护区矩形内（会被中文覆盖）" % t)
                 bad += 1
             if t in used_dst:
                 notes.append("dst %d 与前面的镜像槽重叠" % t)
@@ -399,7 +413,7 @@ def check_mirrors(c, mirrors, occ, avoid_pairs):
     for s, _d in mirrors:
         covered.add(s)
         covered.add(s + 1)
-    miss = sorted(t for t in occ if t in avoid_pairs and t not in covered)
+    miss = sorted(t for t in prot if t in avoid_pairs and t not in covered)
     if miss:
         print("      ✗ 有 %d 个冲突未被镜像覆盖: %s" % (len(miss), miss[:8]))
         bad += 1
@@ -459,12 +473,22 @@ def main() -> int:
             # ⚠ 必须传 cand_wide（= 配置 cand_font 或 --all-12px 的结果），
             #   不能传 all_12——后者只是命令行开关，默认 False。
             occ_g = sim_grid(c, sess, cand_wide)
+            prot = prot_tiles(c)
+            print("    保护区矩形: 行%d..%d 列%d..%d → tile %d..%d (%d 格)"
+                  % (c["prot_row0"], c["prot_row1"], c["prot_col0"], c["prot_col1"],
+                     min(prot), max(prot), len(prot)))
             no, nh, _nc = report("GRID  base=%d stride=%d x0=%d y0=%d 候选%s"
                                  % (c["grid_base"], c["grid_stride"], c["grid_x0"],
                                     c["grid_y0"], "12px" if cand_wide else "8px"),
-                                 occ_g, avoid_pairs, mirrors)
+                                 occ_g, avoid_pairs, mirrors, prot)
             fail += bool(no) + bool(nh)
-            fail += check_mirrors(c, mirrors, occ_g, avoid_pairs)
+            fail += check_mirrors(c, mirrors, prot, avoid_pairs)
+            # 实际足迹必须落在矩形内，否则矩形取小了
+            out = sorted(t for t in occ_g if t not in prot)
+            if out:
+                print("    ✗ 实际足迹有 %d 格越出保护区矩形: %s"
+                      % (len(out), out[:8]))
+                fail += 1
         else:
             rows = parse_u16_array(src, c["row_tab"]) or []
             spans = parse_u16_array(src, c["row_span_tab"]) or []

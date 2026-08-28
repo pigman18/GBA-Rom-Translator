@@ -198,25 +198,30 @@ static void map_at(TextPrinter *win, uint8_t tx, uint16_t abs_u, uint16_t abs_l)
     UpdateTilemap_PreserveCursorX(win, abs_u, abs_l);
 }
 
-static uint8_t tile_get_px(const uint8_t *tile, unsigned x, unsigned y)
-{
-    unsigned bi = y * 4u + x / 2u;
+/* ---- sChsShiftAmounts（pokeruby text.c sGlyphShiftAmounts 同构）----
+ * left = startPixel*4：本 tile 内左移；right = 32-left：溢出段右移。
+ * 恒等式 width-(gw_end-8) = 8-startPixel ⇒ right 对任意 width≤8 都成立；
+ * need_spill 蕴含 startPixel≥1 ⇒ right≤28，无 >>32 UB。 */
+static const struct ChsShiftAmount {
+    uint32_t left;
+    uint32_t right;
+} sChsShiftAmounts[8] = {
+    {  0, 32 },
+    {  4, 28 },
+    {  8, 24 },
+    { 12, 20 },
+    { 16, 16 },
+    { 20, 12 },
+    { 24,  8 },
+    { 28,  4 },
+};
 
-    if (x & 1u)
-        return (uint8_t)(tile[bi] & 0x0Fu);
-    return (uint8_t)(tile[bi] >> 4);
-}
-
-static void tile_put_px(uint8_t *tile, unsigned x, unsigned y, uint8_t ink)
-{
-    unsigned bi = y * 4u + x / 2u;
-
-    if (x & 1u)
-        tile[bi] = (uint8_t)((tile[bi] & 0xF0u) | (ink & 0x0Fu));
-    else
-        tile[bi] = (uint8_t)((tile[bi] & 0x0Fu) | ((ink & 0x0Fu) << 4));
-}
-
+/* 美版 DrawGlyphTile_ShadowedFont + ShiftGlyphTile_*_Width0..8 的合体字版实现：
+ * src 经 CopyGlyph(C,E,D) 已烘焙调色板（= 美版 colors[] 逐 nibble 查表的等价
+ * 前置），故整行按字移位即可，逐像素循环取缔。
+ * 输出语义与旧 refpr 逐像素版逐字节一致：
+ *   左 tile  [0,startPixel) 保留 | 字形覆盖 | [gw_end,8) 清底色
+ *   spill    整 tile 重写 = 溢出字形 [0,gw_end-8) | 清底色 [gw_end-8,8) */
 void DrawGlyphTile_refpr(
     TextPrinter *win, struct GlyphTileInfo *info,
     const uint8_t *src32, uint8_t *dest, uint8_t *spillTile)
@@ -225,17 +230,19 @@ void DrawGlyphTile_refpr(
     uint32_t dest_words[8];
     uint32_t spill_words[8];
     uint8_t *temp = (uint8_t *)temp_words;
-    uint8_t *dest_l = (uint8_t *)dest_words;
-    uint8_t *spill_l = (uint8_t *)spill_words;
     unsigned startPixel = info->startPixel;
     unsigned width = info->width;
-    unsigned gw_end = startPixel + width;
-    unsigned r, c;
+    unsigned gw_end;
+    unsigned r;
     uint8_t fg_ov = *(volatile uint8_t *)ADDR_OPT_FG_COLOR;
     uint8_t color_c = (fg_ov != 0u) ? fg_ov : win_u8(win, WIN_COLOR_C);
     uint8_t color_d = win_u8(win, WIN_COLOR_D);
     uint8_t color_e = win_u8(win, WIN_COLOR_E);
-    int need_spill = (spillTile != 0) && (gw_end > 8u);
+    int need_spill;
+    uint32_t bg_word = 0x11111111u * (color_d & 0x0Fu);
+    const struct ChsShiftAmount *sa;
+    uint32_t keep_mask;
+    uint32_t val;
 
     /* CopyGlyph(C,E,D) + 清列盖字：与 bak DrawGlyphTile_CHS 同构，保缩进/相位 */
     CopyGlyph2bppTo4bpp_Origin(src32, temp, color_c, color_e, color_d);
@@ -245,48 +252,37 @@ void DrawGlyphTile_refpr(
         return;
     }
 
+    if (width > 8u)
+        width = 8u;
+    gw_end = startPixel + width;
+    need_spill = (spillTile != 0) && (gw_end > 8u);
+    sa = &sChsShiftAmounts[startPixel & 7u];
+    keep_mask = (startPixel >= 8u) ? 0xFFFFFFFFu
+                                   : ((1u << (startPixel * 4u)) - 1u);
+
     {
         const uint32_t *dv = (const uint32_t *)dest;
-        for (c = 0; c < 8u; c++)
-            dest_words[c] = dv[c];
-    }
-    if (need_spill) {
-        const uint32_t *sv = (const uint32_t *)spillTile;
-        for (c = 0; c < 8u; c++)
-            spill_words[c] = sv[c];
+        for (r = 0; r < 8u; r++)
+            dest_words[r] = dv[r];
     }
 
     for (r = 0; r < 8u; r++) {
-        for (c = startPixel; c < gw_end && c < 8u; c++)
-            tile_put_px(dest_l, c, r, color_d);
-        if (need_spill) {
-            unsigned from = (startPixel > 8u) ? (startPixel - 8u) : 0u;
-            unsigned to = gw_end - 8u;
+        val = temp_words[r];
+        if (width < 8u)
+            val &= (1u << (width * 4u)) - 1u;
 
-            for (c = from; c < to && c < 8u; c++)
-                tile_put_px(spill_l, c, r, color_d);
-        }
-        for (c = 0; c < width; c++) {
-            unsigned dc = startPixel + c;
+        dest_words[r] = (dest_words[r] & keep_mask) | (val << sa->left);
+        if (gw_end < 8u)
+            dest_words[r] |= bg_word << (gw_end * 4u);
 
-            if (dc < 8u)
-                tile_put_px(dest_l, dc, r, tile_get_px(temp, c, r));
-            else if (need_spill)
-                tile_put_px(spill_l, dc - 8u, r, tile_get_px(temp, c, r));
-        }
-        if (gw_end < 8u) {
-            for (c = gw_end; c < 8u; c++)
-                tile_put_px(dest_l, c, r, color_d);
-        }
-        if (need_spill && gw_end > 8u) {
-            for (c = gw_end - 8u; c < 8u; c++)
-                tile_put_px(spill_l, c, r, color_d);
-        }
+        if (need_spill)
+            spill_words[r] = (val >> sa->right)
+                           | (bg_word << ((gw_end - 8u) * 4u));
     }
 
-    copy_tile32(dest, dest_l);
+    copy_tile32(dest, dest_words);
     if (need_spill)
-        copy_tile32(spillTile, spill_l);
+        copy_tile32(spillTile, spill_words);
 }
 
 unsigned GetGlyphWidthChinese(TextPrinter *win, uint32_t gidx_or_code, unsigned glyphWidth)

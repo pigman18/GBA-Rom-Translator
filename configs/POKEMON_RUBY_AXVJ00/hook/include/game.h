@@ -50,6 +50,10 @@
  * 注意与 tm0/tm2 的 sub_8003630 不是同一个函数（sub_8003464 内实证）。 */
 #define ADDR_DRAW_GLYPH_TM3_PRIM           0x080033B4u
 #define ADDR_INIT_WINDOW_TILE_DATA         0x08002A50u
+/* 设置（选项）窗口模板：gdb 实证 InitWindowTileData 的 256/256 次调用 r0 都是
+ * 它；其余 tm1 窗口走 LZ77 场景字库，不走 InitWindowTileData（README §F7）。
+ * P24「削字库」据此门控，非本窗口一律照常渲染（零回归）。 */
+#define ADDR_OPTION_WINDOW_TEMPLATE        0x081BB874u
 #define ADDR_GLYPH_PAGE_CURTAB             0x0203FFD2u
 // <<<GEN_ADDR_END>>>
 /*

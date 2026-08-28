@@ -18,6 +18,17 @@
 #include "text_scene.h"
 
 /* ============================================================================
+ * 布局模式切换：改这一行即可。
+ *   TM1_MODE_PARTITION —— 已实测通过：值列 8px，120 tile，
+ *                         不越出 charblock2、不踩任何已实测引用字形
+ *   TM1_MODE_GRID      —— 位置式（bak 的做法），可全 12px、不依赖文本结构；
+ *                         但格位需求大，务必先跑
+ *                         `scripts/check_tm1_scene.py --search-base`
+ *                         搜一个不踩引用字形且不越界的 grid_base
+ * ==========================================================================*/
+#define OPTION_MODE   TM1_MODE_GRID
+
+/* ============================================================================
  * 设置（选项）窗口 — 模板 0x081BB874
  *
  * 几何（gdb [CFF] 实测，以打印时的值为准）：
@@ -66,15 +77,61 @@ static const uint16_t kOptGlyphAvoid[24] = {
     0x1B7u, 0x1BFu, 0x1C3u,                                  /* 439 447 451 */
 };
 
+/* GRID 模式参数（OPTION_MODE = TM1_MODE_GRID 时生效）：
+ *   列只用到 4..26、行 1..18 ⇒ stride 取 23 而非 30，
+ *   跨度从 600 降到 ~436，才塞得进 charblock2(512)。
+ *   grid_base 需由 `check_tm1_scene.py --search-base` 搜出不踩引用字形的值。 */
+#define OPT_GRID_BASE    0x028u   /* 40 */
+#define OPT_GRID_STRIDE  23u
+#define OPT_GRID_X0      4u
+#define OPT_GRID_Y0      1u
+
+/* 字形镜像表（仅 GRID 模式需要）。
+ *
+ * GRID 穷举证明：stride 20..32 × x0 0..6 × base 1..512，**无解**——
+ * 位置式足迹必然压到引用字形。加镜像后 base=40 成为最优：
+ *   中文足迹 148 tile / max=433（≤511，不越 charblock2），
+ *   只有 4 个字形被压住，镜像槽取 3/5/7/9（均不在足迹与引用字形内）。
+ *
+ * ⚠ 镜像槽 3..10 与 PARTITION 的 title_base [3,19) 重叠 —— 故用 #if 门控，
+ *   PARTITION 下 mirror_n = 0，钩子完全不执行，零副作用。
+ * ⚠ 改 grid_base 后必须重跑 `check_tm1_scene.py`，它会重算冲突集并核对本表。 */
+#if OPTION_MODE == TM1_MODE_GRID
+static const struct Tm1Mirror kOptMirrors[4] = {
+    { 0x14Fu, 0x003u },   /* 335,336 → 3,4 */
+    { 0x151u, 0x005u },   /* 337,338 → 5,6 */
+    { 0x153u, 0x007u },   /* 339,340 → 7,8 */
+    { 0x199u, 0x009u },   /* 409,410 → 9,10 */
+};
+#define OPT_MIRRORS   kOptMirrors
+#define OPT_MIRROR_N  4u
+#else
+#define OPT_MIRRORS   ((const struct Tm1Mirror *)0)
+#define OPT_MIRROR_N  0u
+#endif
+
+/* 候选列字模：GRID 容量够 → 全 12px（0）；PARTITION 容量紧 → 8px（4）。
+ * 这是 GRID 相对 PARTITION 的**主要收益**：标签与候选同为 12px，视觉统一。 */
+#if OPTION_MODE == TM1_MODE_GRID
+#define OPT_CAND_FONT  0u
+#else
+#define OPT_CAND_FONT  4u
+#endif
+
+/* 字段顺序必须与 text_scene.h 的 struct Tm1WinCfg 一致（自检脚本会核对个数） */
 static const struct Tm1WinCfg kOptWindow = {
     "OPTION",
     0x081BB874u,
+    OPTION_MODE,
     kOptRows,   kOptRowSpans, 7u,
     3u, 1u,                 /* r = (curY - 3) >> 1  → 5,7,..,17 ⇒ 1..7 */
     0x03u,                  /* title_base：curY<=3 用 [3,19) */
-    8u,                     /* curX < 8 = 标签列（12px） */
+    8u,                     /* col_label_max：curX < 8 = 标签列（12px） */
     0u,  16u,               /* 标签：off 0，span 16（4 字 × 12px） */
     kOptSlots,  3u,
+    OPT_CAND_FONT,          /* GRID=0(12px) / PARTITION=4(8px) —— 见上 */
+    OPT_GRID_BASE, OPT_GRID_STRIDE, OPT_GRID_X0, OPT_GRID_Y0,
+    OPT_MIRRORS, OPT_MIRROR_N,
     kOptGlyphAvoid, 24u,
 };
 
@@ -112,6 +169,11 @@ uint16_t scene_tm1_sub_off(const struct Tm1WinCfg *cfg, uint8_t cur_x, uint16_t 
 {
     unsigned i;
 
+    if (cfg->mode == TM1_MODE_GRID) {
+        /* 位置式：不划子区、不复位（tile 由行列直接算出） */
+        *span = 0u;
+        return 0u;
+    }
     if (cur_x < cfg->col_label_max) {
         *span = (uint16_t)cfg->lbl_span;
         return (uint16_t)cfg->lbl_off;
@@ -125,4 +187,47 @@ uint16_t scene_tm1_sub_off(const struct Tm1WinCfg *cfg, uint8_t cur_x, uint16_t 
     /* 末条 cx_hi 应为 0xFF 兜底；保险起见回落最后一个槽 */
     *span = (uint16_t)cfg->slots[cfg->slot_n - 1u].span;
     return (uint16_t)cfg->slots[cfg->slot_n - 1u].off;
+}
+
+uint16_t scene_tm1_grid_num(const struct Tm1WinCfg *cfg, uint8_t cur_x,
+                            uint8_t cur_y, uint8_t cur_ty, unsigned map_tx)
+{
+    int row = (int)(cur_y + cur_ty) - (int)cfg->grid_y0;
+    int col = (int)(cur_x + map_tx) - (int)cfg->grid_x0;
+
+    /* 越界时夹到边界，避免算到 charblock3（那里可能被别的窗口当 tilemap） */
+    if (row < 0)
+        row = 0;
+    if (col < 0)
+        col = 0;
+    if (col >= (int)cfg->grid_stride)
+        col = (int)cfg->grid_stride - 1;
+    return (uint16_t)(cfg->grid_base
+                      + (unsigned)row * cfg->grid_stride
+                      + (unsigned)col);
+}
+
+uint16_t scene_tm1_mirror_of(const struct Tm1WinCfg *cfg, uint16_t tile)
+{
+    unsigned i;
+
+    for (i = 0u; i < cfg->mirror_n; i++) {
+        uint16_t src = cfg->mirrors[i].src;
+
+        /* 字形占 2 格：命中 src 或 src+1 都算（lower 表项会传 src+1 进来） */
+        if (tile == src || tile == (uint16_t)(src + 1u))
+            return (uint16_t)(cfg->mirrors[i].dst + (tile - src));
+    }
+    return 0u;                  /* 无需镜像 */
+}
+
+uint16_t scene_tm1_mirror_src(const struct Tm1WinCfg *cfg, uint16_t tile)
+{
+    unsigned i;
+
+    for (i = 0u; i < cfg->mirror_n; i++) {
+        if (cfg->mirrors[i].src == tile)
+            return cfg->mirrors[i].dst;
+    }
+    return 0u;
 }

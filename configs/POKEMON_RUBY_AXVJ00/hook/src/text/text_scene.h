@@ -33,10 +33,56 @@ struct Tm1Slot {
     uint8_t span;
 };
 
+/* ---- 布局模式 ------------------------------------------------------------
+ * PARTITION（分配式）
+ *   行基址表 + 列子区。省 tile、不越界、可静态证明安全；
+ *   但要预知文本结构（一行几个候选 / 每候选几个字），
+ *   为了塞进可用区间常常得给候选列降 8px。
+ *
+ * GRID（位置式，bak 的做法）
+ *   tile = grid_base + (y-y0)*stride + (x-x0)，lower = upper + stride。
+ *   每个屏幕格子固定占一格，**不分配、不记账** → 不依赖文本结构，
+ *   全 12px 也装得下，且天然幂等。
+ *   代价：格位需求 ≈ 列数 × 行数，容易越出 charblock2(512)；
+ *   且会覆盖大半个预渲染字库（只影响本窗口自己的非中文字符，
+ *   不影响其它界面——切场景时 VRAM 会重载）。
+ *   ⚠ 若算到 tile ≥ 512 就是 charblock3，那里可能被其它窗口当 tilemap 用
+ *     （实测见过 0x0600F800 = screenblock 31）→ **有可能影响其它界面**。
+ *     用 scripts/check_tm1_scene.py 校验并让它搜一个安全的 grid_base。
+ * ------------------------------------------------------------------------*/
+#define TM1_MODE_PARTITION 0u
+#define TM1_MODE_GRID      1u
+
+/* ---- 字形镜像（Glyph Mirror）--------------------------------------------
+ * 背景：tm1 的原生字符走 ROM 预渲染查表，**零 VRAM 写入**（FontSub_Origin
+ *   只写 tilemap 表项，值 = 字库 tile = startOffset + glyph*2）。
+ *   中文要落 VRAM 就得躲开"本窗口实际引用的字形"，这就是 tile 稀缺的根源。
+ *
+ * 镜像 = 给被中文压住的字形做一个**替身**：
+ *   1) 字库铺完后立刻把该字形（2 tile，64B）拷到空闲处 dst；
+ *   2) 原生字符打印时，把 ROM 写好的表项值从 src 改成 dst。
+ *   → 字库本身一字不动，中文不必再躲它。
+ *
+ * 为什么拷贝时机必须在 InitWindowTileData 里（而不是用到时再拷）：
+ *   中文一写入就把 src 的内容覆盖了，**之后**再拷只会拷到中文碎片。
+ *   而 InitWindowTileData 逐 glyph 调用、且整体跑在文本打印之前
+ *   （gdb 实证：预渲染 日志行 698–4013，首个文本打印 4026），
+ *   此刻字形刚渲染完、内容干净，是唯一的正确时机。
+ *   → 这也让镜像**完全无状态**：不需要 RAM 映射表，更不需要失效逻辑。
+ *
+ * src/dst 都填**字形起点**（= startOffset + glyph*2，必为奇数），
+ * 各占 2 格：src/src+1 → dst/dst+1。表项 lower 一律 = upper+1。
+ * ------------------------------------------------------------------------*/
+struct Tm1Mirror {
+    uint16_t src;       /* 原字形 tile 起点（被中文覆盖的那个） */
+    uint16_t dst;       /* 镜像 tile 起点（须不在中文足迹与引用字形内） */
+};
+
 /* ---- tm1 窗口布局配置 ---------------------------------------------------*/
 struct Tm1WinCfg {
     const char     *name;           /* 仅用于调试/日志，运行时不影响落址 */
     uint32_t        tpl;            /* 窗口模板地址 = 唯一键 */
+    uint8_t         mode;           /* TM1_MODE_PARTITION / TM1_MODE_GRID */
 
     /* 行基址 */
     const uint16_t *row_tab;        /* 菜单行基址表，下标 = 行号-1 */
@@ -49,11 +95,24 @@ struct Tm1WinCfg {
     uint16_t        title_base;     /* curY <= row_y0 时用它（标题/无候选列的行） */
 
     /* 列分区 */
-    uint8_t         col_label_max;  /* curX < 此值 = 标签列（12px），否则候选列（8px） */
-    uint8_t         lbl_off;        /* 标签子区起点 */
-    uint8_t         lbl_span;       /* 标签子区容量 */
-    const struct Tm1Slot *slots;    /* 候选槽表 */
+    uint8_t         col_label_max;  /* curX < 此值 = 标签列，否则候选列 */
+    uint8_t         lbl_off;        /* 标签子区起点（PARTITION） */
+    uint8_t         lbl_span;       /* 标签子区容量（PARTITION） */
+    const struct Tm1Slot *slots;    /* 候选槽表（PARTITION） */
     uint8_t         slot_n;
+    uint8_t         cand_font;      /* 候选列字模：0 = 同标签(12px)，4 = FontChsSmall(8px) */
+
+    /* GRID 用：tile = grid_base + (y - grid_y0)*stride + (x - grid_x0) */
+    uint16_t        grid_base;
+    uint8_t         grid_stride;
+    uint8_t         grid_x0;
+    uint8_t         grid_y0;
+
+    /* 字形镜像表（可为空：mirror_n == 0 表示无需镜像，运行时零开销）。
+     * ⚠ 只有 GRID 这类"位置式"布局才需要——它没法躲开引用字形。
+     *   PARTITION 若本就无冲突，保持空表即可。 */
+    const struct Tm1Mirror *mirrors;
+    uint8_t                 mirror_n;
 
     /* 该窗口**已实测被引用的字形 tile**（各占 2 格）。运行时不读；
      * 供离线自检脚本核对"中文区有没有踩到引用字形"。
@@ -68,7 +127,22 @@ const struct Tm1WinCfg *scene_tm1_lookup(uint32_t tpl);
 /* 由配置求行基址：curY <= row_y0 → title_base；否则 row_tab[r-1]，r clamp 到 [1,n]。 */
 uint16_t scene_tm1_row_base(const struct Tm1WinCfg *cfg, uint8_t cur_y);
 
-/* 由配置求行内子区起点，容量写入 *span。 */
+/* 由配置求行内子区起点，容量写入 *span。GRID 模式返回 span=0（不做复位）。 */
 uint16_t scene_tm1_sub_off(const struct Tm1WinCfg *cfg, uint8_t cur_x, uint16_t *span);
+
+/* GRID 模式求 tile。map_tx = 行内已推进的 tile 列（base_tx + (px>>3)）。
+ * 返回值未加 lower 偏移——lower 由调用方按 row_delta*grid_stride 另加。 */
+uint16_t scene_tm1_grid_num(const struct Tm1WinCfg *cfg, uint8_t cur_x,
+                            uint8_t cur_y, uint8_t cur_ty, unsigned map_tx);
+
+/* 字形镜像查表（宽松）：tile 落在 [src, src+2) 即命中，返回对应镜像 tile
+ * （src→dst，src+1→dst+1）。给**运行时表项改写**用——原生字符的 upper/lower
+ * 表项值分别是 src / src+1，两者都要改。无镜像返回 0。 */
+uint16_t scene_tm1_mirror_of(const struct Tm1WinCfg *cfg, uint16_t tile);
+
+/* 字形镜像查表（严格）：仅当 tile **精确等于** src 才返回 dst。
+ * 给**预渲染期拷贝**用——InitWindowTileData 传来的 tile 恒为字形起点
+ * （startOffset + glyph*2），精确匹配可以杜绝错位拷贝。无镜像返回 0。 */
+uint16_t scene_tm1_mirror_src(const struct Tm1WinCfg *cfg, uint16_t tile);
 
 #endif /* TEXT_SCENE_H */

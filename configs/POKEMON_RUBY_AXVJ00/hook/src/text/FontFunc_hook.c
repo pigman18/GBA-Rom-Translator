@@ -317,6 +317,7 @@ static void chs_sync_tilex(TextPrinter *win, int slot, unsigned px, unsigned adv
 
 /* 前向声明：tm1 行基址（实现见中文入口前），chs_tile_num 需要它算 tile 索引 */
 static uint16_t tm1_row_base(TextPrinter *win);
+static const struct Tm1WinCfg *tm1_cfg(TextPrinter *win);
 
 static uint16_t chs_tile_num(TextPrinter *win, unsigned map_tx, int col_delta, int row_delta)
 {
@@ -331,13 +332,26 @@ static uint16_t chs_tile_num(TextPrinter *win, unsigned map_tx, int col_delta, i
     }
     {                                                /* tm0 / tm1 */
         uint16_t off = win_u16(win, WIN_TILE_OFFSET);
-        /* tm1：win[0x18] 已是「行内偏移」(0..19，由 chs_blit 恢复/推进)，
+        /* tm1 分配式：win[0x18] 已是「行内偏移」(0..19，由 chs_blit 恢复/推进)，
          * tile = 行基址 + 行内偏移；**不再加 win[0x16]**（v4 全屏"1"的坑：
          * +win[0x16] 会让所有中文表项指到 1+2=3 = 字模 1）。
          * row_delta=1 → lower=upper+1（gdb 实测 469 条差=1，连续成对）。 */
-        if (tm == 1u)
+        if (tm == 1u) {
+            const struct Tm1WinCfg *cfg = tm1_cfg(win);
+
+            if (cfg && cfg->mode == TM1_MODE_GRID)
+                /* 位置式：lower 在下一行同列(+stride)，spill 在下一列(+1)。 */
+                return (uint16_t)(scene_tm1_grid_num(
+                                      cfg,
+                                      win_u8(win, WIN_CURSOR_X),
+                                      win_u8(win, WIN_CURSOR_Y),
+                                      win_u8(win, WIN_CURSOR_TILE_Y),
+                                      map_tx)
+                                  + (uint16_t)(col_delta
+                                               + row_delta * cfg->grid_stride));
             return (uint16_t)(tm1_row_base(win) + off
                               + (uint16_t)(col_delta * 2 + row_delta));
+        }
         return (uint16_t)(base + off + (uint16_t)(col_delta * 2 + row_delta));
     }
 }
@@ -350,6 +364,27 @@ static uint8_t *chs_tile_ptr(TextPrinter *win, unsigned map_tx, int col_delta, i
                                         + (uint32_t)row_delta * 0x20u);
     }
     return vram_tile(win, chs_tile_num(win, map_tx, col_delta, row_delta));
+}
+
+/* tilemap 表项地址 —— 复刻 ROM sub_08003708（UpdateTilemap 的定位子程）：
+ *   col = (win[0x1A] + win[0x1B]) & 0xFF
+ *   row = (win[0x1C] + win[0x1D]) & 0xFF
+ *   addr = tpl->tilemap + ((row*32 + col) << 1)
+ * lower 表项在 addr + 0x40（= 下一行同列）。
+ * tx 可覆盖列游标：原生 FontSub 返回后 win[0x1B] 已被推进，
+ * 故必须在调用【前】取好 tx 与地址。 */
+static uint16_t *tilemap_entry_at(TextPrinter *win, uint8_t tx)
+{
+    uint8_t *tpl = win_template(win);
+    uint32_t tp  = win_u32(tpl, TPL_TILEMAP);
+    unsigned col, row;
+
+    if (tp == 0u)
+        return 0;                       /* 缓冲区直绘窗口无 tilemap */
+    col = (unsigned)((unsigned)win_u8(win, WIN_CURSOR_X) + (unsigned)tx) & 0xFFu;
+    row = (unsigned)((unsigned)win_u8(win, WIN_CURSOR_Y)
+                     + (unsigned)win_u8(win, WIN_CURSOR_TILE_Y)) & 0xFFu;
+    return (uint16_t *)(uintptr_t)(tp + ((row * 32u + col) << 1));
 }
 
 static void chs_map_at(TextPrinter *win, uint8_t tx, uint16_t abs_u, uint16_t abs_l)
@@ -613,8 +648,10 @@ static void chs_blit(TextPrinter *win, uint32_t glyph)
     if (tm == 1u) {
         const struct Tm1WinCfg *cfg = tm1_cfg(win);
 
-        if (cfg && win_u8(win, WIN_CURSOR_X) >= cfg->col_label_max)
-            fn = 4u;
+        /* cand_font=0 表示候选列也用 12px（GRID 因此可以全 12px） */
+        if (cfg && cfg->cand_font
+            && win_u8(win, WIN_CURSOR_X) >= cfg->col_label_max)
+            fn = cfg->cand_font;
     }
 
     /* tm1：把 win[0x18] 恢复为「行内偏移」——标签 / 候选槽各有起点。
@@ -711,9 +748,31 @@ static void br_tm0(TextPrinter *win, uint32_t glyph, int is_chs)
 
 static void br_tm1(TextPrinter *win, uint32_t glyph, int is_chs)
 {
+    const struct Tm1WinCfg *cfg;
+
     if (is_chs) { chs_blit(win, glyph); return; }
 
-    FontSub_Origin(win, glyph);       /* ROM 预渲染查表，零 VRAM 写入 */
+    cfg = tm1_cfg(win);
+    if (cfg != 0 && cfg->mirror_n != 0u) {
+        /* 原生字符只写 tilemap 表项（值 = 字库 tile），不写 VRAM。
+         * 若那个 tile 正被中文占着，就把表项改指到预渲染期备好的镜像。
+         * ⚠ 地址必须在 FontSub_Origin【之前】算：它会推进 win[0x1B]。 */
+        uint8_t  tx = win_u8(win, WIN_CURSOR_TILE_X);
+        uint16_t *e = tilemap_entry_at(win, tx);
+
+        FontSub_Origin(win, glyph);
+        if (e != 0) {
+            uint16_t v  = (uint16_t)(*e & 0x0FFFu);
+            uint16_t mv = scene_tm1_mirror_of(cfg, v);
+
+            if (mv != 0u) {
+                *e = (uint16_t)((*e & 0xF000u) | mv);   /* 保留 palette */
+                e[32] = (uint16_t)((e[32] & 0xF000u) | (mv + 1u));  /* lower: +0x40B */
+            }
+        }
+    } else {
+        FontSub_Origin(win, glyph);   /* ROM 预渲染查表，零 VRAM 写入 */
+    }
     chs_advance(win, 8u);
 }
 
@@ -793,6 +852,37 @@ void InitWindowTileData_Hook(void *tpl, uint32_t startOffset, uint32_t glyph)
 {
     /* ⛔ 跳过逻辑已于 2026-08-29 实测后停用，见上方 v9 段说明。
      * 保留钩子（直通）以便日后需要时恢复；勿删——入口桩已占用 P24。 */
-    (void)tpl;
     InitWindowTileData_Origin(tpl, startOffset, glyph);
+
+    /* ---- 字形镜像：把被中文压住的字形复制一份到空闲处 ------------------
+     * 时机是这里而非"用到时"的唯一原因：中文一写入就把原位置覆盖了，
+     * 之后再拷只会拷到中文碎片。此刻（预渲染刚写完、文本尚未打印）
+     * 是内容干净且**整体早于任何中文写入**的唯一窗口
+     * （gdb 实证：预渲染行 698–4013 < 首个文本打印 4026）。
+     * 逐 glyph 调用 ⇒ 每个字形只会命中一次，天然无状态、无需失效逻辑。 */
+    {
+        const struct Tm1WinCfg *cfg =
+            scene_tm1_lookup((uint32_t)(uintptr_t)tpl);
+
+        if (cfg && cfg->mirror_n != 0u) {
+            /* tile0 恒为字形起点（startOffset + glyph*2），故用严格匹配 */
+            uint16_t dst = scene_tm1_mirror_src(cfg,
+                               (uint16_t)(startOffset + glyph * 2u));
+
+            if (dst != 0u) {
+                uint8_t *td = (uint8_t *)(uintptr_t)win_u32(tpl, TPL_TILE_DATA);
+
+                if (td != 0) {
+                    const uint32_t *s = (const uint32_t *)(td
+                                        + (startOffset + glyph * 2u) * 32u);
+                    uint32_t *d = (uint32_t *)(td + (uint32_t)dst * 32u);
+                    unsigned k;
+
+                    /* 一个字形 = 上下 2 个 tile × 32B = 64B = 16 个 u32 */
+                    for (k = 0u; k < 16u; k++)
+                        d[k] = s[k];
+                }
+            }
+        }
+    }
 }

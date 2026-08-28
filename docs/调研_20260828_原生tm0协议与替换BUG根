@@ -1,0 +1,175 @@
+# 调研：原生 tm0 落址协议实证 + "替换 BUG" 根因
+
+> 2026-08-28，capstone 反汇编 `roms/origin/POKEMON_RUBY_AXVJ00.gba`。
+> 本文推翻前一份设计稿（`PLAN_TEXT_BRIDGE_REDESIGN.md`）中"日版缺分配器"的判断。
+
+---
+
+## 1. `sub_8003520`（tm0 内核）完整解出
+
+地址 `0x08003520`，逐条反汇编（`scripts/dis_axvj.py 0x08003520`）：
+
+```asm
+08003528: ldr  r3, [r5]             ; r3 = win->template
+0800352A: ldrh r2, [r5, #0x16]      ; r2 = tileDataStartOffset
+0800352C: ldrh r1, [r5, #0x18]      ; r1 = tileDataOffset
+0800352E: adds r2, r2, r1           ; ★ tileIdx = win[0x16] + win[0x18]
+08003530: lsls r2, r2, #5           ; ★ tileIdx * 32 (4bpp tile)
+08003532: ldr  r1, [r3, #0xc]       ; r1 = template->tileData
+08003534: adds r1, r1, r2           ; ★ dst = tileData + tileIdx*32
+08003536: ldrb r2, [r5, #0xb]       ; fontNum
+08003538: ldrb r3, [r5, #0xc]       ; fg
+0800353A: ldrb r4, [r5, #0xd]       ; bg
+0800353C: str  r4, [sp]
+0800353E: ldrb r4, [r5, #0xe]       ; shadow
+08003540: str  r4, [sp, #4]
+08003542: bl   #0x8003630           ; ★ sub_8003630(glyph, dst, fontNum, fg, bg, shadow)
+...
+0800354A: adds r2, r2, r0           ; r2 = tileIdx (重算)
+0800354E: lsrs r1, r2, #0x10        ; upper = tileIdx
+08003550: movs r0, #0x80
+08003552: lsls r0, r0, #9           ; 0x10000
+08003554: adds r2, r2, r0
+08003556: lsrs r2, r2, #0x10        ; lower = tileIdx + 1
+0800355A: bl   #0x80036dc           ; ★ UpdateTilemap(win, tileIdx, tileIdx+1)
+```
+
+等价 C（`sub_8003520` **纯函数，零状态推进**）：
+
+```c
+void sub_8003520(TextPrinter *win, u16 glyph) {
+    u16  tileIdx = win[0x16] + win[0x18];
+    u8  *dst     = win->template->tileData + (tileIdx << 5);
+    sub_8003630(glyph, dst, win[0xB], win[0xC], win[0xD], win[0xE]);
+    UpdateTilemap(win, tileIdx, tileIdx + 1);
+}
+```
+
+## 2. `FontFunc_tm0`（`0x08003569`）—— 状态推进在这里
+
+```asm
+0800356C: bl   #0x8003520           ; sub_8003520(win, glyph)
+08003570: ldrh r0, [r4, #0x18]
+08003572: adds r0, #2
+08003574: strh r0, [r4, #0x18]      ; ★ win[0x18] += 2
+08003576: ldrb r0, [r4, #0x1b]
+08003578: adds r0, #1
+0800357A: strb r0, [r4, #0x1b]      ; ★ win[0x1B] += 1
+```
+
+```c
+void FontFunc_tm0(TextPrinter *win, u16 glyph) {
+    sub_8003520(win, glyph);
+    win[0x18] += 2;   /* tileDataOffset：线性追加游标 */
+    win[0x1B] += 1;   /* cursorTileX */
+}
+```
+
+---
+
+## 3. 三个决定性结论
+
+### 结论 A：日版**不缺**分配器 —— 我上一轮判断错误
+
+`win[0x16] + win[0x18]` 就是一个**线性追加分配器**，且：
+
+- `win[0x18]` 每字符 `+= 2`（一个 8×16 字符 = 2 tile），与 windowId / 场景 / charblock **完全无关**；
+- `dst` 直接由 `tileIdx` 派生 → **控制了 `win[0x18]` 就等于控制了落址**；
+- `sub_8003630` 的 5 个参数 `fontNum/fg/bg/shadow` **全部来自 win 字段**
+  （`win[0xB]/0xC/0xD/0xE`）→ 前稿"未决风险 2（参数来源待实证）"**已解决**。
+
+**所以不需要自己写分配器，只需要接管"绘制"这一步。**
+
+### 结论 B：scene 门控的根因 —— 现有代码在原生游标之上另建坐标系
+
+`text_scene.c:208`：
+
+```c
+uint16_t scene_gctn_linear(TextPrinter *win, unsigned xOff, unsigned yOff) {
+    return scene_remap_tile(win,
+        win_u16(win, WIN_TILE_BASE) + win_u16(win, WIN_TILE_OFFSET)
+        + 2u * xOff + yOff);        /* ← 原生协议里没有的项 */
+}
+```
+
+原生是 `win[0x16]+win[0x18]`；现有代码又叠了 `2*xOff + yOff`。
+
+同时 `text_render.c:346/396/468/560/568` **确实在推进** `win[0x18] += 2`。
+→ **同一个游标被两套公式解释**（我们的 `+2xOff+yOff` vs 原生的裸值）。
+
+`scene_gctn_mode2`（`text_scene.c:216`）更极端：完全另起一套
+`idx = y*CHS_TILE_GRID_W + x + band + base + origin` 的 grid 坐标系。
+
+**场景门控存在的唯一理由，就是在猜「这个窗口该用哪套坐标系」。**
+一旦回归原生协议（只用 `win[0x16]+win[0x18]`），坐标系唯一 → 门控整体失去存在意义。
+
+### 结论 C："替换 BUG" 的真正机制
+
+日文交还原生 `FontFunc_tm0` 时，原生按 `tileIdx = win[0x16]+win[0x18]` 落址。
+中文路径虽然推进了 `win[0x18]`，但落址用的是**另一套公式**（含 `xOff/yOff` 或 grid）。
+
+两个后果，取决于偏移方向：
+
+- 中文算出的 `tileIdx` **落后于**原生游标 → 日文随后写到同一 tile → **中文被覆盖（替换）**；
+- 中文算出的 `tileIdx` **超前** → 中文占了日文的位置，且中间留下空洞/错位数字。
+
+`text_render.c:458-474` 的 `CHS_LAST_OFF_ADDR` / `off_last` 保存-回滚，
+以及 `scene_apply_linear_floor` 的 floor 兜底，都是在给这个错位打补丁。
+
+**根因不是"两套 tile 空间并存"，而是"两套公式解释同一个游标"。**
+这也解释了为什么"让日文也走我们的通道"能压住症状——它只是把两套公式统一成一套，
+属于 workaround；正解是**废弃我们那套公式，回归原生**。
+
+---
+
+## 4. 新设计：接管绘制，其余全部交还原生
+
+```c
+void Chs_FontFunc(TextPrinter *win, u16 glyph)
+{
+    u16 tileIdx = win_u16(win, WIN_TILE_BASE) + win_u16(win, WIN_TILE_OFFSET);
+    u8 *dst = *(u8 **)(win->template + TPL_TILE_DATA) + (tileIdx << 5);
+
+    if (is_chs(glyph))
+        chs_blit(glyph, dst);                                  /* 只换绘制 */
+    else
+        sub_8003630(glyph, dst, win[0xB], win[0xC], win[0xD], win[0xE]);
+
+    UpdateTilemap_Origin(win, tileIdx, tileIdx + 1);
+    win_set_u16(win, WIN_TILE_OFFSET, tileIdx_delta + 2);      /* 原生步进 */
+    win_set_u8  (win, WIN_CURSOR_TILE_X, win_u8(win, WIN_CURSOR_TILE_X) + 1);
+}
+```
+
+**约 12 行**，替换掉：pitch 分配器、行相位表（8 slot @0x0203FF90）、
+scene 门控（233 行）、mode2 grid、`CHS_LAST_OFF_ADDR` 回滚。
+
+### 唯一的硬约束：advance 必须是 8px
+
+`win[0x1B]`（cursorTileX）是 **tile 级**，只能 `+1` = 8px。
+当前 `CHS_GLYPH_ADVANCE_PX = 12`（game.h:180），而字模已经是
+**8px 点阵**（`ADDR_FONT_CHS_SMALL 0x09100000`，2026-08-24 决定）。
+
+**字模 8px、步进 12px → 12 不是 8 的整数倍 → 必须保留半列相位。**
+这是全部复杂度中最后、也是唯一无法靠"回归原生"消除的一项。
+
+| 方案 | advance | 相位表 | 视觉 | 代码量 |
+|---|---|---|---|---|
+| **P1 全同构** | **8px** | **不需要** | 汉字无字间距，与日文半角同节奏 | **~300 行** |
+| **P2 保 12px** | 12px | 需要（仅相位，不负担分配） | 保持现状 | ~700 行 |
+
+> P2 仍可**删掉 scene 门控**——因为分配回归 `win[0x18]` 后不再需要猜 grid；
+> 相位只用于"写 tilemap 表项时的列位置"，不再参与 tile 分配。
+
+---
+
+## 5. 待验证 / 风险
+
+1. **tm1 / tm2 / tm3 的落址是否同构** —— 本文只解了 tm0。
+   tm1（`FontSubTable`，写预渲染 tile 表项）与 tm2（`win[0x20]` 追加写）
+   协议不同，需逐个确认；尤其 PSS/战斗界面大量走 tm1。
+2. **`win[0x1A]`（cursorX）语义** —— game.h:323 注记"原生 UpdateTilemap 会推进
+   win[0x1A]"，与 `UpdateTilemap_PreserveCursorX` 的 save/restore 配套。
+   回归原生后是否仍需 preserve，需实测。
+3. **8px advance 的可读性** —— 属产品决策，需用户确认。
+4. 现有 6 个源文件处于 `M` 未提交状态，改动前先 `git stash` 或建分支。

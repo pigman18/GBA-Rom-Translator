@@ -1,7 +1,65 @@
 # PLAN — ROM 分发表桥接层：用官方函数替换手写实现
 
-> 状态：**待用户拍板，未动手**。
+> 状态：**P0/P1 已实施并通过静态验证（2026-08-28）；P2/P3 已被 P1 吸收；P4/P5 暂缓**。
 > 依据：`docs/调研_20260828_日版AXVJ文本引擎分发表与美版桥接评估.md`（全部静态反汇编证据）。
+
+---
+
+## 实施记录（2026-08-28）
+
+### ✅ P0 标定 —— 完成
+
+全部 5 项标定完毕，另有 2 项超出原计划的发现（见调研文档 §1.5、§4）：
+
+| 项 | 结果 |
+|---|---|
+| `sub_8003EE0`（FontSubTable 第二用户） | = **TryEraseDownArrow**：先 `bl sub_8003964`，再 switch textMode；case0 直接 `bl sub_8003520(win,0)`（`0x08003F1A` 实证，**不经 FontFuncTable**，故改表不影响擦箭头）、case1 `FontSubTable[fontNum](win,0)`（`0x08003F24` 实证） |
+| `sub_8003464` | tm3 内层，经 `sub_80034A8` 算 tile：`cursorTileX+(cursorX+2)+tileBase+row*30`，lower=+30 |
+| `0x080032B0` | FontFuncTable 第二用户的 literal pool，宿主未标定（**不阻塞**：P1 不改表） |
+| `sub_8003964` | TryEraseDownArrow 的前置判断 |
+| **printer 0x1E/0x1F 空闲性** | **已证空闲**（构造函数不写 + 引擎簇零命中）。但仅 2 字节，详见 P4 |
+
+### ✅ P1 前端瘦身 —— 完成，**−230 行**
+
+`PrintNextChar_hook.c` **416 → 180 行**。删除并交还原生：
+
+| 删除 | 行 | 交还 |
+|---|---|---|
+| `HandleExtCtrlCode` + `AXV_STATE_*` + `FC_*` | 129 | 原生 `0x08003110`（返回值 0/1/2 正确传播，实证） |
+| `axv_play_bgm/play_se/clear_window` | 15 | 随 FC 0B/0C/10 交还原生 |
+| FA/FB/FD/FE/FF 状态机分支 | 25 | 原生跳转表 `0x08003324` |
+| `DrawInitialDownArrow` | 10 | 原生 `0x08003F4C`（`win[0x06]=0` + body，实证一致） |
+| `PcsPrint_Custom`/`PcsPrint_Tm1`/`sPcs*` 两级表 | 84 | 原生 `FontFuncTable`（`FontFunc_Origin`） |
+| `scene_is_buffer_printer`/`delegate`/`jp_via_chs` | 19 | 无需按窗型特判 |
+
+保留（原生确实做不到）：F9/slot 翻译前端、菜单 ▶(0xEF) 自绘、FA/FB 的 12px 相位预对齐。
+
+### ✅ P2/P3 —— 已并入 P1，**不单独立项**
+
+实施中发现两者目标已被 P1 覆盖，无需再动：
+
+- **P2（建桥接层 + 改 ROM 分发表）**：P1 之后，`PrintNextChar_Origin` 让原生自己走
+  `FontFuncTable[textMode]` 两级分发，我们不需要再往表里塞指针即可获得官方分发。
+  菜单 ▶ 在前端拦截即可，改表反而会牵动 `TryEraseDownArrow` 的 tm1 分支。
+  **结论：不改表，只加 `FontFunc_Origin()`（读 ROM 表直接调原生）。**
+- **P3（非汉字直通官方）**：`FontFunc_Origin()` 就是。另经查 `GetGlyph` 早已在用
+  官方原语（`GetGlyphTilePointers_Origin` + `CopyGlyph1bppTo4bpp_Origin`），
+  没有手写的 JP 解码需要替换——原估计的 −70 行里大部分本就不存在。
+
+### 验证（全部静态，未启模拟器）
+
+- `build.bat` 编译通过，零新增告警；`game.bin` **15,032 → 14,204 字节**（余 51,332）
+- 已删函数在 `out/game.map` 中 **0 处残留**
+- Meowth 完整流水线 `full --seed-only` **exit=0**，产出
+  `roms/outputs/POKEMON_RUBY_AXVJ00_translated.gba`（30.7 MB），日志无 error/abort
+- 产出 ROM 字节级核对：
+  - `0x080032F8` = `ldr r1,[pc,#0]; bx r1` → `0x08800000`(EngineEntry) ✓
+  - 原生字节自 `0x08003300` 起完好未被覆盖 ✓
+  - `PrintNextChar_Origin@0x08800008` 重放 4 条序言后 `bx 0x08003301` ✓
+  - 符号地址 `PrintNextChar_Hook=0x0880011C`、`TranslateHandleChar=0x088003E0` 与 map 一致 ✓
+
+> ⚠️ **仍需用户实机验收**：控制码（颜色/字体切换/暂停/BGM/SE）、▼ 翻页、
+> 六场景（对话/菜单/战斗/背包/图鉴/队伍）。静态只能证明链路接对了。
 > 目标：**不靠重写、靠"换成调官方函数"来少写代码**，同时消除"手写实现与原生语义漂移"这一类 bug。
 > 关联：`PLAN_TEXT_RENDER_REFERENCE_BRIDGE.md`（V1–V4 已落地，本方案是其延续，不是替代）。
 
@@ -152,16 +210,56 @@ void FontSub_f1_f4(win,glyph){ UpdateTilemap(win, tileBase+Map[glyph*4],   tileB
 
 > 验收：像素级 A/B（打包两版让用户同屏对照）；重点看血条（tm2）与菜单（tm3）。
 
-### P4 — 相位入 printer 结构 · **净减 ≈95 行** · 风险中（**依赖 P0 第 5 项**）
+### P4 — 相位入 printer 结构 · **净减 ≈95 行** · 风险中
+
+> **2026-08-28 实施结论：本步已标定完毕，但暂不改动，理由见下。**
 
 现役把 12px 半列相位存在**全局 8 槽 LRU 表**（`0x0203FF80`，`chs_bind_pitch_slot` 55 行
-+ `chs_pitch_key` + `pitch_reset` + `ChsPitchCtrl` 结构 ≈ 95 行），靠"行指纹"匹配，
++ `chs_pitch_key` + `pitch_reset` + `ChsPitchCtrl` 结构 ≈ 95 行），靠 16 位"行指纹"匹配，
 这是**串台类 bug 的结构性来源**。
 
-若 P0 证实 printer 的 **0x1E/0x1F**（或 0x21-0x23）未被原生使用，则相位改为**随窗口走**：
-LRU / 驱逐 / 指纹失配检测全部消失，每窗口独立，天然不会串。
+#### 标定结果（一手，可复核）
 
-> 这是本方案里**单点收益最高**的一步，但**必须先标定**，标不了就维持现状。
+| 证据 | 结论 |
+|---|---|
+| `InitTextPrinter @0x08002C68`（构造函数）反汇编 | 只初始化 **0x04–0x1D**；**0x1E / 0x1F / 0x20 一字未写** |
+| 全 ROM 带重同步反汇编（43 万条指令）过滤引擎簇 0x08002800–0x08004800 | **+0x1E / +0x1F 零命中**（+0x1B 有 22 处、+0x1D 有 18 处 —— 扫描方法有效性对照） |
+| 引擎簇 0x18–0x30 逐偏移扫描 | 0x1E–0x1F、0x21–0x2B、0x2D、0x2F–0x30 零命中；0x20 有 4 处（tm2 缓冲指针） |
+| 结构体布局 | 0x1C cursorY / 0x1D cursorTileY / **0x1E-0x1F 填充** / 0x20 u32 缓冲指针 |
+
+→ **0x1E/0x1F 是 0x20 处 u32 的对齐填充，可证空闲（2 字节）。**
+0x21–0x2B 在引擎簇同样零命中，但**无法静态排除非文本子系统共用同一块 IWRAM**，风险不可控。
+
+#### 为什么暂不改：状态需要 8 字节，可证的只有 2 字节
+
+实测相位状态**四个字段全在使用**（`text_render.c` 实证）：
+
+| 字段 | 用途 | 行 |
+|---|---|---|
+| `chs_pitch_key` (u16) | 行指纹，槽位绑定 | 109 / 119 |
+| `chs_px` (u16) | 行内已绘像素（相位本体） | 321 / 375 / 436 |
+| `base_tx` (u8) | 行首表项列，tilemap 落点 + 失配检测 | 321 / 371 / 436-452 / 554 |
+| `write_op` (u8) | 布局策略（`text_scene.c:162` 消费） | 164-171 |
+| `char_base` (u8) | 指纹的一部分 | 108 / 119 |
+
+共 **8 字节**，只有 `last_adv` 是纯记账（可省）。2 字节装不下。
+
+若只把 `chs_px` + `write_op` 搬进 0x1E/0x1F，剩余 `base_tx` / `pitch_key` / `char_base`
+仍要全局槽，`chs_bind_pitch_slot` 的 LRU 主体删不掉——收益从 −95 掉到 −30 左右，
+却要承担"相位重置时机"这个**必须实机迭代**的语义风险。
+
+> 历史教训（`game.h` 注释）：旧页游标表落在 0x0203FFD2 游戏数据区，
+> 曾是**背包/队伍死机**的根因。相位/串台区是全项目最脆的部分。
+
+#### 后续若要做（按顺序）
+
+1. 先确认 printer 数组步长：gdb 日志见 printer @0x0202E5DC 与 0x0202E658 相距 **0x7C**；
+   若确为数组元素，则 0x24–0x7B 可能是同记录的其它字段，**不能占用**；若只是两个
+   独立全局，则 0x21–0x2B 可用。
+2. 确认后再把整个 `struct ChineseTileState` 搬进 printer（建议落 0x24，8 字节对齐），
+   此时 LRU / 指纹 / 驱逐 / 失配检测全部可删，−95 行且结构性消串台。
+3. 相位重置时机改为显式：换行（FE）由原生推进 `cursorTileY(0x1D)`，
+   可用 `cursorTileX(0x1B) <= base_tx` 判新行（现役已有此逻辑，见 436 行）。
 
 ### P5 — tile 分配器统一 · **净减 ≈100–150 行** · 风险高、回报高
 

@@ -70,6 +70,52 @@ typedef struct {
 
 #define TM1_LINEAR_FLOOR   0x100u
 
+/* tm1 确定性分区（无分配器、无槽——v2 行槽已被实测否决：标签/值是同 curY
+ * 的不同会话（gdb：值列 curX=15/19/23 vs 标签 curX=4），并发 key ≈17 个，
+ * 8 槽轮转覆盖 → 行内容串换）。
+ *
+ * 基址纯位置推导：row = curY>>1（实测标签 curY=1,5,7..17 → 0,2..8），
+ * col = curX>=8（值列）：base = 0x100 + row*0x10 + col*0x8（每子区 4 字）。
+ * 9 行 × 2 子区 × 0x8 = 0x90 ⊂ 自由区 [0x100,0x1C8)。同会话重绘永远映射
+ * 同一子区 → 幂等，游标不漂移、不外溢。
+ *
+ * 会话重置检测：原生 ITP 把 win[0x18] 重置回 0x100+(curTX-1)*2（gdb 全部
+ * 样本吻合：curTX=2/4/5/7 → 0x102/106/108/10C）。本子区全在 <0x100，
+ * 重置值恒 ≥0x102 → 区间判定天然区分，无需公式比对。 */
+/* ⚠️ 2026-08-29：v4 / v4.1（偶数槽方案）**已回退**，当前行为 = v3 确定性分区。
+ * 回退原因（详见 docs/评估_20260829_text重构合理性反汇编复核.md）：
+ *   v4   全屏"1" —— chs_tile_num 仍吃 win[0x16](=1)，tile=1+2=3 = 字模 1 上下半槽
+ *   v4.1 仍未修复 —— 子区 0x8 装不下 4 字（12px 相位交错下约需 12 tile）、
+ *        部分会话 win[0x18] 未被原生重置（残留 0x2C/0x14A/0x166 落进错子区）、
+ *        off 可越过 0x100 再进字库区；且偶数区仅 127 tile 装不下 9 行需求。
+ * v3 已知代价：中文区 [0x100,0x190) 压在字库 lower 奇数槽上（R1）→ 数字/问号
+ * 被踩。这是"串换已修、基本可读"与"数字正常但整体错乱"之间的取舍，用户
+ * 拍板取前者。R1 的彻底解法待专项（见评估文档 §四）：
+ *   1) gdb 采 BGCNT 确认设置菜单窗 charBase 与表项值域
+ *   2) 反汇编 InitWindowTileData 确认字库预渲染真实布局（连续 or 上下分离）
+ *   3) 再据此重设计中文落址（目标：位置式 tile=格子，一次消解 R1/R2/R4） */
+#define TM1_SUB_STRIDE     0x8u          /* 每子区 8 tile = 4 个 12px 字 */
+
+/* ---- v5 方案 D：数据驱动安全区（2026-08-29 gdb 实测）----------------------
+ * 字库预渲染写满 charBase 2 的 [1,0x201)=512 tile，但**设置菜单实际只引用
+ * 22 个字模**（upper 去重集合，每字模占 2 连续 tile，实占 44 tile）：
+ *   1 33 49 111 119 323 325 327 329 331 333 335 337 339 345 349 369 397 409 439 447 451
+ * → 最大安全连续块 = **[121, 322]（202 tile）**，另有 [3,32]/[51,110]/[453,512]。
+ *
+ * 实测文本上界（模板 0x081BB874, tm=1）：标签恒 4 字（F9 80 短语：对话速度/
+ * 战斗动画/对战规则/声音/按键模式/窗口/关闭/改变设置），值 ≤2 字（IWRAM，
+ * 87% 为 7 字节 = FC 05 0F + 1 字）。12px 字相位交错下 off 推进 +2/+4 交替
+ * → 标签 12 tile、值 8 tile → 行 stride 20，9 档 = 180 → **[121, 301] ⊂ 安全块**。
+ *
+ * ⚠ 该引用集是**设置菜单场景专属**；其他 tm1 场景（如 0x081BB784）需各自采集。
+ * 互斥显示的场景（设置菜单 vs 图鉴）可安全共用同一分配区。
+ * ⚠ palette（FC 05 调色板）只改表项高 4 位，**不影响 tile 索引**，不占配额。 */
+#define TM1_CHS_BASE       0x79u   /* 121  = 安全块 [121,322] 起点 */
+#define TM1_ROW_STRIDE     0x14u   /* 20   = 标签 12 + 值 8          */
+#define TM1_LABEL_SPAN     0xCu    /* 12   = 4 字 × 3 tile            */
+#define TM1_VALUE_OFF      0xCu    /* 12   = 值子区在行内的起点偏移   */
+#define TM1_VALUE_SPAN     0x8u    /* 8    = 2 字 × ~4 tile           */
+
 typedef void (*fn_draw6)(uint32_t glyph, void *dst, uint32_t font,
                          uint32_t fg, uint32_t bg, uint32_t shadow);
 
@@ -201,6 +247,9 @@ static void chs_sync_tilex(TextPrinter *win, int slot, unsigned px, unsigned adv
 
 /* ---- 落址：按 textMode 求 tile 编号 / VRAM 指针 ---------------------------*/
 
+/* 前向声明：tm1 行基址（实现见中文入口前），chs_tile_num 需要它算 tile 索引 */
+static uint16_t tm1_row_base(TextPrinter *win);
+
 static uint16_t chs_tile_num(TextPrinter *win, unsigned map_tx, int col_delta, int row_delta)
 {
     uint8_t  tm   = win_u8(win, WIN_TEXTMODE) & 7u;
@@ -212,10 +261,15 @@ static uint16_t chs_tile_num(TextPrinter *win, unsigned map_tx, int col_delta, i
                                 + win_u8(win, WIN_CURSOR_TILE_Y) + row_delta);
         return (uint16_t)(base + col + 2u + (unsigned)row * CHS_TILE_GRID_W);
     }
-    {                                                /* tm0 / tm1：线性游标 */
+    {                                                /* tm0 / tm1 */
         uint16_t off = win_u16(win, WIN_TILE_OFFSET);
-        if (tm == 1u && off < TM1_LINEAR_FLOOR)
-            off = TM1_LINEAR_FLOOR;
+        /* tm1：win[0x18] 已是「行内偏移」(0..19，由 chs_blit 恢复/推进)，
+         * tile = 行基址 + 行内偏移；**不再加 win[0x16]**（v4 全屏"1"的坑：
+         * +win[0x16] 会让所有中文表项指到 1+2=3 = 字模 1）。
+         * row_delta=1 → lower=upper+1（gdb 实测 469 条差=1，连续成对）。 */
+        if (tm == 1u)
+            return (uint16_t)(tm1_row_base(win) + off
+                              + (uint16_t)(col_delta * 2 + row_delta));
         return (uint16_t)(base + off + (uint16_t)(col_delta * 2 + row_delta));
     }
 }
@@ -421,6 +475,18 @@ static void chs_buffer(TextPrinter *win, const struct ChsGlyphTiles *tiles, unsi
     win_set_u32(win, WIN_TILE_DATA, (uint32_t)(uintptr_t)dst);
 }
 
+/* tm1 子区基址：纯位置推导（见文件头 TM1_SUB_STRIDE 注释），无状态幂等。
+ * v4：改占偶数槽 [2,0x92)，避开字库奇数槽（R1 修复）。基址全 <0x100，
+ * 原生会话重置值恒 ≥0x102 → 区间判定天然区分，无需公式比对。 */
+static uint16_t tm1_row_base(TextPrinter *win)
+{
+    unsigned row = win_u8(win, WIN_CURSOR_Y) >> 1;
+
+    if (row > 8u)
+        row = 8u;
+    return (uint16_t)(TM1_CHS_BASE + row * TM1_ROW_STRIDE);
+}
+
 /* ---- 中文入口：字库选择 + 解压 + 分派 -------------------------------------*/
 static void chs_blit(TextPrinter *win, uint32_t glyph)
 {
@@ -436,15 +502,16 @@ static void chs_blit(TextPrinter *win, uint32_t glyph)
     if (tm == 2u)
         fn = 4u;
 
-    /* tm1 地板必须【写回 win[0x18]】，不能只在 chs_tile_num 里局部提升：
-     * 否则 chs_off_add() 仍基于原始偏小的 off 累加，每个汉字都被算回同一个
-     * tile → tilemap 上 N 个格子全指向同一 tile → 显示成"蛋蛋蛋"式重复。
-     * （队伍/图鉴/背包等 slot 场景正是 tm1。） */
+    /* tm1：把 win[0x18] 恢复为「行内偏移」——标签列 0、值列 TM1_VALUE_OFF。
+     * 行基址由 chs_tile_num 加 tm1_row_base()。新会话（原生重置 off≥0x102）
+     * 或越出本子区 → 复位；同会话内推进则不动（幂等：重绘总从子区头开始）。 */
     if (tm == 1u) {
         uint16_t off = win_u16(win, WIN_TILE_OFFSET);
+        uint16_t start = (win_u8(win, WIN_CURSOR_X) >= 8u) ? TM1_VALUE_OFF : 0u;
+        uint16_t span  = (start == 0u) ? TM1_LABEL_SPAN : TM1_VALUE_SPAN;
 
-        if (off < TM1_LINEAR_FLOOR)
-            win_set_u16(win, WIN_TILE_OFFSET, TM1_LINEAR_FLOOR);
+        if (off < start || off >= (uint16_t)(start + span))
+            win_set_u16(win, WIN_TILE_OFFSET, start);
     }
 
     DecompressGlyph_Chinese(&g, (uint16_t)(glyph & 0xFFFFu), fn);

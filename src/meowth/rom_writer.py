@@ -297,6 +297,31 @@ class RomWriter:
         return rom
 
     @staticmethod
+    def align_rom(rom: bytearray, min_size: int = 0x02000000) -> bytearray:
+        """Pad ROM up to a power-of-two size (default floor 32MB) with 0xFF.
+
+        Flash carts (EZ Flash Omega etc.) size the ROM window by power of two
+        and need trailing free space to inject their own patch code. The armips
+        path (``expands_rom: true``) skips the up-front :meth:`expand_rom`, so
+        the result stops at the last written byte — not a power of two, and with
+        zero trailing free space. The cart then mis-sizes the save area and can
+        clobber live data when it injects its patch.
+
+        Call this immediately before saving. Never call it before armips:
+        0xFF padding breaks armips free-space detection.
+
+        Note: padding is applied **in place** and the same object is returned
+        (same contract as :meth:`expand_rom`). Callers that need to know whether
+        anything changed must capture ``len(rom)`` *before* calling — comparing
+        the return value against the argument afterwards is always false.
+        """
+        size = max(len(rom), min_size)
+        aligned = 1 << max((size - 1).bit_length(), 9)  # floor 512 (SD sector)
+        if len(rom) < aligned:
+            rom.extend(b"\xFF" * (aligned - len(rom)))
+        return rom
+
+    @staticmethod
     def save_rom(rom: bytearray, path: Path) -> None:
         """Write ROM bytearray to file."""
         Path(path).write_bytes(rom)

@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 gdb_patcher.py — 基于 mGBA GDB stub 的运行时追踪工具（yaml 配置驱动）。
@@ -717,6 +717,73 @@ def _maybe_vram_survey(gdb: GdbClient, ctx: Ctx) -> None:
         ctx.log(f"  cb2尾 0x1F8-0x1FF (0x0600BF00) 非零={'有' if any(tail) else '全零'}")
     except GdbError:
         pass
+
+
+@handler("ChsFontFunc")
+def _on_chs_fontfunc(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """新管线每字符入口（Chs_FontFunc_hook）：r0=win, r1=glyph, r2=is_chs。
+    输出 win 关键字段 + 自定义相位（0x0203FF84=key|px，0x0203FF88=key|base_tx）。
+    诊断：中英混排 / 换行后 px、base_tx、win[0x1B] 三者是否连贯演化。
+    ⚠ 地址随 game.bin 重建变化（当前对应 sha 3b370e2cf4e5），重建后须更新。"""
+    win = regs.get("r0", 0)
+    glyph = regs.get("r1", 0) & 0xFFFF
+    is_chs = regs.get("r2", 0) & 0xFF
+    lr = regs.get("r14", 0) & ~1
+    who = "C管线" if 0x08800000 <= lr < 0x09000000 else "原生ROM"
+    wb = _read_win(gdb, win)
+    if len(wb) < 0x1E:
+        return
+    ph = _read_mem(gdb, 0x0203FF84, 48)
+    genb = _read_mem(gdb, 0x0203FFB4, 1)
+    slots = []
+    for i in range(8):
+        if len(ph) >= (i + 1) * 6:
+            k = u16(ph, i * 6)
+            x = u16(ph, i * 6 + 2)
+            b = ph[i * 6 + 4]
+            g = ph[i * 6 + 5]
+            slots.append("s%d:k%04X/px%d/tx%d/g%d" % (i, k, x, b, g))
+    slots.append("gen=%d" % (genb[0] if genb else -1))
+    ctx.log(
+        f"\n[CFF] win=0x{win:08X} tm={wb[0x0A]} font={wb[0x0B]} chs={is_chs} "
+        f"glyph=0x{glyph:04X} idx={u16(wb, 0x14)} 调用方={who} LR=0x{lr:08X}"
+    )
+    ctx.log(
+        f"  TB=0x{u16(wb, 0x16):04X} OFF=0x{u16(wb, 0x18):04X} "
+        f"curX={wb[0x1A]} curTX={wb[0x1B]} curY={wb[0x1C]} curTY={wb[0x1D]}"
+    )
+    ctx.log("  槽: " + " | ".join(slots))
+
+
+@handler("SlotDrawChs")
+def _on_slot_draw_chs(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """slot 命中中文流绘制（slot_draw_chinese）：r0=win, r1=流, r2=next_index。
+    诊断队伍/图鉴等 slot 名字错位：流字节 + F9 解码 + index 推进。
+    可区分「哈希匹配错条目」vs「流正确但 gidx/推进错」。
+    ⚠ 地址随 game.bin 重建变化（当前对应 sha 3b370e2cf4e5），重建后须更新。"""
+    win = regs.get("r0", 0)
+    cn = regs.get("r1", 0)
+    nxt = regs.get("r2", 0) & 0xFFFF
+    lr = regs.get("r14", 0) & ~1
+    data = _read_mem(gdb, cn, 24)
+    if not data:
+        return
+    dec: list[str] = []
+    i = 0
+    while i < len(data) and data[i] != 0xFF and len(dec) < 20:
+        if data[i] == 0xF9 and i + 3 < len(data) and data[i + 1] == 0:
+            dec.append(f"字({data[i + 2]:02X}{data[i + 3]:02X})")
+            i += 4
+        else:
+            dec.append(f"{data[i]:02X}")
+            i += 1
+    idxb = _read_mem(gdb, win + 0x14, 2)
+    idx = u16(idxb, 0) if len(idxb) == 2 else -1
+    ctx.log(
+        f"\n[SLT] win=0x{win:08X} cur_index={idx} next_index={nxt} LR=0x{lr:08X}"
+    )
+    ctx.log(f"  流@0x{cn:08X}: {data.hex(' ')}")
+    ctx.log(f"  解码: {' '.join(dec)}")
 
 
 @handler("UpdateTilemap")

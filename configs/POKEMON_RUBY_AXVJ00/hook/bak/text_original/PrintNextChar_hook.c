@@ -25,13 +25,14 @@
  *   跨模块 API（PrintGlyph/DrawGlyph/TranslateHandleEscape）见 include/text.h。
  *
  * 模块划分（include/src 布局）：
- *   本文件 = 引擎；src/text_translater.c = F9 翻译链路（F900/F980/slot）；
+ *   本文件 = 引擎；src/text_translter.c = F9 翻译链路（F900/F980/slot）；
  *   src/text_render.c = 共享渲染原语 + GetGlyph 字形源解析；
  *   src/text_render.c = refpr + pitch + 日版 GetCursorTileNum（薄路径）。
  * 本文件取代 text_jp2chs.c 及旧多文件引擎（归档于 src/bak/text/，移出构建）。
  * ===================================================================================== */
 #include "text.h"
 #include "text_render.h"
+#include "text_scene.h"
 
 /* =====================================================================
  * §1 常量与布局
@@ -78,14 +79,6 @@ enum {
 int  PrintNextChar_Hook(TextPrinter *win);
 static int  DrawMenuCursorEF(TextPrinter *win);
 
-/* 落址协议桥接（src/text/FontFunc_hook.c）：按 win[0x0A](textMode) 分派到
- * 四种原生协议，只替换"绘制"一步；落址/步进/写表项全部回归 ROM 原生。
- * 实证见 docs/调研_20260828_原生tm0协议与替换BUG根 */
-void Chs_FontFunc_hook(TextPrinter *win, uint32_t glyph, int is_chs);
-/* 整窗交还官方（血条/缓冲打印机：tm1+font4+tilemap0）。
- * 汇编实现见 src/text/entry.s，返回值语义同 PrintNextChar_Hook。 */
-int PrintNextChar_Origin(TextPrinter *win);
-
 /* =====================================================================
  * §11 单字节分发（PCS 两级表，镜像原生 sPrintGlyphFuncs × sWriteGlyphTilemapFuncs）
  * ===================================================================== */
@@ -97,19 +90,47 @@ static void PcsPrint_Custom(TextPrinter *win, uint32_t cur_char)
 {
     uint8_t buf[128];
     uint8_t width = 8;
+    struct ChsGlyphTiles t;
 
     if (!GetGlyph(win, cur_char, buf, &width))
         return;                         /* 引擎零回落：不可印位直接消费 */
-    (void)buf;
-    (void)width;
-    Chs_FontFunc_hook(win, cur_char, 0);       /* 非中文：像素归官方原语 */
+    {
+        /* 缓存键基底：JP/SYM/空白 = (fontNum<<8)|code（钳制与 GetGlyph 一致） */
+        uint8_t fn = win_u8(win, WIN_FONTNUM_REAL);
+        if (fn > 6u)
+            fn = 3u;
+        t.glyph_id = (uint16_t)((fn << 8) | (cur_char & 0xFFu));
+    }
+    t.tl = buf + 0x00;
+    t.bl = buf + 0x20;
+    t.tr = buf + 0x40;
+    t.br = buf + 0x60;
+    DrawGlyphTiles(win, &t, width);
 }
+
+/* 第二级 [fontNum]，镜像原生 sWriteGlyphTilemapFuncs——每格对应日志实证窗口：
+ *  [4]=PrintGlyph_TextMode1_Origin 队伍名窗 0x081BB43C（charBase1）：font4 走
+ *                FontType1Map 紧凑区 [TILE_BASE,+0xD5]，在 CHS scratch 带
+ *                [0xD7,0x14B] 下方，原生表项指向的 tile 完好（gdb 实证；
+ *                ♂/♀/Lv/状态图标 0x14C-0x151/0x18C-0x19B 不再被覆写）。
+ *  [3]=Custom    弹窗 0x081BB49C（charBase0）/请选择 0x081BB484：font3 线性
+ *                区 [1,0x1BC] 与 scratch 带重叠（数字 0xA2→tile0x145，208 处实证）。
+ *  [1]=Custom    无实证，默认安全（原生同为紧凑区，将来可切 Origin）。
+ *  其余=Custom。 */
+static const PcsPrintFunc sPcsTm1FontFuncs[8] = {
+    PcsPrint_Custom,       /* font0 */
+    PcsPrint_Custom,       /* font1：无实证，默认自绘 */
+    PcsPrint_Custom,       /* font2 */
+    PcsPrint_Custom,       /* font3：线性区与 scratch 带重叠 */
+    PrintGlyph_TextMode1_Origin,    /* font4：FontType1Map 区在 scratch 带下方 */
+    PcsPrint_Custom,       /* font5 */
+    PcsPrint_Custom,       /* font6 */
+    PcsPrint_Custom,       /* font7 */
+};
 
 static void PcsPrint_Tm1(TextPrinter *win, uint32_t cur_char)
 {
-    /* tm1 落址回归原生：非中文走 ROM 预渲染查表（FontSubTable），
-     * 中文走线性游标 + 地板保护。不再按 fontNum 猜字体区。 */
-    Chs_FontFunc_hook(win, cur_char, 0);
+    sPcsTm1FontFuncs[win_u8(win, WIN_FONTNUM_REAL) & 7u](win, cur_char);
 }
 
 /* 第一级 [textMode]，镜像原生 sPrintGlyphFuncs：
@@ -149,8 +170,26 @@ int DrawGlyph(TextPrinter *win, uint32_t cur_char)
  * 缓冲在栈：game.bin 无 RAM 段（link/game.ld），全局落 ROM 写无效。 */
 void PrintGlyph(TextPrinter *win, uint32_t gidx, unsigned glyphWidth)
 {
+    struct TextGlyph glyph;
+    struct ChsGlyphTiles t;
+    unsigned width;
+    uint8_t fn;
+
     (void)glyphWidth;
-    Chs_FontFunc_hook(win, gidx, 1);      /* 中文：按 textMode 走原生落址协议 */
+    fn = win_u8(win, WIN_FONTNUM_REAL);
+    if (fn > 6u)
+        fn = 3u;
+    /* tm2 缓冲（战斗顶栏名/Lv 等）：原生 8px 槽，中文须 FontChsSmall */
+    if (win_u8(win, WIN_TEXTMODE) == 2u)
+        fn = 4u;
+    DecompressGlyph_Chinese(&glyph, (uint16_t)(gidx & 0xFFFFu), fn);
+    width = glyph.width;
+    t.glyph_id = (uint16_t)(0x8000u | (gidx & 0x1FFFu));
+    t.tl = (uint8_t *)&glyph.gfxBufferTop[0];
+    t.tr = (uint8_t *)&glyph.gfxBufferTop[8];
+    t.bl = (uint8_t *)&glyph.gfxBufferBottom[0];
+    t.br = (uint8_t *)&glyph.gfxBufferBottom[8];
+    DrawGlyphTiles(win, &t, width);
 }
 
 
@@ -289,17 +328,9 @@ int PrintNextChar_Hook(TextPrinter *win)
     uint16_t index;
     uint8_t c;
 
-    /* tm1+font4+tilemap0 仍交 Origin；tm2 血条缓冲要走 slot，不能整窗委托。
-     * 原 scene_is_buffer_printer() 的判定内联于此——落址已按 textMode 分派，
-     * 不再需要按 template/cursor 猜场景（text_scene.c 已删）。 */
-    {
-        uint8_t *tpl = win_template(win);
-
-        if (win_u8(win, WIN_TEXTMODE) == 1u
-            && win_u8(win, WIN_FONTNUM_REAL) == 4u
-            && tpl && win_u32(tpl, TPL_TILEMAP) == 0u)
-            return PrintNextChar_Origin(win);
-    }
+    /* tm1+font4+tilemap0 等仍交 Origin；tm2 血条缓冲要走 slot，不能整窗委托 */
+    if (scene_is_buffer_printer(win) && win_u8(win, WIN_TEXTMODE) != 2u)
+        return scene_delegate_buffer_print(win);
 
     /* 复刻原生前 8 条指令：u16 回绕推进 + 取字符 */
     index = win_u16(win, WIN_TEXT_INDEX);
@@ -338,7 +369,7 @@ int PrintNextChar_Hook(TextPrinter *win)
             return 1;
     }
 
-    /* ---- 翻译链路（F9 协议 + slot 替换，src/text_translater.c）---- */
+    /* ---- 翻译链路（F9 协议 + slot 替换，src/text_translter.c）---- */
     if (TranslateHandleChar(win, c))
         return 1;
 

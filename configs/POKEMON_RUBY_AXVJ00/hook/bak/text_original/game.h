@@ -42,13 +42,6 @@
 #define ADDR_TEXT_CLEAR_WINDOW             0x08003BA8u
 #define ADDR_UPDATE_TILEMAP                0x080036DCu
 #define ADDR_PRINT_GLYPH_TM1_ORIGIN        0x0800360Cu
-/* 字形绘制原语 sub_8003630(glyph, dst, fontNum, fg, bg, shadow)。
- * dst 是【参数】——这是全套桥接的支点：落址归我们，像素归官方。
- * 实证见 docs/调研_20260828_原生tm0协议与替换BUG根 */
-#define ADDR_DRAW_GLYPH_PRIM               0x08003630u
-/* tm3 专用字形绘制原语 sub_80033B4(glyph, dst, fontNum, fg, bg, shadow)。
- * 注意与 tm0/tm2 的 sub_8003630 不是同一个函数（sub_8003464 内实证）。 */
-#define ADDR_DRAW_GLYPH_TM3_PRIM           0x080033B4u
 #define ADDR_INIT_WINDOW_TILE_DATA         0x08002A50u
 #define ADDR_GLYPH_PAGE_CURTAB             0x0203FFD2u
 // <<<GEN_ADDR_END>>>
@@ -378,7 +371,7 @@ uint32_t GetStringWidth(const uint8_t *buf, uint32_t max_bytes);
 /* （原 P24 InitWindowTileData 分区器钩子已于 2026-08-25 随页游标表移除：
  *  页表落 0x0203FFD2 游戏数据区，为背包/队伍死机根因。） */
 
-/* 场景布局门控已移除：落址按 win[0x0A](textMode) 分派，见 src/text/FontFunc_hook.c */
+/* 场景布局门控 → include/text_scene.h + src/text/text_scene.c */
 
 /*
  * AXVJ GetGlyphTilePointers @ 0x08003730 is 4-arg (JP ROM; language baked

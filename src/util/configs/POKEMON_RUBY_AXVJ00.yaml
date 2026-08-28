@@ -752,3 +752,11 @@ gdb:
   address: '0x080425CC'
   description: Alt2 我方单打 OBJ 拷贝循环入口（r6=buf r8=列数 r5=0）；看拷几列、缓冲是否已被 chrome 改
   default: false
+- name: ChsFontFunc
+  address: '0x088019b0'
+  description: 新管线每字符入口 Chs_FontFunc_hook（r0=win,r1=glyph,r2=is_chs）；含相位 px/base_tx。逐字符断点量大，建议 --functions 按需启用。地址对应 8槽LRU 版 game.bin，重建后须 nm 更新
+  default: false
+- name: SlotDrawChs
+  address: '0x08800450'
+  description: slot 命中中文流绘制 slot_draw_chinese（r0=win,r1=流,r2=next_index）。诊断队伍/图鉴 slot 名字错位。地址对应 8槽LRU 版 game.bin，重建后须 nm 更新
+  default: false

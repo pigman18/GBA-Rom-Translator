@@ -1,4 +1,4 @@
-/* text_render.h — refpr + pitch + GCTN */
+/* text_render.h — refpr + pitch + GCTN（布局门控见 text_scene.h） */
 #ifndef TEXT_RENDER_H
 #define TEXT_RENDER_H
 

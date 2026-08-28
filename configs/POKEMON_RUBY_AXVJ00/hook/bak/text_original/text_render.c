@@ -1,5 +1,6 @@
-/* text_render.c — refpr + pitch + GCTN */
+/* text_render.c — refpr + pitch + GCTN（布局门控见 text_scene.c） */
 #include "text_render.h"
+#include "text_scene.h"
 
 #define CHS_GLYPH_HALF_BIT   0x8000u
 #define CHS_GLYPH_IDX_MASK   0x7FFFu
@@ -170,6 +171,32 @@ void chs_pitch_set_write_op(TextPrinter *win, uint8_t op)
     chs_bind_pitch_slot(win, 0)->write_op = op;
 }
 
+static int draw_use_linear(TextPrinter *win, uint8_t write_op)
+{
+    return scene_should_use_linear(win, write_op);
+}
+
+static void ensure_linear_dest_floor(TextPrinter *win)
+{
+    scene_apply_linear_floor(win);
+}
+
+static uint16_t GetCursorTileNum_Linear(TextPrinter *win, unsigned xOff, unsigned yOff)
+{
+    return scene_gctn_linear(win, xOff, yOff);
+}
+
+static void GetCursorTileNum_Mode2(
+    TextPrinter *win, int tile_x, uint16_t *upper, uint16_t *lower)
+{
+    scene_gctn_mode2(win, tile_x, upper, lower);
+}
+
+static void map_at(TextPrinter *win, uint8_t tx, uint16_t abs_u, uint16_t abs_l)
+{
+    win_set_u8(win, WIN_CURSOR_TILE_X, tx);
+    UpdateTilemap_PreserveCursorX(win, abs_u, abs_l);
+}
 
 /* ---- sChsShiftAmounts（pokeruby text.c sGlyphShiftAmounts 同构）----
  * left = startPixel*4：本 tile 内左移；right = 32-left：溢出段右移。
@@ -267,6 +294,247 @@ unsigned GetGlyphWidthChinese(TextPrinter *win, uint32_t gidx_or_code, unsigned 
     return glyphWidth - 8u;
 }
 
+static void DrawGlyphTiles_core(
+    TextPrinter *win, const struct ChsGlyphTiles *tiles, int linear,
+    unsigned glyphWidth)
+{
+    volatile struct ChineseTileState *st = chs_bind_pitch_slot(win, 0);
+    unsigned startPixel;
+    unsigned pass2_w;
+    uint16_t off, abs_u, abs_l, su, sl;
+    uint8_t *du, *dl, *du_sp, *dl_sp;
+    uint8_t map_tx;
+    int spilled;
+    struct GlyphTileInfo info;
+
+    if (glyphWidth < 8u)
+        glyphWidth = 8u;
+    if (glyphWidth > 12u)
+        glyphWidth = 12u;
+    pass2_w = glyphWidth - 8u;
+    spilled = 0;
+
+    if (st->chs_px == 0)
+        st->base_tx = pitch_capture_base_tx(win);
+
+    startPixel = (unsigned)(st->chs_px & 7u);
+    map_tx = (uint8_t)(st->base_tx + (st->chs_px >> 3));
+    info.startPixel = (uint8_t)startPixel;
+    info.width = 8;
+
+    if (linear) {
+        if (st->chs_px == 0)
+            ensure_linear_dest_floor(win);
+        off = win_u16(win, WIN_TILE_OFFSET);
+        abs_u = GetCursorTileNum_Linear(win, 0, 0);
+        abs_l = GetCursorTileNum_Linear(win, 0, 1);
+        du = vram_tile(win, abs_u);
+        dl = vram_tile(win, abs_l);
+        if (startPixel + 8u > 8u) {
+            su = GetCursorTileNum_Linear(win, 1, 0);
+            sl = GetCursorTileNum_Linear(win, 1, 1);
+            du_sp = vram_tile(win, su);
+            dl_sp = vram_tile(win, sl);
+            spilled = 1;
+        } else {
+            du_sp = 0;
+            dl_sp = 0;
+        }
+        DrawGlyphTile_refpr(win, &info, tiles->tl, du, du_sp);
+        DrawGlyphTile_refpr(win, &info, tiles->bl, dl, dl_sp);
+        map_at(win, map_tx, abs_u, abs_l);
+        win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
+    } else {
+        GetCursorTileNum_Mode2(win, (int)map_tx, &abs_u, &abs_l);
+        du = vram_tile(win, abs_u);
+        dl = vram_tile(win, abs_l);
+        if (startPixel + 8u > 8u) {
+            GetCursorTileNum_Mode2(win, (int)map_tx + 1, &su, &sl);
+            du_sp = vram_tile(win, su);
+            dl_sp = vram_tile(win, sl);
+            spilled = 1;
+        } else {
+            du_sp = 0;
+            dl_sp = 0;
+        }
+        DrawGlyphTile_refpr(win, &info, tiles->tl, du, du_sp);
+        DrawGlyphTile_refpr(win, &info, tiles->bl, dl, dl_sp);
+        map_at(win, map_tx, abs_u, abs_l);
+    }
+
+    st->chs_px = (uint16_t)(st->chs_px + 8u);
+    if (pass2_w == 0u) {
+        if (spilled)
+            map_at(win, (uint8_t)(map_tx + 1u), su, sl);
+        st->last_adv = (uint8_t)glyphWidth;
+        win_set_u8(win, WIN_CURSOR_TILE_X,
+                   (uint8_t)(st->base_tx + ((st->chs_px + glyphWidth - 1) >> 3)));
+        return;
+    }
+
+    map_tx = (uint8_t)(st->base_tx + (st->chs_px >> 3));
+    info.width = (uint8_t)pass2_w;
+
+    if (linear) {
+        off = win_u16(win, WIN_TILE_OFFSET);
+        abs_u = GetCursorTileNum_Linear(win, 0, 0);
+        abs_l = GetCursorTileNum_Linear(win, 0, 1);
+        du = vram_tile(win, abs_u);
+        dl = vram_tile(win, abs_l);
+        if (startPixel + pass2_w > 8u) {
+            su = GetCursorTileNum_Linear(win, 1, 0);
+            sl = GetCursorTileNum_Linear(win, 1, 1);
+            du_sp = vram_tile(win, su);
+            dl_sp = vram_tile(win, sl);
+        } else {
+            du_sp = 0;
+            dl_sp = 0;
+        }
+        DrawGlyphTile_refpr(win, &info, tiles->tr, du, du_sp);
+        DrawGlyphTile_refpr(win, &info, tiles->br, dl, dl_sp);
+        map_at(win, map_tx, abs_u, abs_l);
+        win_set_u16(win, WIN_TILE_OFFSET,
+                    (uint16_t)(off + (startPixel == 0u ? 0u : 2u)));
+    } else {
+        GetCursorTileNum_Mode2(win, (int)map_tx, &abs_u, &abs_l);
+        du = vram_tile(win, abs_u);
+        dl = vram_tile(win, abs_l);
+        if (startPixel + pass2_w > 8u) {
+            GetCursorTileNum_Mode2(win, (int)map_tx + 1, &su, &sl);
+            du_sp = vram_tile(win, su);
+            dl_sp = vram_tile(win, sl);
+        } else {
+            du_sp = 0;
+            dl_sp = 0;
+        }
+        DrawGlyphTile_refpr(win, &info, tiles->tr, du, du_sp);
+        DrawGlyphTile_refpr(win, &info, tiles->br, dl, dl_sp);
+        map_at(win, map_tx, abs_u, abs_l);
+    }
+
+    st->chs_px = (uint16_t)(st->chs_px + pass2_w);
+    st->last_adv = (uint8_t)glyphWidth;
+    win_set_u8(win, WIN_CURSOR_TILE_X,
+               (uint8_t)(st->base_tx + ((st->chs_px + glyphWidth - 1) >> 3)));
+}
+
+static void DrawGlyphTiles_common(
+    TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth)
+{
+    int slot_new = 0;
+    volatile struct ChineseTileState *st = chs_bind_pitch_slot(win, &slot_new);
+    uint8_t cur_tx = win_u8(win, WIN_CURSOR_TILE_X);
+    unsigned last;
+    int linear;
+    int newline_reset = 0;
+
+    if (slot_new && st->chs_px == 0) {
+        newline_reset = 1;
+        *(volatile uint16_t *)CHS_LAST_OFF_ADDR = 0;
+    }
+
+    if (st->chs_px != 0 && cur_tx <= st->base_tx) {
+        st->chs_px = 0;
+        st->base_tx = pitch_capture_base_tx(win);
+        newline_reset = 1;
+    } else if (st->chs_px != 0) {
+        last = st->last_adv ? st->last_adv : (unsigned)CHS_GLYPH_ADVANCE_PX;
+        {
+            uint8_t expect = (uint8_t)(st->base_tx + ((st->chs_px + last - 1) >> 3));
+
+            if (cur_tx != expect) {
+                st->chs_px = 0;
+                st->base_tx = pitch_capture_base_tx(win);
+                newline_reset = 1;
+            }
+        }
+    } else {
+        st->base_tx = pitch_capture_base_tx(win);
+    }
+
+    linear = draw_use_linear(win, st->write_op);
+
+    if (linear && st->chs_px != 0u) {
+        uint16_t off_now = win_u16(win, WIN_TILE_OFFSET);
+        uint16_t off_last = *(volatile uint16_t *)CHS_LAST_OFF_ADDR;
+
+        if (off_last != 0u && off_now < off_last)
+            win_set_u16(win, WIN_TILE_OFFSET, off_last);
+    }
+
+    if (newline_reset && linear) {
+        uint16_t off = win_u16(win, WIN_TILE_OFFSET);
+
+        win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
+    }
+
+    DrawGlyphTiles_core(win, tiles, linear, glyphWidth);
+
+    if (linear)
+        *(volatile uint16_t *)CHS_LAST_OFF_ADDR = win_u16(win, WIN_TILE_OFFSET);
+}
+
+/* FontFunc[2] 血条缓冲：对齐原生 BlitGlyph + dst+=0x40（每列 upper|lower）。
+ * dst==0 为幻影打印，消费字符但不写。 */
+static void DrawGlyphTiles_buffer(
+    TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth)
+{
+    uint32_t dst_u = win_u32(win, WIN_TILE_DATA);
+    uint8_t *dst;
+    struct GlyphTileInfo info;
+    unsigned cols;
+    unsigned i;
+
+    if (dst_u == 0u)
+        return;
+
+    dst = (uint8_t *)(uintptr_t)dst_u;
+    if (glyphWidth < 8u)
+        glyphWidth = 8u;
+    if (glyphWidth > 12u)
+        glyphWidth = 12u;
+
+    cols = (glyphWidth <= 8u) ? 1u : 2u;
+    info.startPixel = 0;
+
+    for (i = 0; i < cols; i++) {
+        const uint8_t *src_u = (i == 0u) ? tiles->tl : tiles->tr;
+        const uint8_t *src_l = (i == 0u) ? tiles->bl : tiles->br;
+
+        info.width = (i == 0u) ? 8u : (uint8_t)(glyphWidth - 8u);
+        if (info.width == 0u)
+            break;
+        if (info.width > 8u)
+            info.width = 8u;
+        DrawGlyphTile_refpr(win, &info, src_u, dst, 0);
+        DrawGlyphTile_refpr(win, &info, src_l, dst + 0x20, 0);
+        dst += 0x40;
+    }
+    win_set_u32(win, WIN_TILE_DATA, (uint32_t)(uintptr_t)dst);
+}
+
+void DrawGlyphTiles(TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth)
+{
+    uint8_t tm;
+
+    if (!win || !tiles)
+        return;
+
+    tm = win_u8(win, WIN_TEXTMODE) & 7u;
+    switch (tm) {
+    case 0:
+    case 1:
+    case 3:
+        DrawGlyphTiles_common(win, tiles, glyphWidth);
+        break;
+    case 2:
+        /* FontFunc[2]：写 win[0x20] 缓冲，每列 +0x40（血条 OBJ 刷走） */
+        DrawGlyphTiles_buffer(win, tiles, glyphWidth);
+        break;
+    default:
+        break;
+    }
+}
 
 void DrawGlyphTiles_arrow_prepare(TextPrinter *win)
 {

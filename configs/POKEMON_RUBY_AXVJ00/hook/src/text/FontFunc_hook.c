@@ -40,6 +40,7 @@
 #include "game.h"
 #include "text.h"
 #include "text_render.h"
+#include "text_scene.h"
 
 /* ---- 行相位影子存储 -------------------------------------------------------
  * game.bin 无 RAM 段（link/game.ld），全局落 ROM 不可写。
@@ -176,34 +177,9 @@ typedef struct {
  * ⚠ 该引用集为设置菜单专属；但 InitWindowTileData 实测只由 tpl 0x081BB874
  *    使用（256/256 次），其余 tm1 窗口走 LZ77 场景字库，故 P24 钩子按 tpl 门控，
  *    非该窗口一律照常渲染（零回归）。 */
-#define TM1_TITLE_BASE     0x03u   /* 3    = 标题（curY<=1）起点，16 tile */
-#define TM1_TITLE_SPAN     0x10u   /* 16   = 4 字 × 12px                  */
-#define TM1_LBL_OFF        0x00u
-#define TM1_LBL_SPAN       0x10u   /* 16   = 4 字 × 4 tile（12px）        */
-#define TM1_VA_OFF         0x10u
-#define TM1_VA_SPAN        0x06u   /* 6    = 8px 3 字                     */
-#define TM1_VB_OFF         0x12u   /* 18   ← 与 A 尾部重叠，合法性见上     */
-#define TM1_VB_SPAN        0x04u   /* 4    = 8px 2 字                     */
-#define TM1_VC_OFF         0x16u
-#define TM1_VC_SPAN        0x06u   /* 6    = 8px 3 字                     */
-/* 菜单行基址表（r=1..7）——不能用"起点+步长"，因为可用区间被引用字形切碎了。
- *
- * 已实测被引用的字形 tile（原生 ROM 写入，各占 2 tile）：
- *   1 33 49 111 119 | 139 | 255 | 323 325 327 329 331 333 335 337 339
- *   345 349 369 397 409 439 447 451
- *   （139 / 255 是 v9 首版实测后才暴露的：r5/r6 的原生字符正好落在那里，
- *     表现为"普通"/"类型"串到别的行 + 纯色方块）
- * → 连续空档只有 [3,33)=30 / [51,111)=60 / [141,255)=114 / [257,323)=66，
- *   单块装不下 7 行，故按行显式给基址。每行跨 28 tile，末行只用前 8。 */
-static const uint16_t TM1_ROW_TAB[7] = {
-    0x08Du,  /* 141  r1 对话速度   [141,169) */
-    0x0A9u,  /* 169  r2 战斗动画   [169,197) */
-    0x0C5u,  /* 197  r3 对战规则   [197,225) */
-    0x0E1u,  /* 225  r4 声音       [225,253) */
-    0x101u,  /* 257  r5 按键模式   [257,285) */
-    0x11Du,  /* 285  r6 窗口       [285,313) */
-    0x139u,  /* 313  r7 关闭       [313,321) 仅标签 8 tile */
-};
+/* ↑ 上面 v9 段第 4 点描的**具体数值**已经全部搬到 src/text/text_scene.c 的
+ * 配置表里（kOptRows / kOptSlots / kOptGlyphAvoid），按窗口模板地址键控。
+ * 本文件不再持有任何窗口专属常量 —— 改布局请去 text_scene.c，不要在这里加。 */
 
 typedef void (*fn_draw6)(uint32_t glyph, void *dst, uint32_t font,
                          uint32_t fg, uint32_t bg, uint32_t shadow);
@@ -582,35 +558,38 @@ static void chs_buffer(TextPrinter *win, const struct ChsGlyphTiles *tiles, unsi
     win_set_u32(win, WIN_TILE_DATA, (uint32_t)(uintptr_t)dst);
 }
 
-/* tm1 行基址（v9 位置分区，见文件头）：标题独占 [3,19)，
- * 菜单 7 行各 28 tile 排在 [121,317)。纯位置推导、无状态、幂等。 */
-static uint16_t tm1_row_base(TextPrinter *win)
-{
-    uint8_t cy = win_u8(win, WIN_CURSOR_Y);
-    unsigned r;
+/* ---- tm1 落址：查窗口配置表，查不到就回退线性式（不猜场景） ---------------
+ * 布局数值全部在 src/text/text_scene.c，本文件只做"查表 + 求值"。 */
 
-    if (cy <= 1u)
-        return TM1_TITLE_BASE;                  /* 标题（curY=1）：[3,19) */
-    r = (unsigned)((cy - 3u) >> 1);             /* 5,7,..,17 → 1..7 */
-    if (r < 1u)
-        r = 1u;
-    if (r > 7u)
-        r = 7u;
-    return TM1_ROW_TAB[r - 1u];
+static const struct Tm1WinCfg *tm1_cfg(TextPrinter *win)
+{
+    return scene_tm1_lookup((uint32_t)(uintptr_t)win_template(win));
 }
 
-/* tm1 行内子区起点 + 容量（会话复位判定用）。
+/* 行基址。已登记窗口走配置表；未登记回退 win[0x16]（等价 tm0 的线性式）。 */
+static uint16_t tm1_row_base(TextPrinter *win)
+{
+    const struct Tm1WinCfg *cfg = tm1_cfg(win);
+
+    if (!cfg)
+        return win_u16(win, WIN_TILE_BASE);
+    return scene_tm1_row_base(cfg, win_u8(win, WIN_CURSOR_Y));
+}
+
+/* 行内子区起点 + 容量。
  * ⚠ span 必须 ≥ 该子区会走到的最大 off，否则 off 回卷覆盖本字前半
  *   （v8 的槽跨度 2 就是这么炸的）。
- *   12px 每字 off+4（4 字 → 需 16）；8px 每字 off+2（3 字 → 需 6）。 */
+ *   12px 每字 off+4（4 字 → 需 16）；8px 每字 off+2（3 字 → 需 6）。
+ * 未登记窗口返回 span=0 表示"不做复位"。 */
 static uint16_t tm1_sub_off(TextPrinter *win, uint16_t *span)
 {
-    uint8_t cx = win_u8(win, WIN_CURSOR_X);
+    const struct Tm1WinCfg *cfg = tm1_cfg(win);
 
-    if (cx < 8u)  { *span = TM1_LBL_SPAN; return TM1_LBL_OFF; }  /* 标签 4     */
-    if (cx < 19u) { *span = TM1_VA_SPAN;  return TM1_VA_OFF;  }  /* 候选 15-18 */
-    if (cx < 22u) { *span = TM1_VB_SPAN;  return TM1_VB_OFF;  }  /* 候选 19-21 */
-    *span = TM1_VC_SPAN; return TM1_VC_OFF;                      /* 候选 >=22  */
+    if (!cfg) {
+        *span = 0u;
+        return 0u;
+    }
+    return scene_tm1_sub_off(cfg, win_u8(win, WIN_CURSOR_X), span);
 }
 
 /* ---- 中文入口：字库选择 + 解压 + 分派 -------------------------------------*/
@@ -627,21 +606,27 @@ static void chs_blit(TextPrinter *win, uint32_t glyph)
      * 队伍名等其余小字体场景同理。其余一律常规字体（12px）。 */
     if (tm == 2u)
         fn = 4u;
-    /* tm1 候选值列：8px。原因见文件头 v9 段账目——12px 时 3 字候选要 12 tile，
-     * 加标签 16 后 48 tile/行，7 行 336 tile 远超腾得出的 202；8px 下 6 tile
-     * → 16+6+4+6=28 tile/行，7 行 196 tile 装得下。 */
-    if (tm == 1u && win_u8(win, WIN_CURSOR_X) >= 8u)
-        fn = 4u;
+    /* tm1 混排：标签列 12px、候选列 8px，由配置表的 col_label_max 划分。
+     * 8px 的原因见文件头 v9 段账目——12px 时 3 字候选要 12 tile，加标签 16 后
+     * 48 tile/行；8px 下只需 6 tile → 16+6+4+6=28 tile/行，才装得进可用区间。
+     * 未登记窗口没有这个划分 → 一律 12px，且不做子区复位。 */
+    if (tm == 1u) {
+        const struct Tm1WinCfg *cfg = tm1_cfg(win);
 
-    /* tm1：把 win[0x18] 恢复为「行内偏移」——标签 / 候选 A·B·C 各有起点。
+        if (cfg && win_u8(win, WIN_CURSOR_X) >= cfg->col_label_max)
+            fn = 4u;
+    }
+
+    /* tm1：把 win[0x18] 恢复为「行内偏移」——标签 / 候选槽各有起点。
      * 行基址由 chs_tile_num 加 tm1_row_base()。新会话（原生重置为较大值）
-     * 或越出本子区 → 复位；同会话内推进则不动（幂等：重绘总从子区头开始）。 */
+     * 或越出本子区 → 复位；同会话内推进则不动（幂等：重绘总从子区头开始）。
+     * span==0 表示未登记窗口 → 不复位（保持 win[0x18] 原样推进）。 */
     if (tm == 1u) {
         uint16_t off = win_u16(win, WIN_TILE_OFFSET);
         uint16_t start, span;
 
         start = tm1_sub_off(win, &span);
-        if (off < start || off >= (uint16_t)(start + span))
+        if (span != 0u && (off < start || off >= (uint16_t)(start + span)))
             win_set_u16(win, WIN_TILE_OFFSET, start);
     }
 

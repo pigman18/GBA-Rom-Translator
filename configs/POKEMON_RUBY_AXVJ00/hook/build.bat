@@ -49,6 +49,10 @@ echo === Compiling text_layout.c (tm1 layout algorithms) ===
 %CC% %CFLAGS% %SRC_ROOT%\text\text_layout.c -o %BUILD%\text_layout.o
 if errorlevel 1 exit /b 1
 
+echo === Compiling tile_alloc.c (tm1 unregistered-window row tile allocator) ===
+%CC% %CFLAGS% %SRC_ROOT%\text\tile_alloc.c -o %BUILD%\tile_alloc.o
+if errorlevel 1 exit /b 1
+
 echo === Compiling FontFunc_hook.c (tm0 layout-protocol bridge) ===
 %CC% %CFLAGS% %SRC_ROOT%\text\FontFunc_hook.c -o %BUILD%\FontFunc_hook.o
 if errorlevel 1 exit /b 1
@@ -79,6 +83,7 @@ echo === Linking game.elf ===
   %BUILD%/text_render.o ^
   %BUILD%/text_scene.o ^
   %BUILD%/text_layout.o ^
+  %BUILD%/tile_alloc.o ^
   %BUILD%/FontFunc_hook.o ^
   %BUILD%/ref_pokeemerald.o ^
   %BUILD%/ref_pokeruby.o ^

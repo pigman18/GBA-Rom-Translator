@@ -38,6 +38,7 @@
  * ==========================================================================*/
 
 #include "game.h"
+#include "tile_alloc.h"
 #include "text.h"
 #include "text_render.h"
 #include "text_scene.h"
@@ -534,6 +535,12 @@ static void chs_blit(TextPrinter *win, uint32_t glyph)
 
         if (off < sel.off || off >= (uint16_t)(sel.off + sel.span))
             win_set_u16(win, WIN_TILE_OFFSET, sel.off);
+    } else if (tm == 1u && pb == 0u) {
+        /* 未登记窗口（图鉴等）：官方 AddTextPrinter 每行清 win[0x18]=0 且 mode1
+         * 从不推进它 → 中文行全落 tile 1..7，行间互覆（图鉴列表全显示最后画的
+         * 一行名字，滚动时随重绘顺序漂移）。tile_alloc.c 按行位置确定性分段，
+         * win[0x18]==0 即新行标记。 */
+        tile_alloc_tm1_row(win);
     }
 
     DecompressGlyph_Chinese(&g, (uint16_t)(glyph & 0xFFFFu), fn);

@@ -162,11 +162,6 @@ static void fd_expand_print(TextPrinter *win, uint8_t id)
     ((fn_fd_subprint)(ADDR_FD_SUBPRINT | 1u))(win, str);
 }
 
-static int phrase_parent_continues(const uint8_t *text, uint16_t index)
-{
-    return text[index + 3] != 0xFF;
-}
-
 static int inline_phrase_no_controls(TextPrinter *win, uint16_t index, uint16_t code)
 {
     const uint8_t *stream = phrase_stream_lookup(code);
@@ -460,13 +455,18 @@ int TranslateHandleChar(TextPrinter *win, uint32_t c)
 
     {
         uint16_t code = (uint16_t)((p[1] << 8) | p[2]);
-        int parent_cont = phrase_parent_continues(text, idx2);
 
         (void)op;                       /* 旧 pitch write_op 随分配器一并移除 */
 
-        if (parent_cont && inline_phrase_no_controls(win, idx2, code))
+        /* 无等待控制码的短语一律先走内联打印（含 FD 占位符官方展开）。
+         * ⚠ 旧的 phrase_parent_continues 短路必须去掉：短语恰好是整条消息时
+         *   （父串只剩 0xFF）它返回 false → 跳过内联 → 重定向 → 原生打印器的
+         *   FD 残迹路径把 id 字节画成 あ/う（2026-08-29 拾道具对话实证）。
+         *   内联路径对"父串续/父串结束"都正确（结束场景 index 落在 0xFF 上）。 */
+        if (inline_phrase_no_controls(win, idx2, code))
             return 1;
 
+        /* 有等待控制码（FA~FE 等）的短语仍走重定向，交原生状态机 */
         redirect_phrase_stream(win, code);
         return 1;
     }

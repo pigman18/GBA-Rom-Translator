@@ -354,6 +354,64 @@ def convert_primary_glyph_to_unshadow_display(
     )
 
 
+def fill_blank_glyph_slots(
+    fonts_dir: Path,
+    game_id: str,
+    prefix: str = "PokeRSFontChs",
+    bytes_per_glyph: int = 128,
+) -> int:
+    """回填 tuned 库里仍空白的 charmap 字形（祐/全角标点等）。
+
+    链路：主 BDF 缺 44 字 → build_chinese_font 缺字自动补画（SimSun-16 备用）
+    → plain 字形已完整；但 restore_tuned_font_bins_from_reference 整库盖回
+    hook/work tuned 库 → 这些槽回到空白（2026-08-29 实证）。
+    本函数逐 charmap 字形检查：unshadow 槽无墨而 plain 槽有墨 → 复制该槽。
+    plain 为 shadow=False 构建（无 14 阴影像素）= unshadow 形制本身。
+    tuned 已有墨迹的字一律不动。Sym 库（64B 槽、单独维护）跳过。"""
+    charmap = get_charmap_path(game_id)
+    if not charmap.is_file() or not fonts_dir.is_dir():
+        return 0
+    import importlib.util
+
+    scripts = Path(__file__).resolve().parents[2] / "scripts"
+    spec = importlib.util.spec_from_file_location(
+        "build_chinese_font", scripts / "build_chinese_font.py"
+    )
+    if spec is None or spec.loader is None:
+        return 0
+    mod = importlib.util.module_from_spec(spec)
+    spec.loader.exec_module(mod)
+    gidx_set = set(mod.parse_charmap(charmap).keys())
+    if not gidx_set:
+        return 0
+
+    filled = 0
+    for plain_path in sorted(fonts_dir.glob(f"{prefix}*.bin")):
+        if "_unshadow" in plain_path.name or "Sym" in plain_path.name:
+            continue
+        unsh_name = plain_path.name.replace("(", "_unshadow(", 1)
+        unsh_path = fonts_dir / unsh_name
+        if not unsh_path.is_file():
+            continue
+        plain = plain_path.read_bytes()
+        unsh = bytearray(unsh_path.read_bytes())
+        if len(unsh) < len(plain):
+            continue
+        changed = False
+        for gidx in sorted(gidx_set):
+            # _glyph_slot_has_ink 吃的是【字形号】(内部再 ×bytes_per_glyph)
+            if not _glyph_slot_has_ink(unsh, gidx, bytes_per_glyph) and _glyph_slot_has_ink(
+                plain, gidx, bytes_per_glyph
+            ):
+                off = gidx * bytes_per_glyph
+                unsh[off : off + bytes_per_glyph] = plain[off : off + bytes_per_glyph]
+                changed = True
+                filled += 1
+        if changed:
+            unsh_path.write_bytes(bytes(unsh))
+    return filled
+
+
 def restore_tuned_font_bins_from_reference(
     fonts_dir: Path,
     *,
@@ -380,7 +438,12 @@ def restore_tuned_font_bins_from_reference(
         dst.parent.mkdir(parents=True, exist_ok=True)
         shutil.copy2(ref, dst)
         restored += 1
-    return restored
+
+    # 2026-08-29:restore 后,tuned 库里仍空白的 charmap 字形(祐/全角标点等
+    # 主 BDF 缺、hook/work 也没有的字)用本构建的 plain 字形(无影=BDF 渲染)
+    # 逐槽回填——tuned 已有墨迹的字一个不动,外观零变化,只补真空。
+    # 旧行为:整库盖回 → 自动补画的 44 字在游戏里仍空白(实证)。
+    return restored + fill_blank_glyph_slots(fonts_dir, game_id, prefix)
 
 
 def seed_unshadow_banks_from_reference(

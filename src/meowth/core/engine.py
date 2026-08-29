@@ -1817,7 +1817,7 @@ class TranslationEngine:
         root = Path(__file__).resolve().parents[3]
         candidates: list[Path] = []
         for rel in (
-            "fonts/meowth/Meowth-Normal.bdf",
+            "fonts/default/Normal.bdf",
             "fonts/fusion-pixel/12px-proportional/fusion-pixel-12px-proportional-zh_hans.bdf",
             "fonts/shortcuts/fusion-12px-proportional-fusion-pixel-12px-proportional-zh_hans.bdf",
         ):
@@ -1881,11 +1881,37 @@ class TranslationEngine:
                 args.append("--no-shadow")
             else:
                 args.append("--shadow")
+            # 备用 BDF：主 BDF（default/Normal）缺字时自动补画。
+            # 顺序 = 质量：fusion-pixel 12px（原生 12px 像素字，祐 实测形状正确）
+            # > SimSun-16（16px 字形裁进 12x12 会变形，仅兜底）。
+            root_fonts = Path(__file__).resolve().parents[3] / "fonts"
+            for fb_name in (
+                "fusion-pixel/12px-proportional/fusion-pixel-12px-proportional-zh_hans.bdf",
+                "ark-pixel/12px-proportional/ark-pixel-12px-proportional-zh_cn.bdf",
+                "ark-pixel/12px-monospaced/ark-pixel-12px-monospaced-zh_cn.bdf",
+                "SimSun-16.bdf",
+            ):
+                fb = root_fonts / fb_name
+                if fb.is_file():
+                    args += ["--bdf-fallback", str(fb)]
             r = subprocess.run(args, capture_output=True, text=True, timeout=120)
             if r.returncode != 0:
                 raise RuntimeError(f"Font generation failed:\n{r.stderr}\n{r.stdout}")
             self._fonts_from_bdf = True
             self._log("info", f"Font generated from {bdf_path.name} -> {fonts_dir}")
+
+            if fp_cfg.get("shadow") is False:
+                # shadow=False 时 plain 本身就是无影内容;同步刷 *_unshadow 副本。
+                # 否则陈旧 _unshadow(prefer_unshadow 下才是 ROM 真正嵌入的库)
+                # 会让自动补画的新字形(祐/全角标点)在游戏里仍是空白
+                # (2026-08-29 拾道具对话实证)。Sym 库单独维护,跳过。
+                for lbl, sz in zip(labels, sizes):
+                    if lbl.lower() == "sym":
+                        continue
+                    plain = fonts_dir / f"{prefix}{lbl}(0x{sz:X}).bin"
+                    unsh = fonts_dir / f"{prefix}{lbl}_unshadow(0x{sz:X}).bin"
+                    if plain.is_file():
+                        shutil.copy2(plain, unsh)
 
             # Patch punctuation glyphs: baseline alignment + no pass-2 right spill.
             # build_chinese_font places all glyphs via bdf_to_ink12 which ignores BDF

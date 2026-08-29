@@ -199,6 +199,26 @@ def pack_slot16_4bpp(pixels: bytearray) -> bytes:
     return bytes(glyph)
 
 
+def ttf_to_ink12(char: str, ttf_path: str, size: int = 12) -> bytearray | None:
+    """PIL + TTF 在 12x12 内栅划单字(0/1 ink);失败返回 None。"""
+    try:
+        from PIL import Image, ImageDraw, ImageFont
+    except ImportError:
+        return None
+    try:
+        font = ImageFont.truetype(ttf_path, size=size)
+        img = Image.new("L", (size, size), 0)
+        ImageDraw.Draw(img).text((0, 0), char, font=font, fill=255)
+    except Exception:
+        return None
+    ink = bytearray(INK_W * INK_H)
+    for y in range(INK_H):
+        for x in range(INK_W):
+            if img.getpixel((x, y)) >= 96:
+                ink[y * INK_W + x] = 1
+    return ink
+
+
 def build_font_bin(
     bdf_glyphs: dict,
     charmap: dict[int, str],
@@ -207,23 +227,47 @@ def build_font_bin(
     bytes_per_glyph: int = BYTES_PER_GLYPH,
     *,
     shadow: bool = True,
+    bdf_fallbacks: list[tuple[dict, int]] | None = None,
+    ttf_fallbacks: list[str] | None = None,
 ) -> bytearray:
     if bytes_per_glyph != BYTES_PER_GLYPH:
         raise ValueError(
             f"bytes_per_glyph must be {BYTES_PER_GLYPH} (16x16 4bpp slot); got {bytes_per_glyph}"
         )
     buf = bytearray(bytes_per_glyph * glyph_count)
+    fallback_drawn: list[str] = []
     for idx, char in charmap.items():
         encoding = ord(char)
         if encoding in bdf_glyphs:
             bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y = bdf_glyphs[encoding]
             ink = bdf_to_ink12(bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y, font_ascent)
         else:
-            ink = bytearray(INK_W * INK_H)
+            # 缺字自动补画:先 TTF(宋体,风格与主字库一致),再备用 BDF
+            ink = None
+            for ttf in ttf_fallbacks or []:
+                ink = ttf_to_ink12(char, ttf)
+                if ink is not None and any(ink):
+                    fallback_drawn.append(char)
+                    break
+                ink = None
+            if ink is None:
+                for fb_glyphs, fb_ascent in bdf_fallbacks or []:
+                    if encoding in fb_glyphs:
+                        ink = bdf_to_ink12(*fb_glyphs[encoding], fb_ascent)
+                        fallback_drawn.append(char)
+                        break
+            if ink is None:
+                ink = bytearray(INK_W * INK_H)
         slot = ink12_to_slot16(ink, shadow=shadow)
         packed = pack_slot16_4bpp(slot)
         off = idx * bytes_per_glyph
         buf[off : off + bytes_per_glyph] = packed
+    if fallback_drawn:
+        print(
+            f"  缺字自动补画 {len(fallback_drawn)} 个(备用 BDF): "
+            + "".join(fallback_drawn[:60])
+            + ("..." if len(fallback_drawn) > 60 else "")
+        )
     return buf
 
 
@@ -232,6 +276,19 @@ def main() -> None:
         description="Build Gen3 Chinese font bins (128B / 16x16 slot, 12px ink)"
     )
     ap.add_argument("--bdf", required=True, type=Path)
+    ap.add_argument(
+        "--bdf-fallback",
+        type=Path,
+        nargs="*",
+        default=[],
+        help="备用 BDF(按序查缺字;如 fonts/SimSun-16.bdf 补 GB2312 全集)",
+    )
+    ap.add_argument(
+        "--ttf-fallback",
+        nargs="*",
+        default=[],
+        help="兜底 TTF(缺字 12px 栅划;默认自动探测 simsun/msyh)",
+    )
     ap.add_argument("--charmap", required=True, type=Path)
     ap.add_argument("--output-dir", required=True, type=Path)
     ap.add_argument("--glyph-count", type=int, default=DEFAULT_GLYPH_COUNT)
@@ -258,6 +315,28 @@ def main() -> None:
         f"  Loaded {len(bdf_glyphs)} glyphs "
         f"(ascent={font_ascent}, descent={font_descent}, pixel_size={pixel_size})"
     )
+
+    ttf_fallbacks: list[str] = list(args.ttf_fallback or [])
+    if not ttf_fallbacks:
+        import os
+
+        for cand in ("C:/Windows/Fonts/simsun.ttc", "C:/Windows/Fonts/msyh.ttc",
+                     "C:/Windows/Fonts/simhei.ttf"):
+            if os.path.exists(cand):
+                ttf_fallbacks.append(cand)
+                break
+
+    bdf_fallbacks: list[tuple[dict, int]] = []
+    for fb in args.bdf_fallback:
+        if not fb.is_file():
+            print(f"  warning: fallback BDF 不存在,跳过: {fb}")
+            continue
+        fg, fa, _fd, _px = parse_bdf(fb)
+        bdf_fallbacks.append((fg, fa))
+        print(
+            f"  Fallback BDF: {fb.name} ({len(fg)} 字形, ascent={fa}) "
+            f"—— 主 BDF 缺字时自动补画"
+        )
     print(
         f"  Target: {INK_W}x{INK_H} ink in {SLOT_W}x{SLOT_H} slot, "
         f"{BYTES_PER_GLYPH} B/glyph, pad_top={PAD_TOP}, shadow={args.shadow}"
@@ -276,6 +355,8 @@ def main() -> None:
             glyph_count=args.glyph_count,
             bytes_per_glyph=args.bytes_per_glyph,
             shadow=args.shadow,
+            bdf_fallbacks=bdf_fallbacks,
+            ttf_fallbacks=ttf_fallbacks,
         )
         if args.slot_sizes and i < len(args.slot_sizes):
             buf = buf[: args.slot_sizes[i]]

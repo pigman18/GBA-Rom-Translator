@@ -57,8 +57,6 @@
 #define PROTO_PHASE_ADDR   0x0203FF84u   /* key(u16) << 16 | px(u16) */
 #define PROTO_BASE_TX_ADDR 0x0203FF88u   /* 行首 cursorTileX (u8)    */
 
-/* tm1 线性分配地板：tm1 窗口 tileData 前部是【ROM 预渲染字体区】，
- * 中文必须分配在其后，否则覆写字体。 */
 /* 相位 8 槽 LRU（log1 实锤：全局单槽被其他窗口踩踏——换行后首字 px=320、
  * curTX=42，字符画出框外）。布局（安全区 0x0203FF80-0xFFCF 内）：
  *   0x0203FF84 槽[0..7] 每槽 6B：key(u16) px(u16) btx(u8) gen(u8)
@@ -76,118 +74,6 @@ typedef struct {
     uint8_t  gen;        /* +6 LRU */
     uint8_t  char_base;  /* +7 tpl[1]，与旧实现同，提高区分度 */
 } PhaseSlot;
-
-#define TM1_LINEAR_FLOOR   0x100u
-
-/* tm1 确定性分区（无分配器、无槽——v2 行槽已被实测否决：标签/值是同 curY
- * 的不同会话（gdb：值列 curX=15/19/23 vs 标签 curX=4），并发 key ≈17 个，
- * 8 槽轮转覆盖 → 行内容串换）。
- *
- * 基址纯位置推导：row = curY>>1（实测标签 curY=1,5,7..17 → 0,2..8），
- * col = curX>=8（值列）：base = 0x100 + row*0x10 + col*0x8（每子区 4 字）。
- * 9 行 × 2 子区 × 0x8 = 0x90 ⊂ 自由区 [0x100,0x1C8)。同会话重绘永远映射
- * 同一子区 → 幂等，游标不漂移、不外溢。
- *
- * 会话重置检测：原生 ITP 把 win[0x18] 重置回 0x100+(curTX-1)*2（gdb 全部
- * 样本吻合：curTX=2/4/5/7 → 0x102/106/108/10C）。本子区全在 <0x100，
- * 重置值恒 ≥0x102 → 区间判定天然区分，无需公式比对。 */
-/* ⚠️ 2026-08-29：v4 / v4.1（偶数槽方案）**已回退**，当前行为 = v3 确定性分区。
- * 回退原因（详见 docs/评估_20260829_text重构合理性反汇编复核.md）：
- *   v4   全屏"1" —— chs_tile_num 仍吃 win[0x16](=1)，tile=1+2=3 = 字模 1 上下半槽
- *   v4.1 仍未修复 —— 子区 0x8 装不下 4 字（12px 相位交错下约需 12 tile）、
- *        部分会话 win[0x18] 未被原生重置（残留 0x2C/0x14A/0x166 落进错子区）、
- *        off 可越过 0x100 再进字库区；且偶数区仅 127 tile 装不下 9 行需求。
- * v3 已知代价：中文区 [0x100,0x190) 压在字库 lower 奇数槽上（R1）→ 数字/问号
- * 被踩。这是"串换已修、基本可读"与"数字正常但整体错乱"之间的取舍，用户
- * 拍板取前者。R1 的彻底解法待专项（见评估文档 §四）：
- *   1) gdb 采 BGCNT 确认设置菜单窗 charBase 与表项值域
- *   2) 反汇编 InitWindowTileData 确认字库预渲染真实布局（连续 or 上下分离）
- *   3) 再据此重设计中文落址（目标：位置式 tile=格子，一次消解 R1/R2/R4） */
-#define TM1_SUB_STRIDE     0x8u          /* 每子区 8 tile = 4 个 12px 字 */
-
-/* ---- v5 方案 D：数据驱动安全区（2026-08-29 gdb 实测）----------------------
- * 字库预渲染写满 charBase 2 的 [1,0x201)=512 tile，但**设置菜单实际只引用
- * 22 个字模**（upper 去重集合，每字模占 2 连续 tile，实占 44 tile）：
- *   1 33 49 111 119 323 325 327 329 331 333 335 337 339 345 349 369 397 409 439 447 451
- * → 最大安全连续块 = **[121, 322]（202 tile）**，另有 [3,32]/[51,110]/[453,512]。
- *
- * 实测文本上界（模板 0x081BB874, tm=1）：标签恒 4 字（F9 80 短语：对话速度/
- * 战斗动画/对战规则/声音/按键模式/窗口/关闭/改变设置）。
- *
- * ⚠ 修正（用户实测）：**值不是单个值，而是该行所有候选值并列**，每行 3 个
- * 独立 ITP 会话（gdb 实测同 curY 下 curX=15 / 19 / 22-23 三条）——如"慢 普通 快"。
- * 每个候选 1-2 字，故值区必须**按 curX 分 3 槽**，否则三候选共用一子区互覆
- * （现象："快 快通 快"），且溢出会踩下一条标签（现象：字中间一条白条）。
- *
- * v8 排布——v7 漏判候选数（实测 **4 个**，不是 3 个：curX=15/19/22/23）：
- *   顶窗 curY=0  → TM1_TITLE_BASE          [3, 23)  ⊂ 小块 [3,32]
- *   标签区 12px  → 121 + row*16            [121, 249)  4 字 × 4 tile
- *   值列   8px   → 249 + row*8             [249, 313)  **4 候选槽 × 2 tile**
- *   row = (curY<=1) ? 0 : (curY-3)>>1 → curY{1,5,7,9,11,13,15,17} → 0..7
- *   合计 [121,313] ⊂ 安全块 [121,322]，余量 9；与 22 字模零冲突。
- *
- * ⚠ 候选按 curX 实测分 4 档（<17/<19/<21/<23），不能再合并 22/23 到 else。
- * "适中" 2 字候选 8px 需 4 tile 而槽仅 2 tile，会溢出——目前设置菜单候选
- * 全是单字（慢/适/中/快/替/交/看/单/立/L/是/否...），实测未触发；若日后汉化
- * 增 2 字候选需扩槽。
- *
- * ⛔ 2026-08-29 v9：上面"安全块 [121,322]"的**依据是错的**——把"tilemap
- * 引用稀疏"当成了"VRAM 占用稀疏"。实测 InitWindowTileData 分 256 次把整本
- * 字库**写满** tile [1,513)（tile = startOffset + glyph*2，每字形 2 tile）。
- * → 那 202 个 tile 上压着 128 个真实字形，这就是 R1（数字/问号被踩）的真身。
- * 详见下方 v9 段。 */
-
-/* ---- v9：方案 C「削字库」+ 位置分区（2026-08-29 gdb 实测）----------------
- *
- * 1) 字库占用（一手数据）
- *    InitWindowTileData(tpl, startOffset=1, glyph 0..255)，256 次调用，
- *    返回 r1 = 0x06008060/A0/E0/…（每字形 +0x40 = 2 tile）
- *    → 实占 tile [1, 513)，一个 charblock 被占满。
- *    原生引用到的字形 tile 只有 22 个：
- *      1 33 49 111 119 | 323 325 327 329 331 333 335 337 339 345 349
- *      369 397 409 439 447 451
- *    → 最大空隙 = **[121, 323)（202 tile）**，全不含引用字形 ✓
- *
- * 2) ⛔「削字库」（P24 跳过部分字形）——**实测后停用**，钩子保留为直通。
- *    两条实测把它否掉了：
- *      a) 时序：预渲染循环（日志行 698-4013）整个跑在设置窗口文本打印
- *         （首个 ITP 在 4026 行）**之前**且只跑一次 → 永不覆盖中文，
- *         "跳过以腾地盘"的前提不成立。
- *      b) 跳过反而有害：菜单随后要用到的字形（实测 tile **139 / 255**）
- *         正落在被跳区间 → 那些位置显示成串到别行的中文或纯色方块
- *         （2026-08-29 截图实证：按键模式行首显示"普通"、窗口行首显示"类型"）。
- *    → 正确做法是**中文区避开已实测的引用字形**（见 TM1_ROW_TAB），
- *      字库一字不少地渲染。
- *    注：上面那份"22 个引用 tile"清单是 v3 老日志量的，**不完整**，
- *      漏了 139 / 255。任何"按引用集划安全区"的做法都必须留余量。
- *
- * 3) tile 账目（v8 修掉 pass2 的 off 推进 bug 后重算，勿再用 2n+2）
- *    12px：每字 off 推进 4（pass1 +2 / pass2 +2），**n 字 = 4n tile**
- *    8px ：pass2_w=0 只走一趟，**n 字 = 2n tile**
- *      → 4 字标签 = 16；3 字候选 12px=12 / 8px=6
- *      → **值列必须 8px**，否则 16+12+8+12=48/行 装不进 202
- *
- * 4) 布局（实测几何，以 [CFF] 行为准；ITP 行的 curX/curY 是上一会话残留）
- *    标题 curY=1（curX=4）；菜单行 curY=5,7,9,11,13,15,17（curX=4）
- *    候选 curX ∈ {15,18,19,20,22,23}
- *      标题                → [3, 19)    ⊂ [3,33)
- *      菜单行 r=1..7       → TM1_ROW_TAB[r-1]（**不能用"起点+步长"**：
- *                            可用区间被引用字形 139/255 切成碎块），行内：
- *        标签 (curX<8)     off  0  span 16   （4 字 × 12px）
- *        候选A (15..18)    off 16  span  6   （8px 3 字）
- *        候选B (19..21)    off 18  span  4   （8px 2 字，与 A 尾部重叠，见下）
- *        候选C (>=22)      off 22  span  6   （8px 3 字）
- *      每行跨 28 tile；r7（关闭）无候选项，只用到前 8 tile。
- *
- * ⚠ B 与 A 尾部重叠的合法性（逐行核对，**改翻译文本后必须重核**）：
- *    B 只在 r1(普通=4tile) 与 r6(慢=2tile) 用到；这两行 A 分别只用 2 和 0 tile。
- *    A 用到 4/6 tile 的 r3(替换)/r4(立体声) 都不用 B → 实际不冲突。
- * ⚠ 该引用集为设置菜单专属；但 InitWindowTileData 实测只由 tpl 0x081BB874
- *    使用（256/256 次），其余 tm1 窗口走 LZ77 场景字库，故 P24 钩子按 tpl 门控，
- *    非该窗口一律照常渲染（零回归）。 */
-/* ↑ 上面 v9 段第 4 点描的**具体数值**已经全部搬到 src/text/text_scene.c 的
- * 配置表里（kOptRows / kOptSlots / kOptGlyphAvoid），按窗口模板地址键控。
- * 本文件不再持有任何窗口专属常量 —— 改布局请去 text_scene.c，不要在这里加。 */
 
 typedef void (*fn_draw6)(uint32_t glyph, void *dst, uint32_t font,
                          uint32_t fg, uint32_t bg, uint32_t shadow);
@@ -348,26 +234,14 @@ static uint16_t chs_tile_num(TextPrinter *win, unsigned map_tx, int col_delta,
     }
     {                                                /* tm0 / tm1 */
         uint16_t off = win_u16(win, WIN_TILE_OFFSET);
-        /* tm1 分配式：win[0x18] 已是「行内偏移」(0..19，由 chs_blit 恢复/推进)，
-         * tile = 行基址 + 行内偏移；**不再加 win[0x16]**（v4 全屏"1"的坑：
+        /* tm1 分配式：win[0x18] 已是「行内偏移」(0..31，由 chs_blit 恢复/推进)，
+         * tile = 行基址(配置表) + 行内偏移；**不加 win[0x16]**（v4 全屏"1"的坑：
          * +win[0x16] 会让所有中文表项指到 1+2=3 = 字模 1）。
+         * 未登记窗口：tm1_row_base 回退 win[0x16]（线性式）。
          * row_delta=1 → lower=upper+1（gdb 实测 469 条差=1，连续成对）。 */
-        if (tm == 1u) {
-            const struct Tm1WinCfg *cfg = tm1_cfg(win);
-
-            if (cfg && cfg->mode == TM1_MODE_GRID)
-                /* 位置式：lower 在下一行同列(+stride)，spill 在下一列(+1)。 */
-                return (uint16_t)(scene_tm1_grid_num(
-                                      cfg,
-                                      win_u8(win, WIN_CURSOR_X),
-                                      win_u8(win, WIN_CURSOR_Y),
-                                      win_u8(win, WIN_CURSOR_TILE_Y),
-                                      map_tx)
-                                  + (uint16_t)(col_delta
-                                               + row_delta * cfg->grid_stride));
+        if (tm == 1u)
             return (uint16_t)(tm1_row_base(win) + off
                               + (uint16_t)(col_delta * 2 + row_delta));
-        }
         return (uint16_t)(base + off + (uint16_t)(col_delta * 2 + row_delta));
     }
 }
@@ -382,27 +256,6 @@ static uint8_t *chs_tile_ptr(TextPrinter *win, unsigned map_tx, int col_delta,
     }
     return vram_tile(win, chs_tile_num(win, map_tx, col_delta, row_delta,
                                        ptr_base));
-}
-
-/* tilemap 表项地址 —— 复刻 ROM sub_08003708（UpdateTilemap 的定位子程）：
- *   col = (win[0x1A] + win[0x1B]) & 0xFF
- *   row = (win[0x1C] + win[0x1D]) & 0xFF
- *   addr = tpl->tilemap + ((row*32 + col) << 1)
- * lower 表项在 addr + 0x40（= 下一行同列）。
- * tx 可覆盖列游标：原生 FontSub 返回后 win[0x1B] 已被推进，
- * 故必须在调用【前】取好 tx 与地址。 */
-static uint16_t *tilemap_entry_at(TextPrinter *win, uint8_t tx)
-{
-    uint8_t *tpl = win_template(win);
-    uint32_t tp  = win_u32(tpl, TPL_TILEMAP);
-    unsigned col, row;
-
-    if (tp == 0u)
-        return 0;                       /* 缓冲区直绘窗口无 tilemap */
-    col = (unsigned)((unsigned)win_u8(win, WIN_CURSOR_X) + (unsigned)tx) & 0xFFu;
-    row = (unsigned)((unsigned)win_u8(win, WIN_CURSOR_Y)
-                     + (unsigned)win_u8(win, WIN_CURSOR_TILE_Y)) & 0xFFu;
-    return (uint16_t *)(uintptr_t)(tp + ((row * 32u + col) << 1));
 }
 
 static void chs_map_at(TextPrinter *win, uint8_t tx, uint16_t abs_u, uint16_t abs_l)
@@ -764,31 +617,11 @@ static void br_tm0(TextPrinter *win, uint32_t glyph, int is_chs)
 
 static void br_tm1(TextPrinter *win, uint32_t glyph, int is_chs)
 {
-    const struct Tm1WinCfg *cfg;
-
     if (is_chs) { chs_blit(win, glyph); return; }
 
-    cfg = tm1_cfg(win);
-    if (cfg != 0 && cfg->mirror_n != 0u) {
-        /* 原生字符只写 tilemap 表项（值 = 字库 tile），不写 VRAM。
-         * 若那个 tile 正被中文占着，就把表项改指到预渲染期备好的镜像。
-         * ⚠ 地址必须在 FontSub_Origin【之前】算：它会推进 win[0x1B]。 */
-        uint8_t  tx = win_u8(win, WIN_CURSOR_TILE_X);
-        uint16_t *e = tilemap_entry_at(win, tx);
-
-        FontSub_Origin(win, glyph);
-        if (e != 0) {
-            uint16_t v  = (uint16_t)(*e & 0x0FFFu);
-            uint16_t mv = scene_tm1_mirror_of(cfg, v);
-
-            if (mv != 0u) {
-                *e = (uint16_t)((*e & 0xF000u) | mv);   /* 保留 palette */
-                e[32] = (uint16_t)((e[32] & 0xF000u) | (mv + 1u));  /* lower: +0x40B */
-            }
-        }
-    } else {
-        FontSub_Origin(win, glyph);   /* ROM 预渲染查表，零 VRAM 写入 */
-    }
+    /* 原生字符走 ROM 预渲染查表：只写 tilemap 表项，零 VRAM 写入。
+     * （曾有的"字形镜像改写"随 GRID 模式一起退役，git 历史可查。） */
+    FontSub_Origin(win, glyph);
     chs_advance(win, 8u);
 }
 
@@ -850,55 +683,15 @@ void FontSub_Origin(TextPrinter *win, uint32_t glyph)
 }
 
 /* ============================================================================
- * P24「削字库」—— tm1 字库占满 charblock 的根治
+ * P24 — InitWindowTileData 钩子（**直通**）
  *
- * 原生 void InitWindowTileData(tpl, u16 startOffset, u8 glyph)
- *   → 写 tileData + (startOffset + glyph*2) 两格（upper/lower），
- *     256 次铺满 tile [1,513)。中文字形要落 VRAM 就只能跟它抢。
- *
- * 做法：落址 [tile0, tile0+2) 与中文区 [TM1_CHS_LO, TM1_CHS_HI) 相交的
- *   字形**不渲染**，把那 202 个 tile 让给中文（= 跳过 glyph 60..160）。
- *   校验：原生实际引用到的 22 个字形 tile 全在 <121 或 >=323，无冲突。
- *
- * ⚠ 门控：gdb 实证 256/256 次调用的 r0 都是 0x081BB874（设置窗口），
- *   其余 tm1 窗口走 LZ77 场景字库（README §F7）。这里仍按 tpl 门控，
- *   非该窗口一律照常渲染 —— 保证对未采集场景零回归。
+ * 原生：按 tpl 预渲染 256 个字形，铺满 tile [1,513)（每字形 2 tile）。
+ * 历史用途「削字库」与「字形镜像」均已退役（2026-08-29）：前者被实测否掉
+ * （预渲染只跑一次且早于一切文本打印，跳过反而有害），后者随 GRID 模式删除。
+ * 入口桩（entry.s / hook_origin.s）已占用 P24，**勿删**——需要监控/干预
+ * 字库预渲染时在此加逻辑即可。
  * ==========================================================================*/
 void InitWindowTileData_Hook(void *tpl, uint32_t startOffset, uint32_t glyph)
 {
-    /* ⛔ 跳过逻辑已于 2026-08-29 实测后停用，见上方 v9 段说明。
-     * 保留钩子（直通）以便日后需要时恢复；勿删——入口桩已占用 P24。 */
     InitWindowTileData_Origin(tpl, startOffset, glyph);
-
-    /* ---- 字形镜像：把被中文压住的字形复制一份到空闲处 ------------------
-     * 时机是这里而非"用到时"的唯一原因：中文一写入就把原位置覆盖了，
-     * 之后再拷只会拷到中文碎片。此刻（预渲染刚写完、文本尚未打印）
-     * 是内容干净且**整体早于任何中文写入**的唯一窗口
-     * （gdb 实证：预渲染行 698–4013 < 首个文本打印 4026）。
-     * 逐 glyph 调用 ⇒ 每个字形只会命中一次，天然无状态、无需失效逻辑。 */
-    {
-        const struct Tm1WinCfg *cfg =
-            scene_tm1_lookup((uint32_t)(uintptr_t)tpl);
-
-        if (cfg && cfg->mirror_n != 0u) {
-            /* tile0 恒为字形起点（startOffset + glyph*2），故用严格匹配 */
-            uint16_t dst = scene_tm1_mirror_src(cfg,
-                               (uint16_t)(startOffset + glyph * 2u));
-
-            if (dst != 0u) {
-                uint8_t *td = (uint8_t *)(uintptr_t)win_u32(tpl, TPL_TILE_DATA);
-
-                if (td != 0) {
-                    const uint32_t *s = (const uint32_t *)(td
-                                        + (startOffset + glyph * 2u) * 32u);
-                    uint32_t *d = (uint32_t *)(td + (uint32_t)dst * 32u);
-                    unsigned k;
-
-                    /* 一个字形 = 上下 2 个 tile × 32B = 64B = 16 个 u32 */
-                    for (k = 0u; k < 16u; k++)
-                        d[k] = s[k];
-                }
-            }
-        }
-    }
 }

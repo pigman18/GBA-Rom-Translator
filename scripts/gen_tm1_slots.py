@@ -1,5 +1,5 @@
 # -*- coding: utf-8 -*-
-"""生成 tm1 混合模式（TM1_MODE_MIX）的汉字固定槽表。
+"""生成 tm1 混合布局（PTR 标签列 + DYN 候选列）的汉字固定槽表。
 
 产出两个文件（都在 configs/POKEMON_RUBY_AXVJ00/hook/src/text/）：
   chs_slots.inc      —— PTR 段（固定槽）用的汉字 → tile 映射
@@ -62,12 +62,12 @@ def parse_scene(path):
     if not rows:
         raise SystemExit("kOptRows 解析出 0 行，检查 text_scene.c 的写法")
 
-    # kOptZones：{ cx_hi, STRATEGY, font, off, span }
+    # kOptZones（指定初始化器）：.strategy = TM1_ZONE_DYN 的区取 .off/.span
     zone_span = 0
     for zm in re.finditer(
-            r"\{\s*(\d+|0x[0-9A-Fa-f]+)u,\s*TM1_ZONE_(\w+),\s*(\d+)u,"
-            r"\s*(\d+)u,\s*(\d+)u\s*\}", txt):
-        strat, _font, off, sp = zm.group(2), zm.group(3), int(zm.group(4)), int(zm.group(5))
+            r"\{[^}]*?\.strategy\s*=\s*TM1_ZONE_(\w+)"
+            r"[^}]*?\.off\s*=\s*(\d+)u?[^}]*?\.span\s*=\s*(\d+)u?[^}]*?\}", txt):
+        strat, off, sp = zm.group(1), int(zm.group(2)), int(zm.group(3))
         if strat == "DYN":
             zone_span = max(zone_span, off + sp)
     if zone_span == 0:

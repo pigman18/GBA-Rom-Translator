@@ -21,12 +21,13 @@
   不是整版回退。
 - 若确实认为必须回退，先说明理由并等用户确认，不要直接改。
 
-## tm1 落址模式结论（2026-08-29）
+## tm1 落址模式结论（2026-08-29，v20 起更新）
 
-- **当前生效：`TM1_MODE_MIX`**（混合模式）。按 curX 分区，每区独立选策略：
-  标签列 `curX<8` → PTR 固定槽（16px 步进，幂等）；候选列 → DYN 动态 12px。
-  规则表是 `text_scene.c` 的 `kOptZones`，支持任意多段（末条 cx_hi=0xFF 兜底）。
-  PARTITION / GRID / PTR 三种旧模式行为完整保留，切 `OPTION_MODE` 即可回退。
+- **当前唯一布局：PTR 区 + DYN 区（按 curX 分区）**。标签列 `curX<8` → PTR
+  固定槽（16px 步进，幂等）；候选列 → DYN 动态 12px。规则表是 `text_scene.c`
+  的 `kOptZones`，支持任意多段（末条 cx_hi=0xFF 兜底）。
+  **旧 PARTITION / GRID / PTR-整窗模式与 OPTION_MODE 开关已删除**（v20 瘦身，
+  用户拍板；要翻旧账用 git 历史 ≤ 7af3b08）。
 - **DYN 段不占选中态额外 tile**：选中色 = 换个前景色**重画一遍**到同一处。
   只有 PTR 固定槽才需要红字镜像槽（槽内容长期有效，红色版本必须另存）。
   标签列不吃高亮 ⇒ `chs_slots_sel.inc` 当前为**空表**（省 164 tile 给动态区）。

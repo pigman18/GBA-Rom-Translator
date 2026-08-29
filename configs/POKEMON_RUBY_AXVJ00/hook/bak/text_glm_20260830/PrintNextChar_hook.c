@@ -413,18 +413,3 @@ static int DrawMenuCursorEF(TextPrinter *win)
     return 1;
 }
 
-/* =====================================================================
- * [P24] InitWindowTileData 钩子（直通）
- *
- * 原生：按 tpl 预渲染 256 字形铺满 tile [1,513)（tile = startOffset+glyph*2）。
- * 历史用途「削字库」已实测否掉（预渲染整个跑在文本打印之前，不会覆盖中文，
- * 跳过反而有害）；中文改为避开已实测引用的字形 tile（text_scene.c 配置）。
- * 入口桩（entry.s / hook_origin.s）已占用 P24，需要干预预渲染时在此加逻辑。
- * ===================================================================== */
-void InitWindowTileData_Origin(void *tpl, uint32_t startOffset, uint32_t glyph);
-
-void InitWindowTileData_Hook(void *tpl, uint32_t startOffset, uint32_t glyph)
-{
-    InitWindowTileData_Origin(tpl, startOffset, glyph);
-}
-

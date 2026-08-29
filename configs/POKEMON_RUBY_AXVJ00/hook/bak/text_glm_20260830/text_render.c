@@ -412,11 +412,7 @@ static void DrawGlyphTiles_core(
         map_at(win, map_tx, abs_u, abs_l);
     }
 
-    /* [2026-08-30] PTR 固定槽：一字独占 2 个 tilemap 列 ⇒ 16px 步进
-     * （startPixel 恒 0 ⇒ pass1 不 spill，槽内 4 tile 完整一字）。
-     * DYN 走旧步进 pass2_w（相邻字共享 tile）。 */
-    st->chs_px = (uint16_t)(st->chs_px
-                            + (scene_is_ptr_mode(win) ? 8u : pass2_w));
+    st->chs_px = (uint16_t)(st->chs_px + pass2_w);
     st->last_adv = (uint8_t)glyphWidth;
     win_set_u8(win, WIN_CURSOR_TILE_X,
                (uint8_t)(st->base_tx + ((st->chs_px + glyphWidth - 1) >> 3)));
@@ -431,10 +427,6 @@ static void DrawGlyphTiles_common(
     unsigned last;
     int linear;
     int newline_reset = 0;
-
-    /* [2026-08-30] 告知 scene 本字 glyph_id：PTR 固定槽按字查槽表就在此时做
-     * （槽查询需要 per-glyph，而 gctn_linear 只有 xOff/yOff）。 */
-    scene_note_glyph(win, tiles->glyph_id);
 
     if (slot_new && st->chs_px == 0) {
         newline_reset = 1;

@@ -42,6 +42,49 @@
 #include "text_render.h"
 #include "text_scene.h"
 
+/* ============================================================================
+ * 指针模式（TM1_MODE_PTR）的汉字槽表
+ * 由 scripts 从 gdb 实测的 glyph 集合生成，**勿手改**。
+ * 每个汉字 4 个连续 tile：+0 左上 / +1 左下 / +2 右上 / +3 右下。
+ * 说明见 text_scene.h 的 TM1_MODE_PTR 段。
+ *
+ * 两张表，**下标一一对应**（同一个汉字在两表里位置相同）：
+ *   chs_slots.inc     未选中态槽（普通色）
+ *   chs_slots_sel.inc 选中态槽（高亮色，红）—— 由 gen_chs_sel_slots.py 生成
+ * 选中态为什么也要按汉字分槽，见 chs_slots_sel.inc 头注释。
+ * ==========================================================================*/
+#include "chs_slots.inc"
+#include "chs_slots_sel.inc"
+
+/* 汉字 → 槽。返回 0 = 未登记（→ 回退到旧的 GRID/PARTITION 路径）。 */
+static uint16_t chs_slot_of(uint32_t glyph)
+{
+    uint16_t g = (uint16_t)(glyph & 0xFFFFu);
+    unsigned i;
+
+    for (i = 0u; i < sizeof(kOptChsSlots) / sizeof(kOptChsSlots[0]); i++) {
+        if (kOptChsSlots[i].glyph == g)
+            return kOptChsSlots[i].slot;
+    }
+    return 0u;
+}
+
+/* 汉字 → 选中态槽。返回 0 = 未登记（调用方退回普通槽）。
+ * ⚠ 这张表不能省：选中/未选中两个字模颜色不同，**不能共用槽**；
+ *   而选中槽若按"组内第几个字"共用（旧实现），光标一移动就会顶掉旧选中行
+ *   仍在引用的那批槽 → 文字替换。故必须是 per-glyph 的固定槽。 */
+static uint16_t chs_sel_slot_of(uint32_t glyph)
+{
+    uint16_t g = (uint16_t)(glyph & 0xFFFFu);
+    unsigned i;
+
+    for (i = 0u; i < sizeof(kOptChsSelSlots) / sizeof(kOptChsSelSlots[0]); i++) {
+        if (kOptChsSelSlots[i].glyph == g)
+            return kOptChsSelSlots[i].slot;
+    }
+    return 0u;
+}
+
 /* ---- 行相位影子存储 -------------------------------------------------------
  * game.bin 无 RAM 段（link/game.ld），全局落 ROM 不可写。
  * 0x0203FF80-0x0203FFCF 为已验证安全区；本模块取 0x0203FF84/0x88（避开
@@ -319,10 +362,18 @@ static void chs_sync_tilex(TextPrinter *win, int slot, unsigned px, unsigned adv
 static uint16_t tm1_row_base(TextPrinter *win);
 static const struct Tm1WinCfg *tm1_cfg(TextPrinter *win);
 
-static uint16_t chs_tile_num(TextPrinter *win, unsigned map_tx, int col_delta, int row_delta)
+static uint16_t chs_tile_num(TextPrinter *win, unsigned map_tx, int col_delta,
+                             int row_delta, uint16_t ptr_base)
 {
     uint8_t  tm   = win_u8(win, WIN_TEXTMODE) & 7u;
     uint16_t base = win_u16(win, WIN_TILE_BASE);
+
+    /* 指针模式：每个汉字固定 4 个**连续** tile，与屏幕位置无关。
+     *   col_delta=1 → pass2（右半，+2）；row_delta=1 → lower（下半，+1）
+     *   ⇒ +0 左上 / +1 左下 / +2 右上 / +3 右下
+     * 因为与位置无关，重绘必然落在同一处 ⇒ 天然幂等。 */
+    if (ptr_base != 0u)
+        return (uint16_t)(ptr_base + (uint16_t)(col_delta * 2 + row_delta));
 
     if (tm == 3u) {                                  /* grid：列+1，行+30 */
         uint8_t col = (uint8_t)(win_u8(win, WIN_CURSOR_X) + map_tx + (uint8_t)col_delta);
@@ -356,14 +407,16 @@ static uint16_t chs_tile_num(TextPrinter *win, unsigned map_tx, int col_delta, i
     }
 }
 
-static uint8_t *chs_tile_ptr(TextPrinter *win, unsigned map_tx, int col_delta, int row_delta)
+static uint8_t *chs_tile_ptr(TextPrinter *win, unsigned map_tx, int col_delta,
+                             int row_delta, uint16_t ptr_base)
 {
     if ((win_u8(win, WIN_TEXTMODE) & 7u) == 2u) {
         uint32_t p = win_u32(win, WIN_TILE_DATA);
         return (uint8_t *)(uintptr_t)(p + (uint32_t)col_delta * 0x40u
                                         + (uint32_t)row_delta * 0x20u);
     }
-    return vram_tile(win, chs_tile_num(win, map_tx, col_delta, row_delta));
+    return vram_tile(win, chs_tile_num(win, map_tx, col_delta, row_delta,
+                                       ptr_base));
 }
 
 /* tilemap 表项地址 —— 复刻 ROM sub_08003708（UpdateTilemap 的定位子程）：
@@ -449,7 +502,7 @@ static void chs_refpr_nobake(TextPrinter *win, const uint8_t *src32,
 
 /* ---- 12px 两趟 spill 绘制（中文，bake=1；非中文整字走 native_via_phase）---*/
 static void chs_core_ex(TextPrinter *win, const struct ChsGlyphTiles *tiles,
-                        unsigned glyphWidth, int bake)
+                        unsigned glyphWidth, int bake, uint16_t ptr_base)
 {
     unsigned startPixel, pass2_w, px;
     uint8_t base_tx, map_tx, btx0;
@@ -459,6 +512,9 @@ static void chs_core_ex(TextPrinter *win, const struct ChsGlyphTiles *tiles,
     uint8_t *du, *dl, *du_sp = 0, *dl_sp = 0;
     int spilled;
     struct GlyphTileInfo info;
+    /* 指针模式的 pass2 槽：右半两块在 ptr_base+2 / +3。
+     * ⚠ 不能沿用 ptr_base + col_delta=0 —— 那会返回 +0/+1，把 pass1 的左半覆盖掉。 */
+    uint16_t pb2 = (ptr_base != 0u) ? (uint16_t)(ptr_base + 2u) : 0u;
 
     if (glyphWidth < 8u)
         glyphWidth = 8u;
@@ -477,15 +533,15 @@ static void chs_core_ex(TextPrinter *win, const struct ChsGlyphTiles *tiles,
 
     /* ---- pass1：tl / bl，宽 8 ---- */
     info.width = 8u;
-    abs_u = chs_tile_num(win, map_tx, 0, 0);
-    abs_l = chs_tile_num(win, map_tx, 0, 1);
-    du    = chs_tile_ptr(win, map_tx, 0, 0);
-    dl    = chs_tile_ptr(win, map_tx, 0, 1);
-    if (startPixel + 8u > 8u) {
-        su    = chs_tile_num(win, map_tx, 1, 0);
-        sl    = chs_tile_num(win, map_tx, 1, 1);
-        du_sp = chs_tile_ptr(win, map_tx, 1, 0);
-        dl_sp = chs_tile_ptr(win, map_tx, 1, 1);
+    abs_u = chs_tile_num(win, map_tx, 0, 0, ptr_base);
+    abs_l = chs_tile_num(win, map_tx, 0, 1, ptr_base);
+    du    = chs_tile_ptr(win, map_tx, 0, 0, ptr_base);
+    dl    = chs_tile_ptr(win, map_tx, 0, 1, ptr_base);
+    if (ptr_base == 0u && startPixel + 8u > 8u) {   /* 指针模式不 spill */
+        su    = chs_tile_num(win, map_tx, 1, 0, ptr_base);
+        sl    = chs_tile_num(win, map_tx, 1, 1, ptr_base);
+        du_sp = chs_tile_ptr(win, map_tx, 1, 0, ptr_base);
+        dl_sp = chs_tile_ptr(win, map_tx, 1, 1, ptr_base);
         spilled = 1;
     }
     if (bake) {
@@ -496,7 +552,8 @@ static void chs_core_ex(TextPrinter *win, const struct ChsGlyphTiles *tiles,
         chs_refpr_nobake(win, tiles->bl, dl, dl_sp, startPixel, info.width);
     }
     chs_map_at(win, map_tx, abs_u, abs_l);
-    chs_off_add(win, 2u);
+    if (ptr_base == 0u)          /* 指针模式：槽位固定，不推进 off */
+        chs_off_add(win, 2u);
     px += 8u;
 
     if (pass2_w == 0u) {
@@ -510,15 +567,15 @@ static void chs_core_ex(TextPrinter *win, const struct ChsGlyphTiles *tiles,
     /* ---- pass2：tr / br，宽 4 ---- */
     map_tx = (uint8_t)(base_tx + (px >> 3));
     info.width = (uint8_t)pass2_w;
-    abs_u = chs_tile_num(win, map_tx, 0, 0);
-    abs_l = chs_tile_num(win, map_tx, 0, 1);
-    du    = chs_tile_ptr(win, map_tx, 0, 0);
-    dl    = chs_tile_ptr(win, map_tx, 0, 1);
+    abs_u = chs_tile_num(win, map_tx, 0, 0, pb2);
+    abs_l = chs_tile_num(win, map_tx, 0, 1, pb2);
+    du    = chs_tile_ptr(win, map_tx, 0, 0, pb2);
+    dl    = chs_tile_ptr(win, map_tx, 0, 1, pb2);
     du_sp = 0;
     dl_sp = 0;
     if (startPixel + pass2_w > 8u) {
-        du_sp = chs_tile_ptr(win, map_tx, 1, 0);
-        dl_sp = chs_tile_ptr(win, map_tx, 1, 1);
+        du_sp = chs_tile_ptr(win, map_tx, 1, 0, pb2);
+        dl_sp = chs_tile_ptr(win, map_tx, 1, 1, pb2);
     }
     if (bake) {
         DrawGlyphTile_refpr(win, &info, tiles->tr, du, du_sp);
@@ -540,9 +597,12 @@ static void chs_core_ex(TextPrinter *win, const struct ChsGlyphTiles *tiles,
      * 恒定 +2 的后果（2026-08-29 截图实证）：off 比正确值大 2 并持续累积 →
      * 字 N+1 的 pass1 落到一格**新** tile，其左 4px 从未被写过（应放上一字
      * 的右 4px）→ 屏幕上出现**背景透明的空格子**，且 4 字标签多用 4 个 tile。 */
-    chs_off_add(win, (startPixel == 0u) ? 0u : 2u);
+    if (ptr_base == 0u)          /* 同上 */
+        chs_off_add(win, (startPixel == 0u) ? 0u : 2u);
 
-    px += pass2_w;
+    /* 指针模式每字占 2 个 tilemap 列（16px），否则 px 按 12 累积会让下一字的
+     * startPixel 在 0/4 之间交替，左半就会 spill 到右半槽上。 */
+    px += (ptr_base != 0u) ? 8u : pass2_w;
     phase_px_store(win, slot, (uint16_t)px);
     chs_sync_tilex(win, slot, px, glyphWidth);
 }
@@ -627,6 +687,36 @@ static uint16_t tm1_sub_off(TextPrinter *win, uint16_t *span)
     return scene_tm1_sub_off(cfg, win_u8(win, WIN_CURSOR_X), span);
 }
 
+/* 本窗口的当前字符是否走指针模式；是则返回槽基址，否则 0。
+ *
+ * 选中态（红）取**该汉字专属的选中槽**（chs_sel_slot_of），不是共用槽。
+ * 历史 BUG：曾按「组内第几个字」用 CHS_SEL_SLOT_BASE 起的 3 个共用槽，
+ *   那批槽不属于任何字 —— 光标移动后新选中的字写进去，而旧选中行的
+ *   tilemap 表项还指着它们 → 旧行内容被顶掉（"移动光标文字替换"）。
+ * per-glyph 固定槽下，"快"的红字永远只在"快"的槽里，别的字写不进去。 */
+static uint16_t chs_ptr_base(TextPrinter *win, uint32_t glyph)
+{
+    const struct Tm1WinCfg *cfg;
+    uint8_t fg_ov;
+    uint16_t sel;
+
+    if ((win_u8(win, WIN_TEXTMODE) & 7u) != 1u)
+        return 0u;                       /* 仅 tm1 */
+    cfg = tm1_cfg(win);
+    if (cfg == 0 || cfg->mode != TM1_MODE_PTR)
+        return 0u;
+
+    fg_ov = *(volatile uint8_t *)ADDR_OPT_FG_COLOR;
+    if (fg_ov == (uint8_t)OPT_FG_SELECTED) {
+        sel = chs_sel_slot_of(glyph);
+        if (sel != 0u)
+            return sel;
+        /* 未登记汉字：退回普通槽。只是这个字会被染成选中色，
+         * 不会替换别的字的内容（两害相权取轻）。 */
+    }
+    return chs_slot_of(glyph);           /* 未登记的汉字 → 0 → 走旧路径 */
+}
+
 /* ---- 中文入口：字库选择 + 解压 + 分派 -------------------------------------*/
 static void chs_blit(TextPrinter *win, uint32_t glyph)
 {
@@ -634,6 +724,7 @@ static void chs_blit(TextPrinter *win, uint32_t glyph)
     struct ChsGlyphTiles t;
     uint8_t tm = win_u8(win, WIN_TEXTMODE) & 7u;
     uint8_t fn = win_u8(win, WIN_FONTNUM_REAL);
+    uint16_t pb = chs_ptr_base(win, glyph);   /* 指针模式槽；0 = 走旧路径 */
 
     if (fn > 6u)
         fn = 3u;
@@ -658,7 +749,8 @@ static void chs_blit(TextPrinter *win, uint32_t glyph)
      * 行基址由 chs_tile_num 加 tm1_row_base()。新会话（原生重置为较大值）
      * 或越出本子区 → 复位；同会话内推进则不动（幂等：重绘总从子区头开始）。
      * span==0 表示未登记窗口 → 不复位（保持 win[0x18] 原样推进）。 */
-    if (tm == 1u) {
+    /* 指针模式不用 win[0x18] 做行内偏移（槽位固定），跳过复位 */
+    if (tm == 1u && pb == 0u) {
         uint16_t off = win_u16(win, WIN_TILE_OFFSET);
         uint16_t start, span;
 
@@ -677,7 +769,7 @@ static void chs_blit(TextPrinter *win, uint32_t glyph)
     if (tm == 2u)
         chs_buffer(win, &t, g.width);
     else
-        chs_core_ex(win, &t, g.width, 1);
+        chs_core_ex(win, &t, g.width, 1, pb);
 }
 
 /* 非中文（tm0/tm3）必须【也走相位】：旧实现里所有字符都过 DrawGlyphTiles，
@@ -705,15 +797,15 @@ static void native_via_phase(TextPrinter *win, uint32_t glyph)
     startPixel = px & 7u;
     map_tx = (uint8_t)(btx0 + (px >> 3));
 
-    abs_u = chs_tile_num(win, map_tx, 0, 0);
-    abs_l = chs_tile_num(win, map_tx, 0, 1);
-    du    = chs_tile_ptr(win, map_tx, 0, 0);
-    dl    = chs_tile_ptr(win, map_tx, 0, 1);
+    abs_u = chs_tile_num(win, map_tx, 0, 0, 0u);
+    abs_l = chs_tile_num(win, map_tx, 0, 1, 0u);
+    du    = chs_tile_ptr(win, map_tx, 0, 0, 0u);
+    dl    = chs_tile_ptr(win, map_tx, 0, 1, 0u);
     if (startPixel + 8u > 8u) {
-        su    = chs_tile_num(win, map_tx, 1, 0);
-        sl    = chs_tile_num(win, map_tx, 1, 1);
-        du_sp = chs_tile_ptr(win, map_tx, 1, 0);
-        dl_sp = chs_tile_ptr(win, map_tx, 1, 1);
+        su    = chs_tile_num(win, map_tx, 1, 0, 0u);
+        sl    = chs_tile_num(win, map_tx, 1, 1, 0u);
+        du_sp = chs_tile_ptr(win, map_tx, 1, 0, 0u);
+        dl_sp = chs_tile_ptr(win, map_tx, 1, 1, 0u);
     }
 
     GetGlyphTilePointers_Origin(font, (uint16_t)(glyph & 0xFFFFu), &up_src, &lo_src);

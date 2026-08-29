@@ -758,7 +758,7 @@ gdb:
   default: false
 # --- 字形镜像诊断链（定位 GRID 模式"镜像有没有命中"）---
 # 用法：python src/util/gdb_patcher.py log \
-#         --functions IwtdHook,IwtdMirrorRet,Tm1MirrorRet --no-dedup
+#         --functions TileNumRet,IwtdHook,IwtdMirrorRet,Tm1MirrorRet --no-dedup
 # 进设置菜单再退出即可。判读见 gdb_patcher.py 中对应 handler 的注释。
 - name: IwtdHook
   address: '0x08801DF8'
@@ -771,6 +771,10 @@ gdb:
 - name: Tm1MirrorRet
   address: '0x08801D3E'
   description: '镜像诊断③ mirror_of 返回：r0=镜像dst，0=未命中'
+  default: false
+- name: TileNumRet
+  address: '0x088013F6'
+  description: '落址权威数据：chs_tile_num 返回点（r0=算出的 tile, r4=win）；打印 tm/TB/OFF/cx/cy'
   default: false
 - name: SlotDrawChs
   address: '0x08800450'

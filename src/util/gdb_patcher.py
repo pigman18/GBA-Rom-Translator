@@ -515,7 +515,9 @@ JP_PAL_DECOMP_BUF = 0x0202F0BC  # sPaletteDecompressionBuffer（LoadCompressedPa
 #   未命中也必须留痕，否则"从未命中"和"根本没跑到"在日志里分不清。
 
 _MIRROR_STAT: dict[str, int] = {"iwtd_hit": 0, "iwtd_miss": 0,
-                                "tm1_hit": 0, "tm1_miss": 0}
+                                "tm1_hit": 0, "tm1_miss": 0, "tilenum": 0}
+
+TILE_NUM_MAX = 400            # TileNumRet 最多打印条数（防日志爆炸）
 
 
 @handler("IwtdHook")
@@ -565,6 +567,33 @@ def _on_tm1_mirror_ret(gdb: GdbClient, regs: dict, ctx: Ctx,
         if _MIRROR_STAT["tm1_miss"] % 32 == 0:
             ctx.log(f"[Tm1MirrorRet] …未命中累计 {_MIRROR_STAT['tm1_miss']} 次"
                     f"（命中 {_MIRROR_STAT['tm1_hit']}）")
+
+
+@handler("TileNumRet")
+def _on_tile_num_ret(gdb: GdbClient, regs: dict, ctx: Ctx,
+                     cfg: dict[str, Any]) -> None:
+    """chs_tile_num 返回点：r0=算出的 tile，r4=win。
+    一次采集即可反推落址公式（tile 与 tm / TILE_BASE / TILE_OFFSET / curX / curY 的关系）。
+    这是"中文到底落在哪"的权威数据，比反汇编推公式可靠。
+    前 TILE_NUM_MAX 条有效，避免日志爆炸。"""
+    n = _MIRROR_STAT.get("tilenum", 0)
+    if n >= TILE_NUM_MAX:
+        return
+    _MIRROR_STAT["tilenum"] = n + 1
+    tile = regs.get("r0", 0) & 0xFFFF
+    win = regs.get("r4", 0)
+    tm = tb = off = cx = cy = -1
+    try:
+        b = bytes(gdb.read_mem(win, 0x20))
+        tm = b[0x0A]
+        tb = b[0x16] | (b[0x17] << 8)
+        off = b[0x18] | (b[0x19] << 8)
+        cx = b[0x1A]
+        cy = b[0x1C]
+    except Exception:
+        pass
+    ctx.log(f"[TileNumRet] tile={tile} tm={tm} TB=0x{tb:X} OFF=0x{off:X}"
+            f" cx={cx} cy={cy}")
 
 
 @handler("InitTextPrinter")

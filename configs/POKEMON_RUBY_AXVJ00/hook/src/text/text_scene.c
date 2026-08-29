@@ -26,12 +26,17 @@
  *                         `scripts/check_tm1_scene.py --search-base`
  *                         搜一个不踩引用字形且不越界的 grid_base
  * ==========================================================================*/
-/* ⚠ 2026-08-29：GRID 连测两轮未通过（v12 Ｌ/Ｒ 乱码、v13 连数字也乱）。
- *   已排除矩形/槽位问题：gdb 实测设置窗口 tm1 的 curTY 恒为 0、
- *   row 0..16 / col 0..22 → 足迹 40..453，与保护区矩形一致，镜像槽未被压。
- *   剩下只能是"镜像没有命中"，需 gdb 实证 —— 见 src/util/configs/*.yaml
- *   的 IwtdHook / IwtdMirror 断点。定位之前默认回退 PARTITION（已实测通过）。 */
-#define OPTION_MODE   TM1_MODE_PARTITION
+/* 2026-08-29 三种模式的演进：
+ *   PARTITION — 已实测通过，但候选列被迫 8px（容量所限）。
+ *   GRID      — 连测两轮未过（v12 Ｌ/Ｒ 乱码、v13 连数字也乱）。
+ *               gdb 实证：镜像机制本身完全正常（拷贝 22 次、表项改写 189 次），
+ *               但中文落址实测与配置的 GRID/PARTITION 公式**都不同**
+ *               （实测 257+(cy-1)*8+off；配置 40+(cy-1)*23+col，row_tab 间距 28），
+ *               即 text_scene 的布局对设置菜单是空转 → 不再投入。
+ *   PTR       — 当前选择。「指针直接指向字」：中文用字库未被引用的空槽，
+ *               不额外占 tile、幂等、零冲突、可全 12px。详见 text_scene.h。
+ * 回退：改成 TM1_MODE_PARTITION 即可回到已实测通过的那一版。 */
+#define OPTION_MODE   TM1_MODE_PTR
 
 /* ============================================================================
  * 设置（选项）窗口 — 模板 0x081BB874
@@ -164,10 +169,10 @@ static const struct Tm1Mirror kOptMirrors[22] = {
 
 /* 候选列字模：GRID 容量够 → 全 12px（0）；PARTITION 容量紧 → 8px（4）。
  * 这是 GRID 相对 PARTITION 的**主要收益**：标签与候选同为 12px，视觉统一。 */
-#if OPTION_MODE == TM1_MODE_GRID
-#define OPT_CAND_FONT  0u
+#if OPTION_MODE == TM1_MODE_PARTITION
+#define OPT_CAND_FONT  4u      /* PARTITION 容量紧 → 候选列 8px */
 #else
-#define OPT_CAND_FONT  4u
+#define OPT_CAND_FONT  0u      /* GRID / PTR 容量够 → 候选列也 12px */
 #endif
 
 /* 字段顺序必须与 text_scene.h 的 struct Tm1WinCfg 一致（自检脚本会核对个数） */

@@ -148,7 +148,7 @@ FIELDS = ["name", "tpl", "mode", "row_tab", "row_span_tab", "row_tab_n",
           "mirrors", "mirror_n", "glyph_avoid", "glyph_avoid_n"]
 N_FIELDS = len(FIELDS)
 
-MODE_NAMES = {"TM1_MODE_PARTITION": 0, "TM1_MODE_GRID": 1}
+MODE_NAMES = {"TM1_MODE_PARTITION": 0, "TM1_MODE_GRID": 1, "TM1_MODE_PTR": 2}
 
 
 def eval_cond(expr: str, defs: dict) -> bool:

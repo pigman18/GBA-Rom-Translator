@@ -596,6 +596,18 @@ gdb:
   description: 文本块开始（r0=win, r1=文本指针, r2=tile_base, r3=cur_x）
   cfg:
     charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
+- name: State7
+  address: '0x08002F80'
+  description: FD 占位符 state7 入口处理器（win=r4，分派 mov pc,r0 占用 r0）；验证 FD 是否走到官方路径 + 分块扫内存定位 StringVar 区（为 hook 侧占位符展开拿地址）
+  default: false
+  cfg:
+    winreg: r4
+- name: State7Skip
+  address: '0x08002F78'
+  description: 'FD state7 的 SKIP 处理器（win=r4）：index+=1 跳过占位符 id 字节。判读：拾道具消息命中 2 次=跳过正常（あ/う 另有来源）；0 次=FD 未走 state7。注意与 State7(0x08002F80,NEWLINE 重定位)区分'
+  default: false
+  cfg:
+    winreg: r4
 - name: ProcessCurrentChar
   address: '0x0800336E'
   description: 逐字符（r4=win, r3=char）；输出量大且与 InitTextPrinter 冗余

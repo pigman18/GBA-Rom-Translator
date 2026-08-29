@@ -129,11 +129,37 @@ static int phrase_stream_no_wait_controls(const uint8_t *stream)
                 return 0;
             continue;
         }
+        if (stream[i] == 0xFD) {
+            /* FD nn：占位符，可由 fd_expand_print 调官方展开对内联打印 */
+            i += 2;
+            if (i > 256u)
+                return 0;
+            continue;
+        }
         if (stream[i] >= 0xFAu)
             return 0;
         i++;
     }
     return 1;
+}
+
+/* ---- FD 占位符：官方展开对（ADDR_FD_RESOLVER + ADDR_FD_SUBPRINT）--------
+ * 快径循环（0x08002DE8）state7 的官方实现就是：
+ *   index += 1; SUBPRINT(win, RESOLVER(text[旧 index]))。
+ * RESOLVER 查 0x081BBAC8 函数表返回变量串指针；SUBPRINT 换 text/index 跑
+ * 快径循环把串打完（缓冲内容里的 F9 80 嵌套引用会再次进我们的重定向，
+ * 道具名等因此显示中文）再恢复 text/index/state。
+ * ⚠ 打印器的 state7（0x08002F78）只是"跳过 id"的残迹；预处理循环
+ *   （0x08002E54）没有 s7 分支——FD 在那条路上会漏成 id 字节被当字形
+ *   （PCS 0x01=あ / 0x03=う，2026-08-29 拾道具对话实证）。 */
+typedef uint32_t (*fn_fd_resolver)(uint32_t id);
+typedef void (*fn_fd_subprint)(TextPrinter *win, uint32_t str);
+
+static void fd_expand_print(TextPrinter *win, uint8_t id)
+{
+    uint32_t str = ((fn_fd_resolver)(ADDR_FD_RESOLVER | 1u))((uint32_t)id);
+
+    ((fn_fd_subprint)(ADDR_FD_SUBPRINT | 1u))(win, str);
 }
 
 static int phrase_parent_continues(const uint8_t *text, uint16_t index)
@@ -161,6 +187,9 @@ static int inline_phrase_no_controls(TextPrinter *win, uint16_t index, uint16_t 
             if (gidx < CHS_FONT_GLYPH_MAX)
                 PrintGlyph(win, gidx, CHS_GLYPH_ADVANCE_PX);
             i += 4;
+        } else if (stream[i] == 0xFD) {
+            fd_expand_print(win, stream[i + 1]);
+            i += 2;
         } else {
             if (!DrawGlyph(win, stream[i]))
                 return 0;
@@ -219,6 +248,9 @@ static int slot_draw_chinese(TextPrinter *win, const uint8_t *chinese,
                     PrintGlyph(win, gidx, CHS_GLYPH_ADVANCE_PX);
             }
             ci += 4;
+        } else if (chinese[ci] == 0xFD) {
+            fd_expand_print(win, chinese[ci + 1]);
+            ci += 2;
         } else {
             DrawGlyph(win, chinese[ci]);
             ci++;

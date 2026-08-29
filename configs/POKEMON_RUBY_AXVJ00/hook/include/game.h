@@ -36,6 +36,12 @@
 #define ADDR_OPT_PALETTE_OVERRIDE          0x0203FFD0u
 #define ADDR_PHRASE_OFFSETS                0x08810000u
 #define ADDR_PHRASE_TABLE                  0x08820000u
+/* FD 占位符官方展开对（2026-08-29 反汇编实证，见 .workbuddy 记忆）：
+ *   RESOLVER(id≤13 查 0x081BBAC8 函数表，>13 自带分支) → 返回变量串指针
+ *   SUBPRINT(win, str) = 官方内联子打印：换 text/index 跑快径循环打完整串后恢复。
+ * 快径（0x08002DE8）的 state7 处理就是「index+=1; SUBPRINT(win, RESOLVER(id))」。 */
+#define ADDR_FD_RESOLVER                   0x080046D4u
+#define ADDR_FD_SUBPRINT                   0x08002DB4u
 #define ADDR_PLAY_BGM                      0x080724ACu
 #define ADDR_PLAY_SE                       0x080724CCu
 #define ADDR_SLOT_TABLE                    0x09EA0000u

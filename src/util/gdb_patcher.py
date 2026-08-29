@@ -660,6 +660,86 @@ def _on_init_text(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> 
                 ctx.log(f"  原盘同址: {ob[:64].hex(' ')}")
 
 
+# FD 占位符诊断用的 JP PCS 签名（src/meowth/jp_pcs.py 表硬编码）：
+#   すごいキズぐすり = 0D 3B 02 57 92 39 0D 28 0D
+#   ユウキ           = 75 53 57
+_FD_SIGS = {
+    "すごいキズぐすり": bytes([0x0D, 0x3B, 0x02, 0x57, 0x92, 0x39, 0x0D, 0x28, 0x0D]),
+    "ユウキ": bytes([0x75, 0x53, 0x57]),
+}
+
+
+def _read_mem_big(gdb: GdbClient, addr: int, n: int) -> bytes:
+    """定点读（≤0x400 字节）。mGBA 0.10.5 stub 单包上限约 0x40（超限 E06），
+    read_mem 抛 RuntimeError（E 响应）/GdbError（连接）——两者都吞成空串。"""
+    try:
+        return bytes(gdb.read_mem(addr, n))
+    except Exception:
+        return b""
+
+
+@handler("State7")
+def _on_state7(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """FD 占位符 state7 入口（0x08002F80，win=r4——入口分派 `mov pc,r0` 占用了 r0）。
+
+    dump win/文本/组合缓冲 + 文本引擎全局邻域（小定点读，勿加大范围扫描——
+    mGBA stub 单包 ~0x40，0x8000 级盲扫会把连接拖死，2026-08-29 实证）。"""
+    win = regs.get(cfg.get("winreg", "r4"), 0)
+    wb = _read_win(gdb, win)
+    if len(wb) < 0x20:
+        ctx.log(f"\n[State7] win=0x{win:08X} 读取失败")
+        return
+    if not ctx._hit((win, bytes(wb[:0x20]))):
+        return
+    ctx.log(f"\n[State7] win=0x{win:08X} {_win_fields(wb)}")
+    tptr = u32(wb, 0x10)
+    index = u16(wb, 0x14)
+    nb = _read_mem_big(gdb, (tptr + index) & 0xFFFFFFFF, 12)
+    ctx.log(f"  text[index..]={nb.hex(' ')}（index 处应=占位符 id 字节）")
+    mb = _read_mem_big(gdb, 0x0202322C, 0x60)
+    ctx.log(f"  组合缓冲 0x0202322C: {mb.hex(' ')}")
+    # 候选 StringVar 区定点 dump（每块 ≤0x200 = 32 包）：
+    dumps = [
+        ("IWRAM 文本全局邻域", 0x03000300, 0x200),
+        ("EWRAM 组合缓冲邻域", 0x02023100, 0x400),
+        ("EWRAM 前段", 0x02020000, 0x400),
+    ]
+    for tag, addr, n in dumps:
+        blob = _read_mem_big(gdb, addr, n)
+        if not blob:
+            ctx.log(f"  [{tag}] 0x{addr:08X}..+{n:X} 读取失败")
+            continue
+        hits = []
+        for sig_name, sig in _FD_SIGS.items():
+            pos = blob.find(sig)
+            while pos >= 0 and len(hits) < 4:
+                hits.append(f"{sig_name}@0x{addr + pos:08X}")
+                pos = blob.find(sig, pos + 1)
+        ctx.log(f"  [{tag}] 0x{addr:08X}..+{n:X}: {blob.hex(' ')}"
+                + (f"  ★命中: {', '.join(hits)}" if hits else ""))
+
+
+@handler("State7Skip")
+def _on_state7_skip(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """FD 占位符 state7 的 SKIP 处理器（0x08002F78，win=r4）：index+=1 跳过 id 字节。
+
+    判读：若拾道具消息（FD01 发现了 FD03）里本断点命中 2 次 → 跳过路径正常，
+    あ/う 碎片另有来源；若一次都不命中 → FD 没走到 state7（我们 hook 的
+    state 写入或分派有问题）。"""
+    win = regs.get(cfg.get("winreg", "r4"), 0)
+    wb = _read_win(gdb, win)
+    if len(wb) < 0x20:
+        ctx.log(f"\n[State7Skip] win=0x{win:08X} 读取失败")
+        return
+    if not ctx._hit((win, bytes(wb[:0x20]))):
+        return
+    ctx.log(f"\n[State7Skip] win=0x{win:08X} {_win_fields(wb)}")
+    tptr = u32(wb, 0x10)
+    index = u16(wb, 0x14)
+    nb = _read_mem_big(gdb, (tptr + index) & 0xFFFFFFFF, 12)
+    ctx.log(f"  将跳过 text[index..]={nb.hex(' ')}")
+
+
 @handler("ProcessCurrentChar")
 def _on_char(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
     win = regs.get("r4", 0)

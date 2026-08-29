@@ -585,19 +585,47 @@ static void native_via_phase(TextPrinter *win, uint32_t glyph)
         dl_sp = chs_tile_ptr(win, map_tx, 1, 1, 0u);
     }
 
-    GetGlyphTilePointers_Origin(font, (uint16_t)(glyph & 0xFFFFu), &up_src, &lo_src);
-    /* upper：烘焙到 32B 栈缓冲 → 相位移位落 VRAM */
-    if (FontIsShadowed(font))
-        CopyGlyph2bppTo4bpp_Origin(up_src, buf, c, e, d);
-    else
-        CopyGlyph1bppTo4bpp_Origin(up_src, buf, c, d);
-    chs_refpr_nobake(win, buf, du, du_sp, startPixel, 8u);
-    /* lower */
-    if (FontIsShadowed(font))
-        CopyGlyph2bppTo4bpp_Origin(lo_src, buf, c, e, d);
-    else
-        CopyGlyph1bppTo4bpp_Origin(lo_src, buf, c, d);
-    chs_refpr_nobake(win, buf, dl, dl_sp, startPixel, 8u);
+    if (glyph >= SYM_GLYPH_BASE && glyph < SYM_GLYPH_BASE + SYM_GLYPH_COUNT) {
+        /* SYM 标点带：像素来自专用字库 ADDR_FONT_CHS_SYM（9 字形，ink=15/paper=0
+         * 烘焙），这里按当前窗口 fg/bg 重映射 —— 标点与同窗口原生字符同色
+         * （选项菜单选中变红时标点也随之变红）。
+         * ⚠ 中文主字库在标点码位上没有可用字形（charmap「1E5x→Normal 糊图」），
+         *   裸 SYM 码位交给原生字体表会画出同码位的假名碎片
+         *   （实测："…飞翔了！"→"…飞翔了ざ"，2026-08-29；重构前
+         *   PcsPrint_Custom 直画 GetGlyph 缓冲，重构时这条支路被弄丢）。 */
+        const uint8_t *sym = (const uint8_t *)(ADDR_FONT_CHS_SYM
+                            + (glyph - SYM_GLYPH_BASE) * 64u);
+        unsigned i;
+
+        for (i = 0; i < 32u; i++) {                 /* upper tile */
+            uint8_t b = sym[i];
+
+            buf[i] = (uint8_t)((((b >> 4) != 0u) ? c : d) << 4
+                               | (((b & 0xFu) != 0u) ? c : d));
+        }
+        chs_refpr_nobake(win, buf, du, du_sp, startPixel, 8u);
+        for (i = 0; i < 32u; i++) {                 /* lower tile */
+            uint8_t b = sym[32u + i];
+
+            buf[i] = (uint8_t)((((b >> 4) != 0u) ? c : d) << 4
+                               | (((b & 0xFu) != 0u) ? c : d));
+        }
+        chs_refpr_nobake(win, buf, dl, dl_sp, startPixel, 8u);
+    } else {
+        GetGlyphTilePointers_Origin(font, (uint16_t)(glyph & 0xFFFFu), &up_src, &lo_src);
+        /* upper：烘焙到 32B 栈缓冲 → 相位移位落 VRAM */
+        if (FontIsShadowed(font))
+            CopyGlyph2bppTo4bpp_Origin(up_src, buf, c, e, d);
+        else
+            CopyGlyph1bppTo4bpp_Origin(up_src, buf, c, d);
+        chs_refpr_nobake(win, buf, du, du_sp, startPixel, 8u);
+        /* lower */
+        if (FontIsShadowed(font))
+            CopyGlyph2bppTo4bpp_Origin(lo_src, buf, c, e, d);
+        else
+            CopyGlyph1bppTo4bpp_Origin(lo_src, buf, c, d);
+        chs_refpr_nobake(win, buf, dl, dl_sp, startPixel, 8u);
+    }
 
     chs_map_at(win, map_tx, abs_u, abs_l);
     chs_off_add(win, 2u);

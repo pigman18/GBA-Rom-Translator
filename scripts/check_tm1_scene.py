@@ -123,6 +123,41 @@ def parse_slot_array(src: str, name: str):
     return out
 
 
+def parse_zone_array(src: str, name: str, defs: dict):
+    """解析 struct Tm1Zone[] = { {cx_hi, strategy, font, off, span}, ... }。
+    strategy 等字段是符号常量（TM1_ZONE_PTR/DYN），须按 token 解析——
+    不能整体 findall 数字（"TM1_ZONE_x" 里的 "1" 会被误抠出来）。
+    名字为 0/NULL（未配置区表）时返回 []。"""
+    if not name or name in ("0",):
+        return []
+    m = re.search(r"\b%s\s*\[\s*\d*\s*\]\s*=\s*\{" % re.escape(name), src)
+    if not m:
+        return None
+    body = grab_block(src, m.end() - 1)[1:-1]
+
+    def resolve(tok: str):
+        tok = tok.strip()
+        for _ in range(8):
+            if tok not in defs:
+                break
+            v = defs[tok]
+            if isinstance(v, str):
+                tok = v.strip()
+            else:
+                return v
+        try:
+            return to_int(tok)
+        except ValueError:
+            return None
+
+    out = []
+    for it in split_items(body):
+        vals = [resolve(t) for t in it.strip().strip("{}").split(",")]
+        if len(vals) == 5 and all(v is not None for v in vals):
+            out.append(tuple(vals))
+    return out
+
+
 def parse_mirror_array(src: str, name: str):
     """解析 struct Tm1Mirror[] = { {src, dst}, ... }；返回 [(src, dst), ...]"""
     if not name or name in ("0", "((const struct Tm1Mirror *)0)"):
@@ -145,10 +180,13 @@ FIELDS = ["name", "tpl", "mode", "row_tab", "row_span_tab", "row_tab_n",
           "lbl_off", "lbl_span", "slots", "slot_n", "cand_font",
           "grid_base", "grid_stride", "grid_x0", "grid_y0",
           "prot_row0", "prot_row1", "prot_col0", "prot_col1",
-          "mirrors", "mirror_n", "glyph_avoid", "glyph_avoid_n"]
+          "mirrors", "mirror_n", "glyph_avoid", "glyph_avoid_n",
+          "zones", "zone_n"]
 N_FIELDS = len(FIELDS)
 
-MODE_NAMES = {"TM1_MODE_PARTITION": 0, "TM1_MODE_GRID": 1, "TM1_MODE_PTR": 2}
+MODE_NAMES = {"TM1_MODE_PARTITION": 0, "TM1_MODE_GRID": 1, "TM1_MODE_PTR": 2,
+              "TM1_MODE_MIX": 3}
+ZONE_PTR, ZONE_DYN = 0, 1      # TM1_ZONE_PTR / TM1_ZONE_DYN（text_scene.h）
 
 
 def eval_cond(expr: str, defs: dict) -> bool:
@@ -256,46 +294,77 @@ def parse_cfgs(src: str, defs: dict) -> list:
 
 # ---------------------------------------------------------------- 落址模拟
 
-def sim_partition(c, rows, spans, slots, sessions, cand_wide):
+def sim_partition(c, rows, spans, slots, zones, sessions, cand_wide):
+    """落址模拟。返回 (occ, prints)：
+      occ    tile -> note（供引用字形冲突检查）
+      prints [(note, base, lo, hi, span_lim)] 每会话的绝对足迹与该行预留量。
+    zones 非 None 时按 MIX 的 kOptZones 路由候选（PTR 区不吃行区）；
+    否则按 PARTITION 的 col_label_max / kOptSlots（旧行为）。"""
     occ = {}
+    prints = []
     for cx, cy, n, note in sessions:
         if cy <= c["row_y0"]:
             base = c["title_base"]
+            span_lim = 0                      # 标题行无 row_span，跳过行界检查
         else:
             r = (cy - c["row_y0"]) >> c["row_shift"]
             r = max(1, min(c["row_tab_n"], r))
             base = rows[r - 1]
-        # 标签列恒 12px；候选列字宽由 cand_wide 决定
-        wide = cand_wide if (cx >= c["col_label_max"]) else True
-        if cx < c["col_label_max"]:
-            off = c["lbl_off"]
-        else:
-            off = None
-            for cx_hi, o, _sp in slots:
-                if cx < cx_hi:
-                    off = o
+            span_lim = spans[r - 1] if r - 1 < len(spans) else 0
+        if zones is not None:
+            z = None
+            for zz in zones:
+                if cx < zz[0]:
+                    z = zz
                     break
-            if off is None:
-                off = slots[-1][1]
+            if z is None:
+                z = zones[-1] if zones else None
+            if z is None or z[1] == ZONE_PTR:
+                continue                      # PTR 固定槽：不吃行区（gen_tm1_slots 管账）
+            off, wide = z[3], (z[2] == 0)     # font==0 → 12px
+            zone_win = (z[3], z[3] + z[4])    # 本区复位窗口 [off, off+span)
+        else:
+            wide = cand_wide if (cx >= c["col_label_max"]) else True
+            if cx < c["col_label_max"]:
+                off = c["lbl_off"]
+            else:
+                off = None
+                for cx_hi, o, _sp in slots:
+                    if cx < cx_hi:
+                        off = o
+                        break
+                if off is None:
+                    off = slots[-1][1]
+            zone_win = None
+        lo, hi = None, None
         px, o = 0, off
         for _ in range(n):
             sp = px & 7
             for t in (o, o + 1):
                 occ[base + t] = note
+                lo = base + t if lo is None else min(lo, base + t)
+                hi = base + t if hi is None else max(hi, base + t)
             if sp + 8 > 8:
                 for t in (o + 2, o + 3):
                     occ[base + t] = note
+                    lo = base + t if lo is None else min(lo, base + t)
+                    hi = base + t if hi is None else max(hi, base + t)
             o += 2
             px += 8
             if wide:
                 for t in (o, o + 1):
                     occ[base + t] = note
+                    lo = base + t if lo is None else min(lo, base + t)
+                    hi = base + t if hi is None else max(hi, base + t)
                 if sp + 4 > 8:
                     for t in (o + 2, o + 3):
                         occ[base + t] = note
+                        lo = base + t if lo is None else min(lo, base + t)
+                        hi = base + t if hi is None else max(hi, base + t)
                 o += (0 if sp == 0 else 2)
                 px += 4
-    return occ
+        prints.append((note, base, lo, hi, span_lim, zone_win, off))
+    return occ, prints
 
 
 def sim_grid(c, sessions, cand_wide, base_override=None, stride=None):
@@ -432,6 +501,11 @@ def main() -> int:
     src = preprocess_conditionals(
             strip_comments(open(src_path, encoding="utf-8", errors="replace").read()))
     defs = collect_defines(src)
+    # 同目录头文件（text_scene.h）里的宏也并入（TM1_MODE_* / TM1_ZONE_* 定义在那）
+    import os
+    hdr = os.path.join(os.path.dirname(os.path.abspath(src_path)), "text_scene.h")
+    if os.path.exists(hdr):
+        defs.update(collect_defines(open(hdr, encoding="utf-8", errors="replace").read()))
     cfgs = parse_cfgs(src, defs)
     if not cfgs:
         print("未在 %s 找到可解析的 Tm1WinCfg" % src_path)
@@ -497,12 +571,60 @@ def main() -> int:
                 print("  ⚠ PARTITION 数据不完整")
                 fail += 1
                 continue
-            occ_p = sim_partition(c, rows, spans, slots, sess, cand_wide)
+            # MIX 模式：候选路由按 kOptZones（PTR 区不吃行区），
+            # kOptSlots 只是 PARTITION 回退表，不代表实际落址。
+            zones = (parse_zone_array(src, c["zones"], defs)
+                     if c["mode"] == 3 else None)
+            if zones is not None:
+                if not zones:
+                    print("  ✗ mode=MIX 但区表 %s 解析失败/为空" % c["zones"])
+                    fail += 1
+                    continue
+                # 结构性检查：末条必须 0xFF 兜底；区窗口必须互不重叠且有序
+                if zones[-1][0] != 0xFF:
+                    print("  ✗ 区表末条 cx_hi=%d ≠ 0xFF（缺兜底）" % zones[-1][0])
+                    fail += 1
+                for a, b in zip(zones, zones[1:]):
+                    if b[0] <= a[0]:
+                        print("  ✗ 区表 cx_hi 非递增: %s → %s" % (a[0], b[0]))
+                        fail += 1
+                    if a[1] == ZONE_DYN and b[1] == ZONE_DYN and a[3] + a[4] > b[3]:
+                        print("  ✗ 相邻 DYN 区窗口重叠: off%d+span%d 压过 off%d"
+                              % (a[3], a[4], b[3]))
+                        fail += 1
+            occ_p, prints = sim_partition(c, rows, spans, slots, zones,
+                                          sess, cand_wide)
             no, nh, _nc = report("PARTITION 行=%d 预留=%s" % (len(rows), spans),
                                  occ_p, avoid_pairs, mirrors)
             fail += bool(no) + bool(nh)
             if mirrors:
                 fail += check_mirrors(c, mirrors, occ_p, avoid_pairs)
+
+            # 会话足迹检查（2026-08-29 "打到底踩单声道"BUG 的直接教训）：
+            #   ① 足迹不得越过本行预留 [base, base+span)
+            #   ② DYN 区足迹不得越出本区窗口 [off, off+span)
+            #   ③ 任意两会话的足迹不得重叠（谁后画谁赢 → 串字/残留）
+            for note, base, lo, hi, span_lim, zwin, zoff in prints:
+                if lo is None:
+                    continue
+                if span_lim and hi >= base + span_lim:
+                    print("  ✗ [%s] 足迹 %d..%d 越过行界 %d（base=%d 预留=%d）"
+                          % (note, lo, hi, base + span_lim, base, span_lim))
+                    fail += 1
+                if zwin and not (lo >= zoff + base and hi < zoff + base + (zwin[1] - zwin[0])):
+                    print("  ✗ [%s] 足迹 %d..%d 越出区窗口 [%d,%d)"
+                          % (note, lo, hi, zwin[0] + base, zwin[1] + base))
+                    fail += 1
+            for i in range(len(prints)):
+                for j in range(i + 1, len(prints)):
+                    n1, b1, l1, h1, *_ = prints[i]
+                    n2, b2, l2, h2, *_ = prints[j]
+                    if l1 is None or l2 is None:
+                        continue
+                    if l1 <= h2 and l2 <= h1:
+                        print("  ✗ 会话足迹重叠: [%s] %d..%d ↔ [%s] %d..%d"
+                              % (n1, l1, h1, n2, l2, h2))
+                        fail += 1
 
         # 搜 grid_base。GRID 是位置式，足迹必然压到部分引用字形
         # （已穷举证明无"零冲突"解），所以搜索时**自带镜像槽分配**：

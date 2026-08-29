@@ -43,47 +43,12 @@
 #include "text_scene.h"
 
 /* ============================================================================
- * 指针模式（TM1_MODE_PTR）的汉字槽表
- * 由 scripts 从 gdb 实测的 glyph 集合生成，**勿手改**。
- * 每个汉字 4 个连续 tile：+0 左上 / +1 左下 / +2 右上 / +3 右下。
- * 说明见 text_scene.h 的 TM1_MODE_PTR 段。
- *
- * 两张表，**下标一一对应**（同一个汉字在两表里位置相同）：
- *   chs_slots.inc     未选中态槽（普通色）
- *   chs_slots_sel.inc 选中态槽（高亮色，红）—— 由 gen_chs_sel_slots.py 生成
- * 选中态为什么也要按汉字分槽，见 chs_slots_sel.inc 头注释。
+ * 汉字固定槽表与分区选择**已迁至 src/text/text_layout.c**。
+ * 本文件不再持有任何槽表/分区逻辑，只负责"拿到落址结果后怎么画"：
+ *   tm1_zone_select(win, glyph, &sel) → sel.ptr_base（PTR 固定槽）
+ *                                       或 sel.off/span（DYN 行内偏移）
+ * 布局数值全部在 src/text/text_scene.c，算法在 text_layout.c。
  * ==========================================================================*/
-#include "chs_slots.inc"
-#include "chs_slots_sel.inc"
-
-/* 汉字 → 槽。返回 0 = 未登记（→ 回退到旧的 GRID/PARTITION 路径）。 */
-static uint16_t chs_slot_of(uint32_t glyph)
-{
-    uint16_t g = (uint16_t)(glyph & 0xFFFFu);
-    unsigned i;
-
-    for (i = 0u; i < sizeof(kOptChsSlots) / sizeof(kOptChsSlots[0]); i++) {
-        if (kOptChsSlots[i].glyph == g)
-            return kOptChsSlots[i].slot;
-    }
-    return 0u;
-}
-
-/* 汉字 → 选中态槽。返回 0 = 未登记（调用方退回普通槽）。
- * ⚠ 这张表不能省：选中/未选中两个字模颜色不同，**不能共用槽**；
- *   而选中槽若按"组内第几个字"共用（旧实现），光标一移动就会顶掉旧选中行
- *   仍在引用的那批槽 → 文字替换。故必须是 per-glyph 的固定槽。 */
-static uint16_t chs_sel_slot_of(uint32_t glyph)
-{
-    uint16_t g = (uint16_t)(glyph & 0xFFFFu);
-    unsigned i;
-
-    for (i = 0u; i < sizeof(kOptChsSelSlots) / sizeof(kOptChsSelSlots[0]); i++) {
-        if (kOptChsSelSlots[i].glyph == g)
-            return kOptChsSelSlots[i].slot;
-    }
-    return 0u;
-}
 
 /* ---- 行相位影子存储 -------------------------------------------------------
  * game.bin 无 RAM 段（link/game.ld），全局落 ROM 不可写。
@@ -671,51 +636,8 @@ static uint16_t tm1_row_base(TextPrinter *win)
     return scene_tm1_row_base(cfg, win_u8(win, WIN_CURSOR_Y));
 }
 
-/* 行内子区起点 + 容量。
- * ⚠ span 必须 ≥ 该子区会走到的最大 off，否则 off 回卷覆盖本字前半
- *   （v8 的槽跨度 2 就是这么炸的）。
- *   12px 每字 off+4（4 字 → 需 16）；8px 每字 off+2（3 字 → 需 6）。
- * 未登记窗口返回 span=0 表示"不做复位"。 */
-static uint16_t tm1_sub_off(TextPrinter *win, uint16_t *span)
-{
-    const struct Tm1WinCfg *cfg = tm1_cfg(win);
-
-    if (!cfg) {
-        *span = 0u;
-        return 0u;
-    }
-    return scene_tm1_sub_off(cfg, win_u8(win, WIN_CURSOR_X), span);
-}
-
-/* 本窗口的当前字符是否走指针模式；是则返回槽基址，否则 0。
- *
- * 选中态（红）取**该汉字专属的选中槽**（chs_sel_slot_of），不是共用槽。
- * 历史 BUG：曾按「组内第几个字」用 CHS_SEL_SLOT_BASE 起的 3 个共用槽，
- *   那批槽不属于任何字 —— 光标移动后新选中的字写进去，而旧选中行的
- *   tilemap 表项还指着它们 → 旧行内容被顶掉（"移动光标文字替换"）。
- * per-glyph 固定槽下，"快"的红字永远只在"快"的槽里，别的字写不进去。 */
-static uint16_t chs_ptr_base(TextPrinter *win, uint32_t glyph)
-{
-    const struct Tm1WinCfg *cfg;
-    uint8_t fg_ov;
-    uint16_t sel;
-
-    if ((win_u8(win, WIN_TEXTMODE) & 7u) != 1u)
-        return 0u;                       /* 仅 tm1 */
-    cfg = tm1_cfg(win);
-    if (cfg == 0 || cfg->mode != TM1_MODE_PTR)
-        return 0u;
-
-    fg_ov = *(volatile uint8_t *)ADDR_OPT_FG_COLOR;
-    if (fg_ov == (uint8_t)OPT_FG_SELECTED) {
-        sel = chs_sel_slot_of(glyph);
-        if (sel != 0u)
-            return sel;
-        /* 未登记汉字：退回普通槽。只是这个字会被染成选中色，
-         * 不会替换别的字的内容（两害相权取轻）。 */
-    }
-    return chs_slot_of(glyph);           /* 未登记的汉字 → 0 → 走旧路径 */
-}
+/* 行内子区起点 + 容量已并入 text_layout.c 的 tm1_zone_select()
+ * （DYN 段的 off/span 现在由 kOptZones 按 curX 给出，不再单独查表）。 */
 
 /* ---- 中文入口：字库选择 + 解压 + 分派 -------------------------------------*/
 static void chs_blit(TextPrinter *win, uint32_t glyph)
@@ -724,7 +646,14 @@ static void chs_blit(TextPrinter *win, uint32_t glyph)
     struct ChsGlyphTiles t;
     uint8_t tm = win_u8(win, WIN_TEXTMODE) & 7u;
     uint8_t fn = win_u8(win, WIN_FONTNUM_REAL);
-    uint16_t pb = chs_ptr_base(win, glyph);   /* 指针模式槽；0 = 走旧路径 */
+    struct Tm1ZoneSel sel;
+    uint16_t pb = 0u;                     /* 固定槽基址；0 = 走动态路径 */
+
+    sel.strategy = TM1_ZONE_DYN;
+    sel.font     = 0u;
+    sel.ptr_base = 0u;
+    sel.off      = 0u;
+    sel.span     = 0u;
 
     if (fn > 6u)
         fn = 3u;
@@ -732,31 +661,26 @@ static void chs_blit(TextPrinter *win, uint32_t glyph)
      * 队伍名等其余小字体场景同理。其余一律常规字体（12px）。 */
     if (tm == 2u)
         fn = 4u;
-    /* tm1 混排：标签列 12px、候选列 8px，由配置表的 col_label_max 划分。
-     * 8px 的原因见文件头 v9 段账目——12px 时 3 字候选要 12 tile，加标签 16 后
-     * 48 tile/行；8px 下只需 6 tile → 16+6+4+6=28 tile/行，才装得进可用区间。
-     * 未登记窗口没有这个划分 → 一律 12px，且不做子区复位。 */
-    if (tm == 1u) {
-        const struct Tm1WinCfg *cfg = tm1_cfg(win);
 
-        /* cand_font=0 表示候选列也用 12px（GRID 因此可以全 12px） */
-        if (cfg && cfg->cand_font
-            && win_u8(win, WIN_CURSOR_X) >= cfg->col_label_max)
-            fn = cfg->cand_font;
+    /* tm1：**分区选择**——策略（PTR 固定槽 / DYN 动态分配）与字模（12px / 8px）
+     * 都由 text_scene.c 的 kOptZones 按 curX 决定，算法在 text_layout.c。
+     * 本函数只消费结果：pb != 0 → 槽位固定；否则用 sel.off/span 做行内复位。 */
+    if (tm == 1u) {
+        tm1_zone_select(win, glyph, &sel);
+        pb = sel.ptr_base;
+        if (sel.font != 0u)
+            fn = sel.font;
     }
 
-    /* tm1：把 win[0x18] 恢复为「行内偏移」——标签 / 候选槽各有起点。
+    /* tm1 DYN 段：把 win[0x18] 恢复为「行内偏移」——每个区各有起点。
      * 行基址由 chs_tile_num 加 tm1_row_base()。新会话（原生重置为较大值）
-     * 或越出本子区 → 复位；同会话内推进则不动（幂等：重绘总从子区头开始）。
-     * span==0 表示未登记窗口 → 不复位（保持 win[0x18] 原样推进）。 */
-    /* 指针模式不用 win[0x18] 做行内偏移（槽位固定），跳过复位 */
-    if (tm == 1u && pb == 0u) {
+     * 或越出本子区 → 复位；同会话内推进则不动（幂等：重绘总从区头开始）。
+     * PTR 段不用 win[0x18]（槽位固定），跳过复位。 */
+    if (tm == 1u && pb == 0u && sel.span != 0u) {
         uint16_t off = win_u16(win, WIN_TILE_OFFSET);
-        uint16_t start, span;
 
-        start = tm1_sub_off(win, &span);
-        if (span != 0u && (off < start || off >= (uint16_t)(start + span)))
-            win_set_u16(win, WIN_TILE_OFFSET, start);
+        if (off < sel.off || off >= (uint16_t)(sel.off + sel.span))
+            win_set_u16(win, WIN_TILE_OFFSET, sel.off);
     }
 
     DecompressGlyph_Chinese(&g, (uint16_t)(glyph & 0xFFFFu), fn);

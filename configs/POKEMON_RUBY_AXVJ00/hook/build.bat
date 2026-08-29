@@ -45,6 +45,10 @@ echo === Compiling text_scene.c (per-window layout config table) ===
 %CC% %CFLAGS% %SRC_ROOT%\text\text_scene.c -o %BUILD%\text_scene.o
 if errorlevel 1 exit /b 1
 
+echo === Compiling text_layout.c (tm1 layout algorithms) ===
+%CC% %CFLAGS% %SRC_ROOT%\text\text_layout.c -o %BUILD%\text_layout.o
+if errorlevel 1 exit /b 1
+
 echo === Compiling FontFunc_hook.c (tm0 layout-protocol bridge) ===
 %CC% %CFLAGS% %SRC_ROOT%\text\FontFunc_hook.c -o %BUILD%\FontFunc_hook.o
 if errorlevel 1 exit /b 1
@@ -74,6 +78,7 @@ echo === Linking game.elf ===
   %BUILD%/text_translater.o ^
   %BUILD%/text_render.o ^
   %BUILD%/text_scene.o ^
+  %BUILD%/text_layout.o ^
   %BUILD%/FontFunc_hook.o ^
   %BUILD%/ref_pokeemerald.o ^
   %BUILD%/ref_pokeruby.o ^

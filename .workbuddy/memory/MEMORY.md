@@ -23,8 +23,15 @@
 
 ## tm1 落址模式结论（2026-08-29）
 
-- **当前生效：`TM1_MODE_PTR`**（指针模式，一字一固定槽）。
-  PARTITION（12px 标签 + 8px 候选）与 GRID（全 12px）均已不再投入，代码保留。
+- **当前生效：`TM1_MODE_MIX`**（混合模式）。按 curX 分区，每区独立选策略：
+  标签列 `curX<8` → PTR 固定槽（16px 步进，幂等）；候选列 → DYN 动态 12px。
+  规则表是 `text_scene.c` 的 `kOptZones`，支持任意多段（末条 cx_hi=0xFF 兜底）。
+  PARTITION / GRID / PTR 三种旧模式行为完整保留，切 `OPTION_MODE` 即可回退。
+- **DYN 段不占选中态额外 tile**：选中色 = 换个前景色**重画一遍**到同一处。
+  只有 PTR 固定槽才需要红字镜像槽（槽内容长期有效，红色版本必须另存）。
+  标签列不吃高亮 ⇒ `chs_slots_sel.inc` 当前为**空表**（省 164 tile 给动态区）。
+- **容量算法**：12px n 字最大 off = **4n-2**，占 **4n** 个 tile（不是 2n+4）。
+  3 字 → off 到 10，占 12 tile，span 要给 12。
 - **PTR 的 16px 字距是固有限制，不是 BUG**：固定槽 ⇒ 相邻字无法共享中间 tile
   ⇒ 每字独占 2 列 = 16px 步进。12px 的本质是"相邻字共享一个 tile"，与固定槽互斥
   （共享列的 tile 内容取决于"字A+字B"组合，41 字 ⇒ 1681 组合，装不下）。
@@ -34,8 +41,16 @@
   而选中槽若按"组内第几个字"共用（旧实现），光标一移动就会顶掉旧选中行
   仍在引用的那批槽 → 文字替换。现为 `chs_slots_sel.inc`（与 `chs_slots.inc` 同序）。
 - **PTR 唯一维护成本**：槽表是构建期静态数据，取决于"译文用到哪些汉字"。
-  译文变更（增删汉字）后**必须**重跑 `scripts/gen_chs_slots.py` 与
-  `scripts/gen_chs_sel_slots.py`，否则新汉字回退旧路径。
+  译文变更（增删汉字）后**必须**重跑 `scripts/gen_tm1_slots.py`，
+  否则新汉字回退旧路径。该脚本会**自动从 text_scene.c 读 kOptRows 与
+  kOptZones 的 off/span 当禁区**，所以改完布局直接重跑它，槽表不会与配置脱节。
+
+## 代码分层约定（2026-08-29 与用户确认）
+
+- `hook/src/text/text_scene.c` —— **只放配置**（声明式静态表，一窗一条）
+- `hook/src/text/text_layout.c` —— **只放算法**（查表、求值、分区选择、槽查询）
+- `hook/src/text/FontFunc_hook.c` —— 只消费落址结果，负责"怎么画"
+- 新增 tm1 窗口：在 text_scene.c 加配置并登记进 `kTm1Windows[]`，算法侧不用动。
 
 ## 待办 / 约定
 

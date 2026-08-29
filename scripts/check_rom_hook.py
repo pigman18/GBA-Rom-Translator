@@ -24,7 +24,7 @@ HOOK = os.path.join(ROOT, "configs", "POKEMON_RUBY_AXVJ00", "hook")
 GAME_BIN = os.path.join(HOOK, "out", "game.bin")
 TEXT_DIR = os.path.join(HOOK, "src", "text")
 
-MODES = {0: "PARTITION", 1: "GRID", 2: "PTR"}
+MODES = {0: "PARTITION", 1: "GRID", 2: "PTR", 3: "MIX"}
 
 # 与 text_scene.c kOptGlyphAvoid 一致（各占 2 tile：t 与 t+1）
 GLYPH_AVOID = [
@@ -47,8 +47,8 @@ def find_mode(b):
     for i in range(len(b) - 4):
         if b[i:i + 4] == pat:
             m = b[i + 4]
-            # mode 只可能是 0/1/2，其后是 3 字节对齐填充
-            if m <= 2 and b[i + 5:i + 8] == b"\x00\x00\x00":
+            # mode 只可能是 0..3（PARTITION/GRID/PTR/MIX），其后是 3 字节对齐填充
+            if m <= 3 and b[i + 5:i + 8] == b"\x00\x00\x00":
                 return i, m
     return None, None
 
@@ -65,6 +65,8 @@ def main():
     off, mode = find_mode(b)
     print("  kOptWindow.mode @ 0x%X = %s"
           % (off, MODES.get(mode, mode)) if off else "  ⚠ 未定位到 mode")
+    if mode == 3:
+        print("  （MIX：分区规则在 text_scene.c 的 kOptZones）")
 
     nrm = parse_inc(os.path.join(TEXT_DIR, "chs_slots.inc"))
     sel_path = os.path.join(TEXT_DIR, "chs_slots_sel.inc")
@@ -81,18 +83,23 @@ def main():
         print("  kOptChsSelSlots @ 0x%X (%d 条)" % (table_at(sel[:6]), len(sel))
               if table_at(sel[:6]) >= 0 else "  ⚠ kOptChsSelSlots 缺失")
 
-        blocked = set()
-        for t in GLYPH_AVOID:
-            blocked.add(t)
-            blocked.add(t + 1)
-        for _g, s in nrm:
-            blocked |= {s + k for k in range(4)}
-        bad = [(s, sorted({s + k for k in range(4)} & blocked))
-               for _g, s in sel if {s + k for k in range(4)} & blocked]
-        ok_order = [g for g, _ in nrm] == [g for g, _ in sel]
-        print("  选中槽: 顺序一致=%s 冲突=%s tile %d..%d"
-              % (ok_order, bad if bad else "无",
-                 min(s for _, s in sel), max(s for _, s in sel) + 3))
+        # 空表 = 1 条哨兵（glyph 0xFFFF），这是 MIX 模式的预期状态：
+        # PTR 段（标签列）不吃高亮，DYN 段靠重画出选中色，都不需要红字镜像槽。
+        if len(sel) == 1 and sel[0][0] == 0xFFFF:
+            print("  选中槽: 空表（MIX 模式预期：标签不吃高亮、DYN 靠重画出红字）")
+        else:
+            blocked = set()
+            for t in GLYPH_AVOID:
+                blocked.add(t)
+                blocked.add(t + 1)
+            for _g, s in nrm:
+                blocked |= {s + k for k in range(4)}
+            bad = [(s, sorted({s + k for k in range(4)} & blocked))
+                   for _g, s in sel if {s + k for k in range(4)} & blocked]
+            ok_order = [g for g, _ in nrm] == [g for g, _ in sel]
+            print("  选中槽: 顺序一致=%s 冲突=%s tile %d..%d"
+                  % (ok_order, bad if bad else "无",
+                     min(s for _, s in sel), max(s for _, s in sel) + 3))
 
     rc = 0
     for rp in roms:

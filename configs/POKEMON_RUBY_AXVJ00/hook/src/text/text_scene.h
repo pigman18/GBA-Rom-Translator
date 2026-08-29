@@ -53,6 +53,42 @@ struct Tm1Slot {
 #define TM1_MODE_PARTITION 0u
 #define TM1_MODE_GRID      1u
 #define TM1_MODE_PTR       2u
+#define TM1_MODE_MIX       3u
+
+/* ---- 混合模式（TM1_MODE_MIX）--------------------------------------------
+ * 按 curX 把一行切成若干**区**，每区独立选排版策略与字模。
+ *
+ *   PTR（固定槽）：一字一槽，每字独占 2 个 tilemap 列 ⇒ **16px 步进**。
+ *     幂等 —— 同一汉字永远落在同一处，重绘不漂移、光标怎么动都不串。
+ *     代价：字模只有 12px，格子 16px，右边空 4px（看起来偏散）。
+ *
+ *   DYN（动态分配）：相邻字共享中间那个 tile ⇒ **12px 步进**，紧凑。
+ *     落址 = 行基址 + 行内偏移(win[0x18])，靠 off/span 做会话复位。
+ *     选中态不占额外 tile —— 换个前景色**重画一遍**即可。
+ *
+ * 两者可以共存：文字固定、求稳的一段用 PTR；要紧凑的一段用 DYN。
+ * 设置菜单的做法：标签列 curX<8 → PTR；候选列 → DYN 12px（分 A/B/C 三槽，
+ * 因为同一行的多个候选是各自独立的打印会话，必须分开，否则互相覆盖）。
+ * ------------------------------------------------------------------------*/
+#define TM1_ZONE_PTR  0u   /* 固定槽，16px 步进 */
+#define TM1_ZONE_DYN  1u   /* 动态分配，12px 步进 */
+
+struct Tm1Zone {
+    uint8_t cx_hi;      /* curX < cx_hi 命中本区；**末条必须填 0xFF 兜底** */
+    uint8_t strategy;   /* TM1_ZONE_PTR / TM1_ZONE_DYN */
+    uint8_t font;       /* 字模：0 = 12px 常规，4 = 8px 小字 */
+    uint8_t off;        /* DYN：行内 tile 偏移（相对行基址）；PTR 忽略 */
+    uint8_t span;       /* DYN：容量，须 ≥ 该区最大推进量；PTR 忽略 */
+};
+
+/* 分区选择结果 —— 由 tm1_zone_select() 填充，调用方直接用 */
+struct Tm1ZoneSel {
+    uint8_t  strategy;  /* TM1_ZONE_PTR / TM1_ZONE_DYN */
+    uint8_t  font;      /* 字模：0 = 12px，4 = 8px */
+    uint16_t ptr_base;  /* PTR：槽基址；DYN：0 */
+    uint16_t off;       /* DYN：行内起点；PTR：忽略 */
+    uint16_t span;      /* DYN：容量；PTR：忽略 */
+};
 
 /* ---- 指针模式（TM1_MODE_PTR）--------------------------------------------
  * 「指针直接指向字」：每个汉字占用一块**本窗口未引用的字形槽**，
@@ -149,7 +185,17 @@ struct Tm1WinCfg {
      * ⚠ 集合可能不完整，改翻译后应重新采集。 */
     const uint16_t *glyph_avoid;
     uint8_t         glyph_avoid_n;
+
+    /* MIX 模式：列分区规则表（按 cx_hi 升序，末条 cx_hi=0xFF 兜底）。
+     * 非 MIX 模式可为 NULL / 0。 */
+    const struct Tm1Zone *zones;
+    uint8_t              zone_n;
 };
+
+/* ---- 窗口登记表（**数据在 text_scene.c，算法在 text_layout.c**）----------
+ * 新增窗口：在 text_scene.c 底部定义配置并追加到 kTm1Windows[]，算法侧不用动。 */
+extern const struct Tm1WinCfg *const kTm1Windows[];
+extern const unsigned kTm1WindowN;
 
 /* 按模板地址查表；未登记返回 NULL（调用方回退默认，禁止猜场景）。 */
 const struct Tm1WinCfg *scene_tm1_lookup(uint32_t tpl);
@@ -174,5 +220,13 @@ uint16_t scene_tm1_mirror_of(const struct Tm1WinCfg *cfg, uint16_t tile);
  * 给**预渲染期拷贝**用——InitWindowTileData 传来的 tile 恒为字形起点
  * （startOffset + glyph*2），精确匹配可以杜绝错位拷贝。无镜像返回 0。 */
 uint16_t scene_tm1_mirror_src(const struct Tm1WinCfg *cfg, uint16_t tile);
+
+/* ---- 混合模式：分区选择（实现见 src/text/text_layout.c）------------------
+ * 按当前 curX 命中 zones 表，填好 *out：
+ *   PTR 区 → ptr_base = 该汉字的固定槽（查 kOptChsSlots）
+ *   DYN 区 → off/span = 该区的行内偏移与容量，ptr_base = 0
+ * 未登记窗口 / 非 MIX 模式 / 未登记汉字 → out->strategy 按旧模式回退，
+ * 绝不让调用方拿到半初始化的值。 */
+void tm1_zone_select(TextPrinter *win, uint32_t glyph, struct Tm1ZoneSel *out);
 
 #endif /* TEXT_SCENE_H */

@@ -50,7 +50,8 @@ def parse_glyphs(path):
 
 
 def parse_scene(path):
-    """从 text_scene.c 读出：行基址表 kOptRows + DYN 分区的行内最大占用。"""
+    """从 text_scene.c 读出：行基址表 kOptRows、每行预留 kOptRowSpans、
+    以及 DYN 分区的行内最大占用（自检用）。"""
     txt = open(path, encoding="utf-8").read()
 
     m = re.search(r"kOptRows\s*\[\s*\d+\s*\]\s*=\s*\{(.*?)\}", txt, re.S)
@@ -62,25 +63,34 @@ def parse_scene(path):
         raise SystemExit("kOptRows 解析出 0 行，检查 text_scene.c 的写法")
 
     # kOptZones：{ cx_hi, STRATEGY, font, off, span }
-    span = 0
+    zone_span = 0
     for zm in re.finditer(
             r"\{\s*(\d+|0x[0-9A-Fa-f]+)u,\s*TM1_ZONE_(\w+),\s*(\d+)u,"
             r"\s*(\d+)u,\s*(\d+)u\s*\}", txt):
         strat, _font, off, sp = zm.group(2), zm.group(3), int(zm.group(4)), int(zm.group(5))
         if strat == "DYN":
-            span = max(span, off + sp)
-    if span == 0:
+            zone_span = max(zone_span, off + sp)
+    if zone_span == 0:
         raise SystemExit("未解析到任何 DYN 分区，检查 kOptZones")
-    return rows, span
+
+    # kOptRowSpans：每行预留；**0 = 该行不用行区**（无中文候选项）
+    spans = []
+    m2 = re.search(r"kOptRowSpans\s*\[\s*\d+\s*\]\s*=\s*\{(.*?)\}", txt, re.S)
+    if m2:
+        spans = [int(x) for x in re.findall(r"(\d+)u", m2.group(1))]
+    if len(spans) != len(rows):
+        spans = [zone_span] * len(rows)
+    return rows, spans, zone_span
 
 
-def blocked_set(rows, row_span):
+def blocked_set(rows, spans):
     b = set()
     for t in GLYPH_AVOID:
         b.add(t)
         b.add(t + 1)
-    for r in rows:                      # DYN 行区整段保留
-        b |= set(range(r, r + row_span))
+    for r, sp in zip(rows, spans):      # DYN 行区整段保留（span=0 的行跳过）
+        if sp:
+            b |= set(range(r, r + sp))
     return b
 
 
@@ -104,12 +114,17 @@ def alloc(n, blocked):
 
 def main():
     glyphs = parse_glyphs(SLOTS_INC)
-    rows, row_span = parse_scene(SCENE_C)
-    blocked = blocked_set(rows, row_span)
+    rows, spans, zone_span = parse_scene(SCENE_C)
+    blocked = blocked_set(rows, spans)
 
     print("汉字数        : %d" % len(glyphs))
-    print("DYN 行基址    : %s，每行 %d tile" % (rows, row_span))
-    print("DYN 占用      : %s" % ["[%d,%d)" % (r, r + row_span) for r in rows])
+    print("DYN 行基址    : %s" % rows)
+    print("DYN 每行预留  : %s（0 = 该行无中文候选，不占行区）" % spans)
+    print("DYN 实际占用  : %s"
+          % ["[%d,%d)" % (r, r + sp) for r, sp in zip(rows, spans) if sp])
+    for r, sp in zip(rows, spans):
+        if sp and sp < zone_span:
+            print("  ⚠ 行 %d 预留 %d < 分区所需 %d，会溢出！" % (r, sp, zone_span))
 
     slots = alloc(len(glyphs), blocked)
 

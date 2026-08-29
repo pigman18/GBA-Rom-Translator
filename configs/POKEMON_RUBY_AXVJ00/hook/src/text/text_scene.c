@@ -36,7 +36,7 @@
  *   PTR       — 当前选择。「指针直接指向字」：中文用字库未被引用的空槽，
  *               不额外占 tile、幂等、零冲突、可全 12px。详见 text_scene.h。
  * 回退：改成 TM1_MODE_PARTITION 即可回到已实测通过的那一版。 */
-#define OPTION_MODE   TM1_MODE_PTR
+#define OPTION_MODE   TM1_MODE_PARTITION
 
 /* ============================================================================
  * 设置（选项）窗口 — 模板 0x081BB874

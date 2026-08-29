@@ -1835,7 +1835,11 @@ def run_log(args: argparse.Namespace) -> int:
     charmap_src = _pick_charmap(args, points)
     double: dict[int, str] = {}
     if charmap_src:
-        _, double = load_charmap(charmap_src)
+        charmap_single, double = load_charmap(charmap_src)
+        # 项目 charmap 的单字节重定义（如 SYM 标点带 36=; 37=。 3A=、 3B=，
+        # 3C=！ 3D=？ 3E=：）必须覆盖日文 PCS 底包，否则日志把标点解码成
+        # が/ご（2026-08-30 图鉴说明误判实证）。
+        single.update(charmap_single)
         mode = f"{decode_mode} + F900/F980 字库 {charmap_src}"
     else:
         mode = decode_mode

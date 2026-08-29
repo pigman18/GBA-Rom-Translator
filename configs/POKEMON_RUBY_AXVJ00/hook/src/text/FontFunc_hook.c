@@ -654,6 +654,15 @@ static void br_tm1(TextPrinter *win, uint32_t glyph, int is_chs)
 {
     if (is_chs) { chs_blit(win, glyph); return; }
 
+    if (glyph >= SYM_GLYPH_BASE && glyph < SYM_GLYPH_BASE + SYM_GLYPH_COUNT) {
+        /* SYM 标点带（。=37 ，=3B 、=3A ！=3C ？=3D ：=3E）：主库这些码位
+         * 在预渲染 VRAM 里是糊图/空白（真字形在专用 SYM 字库 0x091E0000，
+         * 只有 native_via_phase 的 SYM 分支读它）。tm1 走官方预渲染查表 →
+         * 图鉴说明标点画成空白/糊图碎片（2026-08-30 实证）。与 tm0 同路。 */
+        native_via_phase(win, glyph);
+        return;
+    }
+
     /* 原生字符走 ROM 预渲染查表：只写 tilemap 表项，零 VRAM 写入。
      * （曾有的"字形镜像改写"随 GRID 模式一起退役，git 历史可查。） */
     FontSub_Origin(win, glyph);

@@ -230,6 +230,17 @@ tiles:
     raw_size: 32
     source: gdb_patcher
     md5: 36e8131bc3016bd0218ed49bd9b0bdbd
+  - id: rt_087E740C
+    label: rt tag=0xD759 LoadCompressedObjectPic
+    default: false
+    address: '0x087E740C'
+    format: 4bpp
+    compression: lz77_swap
+    sprite_size: 32x8
+    count: 1
+    raw_size: 128
+    source: gdb_patcher
+    md5: c695bc0618b5667da532e4e80e3a1b6e
 texts:
   filters:
   - id: global_anim_cmd_filter
@@ -349,8 +360,8 @@ texts:
     label: 词条·训练家个人名
     group: 词条
     default: true
-    description: 训练家个人名表（0x1C5040-0x1CA340，步长 0x20 名称偏移 0x18；区分于「训练家名」class 表与 0x1CA354
-      起物种名）；2026-08 复核：原 end 截短尾部（ユカリ/ナナとネネ等双人组合名至マサシ），实测终点 0x1CA340
+    description: 训练家个人名表（0x1C5040-0x1CA340，步长 0x20 名称偏移 0x18；区分于「训练家名」class 表与 0x1CA354 起物种名）；2026-08 复核：原 end 截短尾部（ユカリ/ナナとネネ等双人组合名至マサシ），实测终点
+      0x1CA340
     start: '0x1C5040'
     end: '0x1CA340'
     type: struct
@@ -598,15 +609,14 @@ gdb:
     charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
 - name: State7
   address: '0x08002F80'
-  description: FD 占位符 state7 入口处理器（win=r4，分派 mov pc,r0 占用 r0）；验证 FD 是否走到官方路径 + 分块扫内存定位
-    StringVar 区（为 hook 侧占位符展开拿地址）
+  description: FD 占位符 state7 入口处理器（win=r4，分派 mov pc,r0 占用 r0）；验证 FD 是否走到官方路径 + 分块扫内存定位 StringVar 区（为 hook 侧占位符展开拿地址）
   default: false
   cfg:
     winreg: r4
 - name: State7Skip
   address: '0x08002F78'
-  description: FD state7 的 SKIP 处理器（win=r4）：index+=1 跳过占位符 id 字节。判读：拾道具消息命中 2 次=跳过正常（あ/う
-    另有来源）；0 次=FD 未走 state7。注意与 State7(0x08002F80,NEWLINE 重定位)区分
+  description: FD state7 的 SKIP 处理器（win=r4）：index+=1 跳过占位符 id 字节。判读：拾道具消息命中 2 次=跳过正常（あ/う 另有来源）；0 次=FD 未走 state7。注意与 State7(0x08002F80,NEWLINE
+    重定位)区分
   default: false
   cfg:
     winreg: r4
@@ -686,8 +696,7 @@ gdb:
     winreg: r0
 - name: MapNamePopupX
   address: '0x0809F6D0'
-  description: 地名弹窗 MenuPrint 调用点（r0=buf, r1=注入的 x 留白px, r2=y）；配 InitTextPrinter 看
-    win+0x1A curX
+  description: 地名弹窗 MenuPrint 调用点（r0=buf, r1=注入的 x 留白px, r2=y）；配 InitTextPrinter 看 win+0x1A curX
   cfg:
     charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
 - name: MapNameHookRet
@@ -714,8 +723,7 @@ gdb:
   description: LZ77→0x02000000 后 LoadSpritePalette（r0=&压缩调色板）
 - name: CreateSprite
   address: '0x08000BCC'
-  description: 创建精灵（r0=&SpriteTemplate，AXVJ 布局 tileTag@0/paletteTag@2/oam*@4；绑定 sheet↔调色板
-    + 权威尺寸）
+  description: 创建精灵（r0=&SpriteTemplate，AXVJ 布局 tileTag@0/paletteTag@2/oam*@4；绑定 sheet↔调色板 + 权威尺寸）
 - name: LoadCompressedPalette
   address: '0x08070A4C'
   description: 压缩调色板：LZ→0x0202F0BC + 2×拷贝→gPlttBuffer*（r0=src, r1=offset, r2=size）
@@ -753,8 +761,7 @@ gdb:
     charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
 - name: HealthboxNickAfterRender
   address: '0x08042536'
-  description: Alt2 RenderText 返回后、chrome 循环前（r6=buf r4=str r8=StringLength-6）；dump
-    每列墨水行距
+  description: Alt2 RenderText 返回后、chrome 循环前（r6=buf r4=str r8=StringLength-6）；dump 每列墨水行距
   default: false
   cfg:
     charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
@@ -768,8 +775,8 @@ gdb:
   default: false
 - name: ChsFontFunc
   address: '0x08801d34'
-  description: 新管线每字符入口 Chs_FontFunc_hook（r0=win,r1=glyph,r2=is_chs）。地址随每次重编变化,必须按
-    out/game.map 同步(2026-08-30 = 0x08801d34;旧值 0x08801BD4/0x088019b0 均过期,断错位置会采到垃圾寄存器)
+  description: 新管线每字符入口 Chs_FontFunc_hook（r0=win,r1=glyph,r2=is_chs）。地址随每次重编变化,必须按 out/game.map 同步(2026-08-30 = 0x08801d34;旧值
+    0x08801BD4/0x088019b0 均过期,断错位置会采到垃圾寄存器)
   default: false
 - name: IwtdHook
   address: '0x08801DF8'

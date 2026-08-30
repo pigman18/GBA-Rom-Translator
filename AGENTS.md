@@ -24,7 +24,12 @@
 
 ## 标准打包（用户验收用）
 见 [`PACK_ROM.md`](docs/PACK_ROM.md)。  
-用户说打 rom / 打包 / 给出该命令时，代理必须代跑；默认 `--seed-only`，且**包含物种名**；勿擅自加回姓名输入等高风险跳过模块。
+用户说打 rom / 打包 / 给出该命令时，代理必须代跑；勿擅自加回姓名输入等高风险跳过模块。
+
+> ⚠ **打包命令一律执行仓库根 [`build.bat`](build.bat)，不要在文档或对话里手写/复制 `meowth full` 命令。**
+> 根 `build.bat` 是**唯一权威**的模块清单与参数来源，文档里手抄的清单会过时
+> （实测教训：2026-08-30 前各文档抄的清单漏了 `图鉴分类名`，导致图鉴页
+> 「たね宝可梦」翻不出「种子宝可梦」，被误判成 hook 渲染回归）。
 
 ## Armips 汇编验证（不依赖翻译文本）
 ```powershell
@@ -36,12 +41,25 @@ Copy-Item "..\..\roms\origin\POKEMON_RUBY_AXVJ00.gba" -Destination "baserom.gba"
 ..\..\..\tools\armips.exe main.asm
 ```
 
-## Meowth 完整流水线验证（需要 BDF 字库 + 种子翻译，不需要 API Key）
-```powershell
-# 从仓库根运行（CLI 在 src\meowth，桥接在 src\MeowthBridge）
-$env:PYTHONPATH = "$PWD\src"
-C:\Python314\python.exe -m meowth full "roms\origin\POKEMON_RUBY_AXVJ00.gba" --seed-only --target zh-Hans -o "roms\outputs"
+## Meowth 完整流水线（用户验收用 ROM）
+**直接执行仓库根 [`build.bat`](build.bat)** —— 它内含权威模块清单与全部参数：
+
+```bat
+cd /d C:\code\GBA-Rom-Translator
+build.bat
 ```
-- `--seed-only`：不调用 LLM API，只用离线种子翻译
-- 如需指定模块，追加 `--modules 招式1,道具1,...`（模块名见 game.json modules 节）
-- 默认流：extract → seed-translate → build（内含 armips 汇编 + 字体生成）
+```powershell
+# PowerShell 下（中文模块名须走 PowerShell 原生调用，Git Bash/MSYS 会转换非 ASCII 参数）
+Set-Location C:\code\GBA-Rom-Translator
+& cmd.exe /c "build.bat" *>&1 | Tee-Object -FilePath pack_log.txt
+```
+
+- 默认流：extract → translate → build（内含 armips 汇编 + 字体生成）
+- 根 `build.bat` **未加 `--seed-only`** ⇒ 会调 LLM 补译（耗时、产生费用）。
+  只想离线快速验证 hook 时，复制该命令并追加 `--seed-only`（其余参数照抄，不要手改模块清单）。
+- 打完必跑自检：`C:\Python314\python.exe scripts\check_rom_hook.py`
+  （验证 `configs\POKEMON_RUBY_AXVJ00\hook\out\game.bin` 与 ROM @0x800000 逐字节一致）
+
+> 🔒 **禁止把 API key 写进仓库**：根 `build.bat` 当前**硬编码了 `--api-key=sk-...`，且已被 git 跟踪**
+> （`git log -- build.bat` 可见）。这是 P0 安全问题 —— 该 key 视为已泄露，应尽快轮换，
+> 并改为从环境变量读取（如 `--api-key=%QWEN_API_KEY%`）。

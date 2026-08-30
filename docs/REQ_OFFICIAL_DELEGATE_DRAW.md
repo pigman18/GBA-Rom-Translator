@@ -97,7 +97,8 @@ F9 00 ll tt --PrintNextChar--> gidx --GetGlyphTilePointers(IWRAM摆渡)--> upper
 ## 7. 验收
 
 1. `hook/build.bat` + `armips main.asm` 通过，`out/game.bin` 正常生成。
-2. `meowth full --seed-only` 打包 `roms/outputs`，`translate.build.json` 无 `width` 异常。
+2. 执行仓库根 `build.bat` 打包 `roms/outputs`，`translate.build.json` 无 `width` 异常。
+   （不要手抄 `meowth full` 命令，模块清单以根 `build.bat` 为准，见 `docs/PACK_ROM.md`）
 3. 真机/mGBA：对话框/商店/队伍/图鉴/战斗 对话按 `12` 排版，无切半、无 `双▼`、无黑条（`CHS_UI_ICON 0x1E8..0x1FF` 未被踩）。
 4. 原日文 `00..FF` 假名/数字仍走官方 `FontFunc`，纹理正确。
 

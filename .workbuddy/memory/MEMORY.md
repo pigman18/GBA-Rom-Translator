@@ -151,8 +151,17 @@ node vision.js bug/<目录>/10.PNG "逐行列出左边标签和右边选项的�
 ## 待办 / 约定
 
 - 🔴 **每次改完 hook 源码都必须走完整流水线**（用户 2026-08-30 明确要求，
-  「每次改完都要执行流水线」）：`build.bat` → meowth full 打包 →
+  「每次改完都要执行流水线」）：hook `build.bat` → **根 `build.bat` 打包** →
   `check_rom_hook.py`。**编译通过 ≠ 交付**，别停在编译那一步。
+- 🔴 **打包一律执行仓库根 `build.bat`，禁止手抄 `meowth full` 命令**
+  （用户 2026-08-30 拍板；详见 `docs/PACK_ROM.md`）。
+  根 build.bat = 模块清单与参数的**唯一权威来源**。
+  教训：此前各文档抄的 15 模块漏了「图鉴分类名」（还漏 树果名/秘密基地装饰名/
+  训练家个人名/补漏剧情/三个华丽大赛变体）⇒ 图鉴页显示「たね宝可梦」而非
+  「种子宝可梦」，被当成 hook 渲染回归白查一整轮。
+  **改模块清单 = 改根 build.bat，不要改文档。**
+  ⚠ 根 build.bat **未加 `--seed-only`**（会调 LLM，耗时+费用）；只验 hook 时
+  复制其命令 + 追加 `--seed-only`，`--modules` 照抄不改。
 - 每次打完 ROM 先跑 `scripts/check_rom_hook.py`：确认 game.bin 与 ROM 逐字节一致
   + 读回 `kOptWindow.mode`。**"源码全对但运行不对"要先排除"打进去的是旧包"。**
   ⚠ 该脚本的 `MODES = {0:PARTITION,1:GRID,2:PTR,3:MIX}` 是 v3 遗留表，
@@ -165,8 +174,12 @@ node vision.js bug/<目录>/10.PNG "逐行列出左边标签和右边选项的�
   用 `*>&1 | Out-File log` 再读日志，别只看退出码。
 - 设置菜单 tm1 布局拟从 `TM1_ROW_TAB` 等文件级字面量，重构为
   **按窗口模板地址键控的静态配置表**（未登记模板走默认，不猜场景）。
-- 打包命令（bash 下 PYTHONPATH 必须用 Windows 路径，`/c/...` 格式 Windows Python 不认）：
-  `PYTHONPATH='C:\code\GBA-Rom-Translator\src' C:/Python314/python.exe -m meowth full ...`
+- ~~打包命令（bash 下 PYTHONPATH 必须用 Windows 路径…）~~ **已作废** → 直接用根 `build.bat`。
+  （保留：bash 下 `PYTHONPATH` 必须用 Windows 路径 `C:\...`，`/c/...` 格式 Windows Python 不认。）
+- 🔒 **P0 待办**：根 `build.bat` 硬编码 `--api-key=sk-...` 且**已被 git 跟踪**
+  （`git log -- build.bat` 可见历史提交也有）⇒ 该 key 视为已泄露。
+  需：轮换 key → 改读环境变量 `--api-key=%QWEN_API_KEY%` → 清理 git 历史。
+  **禁止把该 key 写进任何文档/对话。**
 - 打包被标题 logo 阻塞时，可从 build 阶段产物
   `roms/outputs/POKEMON_RUBY_AXVJ00_translated.gba` 手动补 32MB 对齐出可测 ROM。
 - 识图用仓库根 `vision.js`（需 `.env` 配 VISION_API_KEY / VISION_MODEL）。

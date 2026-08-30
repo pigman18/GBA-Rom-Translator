@@ -503,6 +503,232 @@ JP_PAL_UNFADED = 0x0202E7E8     # gPlttBufferUnfaded（LoadPalette 目标 1）
 JP_PAL_DECOMP_BUF = 0x0202F0BC  # sPaletteDecompressionBuffer（LoadCompressedPalette 中转）
 
 
+# --- 战斗动画（battle_anim）诊断链 ------------------------------------------
+# 针对「放技能偶发黑屏」：技能入口 → 脚本命令流 → tile/调色板写入 全链路留痕。
+# 用法：原版 ROM 与汉化 ROM 各跑一次同存档同一技能，diff 两份日志。
+#
+# 地址来源与可信度（重要）：
+#   • EWRAM 地址日美一致（pokeruby_jp.sym 标 KEEP-US），可直接读，最可靠。
+#   • 代码函数地址来自 pokeruby_jp.sym，但该表标了 UNVERIFIED，实测其地址
+#     普遍偏小（前面带着上一个函数的 literal pool），且每个函数偏移量不同：
+#     DoMoveAnim +0x24 / LaunchBattleAnimation +0x20 / RunAnimScriptCommand +0x4 /
+#     ScriptCmd_loadspritegfx +0x44 / ScriptCmd_restorebg +0x7c（其余多为 +0）。
+#     本文件用的是「向后扫到第一个 push」修正后的函数头地址，
+#     并已校验原版 ROM 与汉化 ROM 在这些点代码一致（两版可共用同一断点）。
+#   • 静态勘验结论（2026-08-30）：gBattleAnims_Moves 表、动画脚本本体
+#     （0x081D36DC-0x081D5900）、battle_anim 代码段，原版与汉化逐字节一致
+#     ⇒ 黑屏不是静态数据被改坏，而是运行时行为差异，须靠本链路抓。
+
+A_SCRIPT_PTR = 0x0202F7A4   # sBattleAnimScriptPtr  const u8*
+A_RET_ADDR   = 0x0202F7A8   # gBattleAnimScriptRetAddr
+A_CALLBACK   = 0x0202F7AC   # gAnimScriptCallback
+A_FRAMES_WAIT= 0x0202F7B0   # u8
+A_ACTIVE     = 0x0202F7B1   # u8  gAnimScriptActive
+A_VIS_TASKS  = 0x0202F7B2   # u8  gAnimVisualTaskCount
+A_SND_TASKS  = 0x0202F7B3   # u8  gAnimSoundTaskCount
+A_MOVE_TURN  = 0x0202F7C4   # u8  gAnimMoveTurn
+A_BG_FADE    = 0x0202F7C5   # u8  sAnimBackgroundFadeState
+A_MOVE_INDEX = 0x0202F7C6   # u16 sAnimMoveIndex ← 当前技能 id
+A_ATTACKER   = 0x0202F7C8   # u8  gBattleAnimAttacker
+A_TARGET     = 0x0202F7C9   # u8  gBattleAnimTarget
+
+# sScriptCmdTable 顺序（src/battle_anim.c），把命令字节翻成可读名字
+ANIM_CMDS = (
+    "loadspritegfx", "unloadspritegfx", "createsprite", "createvisualtask",
+    "delay", "waitforvisualfinish", "hang1", "hang2", "end", "playse",
+    "monbg", "clearmonbg", "setalpha", "blendoff", "call", "return",
+    "setarg", "choosetwoturnanim", "jumpifmoveturn", "jump", "fadetobg",
+    "restorebg", "waitbgfadeout", "waitbgfadein", "changebg", "playsewithpan",
+    "setpan", "panse_1B", "loopsewithpan", "waitplaysewithpan", "setbldcnt",
+    "createsoundtask", "waitsound", "jumpargeq", "monbg_22", "clearmonbg_23",
+    "jumpifcontest", "fadetobgfromset", "panse_26", "panse_27", "monbgprio_28",
+    "monbgprio_29", "monbgprio_2A", "invisible", "visible", "doublebattle_2D",
+    "doublebattle_2E", "stopsound",
+)
+
+# 动到这几条命令就是「背景/调色板/混合」类，黑屏第一嫌疑
+BG_RISKY_CMDS = {"fadetobg", "restorebg", "waitbgfadeout", "waitbgfadein",
+                 "changebg", "setbldcnt", "setalpha", "blendoff", "monbg",
+                 "clearmonbg", "monbg_22", "clearmonbg_23", "fadetobgfromset"}
+
+
+def _anim_state(gdb: GdbClient) -> dict:
+    """一次读完战斗动画 EWRAM 状态块（0x0202F7A4..0x0202F7CA）。读失败返回 {}。"""
+    b = _read_mem(gdb, A_SCRIPT_PTR, 0x28)
+    if len(b) < 0x28:
+        return {}
+    return {
+        "ptr": u32(b, 0x00), "ret": u32(b, 0x04), "cb": u32(b, 0x08),
+        "wait": b[0x0C], "active": b[0x0D], "vis": b[0x0E], "snd": b[0x0F],
+        "turn": b[0x20], "bgfade": b[0x21], "move": u16(b, 0x22),
+        "atk": b[0x24], "tgt": b[0x25],
+    }
+
+
+def _vram_zone(a: int) -> str:
+    """VRAM 地址 → 人类可读区域。BG charblock 归属是黑屏定位的关键。"""
+    if 0x06000000 <= a < 0x06010000:
+        return f"BG-cb{(a - 0x06000000) // 0x4000}"
+    if 0x06010000 <= a < 0x06018000:
+        return "OBJ"
+    if 0x06000000 <= a < 0x06018000:
+        return "VRAM?"
+    if 0x07000000 <= a < 0x07000400:
+        return "OAM"
+    if 0x05000000 <= a < 0x05000400:
+        return "PAL"
+    return ""
+
+
+@handler("MoveAnimEntry")
+def _on_move_anim_entry(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """DoMoveAnim 入口（r0=move）：技能动画总入口，一次出招命中一次。
+    判读：两版日志里 move id 与 LR（调用方）应完全一致；不一致说明上游选技能就分叉了。"""
+    move = regs.get("r0", 0) & 0xFFFF
+    lr = regs.get("r14", 0) & ~1
+    st = _anim_state(gdb)
+    ctx.log(f"\n[MVA] DoMoveAnim move=#{move} LR=0x{lr:08X}")
+    if st:
+        ctx.log(f"  进入前状态: active={st['active']} move_index={st['move']} "
+                f"wait={st['wait']} vis={st['vis']} ptr=0x{st['ptr']:08X}")
+
+
+@handler("LaunchAnim")
+def _on_launch_anim(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """LaunchBattleAnimation 入口（r0=表基址 r1=move r2=isMoveAnim）。
+    核心是查出表结果：脚本指针 = [r0 + r1*4]。
+    判读：表基址两版应相同（0x081D997C）；算出的脚本指针两版应相同
+    （静态已确认 gBattleAnims_Moves 与脚本本体都没被汉化改动），
+    若不同则说明运行时拿到了脏的 r0/r1。"""
+    tab = regs.get("r0", 0) & 0xFFFFFFFF
+    move = regs.get("r1", 0) & 0xFFFF
+    is_move = regs.get("r2", 0) & 0xFF
+    lr = regs.get("r14", 0) & ~1
+    ent = tab + move * 4
+    pb = _read_mem(gdb, ent, 4)
+    val = u32(pb, 0) if len(pb) == 4 else 0
+    ctx.log(f"\n[LNA] LaunchBattleAnimation 表=0x{tab:08X} move=#{move} "
+            f"isMoveAnim={is_move} LR=0x{lr:08X}")
+    ctx.log(f"  表项 [0x{ent:08X}] = 0x{val:08X}"
+            + ("  ← 非 ROM 区，指针可疑！" if not (0x08000000 <= val < 0x0A000000) else ""))
+
+
+@handler("AnimScriptCmd")
+def _on_anim_script_cmd(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """RunAnimScriptCommand 入口：动画脚本命令流主循环，每条命令命中一次。
+    这是本链路的核心——把「技能 → 命令序列」完整录下来，两版逐条 diff。
+    判读：原版与汉化的命令序列应完全一致；某命令突然乱掉/跳到非 ROM 区，
+    就是黑屏点。BG_RISKY 类命令（fadetobg/changebg/setbldcnt…）重点看。"""
+    st = _anim_state(gdb)
+    if not st:
+        return
+    p = st["ptr"]
+    if not (0x08000000 <= p < 0x0A000000):
+        ctx.log(f"\n[ASC] !!! 脚本指针越界 0x{p:08X} move=#{st['move']} "
+                f"（正常应落在 0x081Dxxxx 脚本区）")
+        return
+    stream = _read_mem(gdb, p, 12)
+    cid = stream[0] if stream else 0xFF
+    name = ANIM_CMDS[cid] if cid < len(ANIM_CMDS) else f"cmd#{cid}"
+    risk = "  ⚠BG类" if name in BG_RISKY_CMDS else ""
+    ctx.log(f"\n[ASC] move=#{st['move']} cmd[{cid}]={name}{risk} "
+            f"turn={st['turn']} bgfade={st['bgfade']} wait={st['wait']} "
+            f"vis={st['vis']} snd={st['snd']}")
+    ctx.log(f"  脚本@0x{p:08X}: {stream.hex(' ')}")
+
+
+@handler("AnimLoadSpriteGfx")
+def _on_anim_loadspritegfx(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """ScriptCmd_loadspritegfx：动画脚本加载 sprite 图形（tile 写入的第一站）。
+    参数在脚本流里（sBattleAnimScriptPtr+1 起的 u16 tileTag），不是寄存器。"""
+    st = _anim_state(gdb)
+    if not st:
+        return
+    p = st["ptr"]
+    b = _read_mem(gdb, p, 8)
+    tag = u16(b, 1) if len(b) >= 3 else 0
+    ctx.log(f"\n[ALG] move=#{st['move']} loadspritegfx tileTag=0x{tag:04X} "
+            f"脚本@0x{p:08X}: {b.hex(' ')}")
+
+
+@handler("AnimBgCmd")
+def _on_anim_bg_cmd(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """背景类脚本命令（fadetobg/restorebg/changebg/setbldcnt…）通用处理器。
+    黑屏第一嫌疑：背景被换掉/淡出后没淡回来。记录命令参数 + 背景状态机。
+    判读：sAnimBackgroundFadeState 的演化序列两版应一致。"""
+    st = _anim_state(gdb)
+    if not st:
+        return
+    p = st["ptr"]
+    b = _read_mem(gdb, p, 10)
+    cid = b[0] if b else 0xFF
+    name = ANIM_CMDS[cid] if cid < len(ANIM_CMDS) else f"cmd#{cid}"
+    ctx.log(f"\n[ABG] move=#{st['move']} {name} bgfade={st['bgfade']} "
+            f"turn={st['turn']} vis={st['vis']}")
+    ctx.log(f"  参数@0x{p:08X}: {b.hex(' ')}")
+
+
+# 背景类命令各有独立地址，但 yaml 的 name 必须唯一 ⇒ 一址一名，共用同一实现
+@handler("AnimFadeToBg")
+def _on_anim_fadetobg(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    _on_anim_bg_cmd(gdb, regs, ctx, cfg)
+
+
+@handler("AnimRestoreBg")
+def _on_anim_restorebg(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    _on_anim_bg_cmd(gdb, regs, ctx, cfg)
+
+
+@handler("AnimChangeBg")
+def _on_anim_changebg(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    _on_anim_bg_cmd(gdb, regs, ctx, cfg)
+
+
+@handler("AnimSetBldCnt")
+def _on_anim_setbldcnt(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    _on_anim_bg_cmd(gdb, regs, ctx, cfg)
+
+
+@handler("AnimCreateSprite")
+def _on_anim_createsprite(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    _on_anim_bg_cmd(gdb, regs, ctx, cfg)
+
+
+@handler("AnimMonBg")
+def _on_anim_monbg(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    _on_anim_bg_cmd(gdb, regs, ctx, cfg)
+
+
+@handler("AnimWaitFrame")
+def _on_anim_wait_frame(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """WaitAnimFrameCount：每帧都会命中，必须去重否则日志爆炸。
+    只在「等待帧数/命令指针/可视任务数」三者变化时留痕，用于看脚本是否卡住。"""
+    st = _anim_state(gdb)
+    if not st or not st["active"]:
+        return
+    key = (st["wait"], st["ptr"], st["vis"], st["snd"], st["move"])
+    if not ctx._hit(key):
+        return
+    ctx.log(f"\n[AWF] move=#{st['move']} wait={st['wait']} vis={st['vis']} "
+            f"snd={st['snd']} bgfade={st['bgfade']} 脚本@0x{st['ptr']:08X}")
+
+
+def _tile_anim_note(gdb: GdbClient) -> str:
+    """tile/调色板写入类埋点共用的「动画上下文」附注。
+    动画没激活时返回空串——这样平时日志不吵，只在放技能时才详打。"""
+    st = _anim_state(gdb)
+    if not st or not st["active"]:
+        return ""
+    p = st["ptr"]
+    if 0x08000000 <= p < 0x0A000000:
+        b = _read_mem(gdb, p, 6)
+        cid = b[0] if b else 0xFF
+        name = ANIM_CMDS[cid] if cid < len(ANIM_CMDS) else f"cmd#{cid}"
+        return (f"\n  └ 动画中: move=#{st['move']} cmd[{cid}]={name} "
+                f"bgfade={st['bgfade']} 脚本@0x{p:08X}: {b.hex(' ')}")
+    return f"\n  └ 动画中: move=#{st['move']} 脚本指针 0x{p:08X}（越界！）"
+
+
 # --- 字形镜像（Glyph Mirror）诊断链 ------------------------------------------
 # 用于定位"镜像到底有没有命中"。三个点成对使用：
 #   IwtdHook       InitWindowTileData_Hook 入口   r0=tpl r1=startOffset r2=glyph
@@ -1800,6 +2026,45 @@ def _arm(ctx: Ctx, hook: Hook) -> bool:
         return False
     ctx.log(f"  断点 {hook.name} @0x{hook.bp:08X} OK")
     return True
+
+
+# --- 给 tile/调色板类埋点统一叠加「动画上下文」 --------------------------------
+# 必须放在所有 @handler 注册之后（本文件末尾那段 _mk_sheet_handler 循环注册
+# 会覆盖同名 handler），这里对已注册的函数再包一层：先跑原逻辑，再追加动画态。
+# 只在 gAnimScriptActive 为真时才追加 ⇒ 平时日志不受影响，放技能时才详打。
+# 这是「放技能黑屏」的关键判据：能看出「哪个技能的第几条脚本命令触发了这次写入」。
+_ANIM_AUGMENT = (
+    "LoadSpriteSheet",        # sheet → OBJ VRAM
+    "LoadSpritePalette",      # 调色板 → gPlttBuffer OBJ 区
+    "LoadCompressedObjectPic",
+    "LoadCompressedObjectPalette",
+    "LoadCompressedPalette",
+    "LoadPalette",            # 调色板 2× 拷贝
+    "LZDecompressVram",       # LZ77 直接解压进 VRAM（dest 落在 BG 还是 OBJ 是黑屏关键）
+    "CreateSprite",
+)
+
+
+def _augment_tile_handlers_with_anim() -> None:
+    for name in _ANIM_AUGMENT:
+        orig = HANDLERS.get(name)
+        if orig is None or getattr(orig, "_anim_augmented", False):
+            continue
+
+        def wrapper(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any],
+                    _o=orig) -> None:
+            _o(gdb, regs, ctx, cfg)
+            note = _tile_anim_note(gdb)
+            if note:
+                ctx.log(note)
+
+        wrapper._anim_augmented = True      # type: ignore[attr-defined]
+        wrapper.__doc__ = orig.__doc__
+        HANDLERS[name] = wrapper
+
+
+# 模块加载即生效（在 run_log 之前）
+_augment_tile_handlers_with_anim()
 
 
 def _pick_charmap(args: argparse.Namespace, points: list[GdbPoint]) -> str:

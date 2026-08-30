@@ -1,5 +1,29 @@
 # 项目长期记忆（GBA-Rom-Translator / AXVJ00 汉化）
 
+## ⚠ 日版函数地址定位（2026-08-30 实证，务必照做）
+
+`configs/POKEMON_RUBY_AXVJ00/symbols/pokeruby_jp.sym` 里标 **UNVERIFIED** 的符号
+**不能直接当函数入口用**——实测地址普遍偏小（前面带着上个函数的 literal pool），
+且**每个函数偏移量都不同**（DoMoveAnim +0x24 / LaunchBattleAnimation +0x20 /
+RunAnimScriptCommand +0x4 / ScriptCmd_loadspritegfx +0x44 / ScriptCmd_restorebg +0x7c）。
+
+- **修正法**：从符号表地址向后扫，找第一个 `push`（Thumb `0xB4xx`/`0xB5xx`）作真函数头；
+  再校验原版与汉化 ROM 在该点代码一致（一致才能两版共用同一断点）。
+- **更可靠的抓手**：标 `KEEP-US` 的 **EWRAM 变量**日美同址，可直读，优先用它。
+- 已定位：`gBattleAnims_Moves` = **0x081D997C**（412 项；pokeruby 的 0x081C36DC 是错的，
+  那里读出全 0）；DoMoveAnim 0x08071D98 / LaunchBattleAnimation 0x08071DCC /
+  RunAnimScriptCommand 0x08072048。
+
+## gdb_patcher 两个坑（加埋点前必读）
+
+1. **`HANDLERS[name]` 同名会被后注册者覆盖**，且文件末尾有 `_mk_sheet_handler` 循环注册
+   （LoadSpriteSheet/LoadSpritePalette/LoadCompressedObjectPic/LoadCompressedObjectPalette）。
+   在文件中部注册同名 handler 会**静默失效**。要增强已有埋点，应在**所有注册之后**
+   包一层（见 `_augment_tile_handlers_with_anim`）。
+2. **同一地址只能生效一个埋点**：`by_pc = {h.bp: h}` 按地址建字典，yaml 里给同一地址
+   写两条会互相覆盖 ⇒ 一个地址一个 name，共用实现要靠别名 handler 转发。
+3. yaml 的 `gdb:` 条目 name 唯一、地址不可冲突；`default: false` 表示默认不启用。
+
 ## 用户偏好：场景（scene）门控的边界
 
 - ✅ **可接受**：按**固定窗口**做特殊配置——以稳定标识（如窗口模板地址 `0x081BB874`）

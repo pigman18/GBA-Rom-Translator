@@ -794,3 +794,58 @@ gdb:
   address: '0x088013F6'
   description: 落址权威数据：chs_tile_num 返回点（r0=算出的 tile, r4=win）；打印 tm/TB/OFF/cx/cy
   default: false
+
+# --- 战斗动画诊断链（放技能偶发黑屏）---------------------------------------
+# 用法：原版 ROM 与汉化 ROM 各跑一次「同存档 + 同一技能」，diff 两份日志。
+#   python -m util.gdb_patcher log --game POKEMON_RUBY_AXVJ00 \
+#       --functions MoveAnimEntry,LaunchAnim,AnimScriptCmd,AnimLoadSpriteGfx,\
+# AnimFadeToBg,AnimRestoreBg,AnimChangeBg,AnimSetBldCnt,LoadSpriteSheet,\
+# LZDecompressVram,LoadPalette
+# ⚠ 地址已按「向后扫到第一个 push」修正函数头（pokeruby_jp.sym 标 UNVERIFIED，
+#   实测普遍偏小：DoMoveAnim +0x24 / LaunchBattleAnimation +0x20 /
+#   RunAnimScriptCommand +0x4 / loadspritegfx +0x44 / restorebg +0x7c）。
+#   已校验原版与汉化 ROM 在这些点代码一致 ⇒ 两版可共用同一断点。
+- name: MoveAnimEntry
+  address: '0x08071D98'
+  description: DoMoveAnim 入口（r0=move 技能 id）：技能动画总入口，一次出招命中一次
+  default: false
+- name: LaunchAnim
+  address: '0x08071DCC'
+  description: LaunchBattleAnimation 入口（r0=动画表基址 r1=move r2=isMoveAnim）；查表得到脚本指针=[r0+r1*4]，表基址应恒为 0x081D997C
+  default: false
+- name: AnimScriptCmd
+  address: '0x08072048'
+  description: RunAnimScriptCommand 入口：脚本命令流主循环，每条命令命中一次。核心埋点——两版逐条 diff 命令序列
+  default: false
+- name: AnimLoadSpriteGfx
+  address: '0x080720C8'
+  description: ScriptCmd_loadspritegfx：动画脚本加载 sprite 图形，tile 写入第一站（tileTag 在脚本流里，不在寄存器）
+  default: false
+- name: AnimFadeToBg
+  address: '0x0807327C'
+  description: ScriptCmd_fadetobg：背景淡出/切换（黑屏第一嫌疑）
+  default: false
+- name: AnimRestoreBg
+  address: '0x080735BC'
+  description: ScriptCmd_restorebg：背景恢复（淡出不恢复=黑屏）
+  default: false
+- name: AnimChangeBg
+  address: '0x080735EC'
+  description: ScriptCmd_changebg：换背景（黑屏第一嫌疑）
+  default: false
+- name: AnimSetBldCnt
+  address: '0x080730EC'
+  description: ScriptCmd_setbldcnt：改写 BLDCNT 混合寄存器（全屏变黑/变白的直接原因）
+  default: false
+- name: AnimCreateSprite
+  address: '0x0807214C'
+  description: ScriptCmd_createsprite：创建动画精灵（参数在脚本流里）
+  default: false
+- name: AnimMonBg
+  address: '0x08072488'
+  description: ScriptCmd_monbg：把宝可梦精灵搬到 BG 层显示（涉及背景 tile 占用）
+  default: false
+- name: AnimWaitFrame
+  address: '0x08072030'
+  description: WaitAnimFrameCount：动画等待帧数（脚本推进节奏；卡死时可看是否永不推进）
+  default: false

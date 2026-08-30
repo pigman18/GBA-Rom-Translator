@@ -73,8 +73,19 @@ node vision.js bug/<目录>/10.PNG "逐行列出左边标签和右边选项的�
 
 ## 待办 / 约定
 
+- 🔴 **每次改完 hook 源码都必须走完整流水线**（用户 2026-08-30 明确要求，
+  「每次改完都要执行流水线」）：`build.bat` → meowth full 打包 →
+  `check_rom_hook.py`。**编译通过 ≠ 交付**，别停在编译那一步。
 - 每次打完 ROM 先跑 `scripts/check_rom_hook.py`：确认 game.bin 与 ROM 逐字节一致
   + 读回 `kOptWindow.mode`。**"源码全对但运行不对"要先排除"打进去的是旧包"。**
+  ⚠ 该脚本的 `MODES = {0:PARTITION,1:GRID,2:PTR,3:MIX}` 是 v3 遗留表，
+  v4 的 `WinCfg` 没有 `mode` 字段 → 那个偏移读到的其实是 `use_linear`
+  （=1 被印成 "GRID"，实际语义是"线性"）。字节一致性判定不受影响，
+  但别把那行读数当真。
+- 打包时的编码坑：`--modules` 含中文，**用 PowerShell 原生跑**（`& C:\Python314\python.exe`），
+  别用 Git Bash（MSYS 可能转换非 ASCII 参数）。PowerShell 里 `build.bat` 的
+  stderr 老告警会被判成 NativeCommandError（退出码 1 但构建其实成功）→
+  用 `*>&1 | Out-File log` 再读日志，别只看退出码。
 - 设置菜单 tm1 布局拟从 `TM1_ROW_TAB` 等文件级字面量，重构为
   **按窗口模板地址键控的静态配置表**（未登记模板走默认，不猜场景）。
 - 打包命令（bash 下 PYTHONPATH 必须用 Windows 路径，`/c/...` 格式 Windows Python 不认）：

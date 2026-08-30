@@ -237,74 +237,89 @@ static uint16_t cfg_row_base(const struct WinCfg *cfg, uint8_t cur_y)
     return cfg->row_tab[r - 1u];
 }
 
-/* ---- 当前字的分区绑定结果（note_glyph 填写，gctn_linear 消费）------------
- * 渲染流程同步不重入（每字 DrawGlyphTiles_common 开头 note_glyph 一次），
- * 文件级 static 即可，不必占 EWRAM。
+/* ---- 当前字的 PTR 绑定（note_glyph 填写，gctn_linear / floor 消费）------
  *
- * ⚠ PTR 落址**必须**走 base+off+delta 形式（2026-08-30 修复"左16右12失效"）：
- *   bak 渲染核的 pass2 仍传 xOff=0，它靠 pass1 后无条件的 off+=2 区分两趟
- *   落址。PTR 若直接返回 ptr_base+2*xOff+yOff，pass2 会落回 +0/+1 把左半
- *   覆盖掉（标签只剩残字）。delta = ptr_base - (tileBase+off)，pass1 返回
- *   ptr_base，pass2（off 已 +2）自动返回 ptr_base+2 —— 与 DYN 同构。 */
-static uint16_t s_ptr_base;    /* PTR：槽基址；0 = 非 PTR */
-static uint16_t s_ptr_delta;   /* PTR：槽基址相对 (tileBase+off) 的增量 */
-static uint16_t s_dyn_off;     /* DYN：行内起点 */
-static uint16_t s_dyn_span;    /* DYN：容量；0 = 未登记/未配区 */
+ * ⚠⚠ 必须落 **RAM 绝对地址**，**不能**用文件级 static（2026-08-30 根因实证）：
+ *   link/game.ld 只声明了 ROM 段，SECTIONS 里也没有 .data/.bss 规则 ⇒
+ *   链接器把 .bss 当孤儿段塞进 ROM（out/game.map：.bss 0x08803DB0，8 字节，
+ *   全部来自 text_scene.o）⇒ 对它的 strh **写不进**（ROM 只读）⇒ 读回恒为
+ *   打包时该地址的内容（实测 00 00 00 00 00 00 00 00）⇒ s_ptr_base 恒 0
+ *   ⇒ PTR 永不激活、DYN 区复位也永不执行 ⇒ "左 16px 右 12px"整体失效。
+ *   （那是 v4 把"渲染层感知 PTR"改成"static 变量传递"时踩的坑：v3 用局部
+ *   值传递所以没事，v4 的 static 一律落 ROM。）
+ *   → 与 CHS_LAST_OFF_ADDR(0x0203FF82) 同一路子：显式 EWRAM 绝对地址。
+ *   落 0x0203FF8C：PITCH_CTRL(FF80..FF8B) 与 PITCH_SLOTS(FF90..FFCF) 之间的
+ *   4B 空隙，在实证安全区 0x0203FF80-FFCF 之内。
+ *
+ * 只需跨函数传 **一个** u16，其余现算：
+ *   ptr_delta → gctn_linear 里算（= ptr_base-(tileBase+off)）；
+ *   dyn_off/span → floor 里用 scene_zone_of() 重算（zone 只依赖 curX，
+ *                  不依赖 glyph，所以 floor 不需要 glyph_id）。
+ * 既省 RAM，也顺带根除"delta 在 off 被改写后过期"这一类时序问题。
+ *
+ * ⚠ PTR 落址**必须**走 base+off+delta 形式：bak 渲染核的 pass2 仍传 xOff=0，
+ *   它靠 pass1 后无条件的 off+=2 区分两趟落址。PTR 若直接返回
+ *   ptr_base+2*xOff，pass2 会落回 +0/+1 把左半覆盖掉（标签只剩残字）。
+ *   delta = ptr_base-(tileBase+off) ⇒ pass1 返回 ptr_base，pass2（off 已 +2）
+ *   自动返回 ptr_base+2 —— 与 DYN 同构。 */
+#define ADDR_SCENE_PTR_BASE 0x0203FF8Cu
+
+static uint16_t scene_ptr_base_get(void)
+{
+    return *(volatile uint16_t *)ADDR_SCENE_PTR_BASE;
+}
+
+static void scene_ptr_base_set(uint16_t v)
+{
+    *(volatile uint16_t *)ADDR_SCENE_PTR_BASE = v;
+}
+
+/* 分区选择：只依赖 (cfg, curX)，不依赖 glyph —— note_glyph 与 floor 共用。
+ * 命中第一条 cx < cx_hi；全不中则取末条（约定 cx_hi = 0xFF 兜底）。 */
+static const struct Tm1Zone *scene_zone_of(const struct WinCfg *cfg, uint8_t cx)
+{
+    unsigned i;
+
+    if (cfg == 0 || cfg->zones == 0 || cfg->zone_n == 0u)
+        return 0;
+    for (i = 0u; i < cfg->zone_n; i++) {
+        if (cx < cfg->zones[i].cx_hi)
+            return &cfg->zones[i];
+    }
+    return &cfg->zones[cfg->zone_n - 1u];
+}
 
 void scene_note_glyph(TextPrinter *win, uint16_t glyph_id)
 {
     const struct WinCfg *cfg;
-    const struct Tm1Zone *z = 0;
+    const struct Tm1Zone *z;
     uint32_t glyph;
-    uint8_t cx;
-    unsigned i;
 
-    s_ptr_base = 0u;
-    s_dyn_off  = 0u;
-    s_dyn_span = 0u;
+    scene_ptr_base_set(0u);
 
     if ((win_u8(win, WIN_TEXTMODE) & 7u) != 1u)
         return;                              /* PTR/DYN 只服务 tm1 */
     if (!(glyph_id & 0x8000u))
         return;                              /* 只有 F9 汉字带 0x8000 标记；
                                               * SYM/日文字形不绑槽 */
-    glyph = glyph_id & 0x1FFFu;
     cfg = scene_lookup((uint32_t)(uintptr_t)win_template(win));
-    if (cfg == 0 || cfg->zones == 0)
-        return;
-    cx = win_u8(win, WIN_CURSOR_X);
+    z = scene_zone_of(cfg, win_u8(win, WIN_CURSOR_X));
+    if (z == 0 || z->strategy != TM1_ZONE_PTR)
+        return;                              /* DYN：off/span 由 floor 重算 */
 
-    for (i = 0u; i < cfg->zone_n; i++) {
-        if (cx < cfg->zones[i].cx_hi) {
-            z = &cfg->zones[i];
-            break;
-        }
-    }
-    if (z == 0) {
-        if (cfg->zone_n == 0u)
-            return;
-        z = &cfg->zones[cfg->zone_n - 1u];   /* 末条 0xFF 兜底 */
-    }
-
-    if (z->strategy == TM1_ZONE_PTR) {
+    glyph = glyph_id & 0x1FFFu;
+    {
         uint16_t pb = chs_ptr_base(glyph);   /* 未登记汉字 = 0 → 回退 DYN */
 
-        if (pb != 0u) {
-            s_ptr_base = pb;
-            /* u16 回绕自洽：gctn 时 (base+off+delta) mod 2^16 = ptr_base */
-            s_ptr_delta = (uint16_t)(pb - (win_u16(win, WIN_TILE_BASE)
-                                           + win_u16(win, WIN_TILE_OFFSET)));
-            return;
-        }
+        if (pb != 0u)
+            scene_ptr_base_set(pb);
     }
-    s_dyn_off  = z->off;
-    s_dyn_span = z->span;
 }
 
 uint8_t scene_is_ptr_mode(TextPrinter *win)
 {
     (void)win;
-    return (s_ptr_base != 0u) ? 1u : 0u;
+    return (scene_ptr_base_get() != 0u) ? 1u : 0u;
 }
 
 /* ============================================================================
@@ -364,10 +379,15 @@ void scene_apply_linear_floor(TextPrinter *win)
 
     cfg = scene_lookup((uint32_t)(uintptr_t)win_template(win));
     if (cfg) {
-        if (s_ptr_base == 0u && s_dyn_span != 0u) {
-            if (off < s_dyn_off
-                || off >= (uint16_t)(s_dyn_off + s_dyn_span))
-                win_set_u16(win, WIN_TILE_OFFSET, s_dyn_off);
+        if (scene_ptr_base_get() == 0u) {
+            const struct Tm1Zone *z =
+                scene_zone_of(cfg, win_u8(win, WIN_CURSOR_X));
+
+            if (z != 0 && z->span != 0u) {
+                if (off < z->off
+                    || off >= (uint16_t)(z->off + z->span))
+                    win_set_u16(win, WIN_TILE_OFFSET, z->off);
+            }
         }
         if (cfg->floor != 0u) {
             off = win_u16(win, WIN_TILE_OFFSET);
@@ -398,10 +418,16 @@ uint16_t scene_gctn_linear(TextPrinter *win, unsigned xOff, unsigned yOff)
     uint16_t base;
     uint16_t off = win_u16(win, WIN_TILE_OFFSET);
 
-    if (s_ptr_base != 0u)
+    if (scene_ptr_base_get() != 0u) {
+        /* delta 现算（不再缓存）：base+off+(ptr_base-base-off) = ptr_base，
+         * u16 回绕自洽。pass2 时 off 已 +2 ⇒ 落到 ptr_base+2 —— 与 DYN 同构。 */
+        uint16_t delta = (uint16_t)(scene_ptr_base_get()
+                                    - (win_u16(win, WIN_TILE_BASE) + off));
+
         return scene_remap_tile(
             win, (uint16_t)(win_u16(win, WIN_TILE_BASE) + off
-                            + s_ptr_delta + 2u * xOff + yOff));
+                            + delta + 2u * xOff + yOff));
+    }
 
     if (tm == 1u) {
         cfg = scene_lookup((uint32_t)(uintptr_t)win_template(win));
@@ -437,6 +463,11 @@ void scene_gctn_mode2(TextPrinter *win, int tile_x, uint16_t *upper, uint16_t *l
     int origin = (tpl && tpl[1] == 2) ? CHS_MODE2_ORIGIN_SHOP : 0;
     unsigned i;
     uint32_t idx;
+
+    /* ⚠ cfg 必须显式查表赋值（2026-08-30 修复）：此前只声明未赋值就参与
+     * `cfg != 0` 判断（编译器 -Wall: 'cfg' may be used uninitialized），
+     * 区域搬位规则时灵时不灵，取决于栈垃圾。 */
+    cfg = scene_lookup((uint32_t)(uintptr_t)tpl);
 
     if (chs_pitch_write_op(win) == 0u
         && !(y <= 20 && (y & 1) == 0)

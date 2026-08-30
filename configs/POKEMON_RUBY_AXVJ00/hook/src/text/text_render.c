@@ -432,10 +432,6 @@ static void DrawGlyphTiles_common(
     int linear;
     int newline_reset = 0;
 
-    /* [2026-08-30] 告知 scene 本字 glyph_id：PTR 固定槽按字查槽表就在此时做
-     * （槽查询需要 per-glyph，而 gctn_linear 只有 xOff/yOff）。 */
-    scene_note_glyph(win, tiles->glyph_id);
-
     if (slot_new && st->chs_px == 0) {
         newline_reset = 1;
         *(volatile uint16_t *)CHS_LAST_OFF_ADDR = 0;
@@ -475,6 +471,15 @@ static void DrawGlyphTiles_common(
 
         win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
     }
+
+    /* [2026-08-30] 告知 scene 本字 glyph_id：PTR 固定槽按字查槽表就在此时做
+     * （槽查询需要 per-glyph，而 gctn_linear 只有 xOff/yOff）。
+     * 位置要求：只要早于 DrawGlyphTiles_core 即可。note_glyph 只绑定"本字
+     * 槽基址"（不依赖 off），落址增量 delta 由 scene_gctn_linear 现算，故
+     * newline_reset 的 off+=2 与 CHS_LAST_OFF 回抬都不会让它过期。
+     * （那个 off+=2 是 tm0 行间隔离所必需——奇数个汉字收尾时行末 off 比下一
+     *   空闲 tile 小 2——不能删。） */
+    scene_note_glyph(win, tiles->glyph_id);
 
     DrawGlyphTiles_core(win, tiles, linear, glyphWidth);
 

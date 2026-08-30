@@ -48,6 +48,12 @@
 #define ADDR_TEXT_CLEAR_WINDOW             0x08003BA8u
 #define ADDR_UPDATE_TILEMAP                0x080036DCu
 #define ADDR_PRINT_GLYPH_TM1_ORIGIN        0x0800360Cu
+/* v5 FontFuncTable 原生处理器（2026-08-31 反汇编实证；FontFuncTable@0x081BB3AC
+ * 共 4 项 [tm0..tm3]，二级 FontSubTable@0x081BB3BC fontNum 0..6）。
+ * DrawGlyph 原生分发 & FontFunc 重定向 tail-call 用。 */
+#define ADDR_FONT_FUNC_TM0_ORIGIN          0x08003568u
+#define ADDR_FONT_FUNC_TM2_ORIGIN          0x0800338Cu
+#define ADDR_FONT_FUNC_TM3_ORIGIN          0x08003494u
 /* 字形绘制原语 sub_8003630(glyph, dst, fontNum, fg, bg, shadow)。
  * dst 是【参数】——这是全套桥接的支点：落址归我们，像素归官方。
  * 实证见 docs/调研_20260828_原生tm0协议与替换BUG根 */
@@ -172,31 +178,19 @@ struct ChsPhase {
                       /* gen 字节 @ ADDR_CHS_PITCH_CTRL(0x0203FF80)，LRU 驱逐 */
 
 /*
- * GBA 硬件以 8×8 tile 为单位（4bpp / tile 32B）。中文字模存储为 16×16
- * 标准 4-tile（TL/BL/TR/BR 各 32B 共 128B），但渲染时光标每次只推进
- * CHS_GLYPH_ADVANCE_PX（12px），而非 16px。原理：drawGlyph12 分两趟写
- * VRAM——左 8px（TL+BL）→ 右 4px（TR+BR 的左边 4px），两趟共进 12px。
- * 右 4px 跨入下一 tile 列形成 spill；下一字模的 startPixel 为 4（累积
- * px & 7），其左 4px 覆盖上一字的溢出像素。由于汉字笔画集中在字模
- * 中部，外缘空白区域被覆盖不影响视觉。字模保持 16px 宽可复用原生 tilemap
- * 寻址逻辑（每列 2 tile，index +0/+1），兼容所有 Gen3 文本窗口。
- *
- * 相位载体（2026-08-25 反汇编定案）：行相位表 struct ChsPhase（见上）。
- * 原生引擎不维护像素相位——tm1 writer 只推 win[0x1B]（0x0800360C 实证），
- * win[0x1A] 为窗口属性位域非游标，不可作相位。
- *
- * 12px = ink / advance / line metrics (product).
- * Hardware glyph container stays 8x16 (two 8x8 tiles) / 16x16 slot — do not change.
- * See docs/FONT_12PX_DRAW.md and .cursor/rules/axvj-font-12px-only.mdc.
+ * v5 混合写入架构（2026-08-31）：汉字按 16px 整格渲染。
+ * 反汇编实证（tm0 处理器 @0x08003568）：官方 mode0 渲染模型里
+ * TILE_OFFSET（win[0x12]，单位 tile）与 cursorTileX（win[0x19]，单位
+ * tile 列）都是整列游标，引擎不维护任何像素相位字段。12px 相位方案
+ * 需要额外状态载体（v4 ChsPhase 的踩踏 BUG 温床）；16px 整格
+ * （2 列 × 4 tile）是唯一零状态方案，完全复用官方游标推进语义。
+ * 字模容器仍为 16×16 4-tile 128B（TL/BL/TR/BR），勿改。
+ * 8px 小字 FontChsSmall(0x09100000) 仍由 fontId==4 路径分流。
+ * 旧 12px 双趟 drawGlyph12 / ChsPhase 相位表说明见 bak/text-v4/。
  */
-/* 全局 8px 小字（2026-08-24）：汉字切 FontChsSmall(0x09100000) 8px 点阵，
- * 与 font4 半角小字同节奏；12px FontChsNormal 保留在 ROM 可随时切回。
- * 旧 12px 双趟 drawGlyph12 说明（历史）：
- * Hardware glyph container stays 8x16 (two 8x8 tiles) / 16x16 slot — do not change.
- * See docs/FONT_12PX_DRAW.md and .cursor/rules/axvj-font-12px-only.mdc. */
-#define CHS_GLYPH_ADVANCE_PX 12
-#define CHS_CHAR_HEIGHT_PX   12
-#define CHS_LINE_FEED_PX     14
+#define CHS_GLYPH_ADVANCE_PX 16
+#define CHS_CHAR_HEIGHT_PX   16
+#define CHS_LINE_FEED_PX     16
 #define CHS_CELL_BYTES       128
 #ifndef CHS_MODE2_PITCH12
 #define CHS_MODE2_PITCH12 0
@@ -328,6 +322,23 @@ static inline uint8_t *win_template(TextPrinter *w)
 
 typedef void (*chs_fn3)(void *a0, uint32_t a1, uint32_t a2);
 typedef void (*chs_fn5)(const void *src, void *dst, uint32_t c, uint32_t e, uint32_t d);
+
+/* 32B（1 个 4bpp tile）拷贝。v4 时是 text_render.c 的导出函数；
+ * v5 起为公共内联工具（F9 层 GetGlyph 与新渲染层共用）。 */
+static inline void copy_tile32(void *dst_vram, const void *src)
+{
+    const uint32_t *s = (const uint32_t *)src;
+    uint32_t *d = (uint32_t *)dst_vram;
+
+    d[0] = s[0];
+    d[1] = s[1];
+    d[2] = s[2];
+    d[3] = s[3];
+    d[4] = s[4];
+    d[5] = s[5];
+    d[6] = s[6];
+    d[7] = s[7];
+}
 
 static inline void UpdateTilemap_Origin(TextPrinter *win, uint16_t upper, uint16_t lower)
 {

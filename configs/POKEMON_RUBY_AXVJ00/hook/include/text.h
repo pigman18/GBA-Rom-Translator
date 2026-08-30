@@ -45,6 +45,11 @@ void PrintGlyph(TextPrinter *win, uint32_t gidx, unsigned glyphWidth);
  * 返回 1=已消费（引擎零回落：不可印位直接吞掉）。 */
 int DrawGlyph(TextPrinter *win, uint32_t cur_char);
 
+/* 原生 FontFunc 处理器分发（fontfunc_hook.c 提供）。
+ * 直调 Origin 地址常量（防经 FontFuncTable 递归）；textMode 4-7 静默消费。
+ * thunk（FontFuncTm*_Hook）与 DrawGlyph 共用。 */
+void FontFunc_NativeDispatch(uint8_t tm, TextPrinter *win, uint32_t c);
+
 /* ---- 翻译链路（src/text_translate.c 提供，text.c 状态机消费）---- */
 
 /* 翻译层单字符入口：

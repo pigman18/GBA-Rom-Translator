@@ -68,7 +68,13 @@ def main():
     if mode == 3:
         print("  （MIX：分区规则在 text_scene.c 的 kOptZones）")
 
-    nrm = parse_inc(os.path.join(TEXT_DIR, "chs_slots.inc"))
+    inc_path = os.path.join(TEXT_DIR, "chs_slots.inc")
+    if os.path.exists(inc_path):
+        nrm = parse_inc(inc_path)
+    else:
+        # v5 混合写入架构（2026-08-31）已删除 v4 的 tm1 槽位表，跳过旧检查。
+        nrm = []
+        print("  （v5 架构：无 chs_slots.inc，跳过槽位表检查）")
     sel_path = os.path.join(TEXT_DIR, "chs_slots_sel.inc")
     sel = parse_inc(sel_path) if os.path.exists(sel_path) else []
 
@@ -77,8 +83,9 @@ def main():
                           *[v for p in pairs for v in p])
         return b.find(sig)
 
-    print("  kOptChsSlots    @ 0x%X (%d 条)" % (table_at(nrm[:6]), len(nrm))
-          if table_at(nrm[:6]) >= 0 else "  ⚠ kOptChsSlots 缺失")
+    if nrm:
+        print("  kOptChsSlots    @ 0x%X (%d 条)" % (table_at(nrm[:6]), len(nrm))
+              if table_at(nrm[:6]) >= 0 else "  ⚠ kOptChsSlots 缺失")
     if sel:
         print("  kOptChsSelSlots @ 0x%X (%d 条)" % (table_at(sel[:6]), len(sel))
               if table_at(sel[:6]) >= 0 else "  ⚠ kOptChsSelSlots 缺失")

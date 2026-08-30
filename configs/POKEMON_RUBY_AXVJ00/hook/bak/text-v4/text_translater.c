@@ -15,7 +15,7 @@
  * 槽位机制一并移除）。协议常量 CHS_ESCAPE/CHS_PHRASE_DEFAULT/ADDR_* 见 game.h。
  * ===================================================================================== */
 #include "text.h"
-#include "blend_glyph.h" /* v5：渲染接口收敛中，本文件只用 PrintGlyph/win_*（text.h/game.h） */
+#include "text_render.h"
 
 /* =====================================================================
  * §glyph — 字形源统一解析（自 text_render.c 迁入）

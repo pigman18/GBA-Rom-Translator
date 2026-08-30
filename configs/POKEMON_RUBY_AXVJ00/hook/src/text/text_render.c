@@ -1,654 +1,174 @@
-/* text_render.c — refpr + pitch + GCTN
- * 落址算法在 src/text/text_layout.c，窗口配置在 src/text/text_scene.c。 */
-#include "text_render.h"
-#include "text_layout.h"
+/* =====================================================================================
+ * text_render.c — v5 渲染件（混合写入架构步骤 2，docs/REWRITE_DESIGN_混合写入架构.md）
+ *
+ * 职责：PrintGlyph（F9 汉字）/ DrawGlyph（PCS 单字节）的渲染实现。
+ *
+ * mode0（线性滚动光栅，对话/战斗台词/详情页）—— 官方模型逐列复刻：
+ *   官方 tm0 处理器@0x08003568：blit@tileData[(TILE_BASE+TILE_OFFSET)*32]
+ *   （8px 列对 upper/lower）→ UpdateTilemap（写 tilemap 列 cursorX+cursorTileX，
+ *   不推进游标）→ TILE_OFFSET+=2、cursorTileX+=1。
+ *   v5 汉字 = 16px 整格（2 列 × 4 tile）：字库容器 [TL@0][BL@32][TR@64][BR@96]
+ *   解压 → 官方 CopyGlyph2bppTo4bpp 颜色重映射（15→C/14→E/0→D）直写 VRAM →
+ *   每列 UpdateTilemap_Origin + cursorTileX++ → 收尾 TILE_OFFSET+=4。
+ *   官方游标语义零改动、零自研状态（无 pitch 槽/行键/last_off，v4 全废）。
+ *
+ * tm1/tm2/tm3：步骤 2 为「消费 + 推进」（像素路径步骤 3 逐窗收敛）：
+ *   tm1/tm3：cursorTileX += cols（官方 tm1 每字 +1 的 16px 推广）；
+ *   tm2：缓冲指针 win[0x20] += cols*0x40（官方每列 +0x40，血条 OBJ 刷走）。
+ *
+ * DrawGlyph（中文替换流里的 PCS 字节）：
+ *   SYM 标点带（0x36-0x3E，编码即 JP PCS 同码）→ mode0 自绘一列 8px；
+ *     非 mode0 尾调原生处理器（JP 半角形回退，视觉可接受）。
+ *   ≥0xF7 不可印位直接消费（引擎零回落）；
+ *   其余按 textMode 尾调原生处理器（FontFunc_NativeDispatch 直调 Origin
+ *   地址，**严禁经 FontFuncTable**——表项已指向我方 thunk，经表分发会无限递归）。
+ * ===================================================================================== */
+#include "text.h"
 
 #define CHS_GLYPH_HALF_BIT   0x8000u
 #define CHS_GLYPH_IDX_MASK   0x7FFFu
-#define CHS_FONT_GLYPH_MAX   7168
-#define CHS_PITCH_SLOT_COUNT 8u
-/* 行内 DYN 游标断点（跨文本块续接用）。
- *   CHS_LAST_OFF_ADDR(0x0203FF82) = (curX << 8) | off —— 上一次绘制结束时的
- *     起始列与行内 tile 游标（off ≤ 32，8bit 足够）。
- *   CHS_LAST_ROW_KEY(0x0203FF8C)  = 所属行的键（tileBase ^ curY<<8 ^ 模板）。
- * 两者配对使用：只有"同一行 + 光标右移"才续接游标。
- * 复用 PITCH_CTRL 的 pad 区(FF82..FF83)，age[] 自 FF84 起，不冲突。 */
-#define CHS_LAST_OFF_ADDR    0x0203FF82u
-#define CHS_LAST_ROW_KEY     0x0203FF8Cu
 
-struct ChineseTileState {
-    uint8_t  char_base;
-    uint8_t  write_op;
-    uint8_t  base_tx;
-    uint8_t  last_adv;
-    uint16_t pitch_key;
-    uint16_t chs_px;
-};
-
-struct ChsPitchCtrl {
-    uint8_t cur;
-    uint8_t gen;
-    uint8_t pad[2];
-    uint8_t age[CHS_PITCH_SLOT_COUNT];
-};
-
-void copy_tile32(void *dst_vram, const void *src_iwram)
-{
-    const uint32_t *s = (const uint32_t *)src_iwram;
-    uint32_t *d = (uint32_t *)dst_vram;
-
-    d[0] = s[0];
-    d[1] = s[1];
-    d[2] = s[2];
-    d[3] = s[3];
-    d[4] = s[4];
-    d[5] = s[5];
-    d[6] = s[6];
-    d[7] = s[7];
-}
-
-uint8_t *vram_tile(TextPrinter *win, uint16_t tile)
-{
-    uint8_t *tpl = win_template(win);
-    uint8_t *tile_data = (uint8_t *)(uintptr_t)win_u32(tpl, 0x0C);
-
-    return tile_data + ((uint32_t)tile << 5);
-}
-
-void DecompressGlyph_Chinese(struct TextGlyph *glyph, uint16_t ChineseChar, uint8_t fontId)
+/* 字形解压（v4 同款）：128B 容器原样拷出，保持
+ * [TL@+0][BL@+32][TR@+64][BR@+96] 布局；bit15=半字右半（+64 起）。 */
+static void decompress_chs_glyph(uint8_t out[CHS_CELL_BYTES],
+                                 uint16_t gidx, uint8_t font_id)
 {
     const uint8_t *base;
     const uint8_t *g;
 
-    if (ChineseChar >= CHS_FONT_GLYPH_MAX)
-        ChineseChar = 0;
+    if (gidx >= CHS_FONT_GLYPH_MAX)
+        gidx = 0;
 
-    base = (fontId == 4u) ? (const uint8_t *)ADDR_FONT_CHS_SMALL
-                          : (const uint8_t *)ADDR_FONT_CHS_NORMAL;
-    g = base + ((uint32_t)(ChineseChar & CHS_GLYPH_IDX_MASK) << 7);
-    if (ChineseChar & CHS_GLYPH_HALF_BIT)
+    base = (font_id == 4u) ? (const uint8_t *)ADDR_FONT_CHS_SMALL
+                           : (const uint8_t *)ADDR_FONT_CHS_NORMAL;
+    g = base + ((uint32_t)(gidx & CHS_GLYPH_IDX_MASK) << 7);
+    if (gidx & CHS_GLYPH_HALF_BIT)
         g += 64u;
 
-    copy_tile32(&glyph->gfxBufferTop[0], g + 0u);
-    copy_tile32(&glyph->gfxBufferTop[8], g + 64u);
-    copy_tile32(&glyph->gfxBufferBottom[0], g + 32u);
-    copy_tile32(&glyph->gfxBufferBottom[8], g + 96u);
-
-    glyph->width = GetChineseFontWidthFunc(ChineseChar, fontId);
-    glyph->height = (fontId == 4u) ? 8u : 12u;
+    copy_tile32(out + 0x00, g + 0u);   /* TL */
+    copy_tile32(out + 0x20, g + 32u);  /* BL */
+    copy_tile32(out + 0x40, g + 64u);  /* TR */
+    copy_tile32(out + 0x60, g + 96u);  /* BR */
 }
 
-uint8_t GetChineseFontWidthFunc(uint16_t ChineseChar, uint8_t fontId)
-{
-    (void)ChineseChar;
-    switch (fontId) {
-    case 4u:
-        return 8u;
-    default:
-        return 12u;
-    }
-}
-
-static uint8_t pitch_capture_base_tx(TextPrinter *win)
-{
-    return win_u8(win, WIN_CURSOR_TILE_X);
-}
-
-/* 行键：同窗口(tpl) + 同 tileBase + 同行(curY) 视为一行。
- * 与 pitch 键的区别：**不含 curX** —— 同一行内并列的多个文本块
- * （curX 不同，如设置菜单「类型」@15 与其后数字 @18）必须认作同一行，
- * 才能让 DYN tile 游标在块间断续。 */
-static uint16_t chs_row_key(TextPrinter *win)
+/* mode0 单列绘制（官方 tm0 一列的逐语义复刻）：
+ * src_u/src_l = 32B 4bpp 字库 tile（索引 15/14/0）；
+ * 落点 tileData[(TILE_BASE+TILE_OFFSET)*32]，颜色重映射后直写 VRAM
+ * （官方 FontFunc → CopyGlyph2bpp 链路本就直写 VRAM dst）；
+ * UpdateTilemap 写表项列，cursorTileX/TILE_OFFSET 各推一格。 */
+static void blit_column_mode0(TextPrinter *win,
+                              const uint8_t *src_u, const uint8_t *src_l)
 {
     uint8_t *tpl = win_template(win);
-    uint16_t w = tpl ? (uint16_t)(((uintptr_t)tpl >> 2) & 0xFFFFu) : 0;
-
-    return (uint16_t)(win_u16(win, WIN_TILE_BASE)
-                      ^ ((uint16_t)win_u8(win, WIN_CURSOR_Y) << 8)
-                      ^ w);
-}
-
-static uint16_t chs_pitch_key(TextPrinter *win)
-{
-    uint8_t *tpl = win_template(win);
-    uint16_t w = tpl ? (uint16_t)(((uintptr_t)tpl >> 2) & 0xFFFFu) : 0;
-
-    return (uint16_t)(win_u16(win, WIN_TILE_BASE)
-                      ^ ((uint16_t)win_u8(win, WIN_CURSOR_Y) << 8)
-                      ^ ((uint16_t)win_u8(win, WIN_CURSOR_X) << 4)
-                      ^ (uint16_t)win_u8(win, WIN_CURSOR_TILE_Y)
-                      ^ w);
-}
-
-static volatile struct ChineseTileState *chs_bind_pitch_slot(TextPrinter *win, int *out_is_new)
-{
-    volatile struct ChsPitchCtrl *ctrl =
-        (volatile struct ChsPitchCtrl *)ADDR_CHS_PITCH_CTRL;
-    volatile struct ChineseTileState *slots =
-        (volatile struct ChineseTileState *)ADDR_CHS_PITCH_SLOTS;
-    uint8_t *tpl = win_template(win);
-    uint8_t char_base = tpl ? tpl[1] : 0;
-    uint16_t key = chs_pitch_key(win);
-    unsigned i;
-    unsigned best;
-    uint8_t best_age;
-    uint8_t gen;
-
-    if (out_is_new)
-        *out_is_new = 0;
-
-    for (i = 0; i < CHS_PITCH_SLOT_COUNT; i++) {
-        if (slots[i].pitch_key == key && slots[i].char_base == char_base) {
-            gen = (uint8_t)(ctrl->gen + 1u);
-            ctrl->gen = gen;
-            ctrl->age[i] = gen;
-            ctrl->cur = (uint8_t)i;
-            return &slots[i];
-        }
-    }
-
-    best = 0;
-    best_age = 255;
-    for (i = 0; i < CHS_PITCH_SLOT_COUNT; i++) {
-        if (ctrl->age[i] == 0) {
-            best = i;
-            break;
-        }
-        if (ctrl->age[i] < best_age) {
-            best_age = ctrl->age[i];
-            best = i;
-        }
-    }
-
-    slots[best].char_base = char_base;
-    slots[best].write_op = 0;
-    slots[best].base_tx = pitch_capture_base_tx(win);
-    slots[best].last_adv = (uint8_t)CHS_GLYPH_ADVANCE_PX;
-    slots[best].pitch_key = key;
-    slots[best].chs_px = 0;
-    gen = (uint8_t)(ctrl->gen + 1u);
-    ctrl->gen = gen;
-    ctrl->age[best] = gen;
-    ctrl->cur = (uint8_t)best;
-    if (out_is_new)
-        *out_is_new = 1;
-    return &slots[best];
-}
-
-static void pitch_reset(TextPrinter *win)
-{
-    volatile struct ChineseTileState *st = chs_bind_pitch_slot(win, 0);
-
-    st->chs_px = 0;
-    st->base_tx = pitch_capture_base_tx(win);
-}
-
-uint8_t chs_pitch_write_op(TextPrinter *win)
-{
-    return chs_bind_pitch_slot(win, 0)->write_op;
-}
-
-void chs_pitch_set_write_op(TextPrinter *win, uint8_t op)
-{
-    chs_bind_pitch_slot(win, 0)->write_op = op;
-}
-
-static int draw_use_linear(TextPrinter *win, uint8_t write_op)
-{
-    return scene_should_use_linear(win, write_op);
-}
-
-static void ensure_linear_dest_floor(TextPrinter *win)
-{
-    scene_apply_linear_floor(win);
-}
-
-static uint16_t GetCursorTileNum_Linear(TextPrinter *win, unsigned xOff, unsigned yOff)
-{
-    return scene_gctn_linear(win, xOff, yOff);
-}
-
-static void GetCursorTileNum_Mode2(
-    TextPrinter *win, int tile_x, uint16_t *upper, uint16_t *lower)
-{
-    scene_gctn_mode2(win, tile_x, upper, lower);
-}
-
-static void map_at(TextPrinter *win, uint8_t tx, uint16_t abs_u, uint16_t abs_l)
-{
-    win_set_u8(win, WIN_CURSOR_TILE_X, tx);
-    UpdateTilemap_PreserveCursorX(win, abs_u, abs_l);
-}
-
-/* ---- sChsShiftAmounts（pokeruby text.c sGlyphShiftAmounts 同构）----
- * left = startPixel*4：本 tile 内左移；right = 32-left：溢出段右移。
- * 恒等式 width-(gw_end-8) = 8-startPixel ⇒ right 对任意 width≤8 都成立；
- * need_spill 蕴含 startPixel≥1 ⇒ right≤28，无 >>32 UB。 */
-static const struct ChsShiftAmount {
-    uint32_t left;
-    uint32_t right;
-} sChsShiftAmounts[8] = {
-    {  0, 32 },
-    {  4, 28 },
-    {  8, 24 },
-    { 12, 20 },
-    { 16, 16 },
-    { 20, 12 },
-    { 24,  8 },
-    { 28,  4 },
-};
-
-/* 美版 DrawGlyphTile_ShadowedFont + ShiftGlyphTile_*_Width0..8 的合体字版实现：
- * src 经 CopyGlyph(C,E,D) 已烘焙调色板（= 美版 colors[] 逐 nibble 查表的等价
- * 前置），故整行按字移位即可，逐像素循环取缔。
- * 输出语义与旧 refpr 逐像素版逐字节一致：
- *   左 tile  [0,startPixel) 保留 | 字形覆盖 | [gw_end,8) 清底色
- *   spill    整 tile 重写 = 溢出字形 [0,gw_end-8) | 清底色 [gw_end-8,8) */
-void DrawGlyphTile_refpr(
-    TextPrinter *win, struct GlyphTileInfo *info,
-    const uint8_t *src32, uint8_t *dest, uint8_t *spillTile)
-{
-    uint32_t temp_words[8];
-    uint32_t dest_words[8];
-    uint32_t spill_words[8];
-    uint8_t *temp = (uint8_t *)temp_words;
-    unsigned startPixel = info->startPixel;
-    unsigned width = info->width;
-    unsigned gw_end;
-    unsigned r;
+    uint8_t *tile_data = (uint8_t *)(uintptr_t)win_u32(tpl, TPL_TILE_DATA);
     uint8_t fg_ov = *(volatile uint8_t *)ADDR_OPT_FG_COLOR;
-    uint8_t color_c = (fg_ov != 0u) ? fg_ov : win_u8(win, WIN_COLOR_C);
+    uint8_t color_c = fg_ov ? fg_ov : win_u8(win, WIN_COLOR_C);
     uint8_t color_d = win_u8(win, WIN_COLOR_D);
     uint8_t color_e = win_u8(win, WIN_COLOR_E);
-    int need_spill;
-    uint32_t bg_word = 0x11111111u * (color_d & 0x0Fu);
-    const struct ChsShiftAmount *sa;
-    uint32_t keep_mask;
-    uint32_t val;
+    uint16_t base = win_u16(win, WIN_TILE_BASE);
+    uint16_t off = win_u16(win, WIN_TILE_OFFSET);
+    uint16_t t;
+    uint8_t *dst_u;
 
-    /* CopyGlyph(C,E,D) + 清列盖字：与 bak DrawGlyphTile_CHS 同构，保缩进/相位 */
-    CopyGlyph2bppTo4bpp_Origin(src32, temp, color_c, color_e, color_d);
-
-    if (spillTile == 0 && startPixel == 0u && width == 8u) {
-        copy_tile32(dest, temp);
+    if (!tile_data)
         return;
-    }
 
-    if (width > 8u)
-        width = 8u;
-    gw_end = startPixel + width;
-    need_spill = (spillTile != 0) && (gw_end > 8u);
-    sa = &sChsShiftAmounts[startPixel & 7u];
-    keep_mask = (startPixel >= 8u) ? 0xFFFFFFFFu
-                                   : ((1u << (startPixel * 4u)) - 1u);
+    t = (uint16_t)(base + off);
+    dst_u = tile_data + ((uint32_t)t << 5);
 
-    {
-        const uint32_t *dv = (const uint32_t *)dest;
-        for (r = 0; r < 8u; r++)
-            dest_words[r] = dv[r];
-    }
-
-    for (r = 0; r < 8u; r++) {
-        val = temp_words[r];
-        if (width < 8u)
-            val &= (1u << (width * 4u)) - 1u;
-
-        dest_words[r] = (dest_words[r] & keep_mask) | (val << sa->left);
-        if (gw_end < 8u)
-            dest_words[r] |= bg_word << (gw_end * 4u);
-
-        if (need_spill)
-            spill_words[r] = (val >> sa->right)
-                           | (bg_word << ((gw_end - 8u) * 4u));
-    }
-
-    copy_tile32(dest, dest_words);
-    if (need_spill)
-        copy_tile32(spillTile, spill_words);
-}
-
-unsigned GetGlyphWidthChinese(TextPrinter *win, uint32_t gidx_or_code, unsigned glyphWidth)
-{
-    (void)win;
-    (void)gidx_or_code;
-    if (glyphWidth <= 8u)
-        return 0u;
-    return glyphWidth - 8u;
-}
-
-static void DrawGlyphTiles_core(
-    TextPrinter *win, const struct ChsGlyphTiles *tiles, int linear,
-    unsigned glyphWidth)
-{
-    volatile struct ChineseTileState *st = chs_bind_pitch_slot(win, 0);
-    unsigned startPixel;
-    unsigned pass2_w;
-    uint16_t off, abs_u, abs_l, su, sl;
-    uint8_t *du, *dl, *du_sp, *dl_sp;
-    uint8_t map_tx;
-    int spilled;
-    unsigned ptr_mode;
-    struct GlyphTileInfo info;
-
-    if (glyphWidth < 8u)
-        glyphWidth = 8u;
-    if (glyphWidth > 12u)
-        glyphWidth = 12u;
-    pass2_w = glyphWidth - 8u;
-    spilled = 0;
-
-    /* [2026-08-30] 本字是否走 PTR 固定槽路径。PTR 落址 = ptr_base+2*xOff+yOff，
-     * 与 win[0x18] 无关，且**不得推进 win[0x18]** —— 见 linear 分支两处推进点。 */
-    ptr_mode = (linear && scene_is_ptr_mode(win)) ? 1u : 0u;
-
-    if (st->chs_px == 0)
-        st->base_tx = pitch_capture_base_tx(win);
-
-    startPixel = (unsigned)(st->chs_px & 7u);
-    map_tx = (uint8_t)(st->base_tx + (st->chs_px >> 3));
-    info.startPixel = (uint8_t)startPixel;
-    info.width = 8;
-
-    if (linear) {
-        if (st->chs_px == 0)
-            ensure_linear_dest_floor(win);
-        off = win_u16(win, WIN_TILE_OFFSET);
-        abs_u = GetCursorTileNum_Linear(win, 0, 0);
-        abs_l = GetCursorTileNum_Linear(win, 0, 1);
-        du = vram_tile(win, abs_u);
-        dl = vram_tile(win, abs_l);
-        if (startPixel + 8u > 8u) {
-            su = GetCursorTileNum_Linear(win, 1, 0);
-            sl = GetCursorTileNum_Linear(win, 1, 1);
-            du_sp = vram_tile(win, su);
-            dl_sp = vram_tile(win, sl);
-            spilled = 1;
-        } else {
-            du_sp = 0;
-            dl_sp = 0;
-        }
-        DrawGlyphTile_refpr(win, &info, tiles->tl, du, du_sp);
-        DrawGlyphTile_refpr(win, &info, tiles->bl, dl, dl_sp);
-        map_at(win, map_tx, abs_u, abs_l);
-        /* [2026-08-30] PTR 不推进 win[0x18]（理由见 pass2 处注释）。
-         * v3 的 chs_core_ex 同样是 PTR 不推进（`if (ptr_base == 0u)` 门控）。 */
-        if (ptr_mode == 0u)
-            win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
-    } else {
-        GetCursorTileNum_Mode2(win, (int)map_tx, &abs_u, &abs_l);
-        du = vram_tile(win, abs_u);
-        dl = vram_tile(win, abs_l);
-        if (startPixel + 8u > 8u) {
-            GetCursorTileNum_Mode2(win, (int)map_tx + 1, &su, &sl);
-            du_sp = vram_tile(win, su);
-            dl_sp = vram_tile(win, sl);
-            spilled = 1;
-        } else {
-            du_sp = 0;
-            dl_sp = 0;
-        }
-        DrawGlyphTile_refpr(win, &info, tiles->tl, du, du_sp);
-        DrawGlyphTile_refpr(win, &info, tiles->bl, dl, dl_sp);
-        map_at(win, map_tx, abs_u, abs_l);
-    }
-
-    st->chs_px = (uint16_t)(st->chs_px + 8u);
-    if (pass2_w == 0u) {
-        if (spilled)
-            map_at(win, (uint8_t)(map_tx + 1u), su, sl);
-        st->last_adv = (uint8_t)glyphWidth;
-        win_set_u8(win, WIN_CURSOR_TILE_X,
-                   (uint8_t)(st->base_tx + ((st->chs_px + glyphWidth - 1) >> 3)));
-        return;
-    }
-
-    map_tx = (uint8_t)(st->base_tx + (st->chs_px >> 3));
-    info.width = (uint8_t)pass2_w;
-
-    if (linear) {
-        /* [2026-08-30] PTR 固定槽：pass2 是右半，必须传 xOff=1 才能落到
-         * 槽+2/+3；DYN 仍传 0（靠 win[0x18] 推进）。传错会导致右半覆盖左半，
-         * 标签列显示成 "1" 状碎片。 */
-        off = win_u16(win, WIN_TILE_OFFSET);
-        abs_u = GetCursorTileNum_Linear(win, ptr_mode, 0);
-        abs_l = GetCursorTileNum_Linear(win, ptr_mode, 1);
-        du = vram_tile(win, abs_u);
-        dl = vram_tile(win, abs_l);
-        if (startPixel + pass2_w > 8u) {
-            su = GetCursorTileNum_Linear(win, ptr_mode + 1u, 0);
-            sl = GetCursorTileNum_Linear(win, ptr_mode + 1u, 1);
-            du_sp = vram_tile(win, su);
-            dl_sp = vram_tile(win, sl);
-        } else {
-            du_sp = 0;
-            dl_sp = 0;
-        }
-        DrawGlyphTile_refpr(win, &info, tiles->tr, du, du_sp);
-        DrawGlyphTile_refpr(win, &info, tiles->br, dl, dl_sp);
-        map_at(win, map_tx, abs_u, abs_l);
-        /* [2026-08-30] PTR **不得推进 win[0x18]**。off 在行内是各 DYN 区依次
-         * 递进的游标（zone A 0 → zone B 12 → zone C 22）：DYN 会话首字的复位
-         * 条件是"off 越出 [z->off, z->off+span)"，靠"上一区推进后正好落进下一区"
-         * 达成。PTR 若在标签列每字 +2，会话结束时 off 会漂到 8/16…，这些值
-         * 恰好落在下一个 DYN 区区间**内部** ⇒ 不复位 ⇒ 候选列首字从残留偏移
-         * 起画，越界覆盖再下一区。PTR 落址不看 off，推进它百害无利。 */
-        if (ptr_mode == 0u)
-            win_set_u16(win, WIN_TILE_OFFSET,
-                        (uint16_t)(off + (startPixel == 0u ? 0u : 2u)));
-    } else {
-        GetCursorTileNum_Mode2(win, (int)map_tx, &abs_u, &abs_l);
-        du = vram_tile(win, abs_u);
-        dl = vram_tile(win, abs_l);
-        if (startPixel + pass2_w > 8u) {
-            GetCursorTileNum_Mode2(win, (int)map_tx + 1, &su, &sl);
-            du_sp = vram_tile(win, su);
-            dl_sp = vram_tile(win, sl);
-        } else {
-            du_sp = 0;
-            dl_sp = 0;
-        }
-        DrawGlyphTile_refpr(win, &info, tiles->tr, du, du_sp);
-        DrawGlyphTile_refpr(win, &info, tiles->br, dl, dl_sp);
-        map_at(win, map_tx, abs_u, abs_l);
-    }
-
-    /* [2026-08-30] PTR 固定槽：一字独占 2 个 tilemap 列 ⇒ 16px 步进
-     * （startPixel 恒 0 ⇒ pass1 不 spill，槽内 4 tile 完整一字）。
-     * DYN 走旧步进 pass2_w（相邻字共享 tile）。 */
-    st->chs_px = (uint16_t)(st->chs_px
-                            + (scene_is_ptr_mode(win) ? 8u : pass2_w));
-    st->last_adv = (uint8_t)glyphWidth;
+    CopyGlyph2bppTo4bpp_Origin(src_u, dst_u, color_c, color_e, color_d);
+    CopyGlyph2bppTo4bpp_Origin(src_l, dst_u + 0x20, color_c, color_e, color_d);
+    UpdateTilemap_Origin(win, t, (uint16_t)(t + 1u));
     win_set_u8(win, WIN_CURSOR_TILE_X,
-               (uint8_t)(st->base_tx + ((st->chs_px + glyphWidth - 1) >> 3)));
+               (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
+    win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
 }
 
-static void DrawGlyphTiles_common(
-    TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth)
+/* mode0 汉字整格：cols=2（16px 主字体）/ 1（font4 小字，8px 单列）。 */
+static void print_glyph_mode0(TextPrinter *win, uint16_t gidx,
+                              uint8_t font_id, unsigned cols)
 {
-    int slot_new = 0;
-    volatile struct ChineseTileState *st = chs_bind_pitch_slot(win, &slot_new);
-    uint8_t cur_tx = win_u8(win, WIN_CURSOR_TILE_X);
-    unsigned last;
-    int linear;
-    int newline_reset = 0;
+    uint8_t buf[CHS_CELL_BYTES];
+    unsigned col;
 
-    /* slot_new 时**不能**清 CHS_LAST_OFF：新的 pitch 槽正是"新起一个文本块"
-     * 的信号（pitch 键含 curX，块间 curX 变化必换槽），而新块要靠 last_off
-     * 续接上一块的 DYN 游标。清了它 ⇒ 新块从 off=0 起画 ⇒ 盖掉前一块的
-     * 汉字（bug/20260830/16.PNG：「类型」+数字 ⇒ 「类」被数字覆盖）。 */
-    if (slot_new && st->chs_px == 0)
-        newline_reset = 1;
+    decompress_chs_glyph(buf, gidx, font_id);
 
-    if (st->chs_px != 0 && cur_tx <= st->base_tx) {
-        st->chs_px = 0;
-        st->base_tx = pitch_capture_base_tx(win);
-        newline_reset = 1;
-    } else if (st->chs_px != 0) {
-        last = st->last_adv ? st->last_adv : (unsigned)CHS_GLYPH_ADVANCE_PX;
-        {
-            uint8_t expect = (uint8_t)(st->base_tx + ((st->chs_px + last - 1) >> 3));
+    for (col = 0; col < cols; col++) {
+        const uint8_t *src_u = buf + (col ? 0x40u : 0x00u);
+        const uint8_t *src_l = buf + (col ? 0x60u : 0x20u);
 
-            if (cur_tx != expect) {
-                st->chs_px = 0;
-                st->base_tx = pitch_capture_base_tx(win);
-                newline_reset = 1;
-            }
-        }
-    } else {
-        st->base_tx = pitch_capture_base_tx(win);
-    }
-
-    linear = draw_use_linear(win, st->write_op);
-
-    if (linear) {
-        uint16_t off_now = win_u16(win, WIN_TILE_OFFSET);
-        uint16_t last = *(volatile uint16_t *)CHS_LAST_OFF_ADDR;
-        uint16_t last_off = (uint16_t)(last & 0xFFu);
-
-        if (st->chs_px != 0u) {
-            /* 块内：off 被外部改小时抬回上次断点（原逻辑，不动）。 */
-            if (last_off != 0u && off_now < last_off)
-                win_set_u16(win, WIN_TILE_OFFSET, last_off);
-        } else if (*(volatile uint16_t *)CHS_LAST_ROW_KEY == chs_row_key(win)
-                   && win_u8(win, WIN_CURSOR_X) > (uint8_t)(last >> 8)
-                   && off_now < last_off) {
-            /* 新块（chs_px==0）接在同一行的**后继列**：必须延续上一块的
-             * DYN 游标，否则从 off=0 起画会与前一块共用同一批 tile。
-             *
-             * 判据只用方向，不猜场景：
-             *   1) 行键相同 —— 同模板/同 tileBase/同 curY，确属同一行；
-             *   2) curX 严格变大 —— 光标右移 = 同行后继块；
-             *      （重绘/新行时光标回到行首，curX 不增 ⇒ 不续接）
-             *   3) off 变小 —— 新块把 off 重置了，需要抬回去。
-             *
-             * gdb 实证（work/gdb_patcher_log.log，第 7 行 curY=15）：
-             *   块1 cur_x=15「类型」OFF 0→6；块2 cur_x=18「9」OFF 被重置为 0
-             *   ⇒ 两者共用 tile ⇒ 「类」被数字覆盖。 */
-            win_set_u16(win, WIN_TILE_OFFSET, last_off);
-        }
-    }
-
-    if (newline_reset && linear) {
-        uint16_t off = win_u16(win, WIN_TILE_OFFSET);
-
-        win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
-    }
-
-    /* [2026-08-30] 告知 scene 本字 glyph_id：PTR 固定槽按字查槽表就在此时做
-     * （槽查询需要 per-glyph，而 gctn_linear 只有 xOff/yOff）。
-     * 位置要求：只要早于 DrawGlyphTiles_core 即可。note_glyph 只绑定"本字
-     * 槽基址"（不依赖 off），落址增量 delta 由 scene_gctn_linear 现算，故
-     * newline_reset 的 off+=2 与 CHS_LAST_OFF 回抬都不会让它过期。
-     * （那个 off+=2 是 tm0 行间隔离所必需——奇数个汉字收尾时行末 off 比下一
-     *   空闲 tile 小 2——不能删。） */
-    scene_note_glyph(win, tiles->glyph_id);
-
-    DrawGlyphTiles_core(win, tiles, linear, glyphWidth);
-
-    if (linear) {
-        *(volatile uint16_t *)CHS_LAST_ROW_KEY = chs_row_key(win);
-        *(volatile uint16_t *)CHS_LAST_OFF_ADDR =
-            (uint16_t)(((uint16_t)win_u8(win, WIN_CURSOR_X) << 8)
-                       | (win_u16(win, WIN_TILE_OFFSET) & 0xFFu));
+        blit_column_mode0(win, src_u, src_l);
     }
 }
 
-/* FontFunc[2] 血条缓冲：对齐原生 BlitGlyph + dst+=0x40（每列 upper|lower）。
- * dst==0 为幻影打印，消费字符但不写。 */
-static void DrawGlyphTiles_buffer(
-    TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth)
+/* mode0 SYM 标点：64B 容器 [U@+0][L@+32]，一列 8px（同官方半角节奏）。 */
+static void draw_sym_mode0(TextPrinter *win, uint32_t sym_idx)
 {
-    uint32_t dst_u = win_u32(win, WIN_TILE_DATA);
-    uint8_t *dst;
-    struct GlyphTileInfo info;
+    const uint8_t *sym =
+        (const uint8_t *)ADDR_FONT_CHS_SYM + sym_idx * 64u;
+
+    blit_column_mode0(win, sym, sym + 32u);
+}
+
+/* F9 汉字渲染入口（text_translater.c 消费）。
+ * glyphWidth 形参仅为兼容既有签名——v5 步进由渲染模型决定：
+ * 16px 整格（主字体 2 列）/ font4 小字 8px（1 列）。 */
+void PrintGlyph(TextPrinter *win, uint32_t gidx, unsigned glyphWidth)
+{
+    uint8_t tm = win_u8(win, WIN_TEXTMODE) & 7u;
+    uint8_t fn = win_u8(win, WIN_FONTNUM_REAL);
     unsigned cols;
-    unsigned i;
 
-    if (dst_u == 0u)
-        return;
+    (void)glyphWidth;
 
-    dst = (uint8_t *)(uintptr_t)dst_u;
-    if (glyphWidth < 8u)
-        glyphWidth = 8u;
-    if (glyphWidth > 12u)
-        glyphWidth = 12u;
+    if (fn > 6u)
+        fn = 3u;
+    if (tm == 2u)
+        fn = 4u;         /* tm2 缓冲为原生 8px 槽（v4 实证） */
 
-    cols = (glyphWidth <= 8u) ? 1u : 2u;
-    info.startPixel = 0;
+    cols = (fn == 4u) ? 1u : 2u;
 
-    for (i = 0; i < cols; i++) {
-        const uint8_t *src_u = (i == 0u) ? tiles->tl : tiles->tr;
-        const uint8_t *src_l = (i == 0u) ? tiles->bl : tiles->br;
-
-        info.width = (i == 0u) ? 8u : (uint8_t)(glyphWidth - 8u);
-        if (info.width == 0u)
-            break;
-        if (info.width > 8u)
-            info.width = 8u;
-        DrawGlyphTile_refpr(win, &info, src_u, dst, 0);
-        DrawGlyphTile_refpr(win, &info, src_l, dst + 0x20, 0);
-        dst += 0x40;
-    }
-    win_set_u32(win, WIN_TILE_DATA, (uint32_t)(uintptr_t)dst);
-}
-
-void DrawGlyphTiles(TextPrinter *win, const struct ChsGlyphTiles *tiles, unsigned glyphWidth)
-{
-    uint8_t tm;
-
-    if (!win || !tiles)
-        return;
-
-    tm = win_u8(win, WIN_TEXTMODE) & 7u;
     switch (tm) {
     case 0:
+        print_glyph_mode0(win, (uint16_t)(gidx & 0xFFFFu), fn, cols);
+        break;
     case 1:
     case 3:
-        DrawGlyphTiles_common(win, tiles, glyphWidth);
+        /* 步骤 2：消费 + 推进（像素路径步骤 3 逐窗收敛） */
+        win_set_u8(win, WIN_CURSOR_TILE_X,
+                   (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + cols));
         break;
-    case 2:
-        /* FontFunc[2]：写 win[0x20] 缓冲，每列 +0x40（血条 OBJ 刷走） */
-        DrawGlyphTiles_buffer(win, tiles, glyphWidth);
+    case 2: {
+        uint32_t dst = win_u32(win, WIN_TILE_DATA);
+
+        if (dst != 0u)
+            win_set_u32(win, WIN_TILE_DATA, dst + cols * 0x40u);
         break;
+    }
     default:
         break;
     }
 }
 
-void DrawGlyphTiles_arrow_prepare(TextPrinter *win)
+/* PCS 单字节渲染入口（text_translater.c 中文替换流内消费）。
+ * 返回 1=已消费（引擎零回落：不可印位直接吞掉）。 */
+int DrawGlyph(TextPrinter *win, uint32_t cur_char)
 {
-    volatile struct ChineseTileState *st;
-    uint16_t cols;
-    uint16_t off;
-    uint8_t want;
-    uint8_t cur_tx;
+    uint8_t tm = win_u8(win, WIN_TEXTMODE) & 7u;
 
-    if (!win)
-        return;
-    st = chs_bind_pitch_slot(win, 0);
-    if (!st->chs_px)
-        return;
-
-    cols = (uint16_t)((st->chs_px + 7u) >> 3);
-    want = (uint8_t)(st->base_tx + cols);
-    cur_tx = win_u8(win, WIN_CURSOR_TILE_X);
-
-    if (cur_tx == 0u && want > 0u) {
-        off = win_u16(win, WIN_TILE_OFFSET);
-        if (st->chs_px & 7u)
-            win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
-        pitch_reset(win);
-        return;
+    if (cur_char >= SYM_GLYPH_BASE
+        && cur_char < SYM_GLYPH_BASE + SYM_GLYPH_COUNT) {
+        if (tm == 0u) {
+            draw_sym_mode0(win, cur_char - SYM_GLYPH_BASE);
+            return 1;
+        }
+        /* 非 mode0：落入下方原生分发，按 JP PCS 同码画半角形
+         * （SYM 编码即 JP PCS 标点码，回退视觉可接受）。 */
     }
 
-    win_set_u8(win, WIN_CURSOR_TILE_X, want);
-    off = win_u16(win, WIN_TILE_OFFSET);
-    if (st->chs_px & 7u)
-        win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
-    pitch_reset(win);
-}
+    if (cur_char >= 0xF7u)
+        return 1;
 
-void arrow_inplace12(TextPrinter *win)
-{
-    DrawGlyphTiles_arrow_prepare(win);
+    FontFunc_NativeDispatch(tm, win, cur_char);
+    return 1;
 }

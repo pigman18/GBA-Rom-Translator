@@ -8,10 +8,11 @@ REM   UTF-8 CJK in REM lines and may execute the fragments):
 REM   1) battle/pokedex/option objects were linked but NEVER compiled -- stale
 REM      .o silently shipped. Now compiled.
 REM   2) wipe %BUILD% first so orphan .o of deleted sources are never linked.
-REM   Text engine: PrintNextChar_hook / text_render (bak/text_original skeleton,
-REM   see bak/text_original/) + text_scene (declarative per-window CONFIG data)
-REM   + text_layout (ALGORITHM: lookup / zones / tile placement, split out of
-REM   text_scene.c 2026-08-30).
+REM   2026-08-31 REWRITE v5 (mixed-write architecture, see repo docs dir,
+REM   REWRITE_DESIGN md): v4 engine (PrintNextChar_hook / text_render /
+REM   text_scene / text_layout / tile_alloc) moved to bak/text-v4.
+REM   New text engine starts from blend_glyph (pure primitive, offline-tested
+REM   via tests/test_blend_glyph.py). Vendored reference/ no longer compiled.
 
 set PREFIX=arm-none-eabi-
 set CC=%PREFIX%gcc
@@ -35,40 +36,20 @@ REM --- wipe stale objects so nothing old can be linked by accident ---
 if exist %BUILD% rmdir /s /q %BUILD%
 if not exist %BUILD% mkdir %BUILD%
 
-echo === Assembling text/entry.s ===
-%CC% %ASFLAGS% %TEXT%\entry.s -o %BUILD%\text_entry.o
+echo === Compiling text/blend_glyph.c (mixed-write pixel primitive) ===
+%CC% %CFLAGS% %TEXT%\blend_glyph.c -o %BUILD%\blend_glyph.o
 if errorlevel 1 exit /b 1
 
-echo === Compiling text/PrintNextChar_hook.c (JP takeover engine) ===
-%CC% %CFLAGS% %TEXT%\PrintNextChar_hook.c -o %BUILD%\PrintNextChar_hook.o
-if errorlevel 1 exit /b 1
-
-echo === Compiling text/text_translater.c (F9 protocol layer) ===
+echo === Compiling text/text_translater.c (F9 protocol layer, kept from v4) ===
 %CC% %CFLAGS% %TEXT%\text_translater.c -o %BUILD%\text_translater.o
 if errorlevel 1 exit /b 1
 
-echo === Compiling text/text_render.c (pixel prims + pitch slots) ===
+echo === Compiling text/text_render.c (v5 renderer: PrintGlyph/DrawGlyph) ===
 %CC% %CFLAGS% %TEXT%\text_render.c -o %BUILD%\text_render.o
 if errorlevel 1 exit /b 1
 
-echo === Compiling text/text_scene.c (declarative per-window layout CONFIG: data only) ===
-%CC% %CFLAGS% %TEXT%\text_scene.c -o %BUILD%\text_scene.o
-if errorlevel 1 exit /b 1
-
-echo === Compiling text/text_layout.c (layout ALGORITHM: lookup/zones/tiles) ===
-%CC% %CFLAGS% %TEXT%\text_layout.c -o %BUILD%\text_layout.o
-if errorlevel 1 exit /b 1
-
-echo === Compiling text/tile_alloc.c (tm1 unregistered-window row allocator) ===
-%CC% %CFLAGS% %TEXT%\tile_alloc.c -o %BUILD%\tile_alloc.o
-if errorlevel 1 exit /b 1
-
-echo === Compiling reference/pokeemerald (vendored GLYPH_COPY) ===
-%CC% %CFLAGS% -Ireference reference\pokeemerald\copy_glyph_to_tiles.c -o %BUILD%\ref_pokeemerald.o
-if errorlevel 1 exit /b 1
-
-echo === Compiling reference/pokeruby (vendored DrawGlyphTile prims) ===
-%CC% %CFLAGS% -Ireference reference\pokeruby\draw_glyph_tile.c -o %BUILD%\ref_pokeruby.o
+echo === Compiling text/fontfunc_hook.c (v5 FontFuncTable redirect thunks) ===
+%CC% %CFLAGS% %TEXT%\fontfunc_hook.c -o %BUILD%\fontfunc_hook.o
 if errorlevel 1 exit /b 1
 
 echo === Assembling map_name_popup\entry.s ===
@@ -104,17 +85,13 @@ echo === Compiling option\DrawOptionMenuChoice_hook.c ===
 if errorlevel 1 exit /b 1
 
 echo === Linking game.elf ===
-@rem text_entry.o must be FIRST: main.asm GameBinAddresses = bin start.
+@rem text objs first (historical convention; no entry.o constraint in v5 --
+@rem FontFuncTable redirect only needs the 4 thunk symbols via game_syms.asm).
 %CC% %LDFLAGS% -o %OUT%/game.elf ^
-  %BUILD%/text_entry.o ^
-  %BUILD%/PrintNextChar_hook.o ^
+  %BUILD%/blend_glyph.o ^
   %BUILD%/text_translater.o ^
   %BUILD%/text_render.o ^
-  %BUILD%/text_scene.o ^
-  %BUILD%/text_layout.o ^
-  %BUILD%/tile_alloc.o ^
-  %BUILD%/ref_pokeemerald.o ^
-  %BUILD%/ref_pokeruby.o ^
+  %BUILD%/fontfunc_hook.o ^
   %BUILD%/MapNamePopup_entry.o ^
   %BUILD%/MapNamePopup_hook.o ^
   %BUILD%/UpdateNickInHealthbox_entry.o ^
@@ -134,7 +111,7 @@ rem Stream emit: no copy-vars, no silent fallback. Missing symbol -> no line ->
 rem armips errors at use site (loud failure beats jumping to 0x08800000).
 > %OUT%\game_syms.asm (
     echo ; Auto-generated from out/game.map - do not edit
-    for %%S in (MapName_DisplayCellLength UnusedPrintMonName_Hook DrawOptionMenuChoice_Hook EngineIwtdEntry) do (
+    for %%S in (MapName_DisplayCellLength UnusedPrintMonName_Hook DrawOptionMenuChoice_Hook FontFuncTm0_Hook FontFuncTm1_Hook FontFuncTm2_Hook FontFuncTm3_Hook) do (
         for /f "tokens=1" %%a in ('findstr /R "%%S$" %OUT%\game.map') do @echo %%S equ %%a
     )
 )

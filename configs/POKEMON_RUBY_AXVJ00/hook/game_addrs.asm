@@ -20,6 +20,17 @@ UpdateTilemap                          equ 0x080036DC  ; C: ADDR_UPDATE_TILEMAP
 ; 原生 tm1 等宽打印（FontFuncTable[1] @0x081BB3AC[1]）：FontSubTable[fontNum]
 ; 写预渲染字体 tile 表项 + [win+0x1B](cursorTileX)+=1。PCS 字形分发专用。
 PrintGlyph_TextMode1_Origin            equ 0x0800360C  ; C: ADDR_PRINT_GLYPH_TM1_ORIGIN
+; --- v5 FontFuncTable 原生处理器（2026-08-31 反汇编实证，tail-call 目标）---
+; FontFuncTable@0x081BB3AC 共 4 项（thumb 位已置）：
+;   [0]=tm0 0x08003569 [1]=tm1 0x0800360D [2]=tm2 0x0800338D [3]=tm3 0x08003495
+;   二级 FontSubTable@0x081BB3BC（fontNum 0..6，7 项）。
+; tm0 处理器：blit@tileData[(TILE_BASE+TILE_OFFSET)*32]（8px 列对）
+;   → UpdateTilemap(upper, upper|0x10000)（写 tilemap 列 left+cursorTileX，
+;   不推进任何游标）→ TILE_OFFSET+=2、cursorTileX+=1。
+; tm2/tm3 处理器：2D(30 列/行)布局，画后 cursorTileX+=1。
+FontFuncTm0_Origin                     equ 0x08003568  ; C: ADDR_FONT_FUNC_TM0_ORIGIN
+FontFuncTm2_Origin                     equ 0x0800338C  ; C: ADDR_FONT_FUNC_TM2_ORIGIN
+FontFuncTm3_Origin                     equ 0x08003494  ; C: ADDR_FONT_FUNC_TM3_ORIGIN
 ; 分区器（多帧字库加载 worker，(tpl, startOffset, glyphIdx)——gdb 采集 2656 命中
 ; 实证 JP 与美版同址；窗体初始化=旧文本作废=CHS 页游标复位点）。
 InitWindowTileData                     equ 0x08002A50  ; C: ADDR_INIT_WINDOW_TILE_DATA

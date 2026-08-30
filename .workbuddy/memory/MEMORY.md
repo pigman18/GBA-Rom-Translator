@@ -1,300 +1,65 @@
 # 项目长期记忆（GBA-Rom-Translator / AXVJ00 汉化）
 
-## ⚠ 日版函数地址定位（2026-08-30 实证，务必照做）
+## 用户偏好（最高优先级）
+- **听命令**：用户指出的路径/方法就是路径本身。先复述计划确认再动手。
+- **修 BUG 不擅自回退旧版本**：在当前方案上定位修掉；确要回退先说明等确认。
+- **场景门控边界**：✅ 按窗口模板地址键控的声明式静态配置表；❌ 启发式 scene 猜测（tileBase 区间/光标值）。裸字面量最糟。
+- **运行时故障先怀疑注入机制**（relocate 改指针/hook 写坏字节），用配置开关二分定位，别纠结文本内容。
 
-`configs/POKEMON_RUBY_AXVJ00/symbols/pokeruby_jp.sym` 里标 **UNVERIFIED** 的符号
-**不能直接当函数入口用**——实测地址普遍偏小（前面带着上个函数的 literal pool），
-且**每个函数偏移量都不同**（DoMoveAnim +0x24 / LaunchBattleAnimation +0x20 /
-RunAnimScriptCommand +0x4 / ScriptCmd_loadspritegfx +0x44 / ScriptCmd_restorebg +0x7c）。
+## 日版函数地址定位（2026-08-30 实证）
+- pokeruby_jp.sym 的 UNVERIFIED 符号偏移不一（带 literal pool），还会张冠李戴（RunAnimScriptCommand 实为 0x08077C20，seg 标错）。
+- 最硬验证：扫全 ROM 的 BL 调用点；0 处可能只是函数指针调用（thunk 表，本例 0x081B12D8）。
+- gBattleAnims_Moves=0x081D997C；DoMoveAnim 0x08071D98 / LaunchBattleAnimation 0x08071DCC。
+- gdb 采集前先 grep -c 验埋点计数，别录完 2034 行才发现 0 命中。
 
-- **修正法**：从符号表地址向后扫，找第一个 `push`（Thumb `0xB4xx`/`0xB5xx`）作真函数头；
-  再校验原版与汉化 ROM 在该点代码一致（一致才能两版共用同一断点）。
-- **更可靠的抓手**：标 `KEEP-US` 的 **EWRAM 变量**日美同址，可直读，优先用它。
-- 已定位：`gBattleAnims_Moves` = **0x081D997C**（412 项；pokeruby 的 0x081C36DC 是错的，
-  那里读出全 0）；DoMoveAnim 0x08071D98 / LaunchBattleAnimation 0x08071DCC。
+## gdb_patcher 坑
+- HANDLERS 同名后注册者覆盖（文件末尾有循环注册），增强埋点要包在所有注册之后；同一地址只能一个埋点（别名转发）。
 
-### ⚠ 补充（2026-08-30 晚）：符号表还会「张冠李戴」，扫 push 也不够
+## 🔴 hook 可写 static 必须显式落 RAM（2026-08-30 实证）
+- game.ld 无 .bss/.data 规则 ⇒ 文件级可写 static 被静默塞进 ROM（恒 0、零报错）。
+- 查法：`grep -nE "^\.bss|^\.data" out/game.map`。修法：EWRAM 显式放置 `0x0203FFxx`。
+- EWRAM 分配表：FF80 CHS_PITCH_CTRL(12B,含FF82 CHS_LAST_OFF) / FF8C LAST_ROW_KEY / FF8E SCENE_PTR_BASE / FF90 PITCH_SLOTS(8×8B→FFCF) / FFD0 OPT_PALETTE_OVERRIDE / FFD1 OPT_FG_COLOR / FFD2 ⚠游戏数据区严禁占用 / FFF8 GLYPH_ALLOC_NEXT。FF80–FF8F 已占满。
+- 排查顺序：①打的是不是旧包(check_rom_hook.py) ②可写变量是否在 RAM ③才是逻辑。
 
-实证：`08072044 l 00000040 RunAnimScriptCommand ; US=0x080759D0 UNVERIFIED(seg=RedrawMenuCursor)`
-—— **段名标成了 RedrawMenuCursor**，且按它定位的 `0x08072048` 在实测日志里 **0 命中**，
-而真正的脚本命令循环在 **`0x08077C20`**。⇒ 符号表连「这是哪个函数」都可能是错的。
+## tm1 落址结论（⚠v4 专属，已随引擎入 bak/text-v4，勿再引用）
+- 唯一布局：PTR 固定槽（curX<8，16px 步进幂等）+ DYN 动态 12px（kOptZones 多段，末条兜底）。旧 PARTITION/GRID/MODE 开关已删（git ≤7af3b08）。
+- 容量：12px n 字占 4n tile（off 最大 4n-2），span 给 4n。
+- PTR 16px 字距是固有限制非 BUG；16px 不额外耗 tile。选中槽必须 per-glyph（chs_slots_sel.inc 与主表同序；标签列不吃高亮 ⇒ 当前空表）。
+- PTR 落址公式：`ptr_base + 2*xOff + yOff`，与 win[0x16]/[0x18] 无关；pass2 必须显式 `xOff = ptr_mode ? 1 : 0`（别用 delta 蹭 off+=2，会互相抵消）。
+- **PTR 不得推进 win[0x18]**：off 是 DYN 区游标，PTR 推进会让 off 漂进下一区 ⇒ 越界覆盖。linear 分支两处 off 推进都要 `if (ptr_mode==0u)` 门控。
+- 译文变更后必须重跑 `scripts/gen_tm1_slots.py`（自动读 kOptRows/kOptZones 当禁区）。
 
-**因此验证函数地址最快、最硬的方法是扫全 ROM 的 BL 调用点：**
-- 有调用点 ⇒ 地址对，且该函数确实被用到；
-- 0 处 ⇒ 要么地址错，**要么只经函数指针调用**（见下）。
+## 四个坑（⚠v4 专属教训，机制已删；诊断思路仍有效）
+- 8px 小字库(font=4)字形有误，设置菜单一律 font=0。
+- kOptRowSpans=0 是危险开关：span=0 不复位 win[0x18]，有中文会越界写 charblock 外。行内有无中文必须识图/实测确认。
+- 混排=多个独立文本块，每个 InitTextPrinter 清零 win[0x18] ⇒ 数字块落回 off 0 踩掉前块的字。修法：pitch 槽键用 zone_id（跨块共享）+ CHS_LAST_ROW_KEY 行键未变不复位。
+  - "只有某个字被盖"⇒怀疑 tile 踩踏非步进；"是否同一文本块"看 InitTextPrinter 的 cur_x。
+- 游标类状态（chs_px）任何分支必须保留归零路径，否则无界累加越界写 VRAM 花屏。
 
-**函数指针调用要顺藤摸到 veneer**：`sScriptCmdTable[...]()` 编译后会生成 thunk，
-表现为 `ldr r1,[r4]` + `bl <thunk表>`，thunk 处是一片 `4708 46C0 4710 46C0`
-（即 `bx r1` / `bx r2` …）。所以 `ScriptCmd_changebg / waitbgfadein / setbldcnt`
-在全 ROM **扫不到任何 BL 调用点**（0 处），这是正常的，不是地址错。
-本例 thunk 表基址 = `0x081B12D8`。
+## text v5 重写（2026-08-31 开工，混合写入架构）
+- v4 引擎整体入 bak/text-v4（configs+work 双份核验一致）；src/text 只留 text_translater.c（F9 层，include 已改 blend_glyph.h）+ 新文件。
+- blend_glyph（src/text/blend_glyph.c）= 唯一绘制原语：1bpp/2bpp，纯函数零状态，spillTile 显式传参（官方 mode0 右邻+64B / mode2 +32B，不能硬编码）；官方 Width3 展开 4 像素的怪癖在 1bpp 路径照抄保逐位等价。对拍 tests/test_blend_glyph.py 三层全绿。
+- reference/ 不再参与构建，仅测试对拍引用（vendored 官方语义 = 对拍基准）。
+- 🔴 hook 链接当前故意红：缺 PrintGlyph/DrawGlyph（步骤 2 = FontFuncTable 重定向 + 新渲染路径），打 ROM 前必须完成。
+- 设计稿唯一权威：docs/REWRITE_DESIGN_混合写入架构.md（§4.3 已按 spillTile 定案修订）。
+- 增删 src/text/*.c 后 build.bat（configs 与 work 两份同步改）编译段+链接段都要改；REM 保持全 ASCII。
 
-### gdb 采集前先验埋点计数（血的教训）
+## relocate / F980（2026-08-30 定案）
+- relocate 改指针是高危：rom_writer 无对齐无区域过滤滑窗，巧合字节也改 ⇒ 黑屏。诊断脚本 scripts/diag_relocate_collisions.py；改 relocate 配置后必跑。**relocate 已改 opt-in（默认 False）**，改动点 translate_plan.py/assign_modules.py/texts_patcher.py；改默认值必须重跑 translate 才生效。
+- F980 短语引用（5 字节，不改指针）基本够用：phrase 上限 16384、表体 6%。仅 62 条槽位<5B 走 SLT2 通路；1 条 650B 超 MAX_PHRASE_STREAM=512 会静默截断。🔴 护栏待补：phrase_stream_lookup 不判 code 上界；build_rom_data 无数量上限检查。
 
-首轮黑屏日志白跑一趟：录完 2034 行才发现 `DoMoveAnim` / `LaunchBattleAnimation`
-**0 命中**（因为动画是即时存档带过来的，压根不会重新走入口函数）。
-⇒ **开跑后先 `grep -c` 各埋点计数，确认录到了目标行为，再继续操作**。
+## 打包约定
+- 🔴 每次改完 hook 源码走完整流水线：hook build.bat → 根 build.bat → check_rom_hook.py。编译通过≠交付。
+- 🔴 打包一律执行仓库根 build.bat（唯一权威模块清单，勿手抄 meowth full；手抄清单漏「图鉴分类名」出过事故）。验 hook 用复制命令+--seed-only，--modules 照抄。
+- 打包用 PowerShell 原生跑（中文参数）；`*>&1 | Out-File log` 再读日志，别只看退出码。bash 下 PYTHONPATH 用 C:\ 路径。
+- check_rom_hook.py 的 MODES 表是 v3 遗留，"GRID"读数实为 use_linear，别当真。
+- 🔒 P0：根 build.bat 硬编码 --api-key 已被 git 跟踪 ⇒ 视为泄露，需轮换+改环境变量+清历史。
 
-## gdb_patcher 两个坑（加埋点前必读）
+## 重构等价性验证（可复用）
+改前存 out/game.bin 快照；判据：①bin 大小相同 ②nm -S 符号块在快照中 in 搜索（纯数据块必须全命中）③地址常量逐条核对。别比 elf vs bin 反汇编行数。
 
-1. **`HANDLERS[name]` 同名会被后注册者覆盖**，且文件末尾有 `_mk_sheet_handler` 循环注册
-   （LoadSpriteSheet/LoadSpritePalette/LoadCompressedObjectPic/LoadCompressedObjectPalette）。
-   在文件中部注册同名 handler 会**静默失效**。要增强已有埋点，应在**所有注册之后**
-   包一层（见 `_augment_tile_handlers_with_anim`）。
-2. **同一地址只能生效一个埋点**：`by_pc = {h.bp: h}` 按地址建字典，yaml 里给同一地址
-   写两条会互相覆盖 ⇒ 一个地址一个 name，共用实现要靠别名 handler 转发。
-3. yaml 的 `gdb:` 条目 name 唯一、地址不可冲突；`default: false` 表示默认不启用。
-
-## 用户偏好：场景（scene）门控的边界
-
-- ✅ **可接受**：按**固定窗口**做特殊配置——以稳定标识（如窗口模板地址 `0x081BB874`）
-  为键的**声明式静态配置表**，一条窗口一条记录，数字显式写出来，可审计可回归。
-- ❌ **不接受**：**启发式 scene 门控**——靠 tileBase 区间 / 光标值 / 模板字段
-  （如旧 bak `text_scene.c` 的 `screen_menu_mode2` / `screen_shop_bag` /
-  `screen_party_footer`）去"猜"当前是哪个场景。这类门控会误判且难验证。
-- **推论**：隐式的、散落在代码里的字面量（只为某个窗口调过参数却没声明属于谁）
-  比两者都糟——至少启发式还有名字和 gate，裸数字两样都没有。
-
-> 背景：tm1 每个窗口的字库都铺满 tile [1,513)，"哪些 tile 空闲"取决于**该窗口
-> 实际引用了哪些字形**，是天生的 per-window 数据。所以这里的选择不是
-> "要不要配置"，而是"声明式配置"还是"隐式字面量"。
-
-## 用户偏好：修 BUG 时**不要擅自回退到已知旧版本**
-
-- 当前方案出了 BUG，优先**在当前方案上定位并修掉**，而不是退回上一个"实测通过"的旧版本。
-  用户原话：「别随便回退啊……那个（旧版本）可以啊」——指的是**旧版本里没出问题的那部分**，
-  不是整版回退。
-- 若确实认为必须回退，先说明理由并等用户确认，不要直接改。
-
-## tm1 落址模式结论（2026-08-29，v20 起更新）
-
-- **当前唯一布局：PTR 区 + DYN 区（按 curX 分区）**。标签列 `curX<8` → PTR
-  固定槽（16px 步进，幂等）；候选列 → DYN 动态 12px。规则表是 `text_scene.c`
-  的 `kOptZones`，支持任意多段（末条 cx_hi=0xFF 兜底）。
-  **旧 PARTITION / GRID / PTR-整窗模式与 OPTION_MODE 开关已删除**（v20 瘦身，
-  用户拍板；要翻旧账用 git 历史 ≤ 7af3b08）。
-- **DYN 段不占选中态额外 tile**：选中色 = 换个前景色**重画一遍**到同一处。
-  只有 PTR 固定槽才需要红字镜像槽（槽内容长期有效，红色版本必须另存）。
-  标签列不吃高亮 ⇒ `chs_slots_sel.inc` 当前为**空表**（省 164 tile 给动态区）。
-- **容量算法**：12px n 字最大 off = **4n-2**，占 **4n** 个 tile（不是 2n+4）。
-  3 字 → off 到 10，占 12 tile，span 要给 12。
-- **PTR 的 16px 字距是固有限制，不是 BUG**：固定槽 ⇒ 相邻字无法共享中间 tile
-  ⇒ 每字独占 2 列 = 16px 步进。12px 的本质是"相邻字共享一个 tile"，与固定槽互斥
-  （共享列的 tile 内容取决于"字A+字B"组合，41 字 ⇒ 1681 组合，装不下）。
-- 16px **不额外耗 tile**：12×16 与 16×16 都是 4 tile/字。
-  → 若嫌字散，正解是**把字模做成 16px 宽填满格子**，别回头死磕 12px。
-- **选中态槽必须 per-glyph**：选中/未选中字模颜色不同，不能共用槽；
-  而选中槽若按"组内第几个字"共用（旧实现），光标一移动就会顶掉旧选中行
-  仍在引用的那批槽 → 文字替换。现为 `chs_slots_sel.inc`（与 `chs_slots.inc` 同序）。
-- **PTR 落址公式（v4，2026-08-30 定案）**：**`ptr_base + 2*xOff + yOff`**，
-  与 `win[0x16]`/`win[0x18]` 完全无关。一字 4 个连续 tile：
-  `+0 左上 / +1 左下 / +2 右上 / +3 右下`（与 DYN 的 `base+off+2xOff+yOff` 同构）。
-  - ❌ **别用 `delta = ptr_base - (tileBase + off)` 去蹭渲染核的 `off += 2`**：
-    delta 与 off 同步变化会**互相抵消**，pass2 算出来仍是 `ptr_base` ⇒
-    右半覆盖左半 ⇒ 标签显示成 "1" 状碎片。
-  - ✅ pass2 必须显式传 **`xOff = scene_is_ptr_mode(win) ? 1 : 0`**
-    （`text_render.c DrawGlyphTiles_core` 的 `ptr_mode`，spill 分支同步 `+1`）。
-- **PTR 不得推进 `win[0x18]`**（2026-08-30 定案，与 v3 的 `if (ptr_base==0u)`
-  门控对齐）：off 在行内是各 DYN 区**依次递进的游标**（zone A 0 → B 12 → C 22），
-  DYN 复位靠"上一区推进后正好落进下一区"。PTR 每字 +2 会让 off 漂到 8/16…，
-  这些值**恰好落在下一个 DYN 区区间内部** ⇒ 不复位 ⇒ 候选列首字从残留偏移起画
-  ⇒ 越界覆盖再下一区。落址不看 off，推进它百害无利。
-  → `DrawGlyphTiles_core` linear 分支**两处** off 推进都要 `if (ptr_mode == 0u)` 门控。
-- **PTR 唯一维护成本**：槽表是构建期静态数据，取决于"译文用到哪些汉字"。
-  译文变更（增删汉字）后**必须**重跑 `scripts/gen_tm1_slots.py`，
-  否则新汉字回退旧路径。该脚本会**自动从 text_scene.c 读 kOptRows 与
-  kOptZones 的 off/span 当禁区**，所以改完布局直接重跑它，槽表不会与配置脱节。
-
-## 🔴 hook 里可写 static 必须显式落 RAM（2026-08-30 实证，最高优先级）
-
-- `link/game.ld` **只有一个 `ROM (rx)` 段**，`SECTIONS` 只放 `.text`/`.rodata`，
-  **没有 `.bss`/`.data` 规则**。文件级可写 static ⇒ `.bss` 成孤儿段 ⇒
-  被链接器**静默塞进 ROM**（只读），写不进去、恒为 0，且**编译链接零报错**。
-- 事故：`text_scene.c` 的 `s_ptr_base`/`s_ptr_delta`/`s_dyn_off`/`s_dyn_span`
-  四个 u16 落到 `0x08803DB0`（ROM）⇒ `s_ptr_base` 恒 0 ⇒ **PTR 模式永不激活**，
-  设置菜单左 16px 完全失效。排查耗了一整轮。
-- **查法**：`grep -nE "^\.bss|^\.data" out/game.map` 看归属与地址；
-  加可写 static 后必须复查 `.bss` 是否为空或落在 `0x02xxxxxx`。
-- **修法**：收敛 static 个数，用绝对地址/EWRAM 显式放置（本项目用 `0x0203FF8x`）。
-- **EWRAM `0x0203FFxx` 分配表**（新增可写状态前必查；`FFD2` 起为游戏数据区，
-  占用即死机 —— 旧页表死机根因）：
-  | 地址 | 用途 |
-  |---|---|
-  | `FF80` | `ADDR_CHS_PITCH_CTRL`（gen 字节，LRU 驱逐）12B |
-  | `FF82` | `CHS_LAST_OFF`（上一文本块结束时的 off，借用 ctrl 区 pad） |
-  | `FF8C` | `CHS_LAST_ROW_KEY`（行键 = tileBase^curY^zone_id） |
-  | `FF8E` | `ADDR_SCENE_PTR_BASE`（PTR 固定槽基址） |
-  | `FF90` | `ADDR_CHS_PITCH_SLOTS` 8 槽 × 8B（→ FFCF） |
-  | `FFD0` | `ADDR_OPT_PALETTE_OVERRIDE` ｜ `FFD1` `ADDR_OPT_FG_COLOR` |
-  | `FFD2` | ⚠ `ADDR_GLYPH_PAGE_CURTAB` **游戏数据区，严禁占用** |
-  | `FFF8` | `ADDR_GLYPH_ALLOC_NEXT` |
-  - `FF80–FF8F` 已占满；再加只能挤 PITCH_CTRL 的 pad 或缩减槽数。
-- 推论：**"源码逻辑全对但运行不对"的排查顺序** —— ① 打进去的是不是旧包
-  （`check_rom_hook.py` 字节比对）→ ② **可写状态变量是否真在 RAM** → ③ 才是逻辑本身。
-
-## ⚠ 四个坑（2026-08-29 / 08-30 实证）
-
-- **8px 小字库（FontChsSmall / font=4）字形有误**：设置菜单"对战规则"的"战"
-  显示成日文"対"。设置菜单一律用 12px 字库（font=0）。
-- **`kOptRowSpans` 给 0（"该行不用行区"）是危险开关**：span=0 时 `chs_blit`
-  不复位 win[0x18]，该行若有中文就会落到 `行基址 + 残留偏移` —— **写到 charblock
-  外面**。现象极具欺骗性：屏幕上看着正常，实际已越界。
-  某行"有没有中文候选"必须**识图/实测确认**，不能靠猜（按键模式行就是
-  `普通/LR/L`，我误判成全字母，结果"普通"写到 tile 551）。
-- **混排 = 多个独立文本块，每个块 `InitTextPrinter` 都会把 `win[0x18]` 清零**
-  （2026-08-30 定案）：设置菜单「类型 9」显示成「9 型 9」——
-  「类型」是译文里的 F9 汉字短语，而「9」是**游戏运行时动态生成的数字**
-  （不在任何翻译文本里，无 `0x8000` 标记，走 PcsPrint_Custom→DrawGlyphTiles）。
-  两者各一次 `InitTextPrinter`（cur_x 15 / 18）⇒ 数字块 off 从 6 掉回 0
-  ⇒ 落在「类」的 tile 上把它盖掉。
-  - **判据**：`[CFF]` 记录有 0x8000 标记的是汉字，只有 `[Note]` 的是原生日文。
-  - **修法**：pitch 槽键里 `curX` 换 **`zone_id`**（同 zone 跨块共享槽），
-    并用 `CHS_LAST_ROW_KEY` 记「行键」—— 行键没变（同一行的后续块）⇒
-    不复位 off，接着上一块的 `CHS_LAST_OFF` 继续画。
-  - 📌 **方法论**：**"只有某个字被盖"⇒ 优先怀疑 tile 踩踏，不是步进。**
-    步进错会让整行整体错位，不会精确只错一个字。
-  - 📌 **"是不是同一个文本块"看 `InitTextPrinter` 的 cur_x，不看屏幕位置。**
-- **删掉状态复位分支 ≠ 简化逻辑**（全屏无限重复打印，15.PNG）：
-  `chs_px` 这类游标类状态，**任何分支都必须保留至少一条归零路径**；
-  去掉归零路径 ⇒ 无界累加 ⇒ 越界写 VRAM ⇒ 全屏花屏。
-
-## 识图方法
-
-我这边直接 Read PNG 会失败，**识图一律走仓库根 `vision.js`**（需 .env 配
-VISION_API_KEY / VISION_MODEL）：
-```
-node vision.js bug/<目录>/10.PNG "逐行列出左边标签和右边选项的每个汉字"
-```
-
-## 代码分层约定（2026-08-29 与用户确认，**2026-08-30 已落地**）
-
-- **`include/text_scene.h`** —— 数据结构：`Tm1Zone` / `TileRemap` / `Mode2Region` /
-  `WinCfg` + `extern kWindows[] / kWindowN`
-- **`src/text/text_scene.c`** —— **只放配置，纯数据文件，0 个函数**
-  （kOptRows / kOptZones / 7 条 WinCfg + kWindows[]）
-- **`include/text_layout.h`** —— 算法接口：`scene_lookup` + 9 个 `scene_*` +
-  `PrintNextChar_Origin`
-- **`src/text/text_layout.c`** —— **只放算法**（槽查询、`cfg_row_base`、
-  `scene_zone_of`、PTR 基址存取、落址 `scene_gctn_*`）；`chs_slots*.inc` 跟着它
-- `hook/src/text/FontFunc_hook.c` / `text_render.c` —— 只消费落址结果，负责"怎么画"
-- **新增 tm1 窗口：只改 text_scene.c + 登记进 `kWindows[]`，算法侧不用动。**
-- ⚠ 增删 `src/text/*.c` 后 **`build.bat` 要改两处**（编译段 + 链接段），
-  漏一处会静默链接进旧 .o。
-
-## 重构等价性验证（2026-08-30 实证，可复用）
-
-分层/搬运代码后证明"零行为变化"的三条判据：
-1. **二进制大小相同**（15960 B == 15960 B）；
-2. **块集合比对**：`nm -S` 取每个符号 (addr,size)，把字节块拿到**重构前 bin 快照**里
-   `in` 搜索。本次 81/94 命中，未命中的全是含地址引用的块（指针数组 + 函数常量池
-   + 内联者）—— 属预期；**纯数据块必须全部逐字节命中**。
-3. **地址常量核对**：kWindows[] 指针 → 逐条读 `tpl` 字段确认与配置一致；
-   EWRAM 绝对地址出现次数合理。
-- ⚠ **基线快照必须在改代码前存** `out/game.bin`（elf 会被覆盖）。
-- ⚠ 别用"elf 反汇编 vs bin 反汇编"的助记符行数做对比——两者口径不同，不可比。
-
-## 待办 / 约定
-
-- 🔴 **每次改完 hook 源码都必须走完整流水线**（用户 2026-08-30 明确要求，
-  「每次改完都要执行流水线」）：hook `build.bat` → **根 `build.bat` 打包** →
-  `check_rom_hook.py`。**编译通过 ≠ 交付**，别停在编译那一步。
-- 🔴 **打包一律执行仓库根 `build.bat`，禁止手抄 `meowth full` 命令**
-  （用户 2026-08-30 拍板；详见 `docs/PACK_ROM.md`）。
-  根 build.bat = 模块清单与参数的**唯一权威来源**。
-  教训：此前各文档抄的 15 模块漏了「图鉴分类名」（还漏 树果名/秘密基地装饰名/
-  训练家个人名/补漏剧情/三个华丽大赛变体）⇒ 图鉴页显示「たね宝可梦」而非
-  「种子宝可梦」，被当成 hook 渲染回归白查一整轮。
-  **改模块清单 = 改根 build.bat，不要改文档。**
-  ⚠ 根 build.bat **未加 `--seed-only`**（会调 LLM，耗时+费用）；只验 hook 时
-  复制其命令 + 追加 `--seed-only`，`--modules` 照抄不改。
-- 每次打完 ROM 先跑 `scripts/check_rom_hook.py`：确认 game.bin 与 ROM 逐字节一致
-  + 读回 `kOptWindow.mode`。**"源码全对但运行不对"要先排除"打进去的是旧包"。**
-  ⚠ 该脚本的 `MODES = {0:PARTITION,1:GRID,2:PTR,3:MIX}` 是 v3 遗留表，
-  v4 的 `WinCfg` 没有 `mode` 字段 → 那个偏移读到的其实是 `use_linear`
-  （=1 被印成 "GRID"，实际语义是"线性"）。字节一致性判定不受影响，
-  但别把那行读数当真。
-- 打包时的编码坑：`--modules` 含中文，**用 PowerShell 原生跑**（`& C:\Python314\python.exe`），
-  别用 Git Bash（MSYS 可能转换非 ASCII 参数）。PowerShell 里 `build.bat` 的
-  stderr 老告警会被判成 NativeCommandError（退出码 1 但构建其实成功）→
-  用 `*>&1 | Out-File log` 再读日志，别只看退出码。
-- 设置菜单 tm1 布局拟从 `TM1_ROW_TAB` 等文件级字面量，重构为
-  **按窗口模板地址键控的静态配置表**（未登记模板走默认，不猜场景）。
-- ~~打包命令（bash 下 PYTHONPATH 必须用 Windows 路径…）~~ **已作废** → 直接用根 `build.bat`。
-  （保留：bash 下 `PYTHONPATH` 必须用 Windows 路径 `C:\...`，`/c/...` 格式 Windows Python 不认。）
-- 🔒 **P0 待办**：根 `build.bat` 硬编码 `--api-key=sk-...` 且**已被 git 跟踪**
-  （`git log -- build.bat` 可见历史提交也有）⇒ 该 key 视为已泄露。
-  需：轮换 key → 改读环境变量 `--api-key=%QWEN_API_KEY%` → 清理 git 历史。
-  **禁止把该 key 写进任何文档/对话。**
-- 打包被标题 logo 阻塞时，可从 build 阶段产物
-  `roms/outputs/POKEMON_RUBY_AXVJ00_translated.gba` 手动补 32MB 对齐出可测 ROM。
-- 识图用仓库根 `vision.js`（需 `.env` 配 VISION_API_KEY / VISION_MODEL）。
-
-## ⚠ relocate 改指针是高危操作（2026-08-30 定案，放技能黑屏真凶）
-
-- `rom_writer._axvj_pointer_sites()` 用 `rom.find(needle, pos)` **逐字节滑窗**，
-  无 4 字节对齐、无区域过滤（2026-08-29 特意去掉了旧的 `ptr_source_ok` 过滤，
-  因为过滤太严漏改了 5/6）。副作用：凡字节序列恰等于旧文本地址（0x083xxxxx）
-  的位置都会被改成 0x092xxxxx，**包括代码/动画数据里的巧合**。
-- 实测（图鉴说明）：383 条命中 384 点，多出的 1 个落在 `0x080DF3EB`
-  （代码区、未对齐、邻居非指针）→ 改坏 THUMB 指令流 → 黑屏。
-- **诊断脚本**：`scripts/diag_relocate_collisions.py`
-  逻辑：复现扫描 → 与 `translate.build.json` 的 `pointer_sources` 求差集 →
-  差集即碰撞嫌疑 → 按「对齐 / 邻居是否也是指针 / 所属区域」分级。
-  **凡是动过 relocate 配置或加了新 scan 模块，都应跑一次。**
-- 🔴 **2026-08-30 起 relocate 改为 opt-in（默认 False）**，用户拍板。
-  只有模块**显式**写 `write.relocate: true` 才启用；未写即不改指针。
-  改动点（3 个文件，5 处）：
-  - `src/meowth/translate_plan.py` `module_allows_relocate()` → `default=False`
-    （+ 文件头优先级链注释、docstring 已同步）
-  - `src/util/assign_modules.py` 两处写配置默认值 → `False`
-  - `src/util/texts_patcher.py` 两处 `elif wk not in write: write[wk] = wk != "relocate"`
-  ⚠ 后两个是**配置生成器**：不改的话重新生成 texts.json 又会把 true 写回去。
-- 现状：**22 个模块无一允许 relocate**。仅 `秘密基地装饰名`/`图鉴分类名`
-  显式 true，但都是 `type=struct`（在 `NO_RELOCATE_TYPES` 里）→ 恒 False；
-  它俩的 `relocate: true` 实际只作用于 **table_widen（扩表）** 语义。
-- ⚠ **改默认值只对"重跑 translate"生效**：`rom_writer` 按 build.json 的
-  `type` 直入，旧的 `translate.build.json` 里那 2133 条 relocate 仍会照旧改指针。
-  换策略后必须重跑 translate，不能只跑 build。
-- 分寸：**只有 `type: scan` 的模块能 relocate**（`NO_RELOCATE_TYPES` 已禁
-  stride/struct/ptr_stride/stride_ptr），而 scan 恰恰是指针最不可靠的一类。
-- 优先用 **F980 短语引用**（5 字节 `F9 80 hi lo FF` + 正文进 PhraseTable，
-  **完全不改指针**）或 hook，relocate 当最后手段。槽位 ≥5 即可用 F980；
-  FD 禁令已解除（`translate_plan` 注释："纯 1→4 链不再据此禁止 F980"）。
-- 权威文档：`docs/HOOK_RELOCATE_PLAN.md`（2026-08-05）——踩坑域
-  `relocate=false` + `hook=false`，只留 in_place + F980。
-
-### F980 够不够替代 relocate？（2026-08-30 实测，结论：**基本够**）
-
-- 诊断脚本 `scripts/diag_phrase_path.py`：按 hook `text_translater.c` 的
-  真实判定模拟每条走哪条路径，输出分布/丢字风险/超限/槽位不足。
-- **容量全不是瓶颈**：phrase 并集 8964 / 上限 **16384**（偏移表 64KB÷4B，
-  余量 3.5 倍）；表体 490KB / 8064KB = **6%**；2132/2133 条 ≤512B（中位 68B）。
-- **phrase 是去重词表**（中位数 4 字），规模随词汇量而非条目数增长
-  ——383 条图鉴产 5032 条 phrase 不是"每条 13 条"，别被这个比值误导。
-- **运行时两条路径**：含 ≥0xFA 控制码或 >256B → 切流（**无长度限制**，安全）；
-  否则内联快径，但 `n > 32` 会 break 丢字。实测 切流 74% / 内联 26% / **截断 0**。
-- **两个边界**（都不是保留 relocate 的理由）：
-  ① 62 条槽位 <5B（训练家名 3 + UI界面 59）放不下 5 字节引用 → 掉 slot 通路
-     （`translated_slot.py` SLT2 分桶 @0x09EA0000，完整实现，历史上跑过 801 条）；
-  ② 1 条 650B（剧情 `0x0818E46E`）超 `MAX_PHRASE_STREAM=512` → **静默截断**、无报错。
-- 🔴 **改前必补护栏**：`phrase_stream_lookup()` 只判 `off >= 0x01000000`，
-  **不判 code 上界**；`build_rom_data.py` **没有 phrase 数量上限检查**。
-  超 16384 时偏移表溢出到 PhraseTable 区 → 读到正文当偏移 → 花屏且静默。
-  改法：提高 `MAX_PHRASE_STREAM`（空间 6%，可到 2048）+ 加数量硬报错。
-
-## 用户偏好：排查运行时 BUG 时，先怀疑"注入机制"别纠结"文本内容"
-
-- 用户原话：「你为啥一直在纠结内容？……明显是它的 relocate 改指针撞了」。
-- 含义：黑屏/崩溃/跑飞这类**运行时**故障，第一怀疑对象是**我们自己改了哪些
-  字节**（指针重定向、hook 注入、扩展区写入），而不是译文文本本身
-  （内容问题通常只表现为乱码/显示错位，不会让机器崩）。
-- 判定捷径：**用配置开关做二分**（把可疑机制整个关掉看症状是否消失），
-  比逐条审数据快几个数量级。用户自己就是这么定位的。
+## 识图
+直接 Read PNG 失败，走仓库根 `node vision.js bug/<目录>/10.PNG "..."`（.env 配 VISION_API_KEY/VAISION_MODEL）。
 
 ## 相关文档
-
-- `docs/复盘_20260830_混排文本块踩踏_类型9.md` —— 混排多文本块 / off 归零踩踏
-  + **EWRAM `0x0203FFxx` 完整分配表**
-- `docs/复盘_20260829_设置菜单tm1落址BUG链.md` —— tm1 落址 BUG 链与方法论
-- `docs/FONT_12PX_DRAW.md` —— 12px 绘制约定（相邻字共享 tile 等）
-- `docs/START_HERE.md` —— 任务分类判断树
+docs/START_HERE.md（判断树）/ 复盘_20260830_混排文本块踩踏 / 复盘_20260829_设置菜单tm1落址BUG链 / FONT_12PX_DRAW.md / HOOK_RELOCATE_PLAN.md

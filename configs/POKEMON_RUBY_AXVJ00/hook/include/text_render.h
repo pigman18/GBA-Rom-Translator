@@ -3,7 +3,7 @@
  *
  * 实现即 bak/text_original/text_render.c（长期实测通过），仅两处标注
  * 2026-08-30 的小改（PTR 的 per-glyph 接入与 16px 步进），见该文件。
- * 落址/搬位在 src/text/text_scene.c（声明式配置）。
+ * 落址/搬位在 src/text/text_layout.c；窗口配置数据在 src/text/text_scene.c。
  * ==========================================================================*/
 #ifndef TEXT_RENDER_H
 #define TEXT_RENDER_H

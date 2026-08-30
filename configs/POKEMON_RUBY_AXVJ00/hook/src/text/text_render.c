@@ -1,6 +1,7 @@
-/* text_render.c — refpr + pitch + GCTN（布局门控见 text_scene.c） */
+/* text_render.c — refpr + pitch + GCTN
+ * 落址算法在 src/text/text_layout.c，窗口配置在 src/text/text_scene.c。 */
 #include "text_render.h"
-#include "text_scene.h"
+#include "text_layout.h"
 
 #define CHS_GLYPH_HALF_BIT   0x8000u
 #define CHS_GLYPH_IDX_MASK   0x7FFFu

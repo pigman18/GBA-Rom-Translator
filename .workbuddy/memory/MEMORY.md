@@ -70,11 +70,24 @@
   设置菜单左 16px 完全失效。排查耗了一整轮。
 - **查法**：`grep -nE "^\.bss|^\.data" out/game.map` 看归属与地址；
   加可写 static 后必须复查 `.bss` 是否为空或落在 `0x02xxxxxx`。
-- **修法**：收敛 static 个数，用绝对地址/EWRAM 显式放置（本项目用 `0x0203FF8C`）。
+- **修法**：收敛 static 个数，用绝对地址/EWRAM 显式放置（本项目用 `0x0203FF8x`）。
+- **EWRAM `0x0203FFxx` 分配表**（新增可写状态前必查；`FFD2` 起为游戏数据区，
+  占用即死机 —— 旧页表死机根因）：
+  | 地址 | 用途 |
+  |---|---|
+  | `FF80` | `ADDR_CHS_PITCH_CTRL`（gen 字节，LRU 驱逐）12B |
+  | `FF82` | `CHS_LAST_OFF`（上一文本块结束时的 off，借用 ctrl 区 pad） |
+  | `FF8C` | `CHS_LAST_ROW_KEY`（行键 = tileBase^curY^zone_id） |
+  | `FF8E` | `ADDR_SCENE_PTR_BASE`（PTR 固定槽基址） |
+  | `FF90` | `ADDR_CHS_PITCH_SLOTS` 8 槽 × 8B（→ FFCF） |
+  | `FFD0` | `ADDR_OPT_PALETTE_OVERRIDE` ｜ `FFD1` `ADDR_OPT_FG_COLOR` |
+  | `FFD2` | ⚠ `ADDR_GLYPH_PAGE_CURTAB` **游戏数据区，严禁占用** |
+  | `FFF8` | `ADDR_GLYPH_ALLOC_NEXT` |
+  - `FF80–FF8F` 已占满；再加只能挤 PITCH_CTRL 的 pad 或缩减槽数。
 - 推论：**"源码逻辑全对但运行不对"的排查顺序** —— ① 打进去的是不是旧包
   （`check_rom_hook.py` 字节比对）→ ② **可写状态变量是否真在 RAM** → ③ 才是逻辑本身。
 
-## ⚠ 三个坑（2026-08-29 / 08-30 实证）
+## ⚠ 四个坑（2026-08-29 / 08-30 实证）
 
 - **8px 小字库（FontChsSmall / font=4）字形有误**：设置菜单"对战规则"的"战"
   显示成日文"対"。设置菜单一律用 12px 字库（font=0）。
@@ -83,6 +96,22 @@
   外面**。现象极具欺骗性：屏幕上看着正常，实际已越界。
   某行"有没有中文候选"必须**识图/实测确认**，不能靠猜（按键模式行就是
   `普通/LR/L`，我误判成全字母，结果"普通"写到 tile 551）。
+- **混排 = 多个独立文本块，每个块 `InitTextPrinter` 都会把 `win[0x18]` 清零**
+  （2026-08-30 定案）：设置菜单「类型 9」显示成「9 型 9」——
+  「类型」是译文里的 F9 汉字短语，而「9」是**游戏运行时动态生成的数字**
+  （不在任何翻译文本里，无 `0x8000` 标记，走 PcsPrint_Custom→DrawGlyphTiles）。
+  两者各一次 `InitTextPrinter`（cur_x 15 / 18）⇒ 数字块 off 从 6 掉回 0
+  ⇒ 落在「类」的 tile 上把它盖掉。
+  - **判据**：`[CFF]` 记录有 0x8000 标记的是汉字，只有 `[Note]` 的是原生日文。
+  - **修法**：pitch 槽键里 `curX` 换 **`zone_id`**（同 zone 跨块共享槽），
+    并用 `CHS_LAST_ROW_KEY` 记「行键」—— 行键没变（同一行的后续块）⇒
+    不复位 off，接着上一块的 `CHS_LAST_OFF` 继续画。
+  - 📌 **方法论**：**"只有某个字被盖"⇒ 优先怀疑 tile 踩踏，不是步进。**
+    步进错会让整行整体错位，不会精确只错一个字。
+  - 📌 **"是不是同一个文本块"看 `InitTextPrinter` 的 cur_x，不看屏幕位置。**
+- **删掉状态复位分支 ≠ 简化逻辑**（全屏无限重复打印，15.PNG）：
+  `chs_px` 这类游标类状态，**任何分支都必须保留至少一条归零路径**；
+  去掉归零路径 ⇒ 无界累加 ⇒ 越界写 VRAM ⇒ 全屏花屏。
 
 ## 识图方法
 
@@ -92,12 +121,32 @@ VISION_API_KEY / VISION_MODEL）：
 node vision.js bug/<目录>/10.PNG "逐行列出左边标签和右边选项的每个汉字"
 ```
 
-## 代码分层约定（2026-08-29 与用户确认）
+## 代码分层约定（2026-08-29 与用户确认，**2026-08-30 已落地**）
 
-- `hook/src/text/text_scene.c` —— **只放配置**（声明式静态表，一窗一条）
-- `hook/src/text/text_layout.c` —— **只放算法**（查表、求值、分区选择、槽查询）
-- `hook/src/text/FontFunc_hook.c` —— 只消费落址结果，负责"怎么画"
-- 新增 tm1 窗口：在 text_scene.c 加配置并登记进 `kTm1Windows[]`，算法侧不用动。
+- **`include/text_scene.h`** —— 数据结构：`Tm1Zone` / `TileRemap` / `Mode2Region` /
+  `WinCfg` + `extern kWindows[] / kWindowN`
+- **`src/text/text_scene.c`** —— **只放配置，纯数据文件，0 个函数**
+  （kOptRows / kOptZones / 7 条 WinCfg + kWindows[]）
+- **`include/text_layout.h`** —— 算法接口：`scene_lookup` + 9 个 `scene_*` +
+  `PrintNextChar_Origin`
+- **`src/text/text_layout.c`** —— **只放算法**（槽查询、`cfg_row_base`、
+  `scene_zone_of`、PTR 基址存取、落址 `scene_gctn_*`）；`chs_slots*.inc` 跟着它
+- `hook/src/text/FontFunc_hook.c` / `text_render.c` —— 只消费落址结果，负责"怎么画"
+- **新增 tm1 窗口：只改 text_scene.c + 登记进 `kWindows[]`，算法侧不用动。**
+- ⚠ 增删 `src/text/*.c` 后 **`build.bat` 要改两处**（编译段 + 链接段），
+  漏一处会静默链接进旧 .o。
+
+## 重构等价性验证（2026-08-30 实证，可复用）
+
+分层/搬运代码后证明"零行为变化"的三条判据：
+1. **二进制大小相同**（15960 B == 15960 B）；
+2. **块集合比对**：`nm -S` 取每个符号 (addr,size)，把字节块拿到**重构前 bin 快照**里
+   `in` 搜索。本次 81/94 命中，未命中的全是含地址引用的块（指针数组 + 函数常量池
+   + 内联者）—— 属预期；**纯数据块必须全部逐字节命中**。
+3. **地址常量核对**：kWindows[] 指针 → 逐条读 `tpl` 字段确认与配置一致；
+   EWRAM 绝对地址出现次数合理。
+- ⚠ **基线快照必须在改代码前存** `out/game.bin`（elf 会被覆盖）。
+- ⚠ 别用"elf 反汇编 vs bin 反汇编"的助记符行数做对比——两者口径不同，不可比。
 
 ## 待办 / 约定
 
@@ -124,6 +173,8 @@ node vision.js bug/<目录>/10.PNG "逐行列出左边标签和右边选项的�
 
 ## 相关文档
 
+- `docs/复盘_20260830_混排文本块踩踏_类型9.md` —— 混排多文本块 / off 归零踩踏
+  + **EWRAM `0x0203FFxx` 完整分配表**
 - `docs/复盘_20260829_设置菜单tm1落址BUG链.md` —— tm1 落址 BUG 链与方法论
 - `docs/FONT_12PX_DRAW.md` —— 12px 绘制约定（相邻字共享 tile 等）
 - `docs/START_HERE.md` —— 任务分类判断树

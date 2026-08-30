@@ -9,7 +9,9 @@ REM   1) battle/pokedex/option objects were linked but NEVER compiled -- stale
 REM      .o silently shipped. Now compiled.
 REM   2) wipe %BUILD% first so orphan .o of deleted sources are never linked.
 REM   Text engine: PrintNextChar_hook / text_render (bak/text_original skeleton,
-REM   see bak/text_original/) + text_scene (declarative config).
+REM   see bak/text_original/) + text_scene (declarative per-window CONFIG data)
+REM   + text_layout (ALGORITHM: lookup / zones / tile placement, split out of
+REM   text_scene.c 2026-08-30).
 
 set PREFIX=arm-none-eabi-
 set CC=%PREFIX%gcc
@@ -49,8 +51,12 @@ echo === Compiling text/text_render.c (pixel prims + pitch slots) ===
 %CC% %CFLAGS% %TEXT%\text_render.c -o %BUILD%\text_render.o
 if errorlevel 1 exit /b 1
 
-echo === Compiling text/text_scene.c (declarative per-window layout config) ===
+echo === Compiling text/text_scene.c (declarative per-window layout CONFIG: data only) ===
 %CC% %CFLAGS% %TEXT%\text_scene.c -o %BUILD%\text_scene.o
+if errorlevel 1 exit /b 1
+
+echo === Compiling text/text_layout.c (layout ALGORITHM: lookup/zones/tiles) ===
+%CC% %CFLAGS% %TEXT%\text_layout.c -o %BUILD%\text_layout.o
 if errorlevel 1 exit /b 1
 
 echo === Compiling text/tile_alloc.c (tm1 unregistered-window row allocator) ===
@@ -105,6 +111,7 @@ echo === Linking game.elf ===
   %BUILD%/text_translater.o ^
   %BUILD%/text_render.o ^
   %BUILD%/text_scene.o ^
+  %BUILD%/text_layout.o ^
   %BUILD%/tile_alloc.o ^
   %BUILD%/ref_pokeemerald.o ^
   %BUILD%/ref_pokeruby.o ^

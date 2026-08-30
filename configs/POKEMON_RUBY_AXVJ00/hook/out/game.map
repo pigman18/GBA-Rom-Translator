@@ -15,6 +15,9 @@ Discarded input sections
  .comment       0x00000000       0x46 out/obj/text_scene.o
  .ARM.attributes
                 0x00000000       0x2a out/obj/text_scene.o
+ .comment       0x00000000       0x46 out/obj/text_layout.o
+ .ARM.attributes
+                0x00000000       0x2a out/obj/text_layout.o
  .comment       0x00000000       0x46 out/obj/tile_alloc.o
  .ARM.attributes
                 0x00000000       0x2a out/obj/tile_alloc.o
@@ -58,6 +61,7 @@ LOAD out/obj/PrintNextChar_hook.o
 LOAD out/obj/text_translater.o
 LOAD out/obj/text_render.o
 LOAD out/obj/text_scene.o
+LOAD out/obj/text_layout.o
 LOAD out/obj/tile_alloc.o
 LOAD out/obj/ref_pokeemerald.o
 LOAD out/obj/ref_pokeruby.o
@@ -109,17 +113,18 @@ LOAD out/obj/DrawOptionMenuChoice_hook.o
                 0x08801134                DrawGlyphTiles
                 0x08801840                DrawGlyphTiles_arrow_prepare
                 0x08801850                arrow_inplace12
- .text          0x08801864      0x540 out/obj/text_scene.o
+ .text          0x08801864        0x0 out/obj/text_scene.o
+ .text          0x08801864      0x540 out/obj/text_layout.o
                 0x08801864                scene_lookup
-                0x08801894                scene_note_glyph
-                0x08801968                scene_is_ptr_mode
-                0x08801978                scene_is_buffer_printer
-                0x088019c4                scene_delegate_buffer_print
-                0x088019d0                scene_should_use_linear
-                0x08801a34                scene_apply_linear_floor
-                0x08801b0c                scene_remap_tile
-                0x08801bb8                scene_gctn_linear
-                0x08801c9c                scene_gctn_mode2
+                0x0880189c                scene_note_glyph
+                0x08801964                scene_is_ptr_mode
+                0x08801974                scene_is_buffer_printer
+                0x088019c0                scene_delegate_buffer_print
+                0x088019cc                scene_should_use_linear
+                0x08801a28                scene_apply_linear_floor
+                0x08801b08                scene_remap_tile
+                0x08801bb0                scene_gctn_linear
+                0x08801c98                scene_gctn_mode2
  .text          0x08801da4       0x54 out/obj/tile_alloc.o
                 0x08801da4                tile_alloc_tm1_row
  .text          0x08801df8      0x170 out/obj/ref_pokeemerald.o
@@ -145,9 +150,11 @@ LOAD out/obj/DrawOptionMenuChoice_hook.o
  .rodata.str1.4
                 0x088037ac       0x53 out/obj/text_scene.o
  *fill*         0x088037ff        0x1 
- .rodata        0x08803800      0x270 out/obj/text_scene.o
-                0x08803800                kWindows
-                0x0880381c                kWindowN
+ .rodata        0x08803800      0x1ca out/obj/text_scene.o
+                0x08803800                kWindowN
+                0x08803804                kWindows
+ *fill*         0x088039ca        0x2 
+ .rodata        0x088039cc       0xa4 out/obj/text_layout.o
  .rodata        0x08803a70      0x3e8 out/obj/ref_pokeruby.o
  *(.rodata.*)
                 0x08803e58                        . = ALIGN (0x4)
@@ -158,6 +165,7 @@ LOAD out/obj/DrawOptionMenuChoice_hook.o
  .data          0x08803e58        0x0 out/obj/text_translater.o
  .data          0x08803e58        0x0 out/obj/text_render.o
  .data          0x08803e58        0x0 out/obj/text_scene.o
+ .data          0x08803e58        0x0 out/obj/text_layout.o
  .data          0x08803e58        0x0 out/obj/tile_alloc.o
  .data          0x08803e58        0x0 out/obj/ref_pokeemerald.o
  .data          0x08803e58        0x0 out/obj/ref_pokeruby.o
@@ -197,6 +205,7 @@ LOAD out/obj/DrawOptionMenuChoice_hook.o
  .bss           0x08803e58        0x0 out/obj/text_translater.o
  .bss           0x08803e58        0x0 out/obj/text_render.o
  .bss           0x08803e58        0x0 out/obj/text_scene.o
+ .bss           0x08803e58        0x0 out/obj/text_layout.o
  .bss           0x08803e58        0x0 out/obj/tile_alloc.o
  .bss           0x08803e58        0x0 out/obj/ref_pokeemerald.o
  .bss           0x08803e58        0x0 out/obj/ref_pokeruby.o

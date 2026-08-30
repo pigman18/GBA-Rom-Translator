@@ -229,6 +229,68 @@ node vision.js bug/<目录>/10.PNG "逐行列出左边标签和右边选项的�
   `roms/outputs/POKEMON_RUBY_AXVJ00_translated.gba` 手动补 32MB 对齐出可测 ROM。
 - 识图用仓库根 `vision.js`（需 `.env` 配 VISION_API_KEY / VISION_MODEL）。
 
+## ⚠ relocate 改指针是高危操作（2026-08-30 定案，放技能黑屏真凶）
+
+- `rom_writer._axvj_pointer_sites()` 用 `rom.find(needle, pos)` **逐字节滑窗**，
+  无 4 字节对齐、无区域过滤（2026-08-29 特意去掉了旧的 `ptr_source_ok` 过滤，
+  因为过滤太严漏改了 5/6）。副作用：凡字节序列恰等于旧文本地址（0x083xxxxx）
+  的位置都会被改成 0x092xxxxx，**包括代码/动画数据里的巧合**。
+- 实测（图鉴说明）：383 条命中 384 点，多出的 1 个落在 `0x080DF3EB`
+  （代码区、未对齐、邻居非指针）→ 改坏 THUMB 指令流 → 黑屏。
+- **诊断脚本**：`scripts/diag_relocate_collisions.py`
+  逻辑：复现扫描 → 与 `translate.build.json` 的 `pointer_sources` 求差集 →
+  差集即碰撞嫌疑 → 按「对齐 / 邻居是否也是指针 / 所属区域」分级。
+  **凡是动过 relocate 配置或加了新 scan 模块，都应跑一次。**
+- 🔴 **2026-08-30 起 relocate 改为 opt-in（默认 False）**，用户拍板。
+  只有模块**显式**写 `write.relocate: true` 才启用；未写即不改指针。
+  改动点（3 个文件，5 处）：
+  - `src/meowth/translate_plan.py` `module_allows_relocate()` → `default=False`
+    （+ 文件头优先级链注释、docstring 已同步）
+  - `src/util/assign_modules.py` 两处写配置默认值 → `False`
+  - `src/util/texts_patcher.py` 两处 `elif wk not in write: write[wk] = wk != "relocate"`
+  ⚠ 后两个是**配置生成器**：不改的话重新生成 texts.json 又会把 true 写回去。
+- 现状：**22 个模块无一允许 relocate**。仅 `秘密基地装饰名`/`图鉴分类名`
+  显式 true，但都是 `type=struct`（在 `NO_RELOCATE_TYPES` 里）→ 恒 False；
+  它俩的 `relocate: true` 实际只作用于 **table_widen（扩表）** 语义。
+- ⚠ **改默认值只对"重跑 translate"生效**：`rom_writer` 按 build.json 的
+  `type` 直入，旧的 `translate.build.json` 里那 2133 条 relocate 仍会照旧改指针。
+  换策略后必须重跑 translate，不能只跑 build。
+- 分寸：**只有 `type: scan` 的模块能 relocate**（`NO_RELOCATE_TYPES` 已禁
+  stride/struct/ptr_stride/stride_ptr），而 scan 恰恰是指针最不可靠的一类。
+- 优先用 **F980 短语引用**（5 字节 `F9 80 hi lo FF` + 正文进 PhraseTable，
+  **完全不改指针**）或 hook，relocate 当最后手段。槽位 ≥5 即可用 F980；
+  FD 禁令已解除（`translate_plan` 注释："纯 1→4 链不再据此禁止 F980"）。
+- 权威文档：`docs/HOOK_RELOCATE_PLAN.md`（2026-08-05）——踩坑域
+  `relocate=false` + `hook=false`，只留 in_place + F980。
+
+### F980 够不够替代 relocate？（2026-08-30 实测，结论：**基本够**）
+
+- 诊断脚本 `scripts/diag_phrase_path.py`：按 hook `text_translater.c` 的
+  真实判定模拟每条走哪条路径，输出分布/丢字风险/超限/槽位不足。
+- **容量全不是瓶颈**：phrase 并集 8964 / 上限 **16384**（偏移表 64KB÷4B，
+  余量 3.5 倍）；表体 490KB / 8064KB = **6%**；2132/2133 条 ≤512B（中位 68B）。
+- **phrase 是去重词表**（中位数 4 字），规模随词汇量而非条目数增长
+  ——383 条图鉴产 5032 条 phrase 不是"每条 13 条"，别被这个比值误导。
+- **运行时两条路径**：含 ≥0xFA 控制码或 >256B → 切流（**无长度限制**，安全）；
+  否则内联快径，但 `n > 32` 会 break 丢字。实测 切流 74% / 内联 26% / **截断 0**。
+- **两个边界**（都不是保留 relocate 的理由）：
+  ① 62 条槽位 <5B（训练家名 3 + UI界面 59）放不下 5 字节引用 → 掉 slot 通路
+     （`translated_slot.py` SLT2 分桶 @0x09EA0000，完整实现，历史上跑过 801 条）；
+  ② 1 条 650B（剧情 `0x0818E46E`）超 `MAX_PHRASE_STREAM=512` → **静默截断**、无报错。
+- 🔴 **改前必补护栏**：`phrase_stream_lookup()` 只判 `off >= 0x01000000`，
+  **不判 code 上界**；`build_rom_data.py` **没有 phrase 数量上限检查**。
+  超 16384 时偏移表溢出到 PhraseTable 区 → 读到正文当偏移 → 花屏且静默。
+  改法：提高 `MAX_PHRASE_STREAM`（空间 6%，可到 2048）+ 加数量硬报错。
+
+## 用户偏好：排查运行时 BUG 时，先怀疑"注入机制"别纠结"文本内容"
+
+- 用户原话：「你为啥一直在纠结内容？……明显是它的 relocate 改指针撞了」。
+- 含义：黑屏/崩溃/跑飞这类**运行时**故障，第一怀疑对象是**我们自己改了哪些
+  字节**（指针重定向、hook 注入、扩展区写入），而不是译文文本本身
+  （内容问题通常只表现为乱码/显示错位，不会让机器崩）。
+- 判定捷径：**用配置开关做二分**（把可疑机制整个关掉看症状是否消失），
+  比逐条审数据快几个数量级。用户自己就是这么定位的。
+
 ## 相关文档
 
 - `docs/复盘_20260830_混排文本块踩踏_类型9.md` —— 混排多文本块 / off 归零踩踏

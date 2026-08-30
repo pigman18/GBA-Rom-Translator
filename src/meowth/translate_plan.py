@@ -2,13 +2,14 @@
 
 type:
   replace  — 写入原槽：F900 整串，或越槽时的 F9 80 短语引用（带 ``phrase_code``）
-  relocate — 编码超槽位且有可用指针源且模块 ``relocate=true``，写扩展区 + 指针改写
+  relocate — 编码超槽位、有可用指针源，且模块**显式** ``relocate=true``
+             （默认 false，opt-in；见 ``module_allows_relocate``）
   keep     — 都无法满足，保留原文（ROM 不动）
 
 优先级链（纯 1→4，编排期一次定死）：
   1. F900 原地
-  2. 不够 → relocate（指针须在编排期校验可用）
-  3. 指针不够 → F980 原地
+  2. 不够 → relocate（**仅当模块显式 relocate=true**，指针须在编排期校验可用）
+  3. 指针不够 / relocate 未开 → F980 原地
   4. F980 不够 → hook
   否则 keep
 
@@ -106,7 +107,13 @@ def module_allows_relocate(game_id: str, module_id: str | None) -> bool:
     """该模块是否允许 relocate（Python 改指针 + 扩展区正文）。
 
     modules.json：``write.relocate: true/false``。
-    ``stride``/``struct`` 等定长表类型始终不允许。
+    **默认 False（opt-in）**：未显式写 ``relocate: true`` 的模块一律不改指针。
+
+    理由（2026-08-30）：指针改写走全 ROM 字节扫描，误命中会改坏代码区／图形区，
+    且静默无报错；而 F900 / F980 / slot 三条原地通路已能覆盖全部实际用例
+    （实测 2133 条 relocate 条目零条真正需要改指针）。故改为「必须显式开」。
+
+    ``stride``/``struct`` 等定长表类型始终不允许（即便显式 true 也无效）。
     """
     meta = _module_meta(game_id, module_id)
     try:
@@ -116,7 +123,7 @@ def module_allows_relocate(game_id: str, module_id: str | None) -> bool:
             return False
     except Exception:
         pass
-    return _write_switch(meta, "relocate", default=True)
+    return _write_switch(meta, "relocate", default=False)
 
 
 def module_allows_replace(game_id: str, module_id: str | None) -> bool:

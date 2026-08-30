@@ -183,9 +183,9 @@ def _emit_scan_entry(
     geo = _geo_from_src(src) if src else None
     if geo:
         entry["geo_ranges"] = geo
-    # write.relocate / write.replace / write.slot — 默认 true
+    # write.relocate 默认 false（opt-in，2026-08-30）；replace/slot 默认 true
     write: dict = {}
-    write["relocate"] = bool(src["relocate"]) if src and "relocate" in src else True
+    write["relocate"] = bool(src["relocate"]) if src and "relocate" in src else False
     write["replace"] = bool(src["replace"]) if src and "replace" in src else True
     write["slot"] = bool(src["slot"]) if src and "slot" in src else True
     entry["write"] = write
@@ -211,9 +211,9 @@ def _emit_typed_entry(src: dict, bands_out: List[List[str]]) -> Dict[str, Any]:
         entry["hidden"] = True
     if src.get("enrich"):
         entry["enrich"] = src["enrich"]
-    # write.relocate / write.replace / write.slot — 默认 true
+    # write.relocate 默认 false（opt-in，2026-08-30）；replace/slot 默认 true
     write: dict = {}
-    write["relocate"] = bool(src["relocate"]) if "relocate" in src else True
+    write["relocate"] = bool(src["relocate"]) if "relocate" in src else False
     write["replace"] = bool(src["replace"]) if "replace" in src else True
     write["slot"] = bool(src["slot"]) if "slot" in src else True
     entry["write"] = write

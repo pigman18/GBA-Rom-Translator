@@ -3497,14 +3497,14 @@ def sync_texts_json_omit(
         ):
             if k in mod:
                 meta[k] = mod[k]
-        # write.relocate / write.replace / write.slot — 默认 true
+        # write.relocate 默认 false（opt-in，2026-08-30）；replace/slot 默认 true
         write = dict(meta.get("write") or {})
         for wk in ("relocate", "replace", "slot"):
             key = f"write.{wk}"
             if key in mod:
                 write[wk] = bool(mod[key])
             elif wk not in write:
-                write[wk] = True
+                write[wk] = wk != "relocate"
         if write:
             meta["write"] = write
         if "style" in mod:
@@ -3667,14 +3667,14 @@ def sync_texts_json_modules_meta(texts_path: Path, cfg: dict) -> int:
         ):
             if k in mod:
                 meta[k] = mod[k]
-        # write.relocate / write.replace / write.slot — 默认 true
+        # write.relocate 默认 false（opt-in，2026-08-30）；replace/slot 默认 true
         write = dict(meta.get("write") or {})
         for wk in ("relocate", "replace", "slot"):
             key = f"write.{wk}"
             if key in mod:
                 write[wk] = bool(mod[key])
             elif wk not in write:
-                write[wk] = True
+                write[wk] = wk != "relocate"
         if write:
             meta["write"] = write
         # style 取代模块顶栏 left

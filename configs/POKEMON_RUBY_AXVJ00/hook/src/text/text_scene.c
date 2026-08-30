@@ -248,8 +248,9 @@ static uint16_t cfg_row_base(const struct WinCfg *cfg, uint8_t cur_y)
  *   （那是 v4 把"渲染层感知 PTR"改成"static 变量传递"时踩的坑：v3 用局部
  *   值传递所以没事，v4 的 static 一律落 ROM。）
  *   → 与 CHS_LAST_OFF_ADDR(0x0203FF82) 同一路子：显式 EWRAM 绝对地址。
- *   落 0x0203FF8C：PITCH_CTRL(FF80..FF8B) 与 PITCH_SLOTS(FF90..FFCF) 之间的
+ *   落 0x0203FF8E：PITCH_CTRL(FF80..FF8B) 与 PITCH_SLOTS(FF90..FFCF) 之间的
  *   4B 空隙，在实证安全区 0x0203FF80-FFCF 之内。
+ *   （2026-08-30 从 FF8C 下移 2B：FF8C 让给 CHS_LAST_ROW_KEY 行键。）
  *
  * 只需跨函数传 **一个** u16，其余现算：
  *   ptr_delta → gctn_linear 里算（= ptr_base-(tileBase+off)）；
@@ -262,7 +263,7 @@ static uint16_t cfg_row_base(const struct WinCfg *cfg, uint8_t cur_y)
  *   ptr_base+2*xOff，pass2 会落回 +0/+1 把左半覆盖掉（标签只剩残字）。
  *   delta = ptr_base-(tileBase+off) ⇒ pass1 返回 ptr_base，pass2（off 已 +2）
  *   自动返回 ptr_base+2 —— 与 DYN 同构。 */
-#define ADDR_SCENE_PTR_BASE 0x0203FF8Cu
+#define ADDR_SCENE_PTR_BASE 0x0203FF8Eu   /* FF8C = CHS_LAST_ROW_KEY（见 text_render.c） */
 
 static uint16_t scene_ptr_base_get(void)
 {

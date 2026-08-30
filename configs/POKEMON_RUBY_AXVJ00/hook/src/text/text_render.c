@@ -6,7 +6,14 @@
 #define CHS_GLYPH_IDX_MASK   0x7FFFu
 #define CHS_FONT_GLYPH_MAX   7168
 #define CHS_PITCH_SLOT_COUNT 8u
+/* 行内 DYN 游标断点（跨文本块续接用）。
+ *   CHS_LAST_OFF_ADDR(0x0203FF82) = (curX << 8) | off —— 上一次绘制结束时的
+ *     起始列与行内 tile 游标（off ≤ 32，8bit 足够）。
+ *   CHS_LAST_ROW_KEY(0x0203FF8C)  = 所属行的键（tileBase ^ curY<<8 ^ 模板）。
+ * 两者配对使用：只有"同一行 + 光标右移"才续接游标。
+ * 复用 PITCH_CTRL 的 pad 区(FF82..FF83)，age[] 自 FF84 起，不冲突。 */
 #define CHS_LAST_OFF_ADDR    0x0203FF82u
+#define CHS_LAST_ROW_KEY     0x0203FF8Cu
 
 struct ChineseTileState {
     uint8_t  char_base;
@@ -84,6 +91,20 @@ uint8_t GetChineseFontWidthFunc(uint16_t ChineseChar, uint8_t fontId)
 static uint8_t pitch_capture_base_tx(TextPrinter *win)
 {
     return win_u8(win, WIN_CURSOR_TILE_X);
+}
+
+/* 行键：同窗口(tpl) + 同 tileBase + 同行(curY) 视为一行。
+ * 与 pitch 键的区别：**不含 curX** —— 同一行内并列的多个文本块
+ * （curX 不同，如设置菜单「类型」@15 与其后数字 @18）必须认作同一行，
+ * 才能让 DYN tile 游标在块间断续。 */
+static uint16_t chs_row_key(TextPrinter *win)
+{
+    uint8_t *tpl = win_template(win);
+    uint16_t w = tpl ? (uint16_t)(((uintptr_t)tpl >> 2) & 0xFFFFu) : 0;
+
+    return (uint16_t)(win_u16(win, WIN_TILE_BASE)
+                      ^ ((uint16_t)win_u8(win, WIN_CURSOR_Y) << 8)
+                      ^ w);
 }
 
 static uint16_t chs_pitch_key(TextPrinter *win)
@@ -450,10 +471,12 @@ static void DrawGlyphTiles_common(
     int linear;
     int newline_reset = 0;
 
-    if (slot_new && st->chs_px == 0) {
+    /* slot_new 时**不能**清 CHS_LAST_OFF：新的 pitch 槽正是"新起一个文本块"
+     * 的信号（pitch 键含 curX，块间 curX 变化必换槽），而新块要靠 last_off
+     * 续接上一块的 DYN 游标。清了它 ⇒ 新块从 off=0 起画 ⇒ 盖掉前一块的
+     * 汉字（bug/20260830/16.PNG：「类型」+数字 ⇒ 「类」被数字覆盖）。 */
+    if (slot_new && st->chs_px == 0)
         newline_reset = 1;
-        *(volatile uint16_t *)CHS_LAST_OFF_ADDR = 0;
-    }
 
     if (st->chs_px != 0 && cur_tx <= st->base_tx) {
         st->chs_px = 0;
@@ -476,12 +499,32 @@ static void DrawGlyphTiles_common(
 
     linear = draw_use_linear(win, st->write_op);
 
-    if (linear && st->chs_px != 0u) {
+    if (linear) {
         uint16_t off_now = win_u16(win, WIN_TILE_OFFSET);
-        uint16_t off_last = *(volatile uint16_t *)CHS_LAST_OFF_ADDR;
+        uint16_t last = *(volatile uint16_t *)CHS_LAST_OFF_ADDR;
+        uint16_t last_off = (uint16_t)(last & 0xFFu);
 
-        if (off_last != 0u && off_now < off_last)
-            win_set_u16(win, WIN_TILE_OFFSET, off_last);
+        if (st->chs_px != 0u) {
+            /* 块内：off 被外部改小时抬回上次断点（原逻辑，不动）。 */
+            if (last_off != 0u && off_now < last_off)
+                win_set_u16(win, WIN_TILE_OFFSET, last_off);
+        } else if (*(volatile uint16_t *)CHS_LAST_ROW_KEY == chs_row_key(win)
+                   && win_u8(win, WIN_CURSOR_X) > (uint8_t)(last >> 8)
+                   && off_now < last_off) {
+            /* 新块（chs_px==0）接在同一行的**后继列**：必须延续上一块的
+             * DYN 游标，否则从 off=0 起画会与前一块共用同一批 tile。
+             *
+             * 判据只用方向，不猜场景：
+             *   1) 行键相同 —— 同模板/同 tileBase/同 curY，确属同一行；
+             *   2) curX 严格变大 —— 光标右移 = 同行后继块；
+             *      （重绘/新行时光标回到行首，curX 不增 ⇒ 不续接）
+             *   3) off 变小 —— 新块把 off 重置了，需要抬回去。
+             *
+             * gdb 实证（work/gdb_patcher_log.log，第 7 行 curY=15）：
+             *   块1 cur_x=15「类型」OFF 0→6；块2 cur_x=18「9」OFF 被重置为 0
+             *   ⇒ 两者共用 tile ⇒ 「类」被数字覆盖。 */
+            win_set_u16(win, WIN_TILE_OFFSET, last_off);
+        }
     }
 
     if (newline_reset && linear) {
@@ -501,8 +544,12 @@ static void DrawGlyphTiles_common(
 
     DrawGlyphTiles_core(win, tiles, linear, glyphWidth);
 
-    if (linear)
-        *(volatile uint16_t *)CHS_LAST_OFF_ADDR = win_u16(win, WIN_TILE_OFFSET);
+    if (linear) {
+        *(volatile uint16_t *)CHS_LAST_ROW_KEY = chs_row_key(win);
+        *(volatile uint16_t *)CHS_LAST_OFF_ADDR =
+            (uint16_t)(((uint16_t)win_u8(win, WIN_CURSOR_X) << 8)
+                       | (win_u16(win, WIN_TILE_OFFSET) & 0xFFu));
+    }
 }
 
 /* FontFunc[2] 血条缓冲：对齐原生 BlitGlyph + dst+=0x40（每列 upper|lower）。

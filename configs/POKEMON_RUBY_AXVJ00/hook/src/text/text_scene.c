@@ -407,7 +407,7 @@ void scene_apply_linear_floor(TextPrinter *win)
 }
 
 /* 线性落址：tile 号（remap 前）。
- *   PTR      → base+off+delta（pass1=槽+0/+1，pass2 随 off+2 落到槽+2/+3）
+ *   PTR      → 槽基址 + 2*xOff + yOff（与 win[0x16]/win[0x18] 无关）
  *   tm1 登记 → 行基址(配置表) + win[0x18]
  *   tm1 未登记 → tile_alloc 行位分段（图鉴），公式同官方线性
  *   tm0/tm2    → 官方公式 win[0x16] + win[0x18]（零配置直通） */
@@ -419,14 +419,13 @@ uint16_t scene_gctn_linear(TextPrinter *win, unsigned xOff, unsigned yOff)
     uint16_t off = win_u16(win, WIN_TILE_OFFSET);
 
     if (scene_ptr_base_get() != 0u) {
-        /* delta 现算（不再缓存）：base+off+(ptr_base-base-off) = ptr_base，
-         * u16 回绕自洽。pass2 时 off 已 +2 ⇒ 落到 ptr_base+2 —— 与 DYN 同构。 */
-        uint16_t delta = (uint16_t)(scene_ptr_base_get()
-                                    - (win_u16(win, WIN_TILE_BASE) + off));
-
+        /* PTR 固定槽：一字独占 4 个连续 tile，落址与 off/tileBase 无关。
+         * pass1 传 xOff=0 得 +0/+1；pass2 传 xOff=1 得 +2/+3。
+         * 此前用 delta = ptr_base-(tileBase+off) 想复用 off 推进，但 off 在
+         * pass1 后被 +2，delta 同步抵消 ⇒ pass2 仍落回 +0/+1，右半覆盖左半，
+         * 标签列显示成 "1" 状碎片（bug/20260830/12.PNG）。 */
         return scene_remap_tile(
-            win, (uint16_t)(win_u16(win, WIN_TILE_BASE) + off
-                            + delta + 2u * xOff + yOff));
+            win, (uint16_t)(scene_ptr_base_get() + 2u * xOff + yOff));
     }
 
     if (tm == 1u) {

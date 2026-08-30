@@ -41,12 +41,40 @@
 - **选中态槽必须 per-glyph**：选中/未选中字模颜色不同，不能共用槽；
   而选中槽若按"组内第几个字"共用（旧实现），光标一移动就会顶掉旧选中行
   仍在引用的那批槽 → 文字替换。现为 `chs_slots_sel.inc`（与 `chs_slots.inc` 同序）。
+- **PTR 落址公式（v4，2026-08-30 定案）**：**`ptr_base + 2*xOff + yOff`**，
+  与 `win[0x16]`/`win[0x18]` 完全无关。一字 4 个连续 tile：
+  `+0 左上 / +1 左下 / +2 右上 / +3 右下`（与 DYN 的 `base+off+2xOff+yOff` 同构）。
+  - ❌ **别用 `delta = ptr_base - (tileBase + off)` 去蹭渲染核的 `off += 2`**：
+    delta 与 off 同步变化会**互相抵消**，pass2 算出来仍是 `ptr_base` ⇒
+    右半覆盖左半 ⇒ 标签显示成 "1" 状碎片。
+  - ✅ pass2 必须显式传 **`xOff = scene_is_ptr_mode(win) ? 1 : 0`**
+    （`text_render.c DrawGlyphTiles_core` 的 `ptr_mode`，spill 分支同步 `+1`）。
+- **PTR 不得推进 `win[0x18]`**（2026-08-30 定案，与 v3 的 `if (ptr_base==0u)`
+  门控对齐）：off 在行内是各 DYN 区**依次递进的游标**（zone A 0 → B 12 → C 22），
+  DYN 复位靠"上一区推进后正好落进下一区"。PTR 每字 +2 会让 off 漂到 8/16…，
+  这些值**恰好落在下一个 DYN 区区间内部** ⇒ 不复位 ⇒ 候选列首字从残留偏移起画
+  ⇒ 越界覆盖再下一区。落址不看 off，推进它百害无利。
+  → `DrawGlyphTiles_core` linear 分支**两处** off 推进都要 `if (ptr_mode == 0u)` 门控。
 - **PTR 唯一维护成本**：槽表是构建期静态数据，取决于"译文用到哪些汉字"。
   译文变更（增删汉字）后**必须**重跑 `scripts/gen_tm1_slots.py`，
   否则新汉字回退旧路径。该脚本会**自动从 text_scene.c 读 kOptRows 与
   kOptZones 的 off/span 当禁区**，所以改完布局直接重跑它，槽表不会与配置脱节。
 
-## ⚠ 两个坑（2026-08-29 实证）
+## 🔴 hook 里可写 static 必须显式落 RAM（2026-08-30 实证，最高优先级）
+
+- `link/game.ld` **只有一个 `ROM (rx)` 段**，`SECTIONS` 只放 `.text`/`.rodata`，
+  **没有 `.bss`/`.data` 规则**。文件级可写 static ⇒ `.bss` 成孤儿段 ⇒
+  被链接器**静默塞进 ROM**（只读），写不进去、恒为 0，且**编译链接零报错**。
+- 事故：`text_scene.c` 的 `s_ptr_base`/`s_ptr_delta`/`s_dyn_off`/`s_dyn_span`
+  四个 u16 落到 `0x08803DB0`（ROM）⇒ `s_ptr_base` 恒 0 ⇒ **PTR 模式永不激活**，
+  设置菜单左 16px 完全失效。排查耗了一整轮。
+- **查法**：`grep -nE "^\.bss|^\.data" out/game.map` 看归属与地址；
+  加可写 static 后必须复查 `.bss` 是否为空或落在 `0x02xxxxxx`。
+- **修法**：收敛 static 个数，用绝对地址/EWRAM 显式放置（本项目用 `0x0203FF8C`）。
+- 推论：**"源码逻辑全对但运行不对"的排查顺序** —— ① 打进去的是不是旧包
+  （`check_rom_hook.py` 字节比对）→ ② **可写状态变量是否真在 RAM** → ③ 才是逻辑本身。
+
+## ⚠ 三个坑（2026-08-29 / 08-30 实证）
 
 - **8px 小字库（FontChsSmall / font=4）字形有误**：设置菜单"对战规则"的"战"
   显示成日文"対"。设置菜单一律用 12px 字库（font=0）。

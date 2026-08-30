@@ -305,6 +305,7 @@ static void DrawGlyphTiles_core(
     uint8_t *du, *dl, *du_sp, *dl_sp;
     uint8_t map_tx;
     int spilled;
+    unsigned ptr_mode;
     struct GlyphTileInfo info;
 
     if (glyphWidth < 8u)
@@ -313,6 +314,10 @@ static void DrawGlyphTiles_core(
         glyphWidth = 12u;
     pass2_w = glyphWidth - 8u;
     spilled = 0;
+
+    /* [2026-08-30] 本字是否走 PTR 固定槽路径。PTR 落址 = ptr_base+2*xOff+yOff，
+     * 与 win[0x18] 无关，且**不得推进 win[0x18]** —— 见 linear 分支两处推进点。 */
+    ptr_mode = (linear && scene_is_ptr_mode(win)) ? 1u : 0u;
 
     if (st->chs_px == 0)
         st->base_tx = pitch_capture_base_tx(win);
@@ -343,7 +348,10 @@ static void DrawGlyphTiles_core(
         DrawGlyphTile_refpr(win, &info, tiles->tl, du, du_sp);
         DrawGlyphTile_refpr(win, &info, tiles->bl, dl, dl_sp);
         map_at(win, map_tx, abs_u, abs_l);
-        win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
+        /* [2026-08-30] PTR 不推进 win[0x18]（理由见 pass2 处注释）。
+         * v3 的 chs_core_ex 同样是 PTR 不推进（`if (ptr_base == 0u)` 门控）。 */
+        if (ptr_mode == 0u)
+            win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
     } else {
         GetCursorTileNum_Mode2(win, (int)map_tx, &abs_u, &abs_l);
         du = vram_tile(win, abs_u);
@@ -376,14 +384,17 @@ static void DrawGlyphTiles_core(
     info.width = (uint8_t)pass2_w;
 
     if (linear) {
+        /* [2026-08-30] PTR 固定槽：pass2 是右半，必须传 xOff=1 才能落到
+         * 槽+2/+3；DYN 仍传 0（靠 win[0x18] 推进）。传错会导致右半覆盖左半，
+         * 标签列显示成 "1" 状碎片。 */
         off = win_u16(win, WIN_TILE_OFFSET);
-        abs_u = GetCursorTileNum_Linear(win, 0, 0);
-        abs_l = GetCursorTileNum_Linear(win, 0, 1);
+        abs_u = GetCursorTileNum_Linear(win, ptr_mode, 0);
+        abs_l = GetCursorTileNum_Linear(win, ptr_mode, 1);
         du = vram_tile(win, abs_u);
         dl = vram_tile(win, abs_l);
         if (startPixel + pass2_w > 8u) {
-            su = GetCursorTileNum_Linear(win, 1, 0);
-            sl = GetCursorTileNum_Linear(win, 1, 1);
+            su = GetCursorTileNum_Linear(win, ptr_mode + 1u, 0);
+            sl = GetCursorTileNum_Linear(win, ptr_mode + 1u, 1);
             du_sp = vram_tile(win, su);
             dl_sp = vram_tile(win, sl);
         } else {
@@ -393,8 +404,15 @@ static void DrawGlyphTiles_core(
         DrawGlyphTile_refpr(win, &info, tiles->tr, du, du_sp);
         DrawGlyphTile_refpr(win, &info, tiles->br, dl, dl_sp);
         map_at(win, map_tx, abs_u, abs_l);
-        win_set_u16(win, WIN_TILE_OFFSET,
-                    (uint16_t)(off + (startPixel == 0u ? 0u : 2u)));
+        /* [2026-08-30] PTR **不得推进 win[0x18]**。off 在行内是各 DYN 区依次
+         * 递进的游标（zone A 0 → zone B 12 → zone C 22）：DYN 会话首字的复位
+         * 条件是"off 越出 [z->off, z->off+span)"，靠"上一区推进后正好落进下一区"
+         * 达成。PTR 若在标签列每字 +2，会话结束时 off 会漂到 8/16…，这些值
+         * 恰好落在下一个 DYN 区区间**内部** ⇒ 不复位 ⇒ 候选列首字从残留偏移
+         * 起画，越界覆盖再下一区。PTR 落址不看 off，推进它百害无利。 */
+        if (ptr_mode == 0u)
+            win_set_u16(win, WIN_TILE_OFFSET,
+                        (uint16_t)(off + (startPixel == 0u ? 0u : 2u)));
     } else {
         GetCursorTileNum_Mode2(win, (int)map_tx, &abs_u, &abs_l);
         du = vram_tile(win, abs_u);

@@ -61,9 +61,87 @@ static const struct WinCfg kOptWindow = {
     .zone_n       = sizeof(kOptZones) / sizeof(kOptZones[0]),
 };
 
+/* ---- 图鉴条目屏 — 模板 0x081BB5BC（GRID：图标/盒子带需搬位）--------------*/
+static const struct TileRemap kSummaryRemaps[] = {
+    { .lo = CHS_UI_ICON_TILE_LO, .hi = CHS_UI_ICON_TILE_HI, .alt = CHS_UI_ICON_TILE_ALT },
+    { .lo = CHS_PSS_B_VRAM_LO,   .hi = CHS_PSS_B_VRAM_HI,   .alt = CHS_PSS_B_VRAM_ALT },
+};
+
+static const struct WinCfg kSummaryWindow = {
+    .name       = "SUMMARY",
+    .tpl        = CHS_SUMMARY_TEMPLATE,
+    .use_linear = 0u,              /* GRID */
+    .remaps     = kSummaryRemaps,
+    .remap_n    = sizeof(kSummaryRemaps) / sizeof(kSummaryRemaps[0]),
+};
+
+/* ============================================================================
+ * gdb 采集登记（2026-08-30，来源 work/gdb_patcher_log.log）
+ * 场景归属以 [InitTextPrinter] 日志的打印内容为准，不是猜的。
+ * ==========================================================================*/
+
+/* ---- 开始菜单 / 主菜单 — 模板 0x081BB46C（tm3 GRID，fn3）------------------
+ * 日志实证：'ずかん/宝可梦/背包/领航员/保存/设置/退出/►'（开始菜单 8 项，
+ * 左列 x=0..）+ '\CC010E继续游戏'（主菜单续档窗，右侧 x≥21：冒险时间/图鉴数）。
+ * bak 的 mode2 menu 分支（CHS_MODE2_MENU_BAND=0x17A / ORIGIN_MENU=0x20 /
+ * CHS_PARTY_MENU_LEFT=20 / TOP=13）只对本窗 x≥20 的深列生效 → 配置为 region。 */
+static const struct Mode2Region kStartMenuRegions[] = {
+    { .x_min = 20u, .y_min = 13u, .x_add = 1u, .y_sub = 13u,
+      .band = CHS_MODE2_MENU_BAND, .origin = CHS_MODE2_ORIGIN_MENU },
+};
+
+static const struct WinCfg kStartMenuWindow = {
+    .name       = "START_MENU",    /* 开始菜单 + 主菜单续档窗（同一模板） */
+    .tpl        = 0x081BB46Cu,
+    .use_linear = 0u,              /* GRID */
+    .regions    = kStartMenuRegions,
+    .region_n   = sizeof(kStartMenuRegions) / sizeof(kStartMenuRegions[0]),
+};
+
+/* ---- 对战菜单/选项窗 — 模板 0x081BB484（tm1 GRID，fn3）--------------------
+ * 日志实证：'请选择/要做什么/查看能力/排序/携带物品/攀瀑/潜水'，候选列
+ * x=0..1 与 21..22（右列），奇数行 curY=7..17。无搬位（官方公式+origin2）。 */
+static const struct WinCfg kChoiceMenuWindow = {
+    .name       = "CHOICE_MENU",   /* 对战/队伍的操作选项窗 */
+    .tpl        = 0x081BB484u,
+    .use_linear = 0u,              /* GRID，无搬位 */
+};
+
+/* ---- 战斗对话窗 — 模板 0x081BB3F4（tm0，fn3）------------------------------
+ * 日志实证：'野生的…跳出来了/ゆけっ！/怎么办/战斗 背包'，TILE_BASE 0x90/0x190
+ * （高区，自带安全距离）→ floor 必须为 0（bak 对 battle 直接跳过 floor；
+ * 未登记 fallback 的 floor=4 会把战斗对话首字推右 4 tile）。 */
+static const struct WinCfg kBattleDialogWindow = {
+    .name       = "BATTLE_DIALOG",
+    .tpl        = 0x081BB3F4u,
+    .use_linear = 1u,              /* tm0 本就线性；登记为的是 floor=0 */
+    .floor      = 0u,
+};
+
+/* ---- 队伍名单窗 — 模板 0x081BB43C（tm1，fn4 8px 小字）---------------------
+ * 日志实证：'ＭＥＷ/ＥＸＰＬＯ/ジグザグマ/ラグラージ'，charBase=1、
+ * tileData=0x06004000 独立区 → 线性直写安全，无需地板。 */
+static const struct WinCfg kPartyNameWindow = {
+    .name       = "PARTY_NAME",
+    .tpl        = 0x081BB43Cu,
+    .use_linear = 1u,              /* fn4 小字，charBase=1 独立 tile 区 */
+    .floor      = 0u,
+};
+
+static const struct WinCfg kNamingConfirmWindow = {
+    .name       = "NAMING_CONFIRM",
+    .tpl        = 0x081BB694u,
+    .use_linear = 0u,              /* GRID，默认路径（'你的名字是'） */
+};
 
 const struct WinCfg *const kWindows[] = {
     &kOptWindow,
+    &kSummaryWindow,
+    &kStartMenuWindow,
+    &kChoiceMenuWindow,
+    &kBattleDialogWindow,
+    &kPartyNameWindow,
+    &kNamingConfirmWindow,
 };
 
 const unsigned kWindowN = sizeof(kWindows) / sizeof(kWindows[0]);

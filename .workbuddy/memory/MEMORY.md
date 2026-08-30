@@ -11,8 +11,29 @@ RunAnimScriptCommand +0x4 / ScriptCmd_loadspritegfx +0x44 / ScriptCmd_restorebg 
   再校验原版与汉化 ROM 在该点代码一致（一致才能两版共用同一断点）。
 - **更可靠的抓手**：标 `KEEP-US` 的 **EWRAM 变量**日美同址，可直读，优先用它。
 - 已定位：`gBattleAnims_Moves` = **0x081D997C**（412 项；pokeruby 的 0x081C36DC 是错的，
-  那里读出全 0）；DoMoveAnim 0x08071D98 / LaunchBattleAnimation 0x08071DCC /
-  RunAnimScriptCommand 0x08072048。
+  那里读出全 0）；DoMoveAnim 0x08071D98 / LaunchBattleAnimation 0x08071DCC。
+
+### ⚠ 补充（2026-08-30 晚）：符号表还会「张冠李戴」，扫 push 也不够
+
+实证：`08072044 l 00000040 RunAnimScriptCommand ; US=0x080759D0 UNVERIFIED(seg=RedrawMenuCursor)`
+—— **段名标成了 RedrawMenuCursor**，且按它定位的 `0x08072048` 在实测日志里 **0 命中**，
+而真正的脚本命令循环在 **`0x08077C20`**。⇒ 符号表连「这是哪个函数」都可能是错的。
+
+**因此验证函数地址最快、最硬的方法是扫全 ROM 的 BL 调用点：**
+- 有调用点 ⇒ 地址对，且该函数确实被用到；
+- 0 处 ⇒ 要么地址错，**要么只经函数指针调用**（见下）。
+
+**函数指针调用要顺藤摸到 veneer**：`sScriptCmdTable[...]()` 编译后会生成 thunk，
+表现为 `ldr r1,[r4]` + `bl <thunk表>`，thunk 处是一片 `4708 46C0 4710 46C0`
+（即 `bx r1` / `bx r2` …）。所以 `ScriptCmd_changebg / waitbgfadein / setbldcnt`
+在全 ROM **扫不到任何 BL 调用点**（0 处），这是正常的，不是地址错。
+本例 thunk 表基址 = `0x081B12D8`。
+
+### gdb 采集前先验埋点计数（血的教训）
+
+首轮黑屏日志白跑一趟：录完 2034 行才发现 `DoMoveAnim` / `LaunchBattleAnimation`
+**0 命中**（因为动画是即时存档带过来的，压根不会重新走入口函数）。
+⇒ **开跑后先 `grep -c` 各埋点计数，确认录到了目标行为，再继续操作**。
 
 ## gdb_patcher 两个坑（加埋点前必读）
 

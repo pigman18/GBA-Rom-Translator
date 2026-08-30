@@ -637,6 +637,80 @@ def _on_anim_script_cmd(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any
     ctx.log(f"  脚本@0x{p:08X}: {stream.hex(' ')}")
 
 
+# 循环体埋点的跨命中状态：用于检测「脚本指针是否推进」
+_loop_prev: dict[str, int] = {"ptr": 0, "n": 0}
+
+
+@handler("AnimScriptLoop")
+def _on_anim_script_loop(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """★真正的脚本命令循环体（0x08077C22）。
+
+    与 AnimScriptCmd(0x08072048) 的区别：后者是符号表口径、实测常 0 命中；
+    本点是实测中 loadspritegfx / changebg / waitbgfadein 的真正调用出处
+    （它们的 LR=0x08077C3E 就落在这个循环里）。
+
+    三条判据，命中即定位黑屏：
+      1. 野指针  —— sBattleAnimScriptPtr 脱离 0x08xxxxxx 脚本区
+      2. 指针停滞 —— 连续命中而 ptr 不变，说明脚本卡在同一条命令上死循环
+      3. 非 ROM 指针推进 —— ptr 在动但不在 ROM，命令字节来自 open bus
+    """
+    raw = _read_mem(gdb, A_SCRIPT_PTR, 0x28)
+    if len(raw) < 0x28:
+        return
+    st = _anim_state(gdb)
+    if not st:
+        return
+    p = st["ptr"]
+    in_rom = 0x08000000 <= p < 0x0A000000
+
+    # 指针推进检测
+    prev = _loop_prev["ptr"]
+    if prev == p:
+        _loop_prev["n"] += 1
+    else:
+        _loop_prev["n"] = 0
+        _loop_prev["ptr"] = p
+    stall = _loop_prev["n"] >= 3
+
+    # 命令字节：只有指针在 ROM 内才有意义
+    if in_rom:
+        sb = _read_mem(gdb, p, 10)
+        cid = sb[0] if sb else 0xFF
+        name = ANIM_CMDS[cid] if cid < len(ANIM_CMDS) else f"cmd#{cid}"
+        cmd_txt = f"cmd[{cid}]={name}"
+    else:
+        sb = b""
+        cmd_txt = "cmd=?（指针不在 ROM，命令字节无意义）"
+
+    flags, hard = [], False
+    if not in_rom:
+        flags.append("★野指针")
+        hard = True
+    if stall:
+        flags.append(f"★指针停滞×{_loop_prev['n']}")
+        hard = True
+    # wait=0&active=1 只是「同帧连发」的软提示，正常动画也很常见，
+    # 不列为硬异常（否则状态块会被无脑 dump 刷屏）。
+    if st["wait"] == 0 and st["active"] and not hard:
+        flags.append("wait=0&active=1（同帧连发）")
+    flag = ("  " + " ".join(flags)) if flags else ""
+
+    ctx.log(f"\n[ASL] move=#{st['move']} {cmd_txt} "
+            f"active={st['active']} wait={st['wait']} turn={st['turn']} "
+            f"bgfade={st['bgfade']} vis={st['vis']} snd={st['snd']}{flag}")
+    ctx.log(f"  ptr=0x{p:08X} ret=0x{st['ret']:08X} cb=0x{st['cb']:08X} "
+            f"atk={st['atk']} tgt={st['tgt']}")
+    if sb:
+        risk = "  ⚠BG类" if name in BG_RISKY_CMDS else ""
+        ctx.log(f"  脚本@0x{p:08X}: {sb.hex(' ')}{risk}")
+
+    # 仅在硬异常时 dump 整块状态，便于离线反查是哪个字段被踩
+    if hard:
+        ctx.log(f"  ★状态块 0x{A_SCRIPT_PTR:08X}+0x28:")
+        for i in range(0, 0x28, 16):
+            ctx.log(f"    +{i:02X}: {raw[i:i+16].hex(' ')}")
+
+
 @handler("AnimLoadSpriteGfx")
 def _on_anim_loadspritegfx(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
     """ScriptCmd_loadspritegfx：动画脚本加载 sprite 图形（tile 写入的第一站）。

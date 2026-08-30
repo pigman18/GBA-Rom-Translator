@@ -125,3 +125,64 @@ print(f"  → 仍出原有日志: {any('LoadSpriteSheet' in ln for ln in c9.line
 print("\n--- _vram_zone 分区校验 ---")
 for a in (0x06000000, 0x06004000, 0x06008000, 0x0600C000, 0x06010000, 0x07000000, 0x05000000):
     print(f"  0x{a:08X} → {gp._vram_zone(a)}")
+
+# ============================================================================
+# 回归：复现 2026-08-30 采集到的「黑屏态」——野指针 + 指针停滞
+# 真实日志 work/gdb/{origin,han}_move.log 里的值：
+#   └ 动画中: move=#1027 脚本指针 0x04030201（越界！）
+#   参数@0x04030201: 00 00 00 17 40 00 00 01 00 00
+# ============================================================================
+print("\n" + "=" * 68)
+print("回归：ASL 能否抓到黑屏态（野指针 + 停滞）")
+print("=" * 68)
+
+WILD_PTR = 0x04030201     # 日志实测值（IO 区，非 ROM）
+WILD_MOVE = 1027          # 0x0403，日志实测
+
+
+def make_wild_gdb(wait=0):
+    """照日志实况构造：ptr 落在 IO 区、active=1、move=0x0403。"""
+    st = bytearray(0x28)
+    struct.pack_into("<I", st, 0x00, WILD_PTR)        # ptr = 野指针
+    struct.pack_into("<I", st, 0x04, 0x00000000)
+    struct.pack_into("<I", st, 0x08, 0x08072048)
+    st[0x0C] = wait                                    # gAnimFramesToWait
+    st[0x0D] = 1                                       # active = TRUE
+    st[0x0E] = 15                                      # vis
+    st[0x0F] = 0                                       # snd
+    st[0x20] = 1                                       # turn
+    st[0x21] = 2                                       # bgfade
+    struct.pack_into("<H", st, 0x22, WILD_MOVE)        # move = 0x0403
+    st[0x24] = 0
+    st[0x25] = 1
+    g = FakeGdb(move=WILD_MOVE)
+    g.mem[ANIM_BASE] = bytes(st)
+    return g
+
+
+gp._loop_prev.update({"ptr": 0, "n": 0})   # 重置跨命中状态
+h = gp.HANDLERS["AnimScriptLoop"]
+
+for i in range(1, 5):
+    g = make_wild_gdb(wait=0)
+    c = run(f"第 {i} 次命中（ptr 恒为 0x{WILD_PTR:08X}）", h, g, {})
+    txt = "\n".join(c.lines)
+    if i == 1:
+        print(f"  → 首命中即告警: {'是' if '野指针' in txt else '否'}")
+    if i >= 4:
+        print(f"  → 第 4 命中检出停滞: {'是' if '停滞' in txt else '否'}")
+    if i == 4:
+        print(f"  → 状态块已 dump: {'是' if '★状态块' in txt else '否'}")
+        print("  ---- 输出样例 ----")
+        for ln in c.lines:
+            print("   ", ln)
+
+# 对照：正常动画（ptr 在 ROM 且每条命令推进）不应误报
+print("\n--- 对照组：正常动画（ptr 在 ROM 且递增）不应告警 ---")
+gp._loop_prev.update({"ptr": 0, "n": 0})
+for off in (0, 3, 7, 9):
+    g = FakeGdb(move=33, cmd_off=off)
+    c = run(f"正常 cmd_off={off}", h, g, {})
+    txt = "\n".join(c.lines)
+    bad = ("野指针" in txt) or ("停滞" in txt)
+    print(f"  → cmd_off={off}: {'★误报！' if bad else '无告警（正确）'}")

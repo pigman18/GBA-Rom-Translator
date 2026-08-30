@@ -815,7 +815,15 @@ gdb:
   default: false
 - name: AnimScriptCmd
   address: '0x08072048'
-  description: RunAnimScriptCommand 入口：脚本命令流主循环，每条命令命中一次。核心埋点——两版逐条 diff 命令序列
+  description: RunAnimScriptCommand（符号表口径，9 处 BL 调用）：脚本命令流入口。注意实测动画循环另走 sub_08077C20，本点常 0 命中
+  default: false
+- name: AnimScriptLoop
+  address: '0x08077C22'
+  description: '★真正的脚本命令循环体（原日志里 loadspritegfx/changebg/waitbgfadein 的 LR=0x08077C3E 就出自此处）。
+
+    每条脚本命令命中一次，且完整 dump EWRAM 动画状态块 0x0202F7A4+0x28。
+
+    定位黑屏的核心：ptr 一旦脱离 0x08xxxxxx 脚本区就会高亮告警'
   default: false
 - name: AnimLoadSpriteGfx
   address: '0x080720C8'

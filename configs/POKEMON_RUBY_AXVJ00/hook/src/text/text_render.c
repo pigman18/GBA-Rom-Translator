@@ -207,6 +207,9 @@ static void blit_column_at_tile(TextPrinter *win, uint16_t tile,
  * 不变量 px = 8*col + phase 恒成立（推进 (phase+ink)/8 列 + px 加 ink）。
  * ===================================================================== */
 #if CHS_ADVANCE_12
+static void chs_fill_bg(TextPrinter *win, uint16_t tile, uint16_t lower_delta,
+                        unsigned x0, unsigned x1);   /* 定义在下方 */
+
 static unsigned print_glyph_px(TextPrinter *win, uint16_t tile,
                                uint16_t lower_delta, uint16_t col_stride,
                                const uint8_t *g128, unsigned ink,
@@ -272,7 +275,73 @@ static unsigned print_glyph_px(TextPrinter *win, uint16_t tile,
     /* 游标净推进 = adv（不是 2）；下一字的起始 tile 由此决定 */
     win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(tx0 + adv));
 
+    /* ---------------------------------------------------------------
+     * 尾像素补齐（2026-08-31，修「奇数中文字后的透明小格子」）
+     *
+     * 本字最后一列往往只写了一部分（例：ink=12 / phase=0 时 t1 只写
+     * px0-3）。剩余像素若无人负责，就会保留**上一次使用该 tile 的残留**
+     * ——行/串到此结束时表现为一块 4px 宽的透明/花屏小格子；
+     * 汉字个数为奇数时末尾必然落在半列，偶数时恰好对齐列边界，
+     * 故症状只在奇数个字后出现。
+     *
+     * 补齐为底色是安全的：下一个字若相位非 0，其第一段会完整覆盖这段
+     * 区间；若后面没有字了，留下的是干净的 4px 底色而非未初始化 VRAM。
+     * --------------------------------------------------------------- */
+    if (w1 != 0u)
+        chs_fill_bg(win, t1, lower_delta, (unsigned)w1, 8u);
+    else
+        chs_fill_bg(win, t0, lower_delta, phase + (unsigned)w0, 8u);
+
     return adv;
+}
+#endif /* CHS_ADVANCE_12 */
+
+/* =====================================================================
+ * 底色填充：把某 tile 的 [x0, x1) 像素区间写成 colors[0]（窗口底色）。
+ * 4bpp 源恒 0 ⇒ expand 出全 0 nibble ⇒ colors[0] = color_d（底色）。
+ *
+ * 两处使用：
+ *   ① chs_flush_to_col —— 半角交原生前把相位补齐到列首；
+ *   ② print_glyph_px   —— 每个字收尾时补齐最后一列的剩余像素。
+ * ===================================================================== */
+#if CHS_ADVANCE_12
+static void chs_fill_bg(TextPrinter *win, uint16_t tile, uint16_t lower_delta,
+                        unsigned x0, unsigned x1)
+{
+    uint8_t *tpl = win_template(win);
+    uint8_t *tile_data;
+    uint8_t fg_ov, color_c, color_d, color_e;
+    uint8_t colors[16];
+    uint8_t zero[32];
+    unsigned i;
+
+    if (x1 <= x0 || x0 > 7u)
+        return;
+    if (x1 > 8u)
+        x1 = 8u;
+    if (!tpl)
+        return;
+    tile_data = (uint8_t *)(uintptr_t)win_u32(tpl, TPL_TILE_DATA);
+    if (!tile_data)
+        return;
+
+    fg_ov   = *(volatile uint8_t *)ADDR_OPT_FG_COLOR;
+    color_c = fg_ov ? fg_ov : win_u8(win, WIN_COLOR_C);
+    color_d = win_u8(win, WIN_COLOR_D);
+    color_e = win_u8(win, WIN_COLOR_E);
+    for (i = 0; i < 16u; i++)
+        colors[i] = color_d;
+    colors[14] = color_e;
+    colors[15] = color_c;
+    for (i = 0; i < 32u; i++)
+        zero[i] = 0u;
+
+    (void)blend_glyph_4bpp(
+        (uint32_t *)(void *)(tile_data + ((uint32_t)tile << 5)),
+        0, zero, x1 - x0, x0, colors);
+    (void)blend_glyph_4bpp(
+        (uint32_t *)(void *)(tile_data + ((uint32_t)(tile + lower_delta) << 5)),
+        0, zero, x1 - x0, x0, colors);
 }
 #endif /* CHS_ADVANCE_12 */
 
@@ -293,41 +362,14 @@ static unsigned print_glyph_px(TextPrinter *win, uint16_t tile,
 static void chs_flush_to_col(TextPrinter *win, uint16_t lower_delta,
                              uint16_t col_stride, uint16_t tile)
 {
-    uint8_t *tpl = win_template(win);
-    uint8_t *tile_data;
-    uint8_t fg_ov, color_c, color_d, color_e;
-    uint8_t colors[16];
-    uint8_t zero[32];
     uint8_t tx;
     unsigned phase = chs_phase_get(win);
-    unsigned i;
 
     if (phase == 0u)
         return;
-    if (!tpl)
-        return;
-    tile_data = (uint8_t *)(uintptr_t)win_u32(tpl, TPL_TILE_DATA);
-    if (!tile_data)
-        return;
-
-    fg_ov   = *(volatile uint8_t *)ADDR_OPT_FG_COLOR;
-    color_c = fg_ov ? fg_ov : win_u8(win, WIN_COLOR_C);
-    color_d = win_u8(win, WIN_COLOR_D);
-    color_e = win_u8(win, WIN_COLOR_E);
-    for (i = 0; i < 16u; i++)
-        colors[i] = color_d;
-    colors[14] = color_e;
-    colors[15] = color_c;
-    for (i = 0; i < 32u; i++)
-        zero[i] = 0u;      /* 4bpp 值 0 → colors[0] = 底色 */
 
     /* 填底色：跨度 [phase,8)（startPixel+width = 8，无溢出） */
-    (void)blend_glyph_4bpp(
-        (uint32_t *)(void *)(tile_data + ((uint32_t)tile << 5)),
-        0, zero, 8u - phase, phase, colors);
-    (void)blend_glyph_4bpp(
-        (uint32_t *)(void *)(tile_data + ((uint32_t)(tile + lower_delta) << 5)),
-        0, zero, 8u - phase, phase, colors);
+    chs_fill_bg(win, tile, lower_delta, phase, 8u);
 
     /* 推到列首：tm0 需同时推 TILE_OFFSET（tile 号来源），tm3 只推 cursorTileX */
     tx = win_u8(win, WIN_CURSOR_TILE_X);

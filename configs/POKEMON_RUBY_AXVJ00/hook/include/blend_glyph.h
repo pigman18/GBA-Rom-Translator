@@ -49,4 +49,18 @@ uint32_t blend_glyph_4bpp(uint32_t *destTile, uint32_t *spillTile,
                           uint32_t width, uint32_t startPixel,
                           const uint8_t colors[16] /* 值→色号 LUT 直通 */);
 
+/* 12px 步进辅助（2026-08-31 新增，纯函数、零状态 ⇒ 可单测）：
+ * 从 128B 中文字模槽（16x16，[TL@0][BL@32][TR@64][BR@96]）取出字列
+ * [xs, xs+w)，拼成**连续**的两块 4bpp tile：up=上半 8 行、lo=下半 8 行，
+ * 各 32B，不足 8 列的部分右侧补 0（值 0 = 底色）。
+ *
+ * 存在意义：blend 原语一次最多写 8 像素宽，且**不支持 src 列偏移**
+ * （blend_row_4bpp 固定从 src 第 0 像素取）。12px 字在 phase!=0 时，
+ * 待写的一个输出块会同时横跨 TL(列4-7) 与 TR(列0-3) 两个源 tile，
+ * 必须先拼成连续块再交给 blend。
+ *
+ * w 会钳到 8；xs+j >= 16 的越界列按 0 处理（墨迹实宽 12，正常不会触发）。 */
+void extract_cols(const uint8_t *g128, uint32_t xs, uint32_t w,
+                  uint8_t up[32], uint8_t lo[32]);
+
 #endif /* BLEND_GLYPH_H */

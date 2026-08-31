@@ -278,3 +278,67 @@ uint32_t blend_glyph_4bpp(uint32_t *destTile, uint32_t *spillTile,
     return blend_core(destTile, spillTile, rows, width, startPixel,
                       blend_row_4bpp, colors);
 }
+
+/* ============================================================================
+ * extract_cols — 12px 步进辅助（2026-08-31，docs/12PX_落地方案.md §3.3）
+ *
+ * blend 原语一次最多写 8 像素宽，且不支持 src 列偏移（blend_row_4bpp 固定
+ * 从 src 第 0 像素取）。12px 字在 phase!=0 时，待写的一个输出块会同时横跨
+ * TL(列4-7) 与 TR(列0-3) 两个源 tile ⇒ 必须先拼成连续块再交给 blend。
+ *
+ * 本函数是纯拼装（逐 nibble 搬运），不改变任何像素值；与 blend 原语一样
+ * 纯函数零状态，可由 tests/ 做 Python 对拍。
+ * ==========================================================================*/
+static void put_px4(uint8_t *tile, uint32_t r, uint32_t x, uint8_t v)
+{
+    uint32_t i = r * 4u + (x >> 1);
+
+    if (x & 1u)
+        tile[i] = (uint8_t)((tile[i] & 0x0Fu) | (uint8_t)((v & 0x0Fu) << 4));
+    else
+        tile[i] = (uint8_t)((tile[i] & 0xF0u) | (v & 0x0Fu));
+}
+
+void extract_cols(const uint8_t *g128, uint32_t xs, uint32_t w,
+                  uint8_t up[32], uint8_t lo[32])
+{
+    const uint8_t *tl = g128 + 0x00u;   /* 上半 列 0-7  */
+    const uint8_t *bl = g128 + 0x20u;   /* 下半 列 0-7  */
+    const uint8_t *tr = g128 + 0x40u;   /* 上半 列 8-15 */
+    const uint8_t *br = g128 + 0x60u;   /* 下半 列 8-15 */
+    uint32_t j, r;
+
+    for (j = 0; j < 32u; j++) {
+        up[j] = 0;
+        lo[j] = 0;
+    }
+    if (w == 0u)
+        return;
+    if (w > 8u)
+        w = 8u;
+
+    for (j = 0; j < w; j++) {
+        uint32_t sc = xs + j;
+        const uint8_t *su;
+        const uint8_t *sl;
+        uint32_t c;
+
+        if (sc >= 16u)      /* 越界列：已清零，跳过即可 */
+            continue;
+
+        su = (sc < 8u) ? tl : tr;
+        sl = (sc < 8u) ? bl : br;
+        c  = sc & 7u;
+
+        for (r = 0; r < 8u; r++) {
+            uint8_t bu = su[r * 4u + (c >> 1)];
+            uint8_t bl_b = sl[r * 4u + (c >> 1)];
+            uint8_t vu = (c & 1u) ? (uint8_t)(bu >> 4) : (uint8_t)(bu & 0x0Fu);
+            uint8_t vl = (c & 1u) ? (uint8_t)(bl_b >> 4)
+                                  : (uint8_t)(bl_b & 0x0Fu);
+
+            put_px4(up, r, j, vu);
+            put_px4(lo, r, j, vl);
+        }
+    }
+}

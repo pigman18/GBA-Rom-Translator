@@ -45,6 +45,86 @@
 #define TM0_LOWER_DELTA      1u
 #define TM3_LOWER_DELTA      30u
 
+/* 列步进：写完一列后"下一列"的 tile 号增量。
+ *   tm0 = 2 —— 上下半相邻(+1)，一列占 2 个 tile 号；
+ *   tm3 = 1 —— 上下半隔 30，一列只占 1 个 tile 号。 */
+#define TM0_COL_STRIDE       2u
+#define TM3_COL_STRIDE       1u
+
+/* =====================================================================
+ * 行相位（仅 12px 模式需要；16px 整格为零状态，不参与）
+ *
+ * 官方游标只有"整列"粒度（TILE_OFFSET / cursorTileX），没有像素相位字段。
+ * 12px 步进必然产生半列相位 ⇒ 必须自存（game.h struct ChsPhase）。
+ * 归零策略：**不检测换行事件**，改用行指纹 key —— 换行/换窗/换流都会让
+ *   TILE_BASE / CURSOR_Y / CURSOR_TILE_Y / template 之一变化 ⇒ key 失配
+ *   ⇒ px 归零。另加游标失配检测（重印/跳列）兜底，防相位错位写坏 VRAM。
+ * ⚠ 表落 EWRAM 绝对地址 0x0203FF90：game.ld 无 .bss/.data，普通可写
+ *   static 会被静默塞进 ROM 恒 0 且不报错。
+ * ===================================================================== */
+#if CHS_ADVANCE_12
+static uint16_t chs_phase_key(TextPrinter *win)
+{
+    uint8_t *tpl = win_template(win);
+    uint16_t w = tpl ? (uint16_t)(((uintptr_t)tpl >> 2) & 0xFFFFu) : 0;
+
+    /* | 0x8000：保证非 0，兼作"槽已占用"标记 */
+    return (uint16_t)((win_u16(win, WIN_TILE_BASE)
+                       ^ ((uint16_t)win_u8(win, WIN_CURSOR_Y) << 8)
+                       ^ ((uint16_t)win_u8(win, WIN_CURSOR_TILE_Y) << 4)
+                       ^ w) | 0x8000u);
+}
+
+static volatile struct ChsPhase *chs_phase_slot(TextPrinter *win, uint16_t key)
+{
+    volatile struct ChsPhase *tab =
+        (volatile struct ChsPhase *)ADDR_CHS_PHASE;
+    unsigned i;
+
+    for (i = 0; i < CHS_PHASE_COUNT; i++)
+        if (tab[i].key == key)
+            return &tab[i];
+
+    for (i = 0; i < CHS_PHASE_COUNT; i++) {
+        if (tab[i].key == 0u) {
+            tab[i].key = key;
+            tab[i].px  = 0;
+            tab[i].tx0 = win_u8(win, WIN_CURSOR_TILE_X);
+            return &tab[i];
+        }
+    }
+    /* 表满：复用 0 号（降级，仅相位归零，不写坏内存） */
+    tab[0].key = key;
+    tab[0].px  = 0;
+    tab[0].tx0 = win_u8(win, WIN_CURSOR_TILE_X);
+    return &tab[0];
+}
+
+/* 当前行内相位（0..7） */
+static unsigned chs_phase_get(TextPrinter *win)
+{
+    uint16_t key = chs_phase_key(win);
+    volatile struct ChsPhase *s = chs_phase_slot(win, key);
+    uint8_t tx = win_u8(win, WIN_CURSOR_TILE_X);
+
+    /* 失配检测：期望已走列数 = px>>3；回退/跳列/重印 ⇒ 归零重锚 */
+    if (tx < s->tx0 || (unsigned)(tx - s->tx0) != (unsigned)(s->px >> 3)) {
+        s->px  = 0;
+        s->tx0 = tx;
+    }
+    return (unsigned)(s->px & 7u);
+}
+
+/* 推进 advance 像素（中文=CHS_GLYPH_ADVANCE_PX；半角=CHS_GLYPH_ADVANCE_JP_PX） */
+static void chs_phase_advance(TextPrinter *win, unsigned adv_px)
+{
+    uint16_t key = chs_phase_key(win);
+    volatile struct ChsPhase *s = chs_phase_slot(win, key);
+
+    s->px = (uint16_t)(s->px + adv_px);
+}
+#endif /* CHS_ADVANCE_12 */
+
 /* 字形解压（v4 同款）：128B 容器原样拷出，保持
  * [TL@+0][BL@+32][TR@+64][BR@+96] 布局；bit15=半字右半（+64 起）。 */
 static void decompress_chs_glyph(uint8_t out[CHS_CELL_BYTES],
@@ -111,6 +191,83 @@ static void blit_column_at_tile(TextPrinter *win, uint16_t tile,
                (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
 }
 
+/* =====================================================================
+ * 12px 两段式渲染（docs/12PX_落地方案.md §3.2，CHS_ADVANCE_12 时启用）
+ *
+ * 12px advance 必然产生半列相位（12 mod 8 = 4 ⇒ phase 只在 0/4 两态）。
+ * blend 原语一次最多写 8 像素宽，故一个字拆两段：
+ *   第一段：本 tile，startPixel = phase，宽 w0 = 8-phase，源列 [0, w0)
+ *   第二段：下一列 tile，startPixel = 0，宽 w1 = 4+phase，源列 [w0, 12)
+ * 两段都**恰好填满目标 tile 的可用区间**（phase+w0 = 8、0+w1 ≤ 8），
+ * 因此永不溢出，spillTile 一律传 0。
+ *
+ * 返回推进列数 = (phase + 12) / 8（phase=0 → 1 列；phase=4 → 2 列）。
+ * ===================================================================== */
+#if CHS_ADVANCE_12
+static unsigned print_glyph_12px(TextPrinter *win, uint16_t tile,
+                                 uint16_t lower_delta, uint16_t col_stride,
+                                 const uint8_t *g128, unsigned phase)
+{
+    uint8_t *tpl = win_template(win);
+    uint8_t *tile_data;
+    uint8_t fg_ov, color_c, color_d, color_e;
+    uint8_t colors[16];
+    uint32_t w0 = 8u - phase;
+    uint32_t w1 = 4u + phase;
+    uint16_t t0 = tile;
+    uint16_t t1 = (uint16_t)(tile + col_stride);
+    uint8_t tx0 = win_u8(win, WIN_CURSOR_TILE_X);
+    uint8_t up[32], lo[32];
+    unsigned adv = (phase + CHS_GLYPH_ADVANCE_PX) / 8u;
+    unsigned i;
+
+    if (adv < 1u)
+        adv = 1u;
+    if (!tpl)
+        return adv;
+    tile_data = (uint8_t *)(uintptr_t)win_u32(tpl, TPL_TILE_DATA);
+    if (!tile_data)
+        return adv;
+
+    fg_ov   = *(volatile uint8_t *)ADDR_OPT_FG_COLOR;
+    color_c = fg_ov ? fg_ov : win_u8(win, WIN_COLOR_C);
+    color_d = win_u8(win, WIN_COLOR_D);
+    color_e = win_u8(win, WIN_COLOR_E);
+    for (i = 0; i < 16u; i++)
+        colors[i] = color_d;
+    colors[14] = color_e;
+    colors[15] = color_c;
+
+    /* 第一段：本 tile，起点 phase —— 源列 [0, w0) */
+    extract_cols(g128, 0u, w0, up, lo);
+    (void)blend_glyph_4bpp(
+        (uint32_t *)(void *)(tile_data + ((uint32_t)t0 << 5)),
+        0, up, w0, phase, colors);
+    (void)blend_glyph_4bpp(
+        (uint32_t *)(void *)(tile_data + ((uint32_t)(t0 + lower_delta) << 5)),
+        0, lo, w0, phase, colors);
+
+    /* 第二段：下一列 tile，起点 0 —— 源列 [w0, 12)
+     * （phase=4 时该段横跨 TL 列4-7 与 TR 列0-3，由 extract_cols 拼好） */
+    extract_cols(g128, w0, w1, up, lo);
+    (void)blend_glyph_4bpp(
+        (uint32_t *)(void *)(tile_data + ((uint32_t)t1 << 5)),
+        0, up, w1, 0u, colors);
+    (void)blend_glyph_4bpp(
+        (uint32_t *)(void *)(tile_data + ((uint32_t)(t1 + lower_delta) << 5)),
+        0, lo, w1, 0u, colors);
+
+    /* tilemap：本列 + 下一列（第二段总是占用下一列，故恒写两次） */
+    UpdateTilemap_Origin(win, t0, (uint16_t)(t0 + lower_delta));
+    win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(tx0 + 1u));
+    UpdateTilemap_Origin(win, t1, (uint16_t)(t1 + lower_delta));
+    /* 游标净推进 = adv（不是 2）；下一字的起始 tile 由此决定 */
+    win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(tx0 + adv));
+
+    return adv;
+}
+#endif /* CHS_ADVANCE_12 */
+
 /* mode0 单列：tile = TILE_BASE + TILE_OFFSET（官方 tm0 线性游标），
  * 画完后额外推 TILE_OFFSET += 2（官方 [win+0x18]+=2，一列占上下两 tile）。 */
 static void blit_column_mode0(TextPrinter *win,
@@ -124,12 +281,30 @@ static void blit_column_mode0(TextPrinter *win,
     win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
 }
 
-/* mode0 汉字整格：cols=2（16px 主字体）/ 1（font4 小字，8px 单列）。 */
+/* mode0 汉字：12px 两段式（cols=2 主字体）/ 16px 整格回退 / font4 小字 8px 单列。 */
 static void print_glyph_mode0(TextPrinter *win, uint16_t gidx,
                               uint8_t font_id, unsigned cols)
 {
     uint8_t buf[CHS_CELL_BYTES];
     unsigned col;
+
+#if CHS_ADVANCE_12
+    if (cols == 2u) {
+        uint16_t base = win_u16(win, WIN_TILE_BASE);
+        uint16_t off  = win_u16(win, WIN_TILE_OFFSET);
+        unsigned phase = chs_phase_get(win);
+        unsigned adv;
+
+        decompress_chs_glyph(buf, gidx, font_id);
+        adv = print_glyph_12px(win, (uint16_t)(base + off),
+                               TM0_LOWER_DELTA, TM0_COL_STRIDE, buf, phase);
+        /* TILE_OFFSET 单位同列步进（tm0 每列 2 个 tile 号） */
+        win_set_u16(win, WIN_TILE_OFFSET,
+                    (uint16_t)(off + (uint16_t)(adv * TM0_COL_STRIDE)));
+        chs_phase_advance(win, CHS_GLYPH_ADVANCE_PX);
+        return;
+    }
+#endif
 
     decompress_chs_glyph(buf, gidx, font_id);
 
@@ -139,6 +314,10 @@ static void print_glyph_mode0(TextPrinter *win, uint16_t gidx,
 
         blit_column_mode0(win, src_u, src_l);
     }
+#if CHS_ADVANCE_12
+    /* 小字（cols==1）也须推进相位，否则中文混排时相位错乱 */
+    chs_phase_advance(win, CHS_GLYPH_ADVANCE_JP_PX);
+#endif
 }
 
 /* mode0 SYM 标点：64B 容器 [U@+0][L@+32]，一列 8px（同官方半角节奏）。 */
@@ -166,13 +345,25 @@ static uint16_t tm3_tile_no(TextPrinter *win)
     return (uint16_t)(x + 2u + base + (uint16_t)y * 30u);
 }
 
-/* tm3 汉字整格：16px 主字体（2 列）/ font4 小字（8px 1 列），
- * 复用 blit_column_at_tile，落点走 2D 布局公式。 */
+/* tm3 汉字：12px 两段式（cols=2 主字体）/ 16px 整格回退 / font4 小字 8px 单列，
+ * 落点走 tm3 的 2D 布局公式（tm3_tile_no）。 */
 static void print_glyph_mode3(TextPrinter *win, uint16_t gidx,
                               uint8_t font_id, unsigned cols)
 {
     uint8_t buf[CHS_CELL_BYTES];
     unsigned col;
+
+#if CHS_ADVANCE_12
+    if (cols == 2u) {
+        unsigned phase = chs_phase_get(win);
+
+        decompress_chs_glyph(buf, gidx, font_id);
+        (void)print_glyph_12px(win, tm3_tile_no(win),
+                               TM3_LOWER_DELTA, TM3_COL_STRIDE, buf, phase);
+        chs_phase_advance(win, CHS_GLYPH_ADVANCE_PX);
+        return;
+    }
+#endif
 
     decompress_chs_glyph(buf, gidx, font_id);
 
@@ -183,6 +374,9 @@ static void print_glyph_mode3(TextPrinter *win, uint16_t gidx,
         blit_column_at_tile(win, tm3_tile_no(win), TM3_LOWER_DELTA,
                             src_u, src_l);
     }
+#if CHS_ADVANCE_12
+    chs_phase_advance(win, CHS_GLYPH_ADVANCE_JP_PX);
+#endif
 }
 
 /* F9 汉字渲染入口（text_translater.c 消费）。
@@ -216,12 +410,18 @@ void PrintGlyph(TextPrinter *win, uint32_t gidx, unsigned glyphWidth)
          * 暂维持消费 + 推进（cursorTileX += cols）。 */
         win_set_u8(win, WIN_CURSOR_TILE_X,
                    (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + cols));
+#if CHS_ADVANCE_12
+        chs_phase_advance(win, CHS_GLYPH_ADVANCE_PX);
+#endif
         break;
     case 2: {
         uint32_t dst = win_u32(win, WIN_TILE_DATA);
 
         if (dst != 0u)
             win_set_u32(win, WIN_TILE_DATA, dst + cols * 0x40u);
+#if CHS_ADVANCE_12
+        chs_phase_advance(win, CHS_GLYPH_ADVANCE_JP_PX);
+#endif
         break;
     }
     default:
@@ -239,6 +439,9 @@ int DrawGlyph(TextPrinter *win, uint32_t cur_char)
         && cur_char < SYM_GLYPH_BASE + SYM_GLYPH_COUNT) {
         if (tm == 0u) {
             draw_sym_mode0(win, cur_char - SYM_GLYPH_BASE);
+#if CHS_ADVANCE_12
+            chs_phase_advance(win, CHS_GLYPH_ADVANCE_JP_PX);
+#endif
             return 1;
         }
         /* 非 mode0：落入下方原生分发，按 JP PCS 同码画半角形
@@ -246,8 +449,13 @@ int DrawGlyph(TextPrinter *win, uint32_t cur_char)
     }
 
     if (cur_char >= 0xF7u)
-        return 1;
+        return 1;   /* 控制码/终止符：不占像素，不推进相位 */
 
     FontFunc_NativeDispatch(tm, win, cur_char);
+#if CHS_ADVANCE_12
+    /* 半角走原生路径：官方只推整列游标、不知像素相位 ⇒ 必须同步推进，
+     * 否则紧随其后的中文相位全错（docs/12PX_落地方案.md §5）。 */
+    chs_phase_advance(win, CHS_GLYPH_ADVANCE_JP_PX);
+#endif
     return 1;
 }

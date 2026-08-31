@@ -159,36 +159,47 @@ struct GlyphBuffer {
 /* eBattleInterfaceGfxBuffer (AXVJ literal). Docs/ref only — gate is textMode==2. */
 #define BATTLE_IF_GFX_SIZE  0x1000u
 
-/* ---- 行相位表（2026-08-25 反汇编定案的最小状态）----
+/* ---- 行相位表（2026-08-25 反汇编定案的最小状态；2026-08-31 v5 精简复用）----
  * 原生 tm1 writer 只推 win[0x1B]（0x0800360C 实证），不维护任何像素相位；
  * 12px 步进的半列相位必须自存。表落 0x0203FF80-FFCF（多轮验证安全区；
  * 0x0203FFD2 起为游戏数据区，严禁占用——旧页表死机根因）。
- * key = 行指纹（TILE_BASE^CURSOR_Y^CURSOR_TILE_Y^template^stream），
- * 换行/换流自动换 key = 相位自动归零；失配检测（cursor 回退/跳列）防重印错位。 */
+ * key = 行指纹（TILE_BASE^CURSOR_Y^CURSOR_TILE_Y^template），
+ * 换行/换流自动换 key = 相位自动归零；失配检测（cursor 回退/跳列）防重印错位。
+ *
+ * v5 精简：去掉 v4 槽位分配残留 scr_org/scr_next/adv12（tile 已无所有权），
+ * 仅留 key/px/tx0；8B 对齐保持，便于索引。
+ * ⚠ 该区 v5 下确为空闲（PITCH_CTRL/PITCH_SLOTS/GLYPH_ALLOC_NEXT 已零引用）。 */
 #define CHS_PHASE_COUNT 8u
+#define ADDR_CHS_PHASE  0x0203FF90u   /* 复用原 PITCH_SLOTS 区（v5 已释放） */
 struct ChsPhase {
-    uint16_t key;    /* +0 行指纹（PitchKey） */
-    uint16_t px;     /* +2 行内已绘像素（相位 = px&7） */
+    uint16_t key;    /* +0 行指纹 */
+    uint16_t px;     /* +2 行内已绘像素（相位 = px & 7） */
     uint8_t  tx0;    /* +4 行首表项列（失配检测锚点） */
-    uint8_t  adv12;  /* +5 保留（旧失配期望值用；现期望 = tx0+(px>>3)） */
-    uint8_t  scr_org;/* +6 B3 本流 scratch 带首（带内偏移） */
-    uint8_t  scr_next;/* +7 B3 本流下一分配偏移（带内偏移） */
-};                    /* 8B × 8 = 64B @ ADDR_CHS_PITCH_SLOTS(0x0203FF90)
-                       * → 至 0x0203FFCF，实证安全区（0x0203FF80-FFCF）之内 */
-                      /* gen 字节 @ ADDR_CHS_PITCH_CTRL(0x0203FF80)，LRU 驱逐 */
+    uint8_t  rsv[3]; /* +5..+7 保留（保持 8B 对齐） */
+};                    /* 8B × 8 = 64B @ 0x0203FF90 → 至 0x0203FFCF（安全区内） */
 
 /*
- * v5 混合写入架构（2026-08-31）：汉字按 16px 整格渲染。
+ * v5 混合写入架构（2026-08-31）：汉字渲染。
  * 反汇编实证（tm0 处理器 @0x08003568）：官方 mode0 渲染模型里
  * TILE_OFFSET（win[0x12]，单位 tile）与 cursorTileX（win[0x19]，单位
- * tile 列）都是整列游标，引擎不维护任何像素相位字段。12px 相位方案
- * 需要额外状态载体（v4 ChsPhase 的踩踏 BUG 温床）；16px 整格
- * （2 列 × 4 tile）是唯一零状态方案，完全复用官方游标推进语义。
- * 字模容器仍为 16×16 4-tile 128B（TL/BL/TR/BR），勿改。
+ * tile 列）都是整列游标，引擎不维护任何像素相位字段。
+ * 字模容器仍为 16×16 4-tile 128B（TL/BL/TR/BR），墨迹 12x12 左对齐，勿改。
  * 8px 小字 FontChsSmall(0x09100000) 仍由 fontId==4 路径分流。
- * 旧 12px 双趟 drawGlyph12 / ChsPhase 相位表说明见 bak/text-v4/。
+ *
+ * 2026-08-31 追加：12px 主字体（docs/12PX_落地方案.md）。
+ *   CHS_ADVANCE_12 = 1 → 12px 两段式（相位两态 0/4，推进列 1,2,1,2）
+ *   CHS_ADVANCE_12 = 0 → 16px 整格（回退到已验证路径，零状态）
+ * 12px 需自存相位（行指纹 key 失配即归零），见 struct ChsPhase。
  */
+#ifndef CHS_ADVANCE_12
+#define CHS_ADVANCE_12       1
+#endif
+#if CHS_ADVANCE_12
+#define CHS_GLYPH_ADVANCE_PX 12
+#else
 #define CHS_GLYPH_ADVANCE_PX 16
+#endif
+#define CHS_INK_WIDTH_PX     12   /* 字库墨迹实宽（advance-ink = 字间距） */
 #define CHS_CHAR_HEIGHT_PX   16
 #define CHS_LINE_FEED_PX     16
 #define CHS_CELL_BYTES       128

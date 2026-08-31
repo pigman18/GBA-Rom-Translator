@@ -41,8 +41,15 @@ int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth
  * （font4 → FontChsSmall 8px，其余 → FontChsNormal 12px）。 */
 void PrintGlyph(TextPrinter *win, uint32_t gidx, unsigned glyphWidth);
 
-/* PCS 单字节渲染入口（含 SYM 标点带 / 日文经 CHS / 两级 tm 分发）。
- * 返回 1=已消费（引擎零回落：不可印位直接吞掉）。 */
+/* PCS 单字节（半角）统一渲染入口。
+ *   SYM 标点带（0x36-0x3E，tm0/tm3）→ 中文标点字库相位感知自绘；
+ *   其余半角（tm0/tm3）→ 先把相位补齐到列首，再交原生（防覆盖前字尾 +
+ *   防 4px 空洞）；tm1/tm2 无像素路径 → 返回 0 交调用方原生分发。
+ * 返回 1=已消费；0=未消费。fontfunc thunk 在原生分发**之前**调用它。 */
+int DrawHalfWidth(TextPrinter *win, uint32_t cur_char);
+
+/* PCS 单字节渲染入口（text_translater.c 的 slot/phrase 替换流内消费）。
+ * 恒返回 1=已消费（引擎零回落：不可印位直接吞掉）。 */
 int DrawGlyph(TextPrinter *win, uint32_t cur_char);
 
 /* 原生 FontFunc 处理器分发（fontfunc_hook.c 提供）。

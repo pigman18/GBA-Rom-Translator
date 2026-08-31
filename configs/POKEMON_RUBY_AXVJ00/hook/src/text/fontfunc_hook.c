@@ -53,12 +53,20 @@ void FontFuncTm0_Hook(TextPrinter *win, uint32_t c)
 {
     if (TranslateHandleChar(win, c))
         return;
+    /* 半角（含 SYM 中文标点）必须先于原生分发：原生只从 startPixel=0
+     * 写整列 8px，会压掉前一个汉字的尾 4px 并留下 4px 空洞；标点若走原生
+     * 则会画出 JP 同码字形（2026-08-31 实测两个 BUG，见 text_render.c）。
+     * 0xF7 及以上是控制码/终止符，行为照旧。 */
+    if (c < 0xF7u && DrawHalfWidth(win, c))
+        return;
     FontFunc_NativeDispatch(0, win, c);
 }
 
 void FontFuncTm1_Hook(TextPrinter *win, uint32_t c)
 {
     if (TranslateHandleChar(win, c))
+        return;
+    if (c < 0xF7u && DrawHalfWidth(win, c))
         return;
     FontFunc_NativeDispatch(1, win, c);
 }
@@ -67,12 +75,16 @@ void FontFuncTm2_Hook(TextPrinter *win, uint32_t c)
 {
     if (TranslateHandleChar(win, c))
         return;
+    if (c < 0xF7u && DrawHalfWidth(win, c))
+        return;
     FontFunc_NativeDispatch(2, win, c);
 }
 
 void FontFuncTm3_Hook(TextPrinter *win, uint32_t c)
 {
     if (TranslateHandleChar(win, c))
+        return;
+    if (c < 0xF7u && DrawHalfWidth(win, c))
         return;
     FontFunc_NativeDispatch(3, win, c);
 }

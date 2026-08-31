@@ -192,33 +192,37 @@ static void blit_column_at_tile(TextPrinter *win, uint16_t tile,
 }
 
 /* =====================================================================
- * 12px 两段式渲染（docs/12PX_落地方案.md §3.2，CHS_ADVANCE_12 时启用）
+ * 任意墨宽的两段式渲染（docs/12PX_落地方案.md §3.2，CHS_ADVANCE_12 时启用）
  *
- * 12px advance 必然产生半列相位（12 mod 8 = 4 ⇒ phase 只在 0/4 两态）。
+ * 中文 12px（ink=12）/ 半角 8px（ink=8）走同一骨架：advance 不是 8 的倍数
+ * 时必然产生半列相位（12 mod 8 = 4 ⇒ phase 只在 0/4 两态）。
  * blend 原语一次最多写 8 像素宽，故一个字拆两段：
- *   第一段：本 tile，startPixel = phase，宽 w0 = 8-phase，源列 [0, w0)
- *   第二段：下一列 tile，startPixel = 0，宽 w1 = 4+phase，源列 [w0, 12)
- * 两段都**恰好填满目标 tile 的可用区间**（phase+w0 = 8、0+w1 ≤ 8），
+ *   第一段：本 tile，startPixel = phase，宽 w0 = min(8-phase, ink)，源列 [0, w0)
+ *   第二段：下一列 tile，startPixel = 0，宽 w1 = ink-w0，   源列 [w0, ink)
+ * 两段都**恰好落在目标 tile 的可用区间内**（phase+w0 ≤ 8、0+w1 ≤ 8），
  * 因此永不溢出，spillTile 一律传 0。
  *
- * 返回推进列数 = (phase + 12) / 8（phase=0 → 1 列；phase=4 → 2 列）。
+ * 返回推进列数 = (phase + ink) / 8：
+ *   ink=12 → phase0:1 列 / phase4:2 列；ink=8 → phase0:1 列 / phase4:1 列。
+ * 不变量 px = 8*col + phase 恒成立（推进 (phase+ink)/8 列 + px 加 ink）。
  * ===================================================================== */
 #if CHS_ADVANCE_12
-static unsigned print_glyph_12px(TextPrinter *win, uint16_t tile,
-                                 uint16_t lower_delta, uint16_t col_stride,
-                                 const uint8_t *g128, unsigned phase)
+static unsigned print_glyph_px(TextPrinter *win, uint16_t tile,
+                               uint16_t lower_delta, uint16_t col_stride,
+                               const uint8_t *g128, unsigned ink,
+                               unsigned phase)
 {
     uint8_t *tpl = win_template(win);
     uint8_t *tile_data;
     uint8_t fg_ov, color_c, color_d, color_e;
     uint8_t colors[16];
-    uint32_t w0 = 8u - phase;
-    uint32_t w1 = 4u + phase;
+    uint32_t w0 = (8u - phase < ink) ? (8u - phase) : ink;
+    uint32_t w1 = ink - w0;
     uint16_t t0 = tile;
     uint16_t t1 = (uint16_t)(tile + col_stride);
     uint8_t tx0 = win_u8(win, WIN_CURSOR_TILE_X);
     uint8_t up[32], lo[32];
-    unsigned adv = (phase + CHS_GLYPH_ADVANCE_PX) / 8u;
+    unsigned adv = (phase + ink) / 8u;
     unsigned i;
 
     if (adv < 1u)
@@ -247,24 +251,91 @@ static unsigned print_glyph_12px(TextPrinter *win, uint16_t tile,
         (uint32_t *)(void *)(tile_data + ((uint32_t)(t0 + lower_delta) << 5)),
         0, lo, w0, phase, colors);
 
-    /* 第二段：下一列 tile，起点 0 —— 源列 [w0, 12)
-     * （phase=4 时该段横跨 TL 列4-7 与 TR 列0-3，由 extract_cols 拼好） */
-    extract_cols(g128, w0, w1, up, lo);
-    (void)blend_glyph_4bpp(
-        (uint32_t *)(void *)(tile_data + ((uint32_t)t1 << 5)),
-        0, up, w1, 0u, colors);
-    (void)blend_glyph_4bpp(
-        (uint32_t *)(void *)(tile_data + ((uint32_t)(t1 + lower_delta) << 5)),
-        0, lo, w1, 0u, colors);
+    if (w1 != 0u) {
+        /* 第二段：下一列 tile，起点 0 —— 源列 [w0, ink)
+         * （phase!=0 时该段横跨 TL/TR 两个源 tile，由 extract_cols 拼好） */
+        extract_cols(g128, w0, w1, up, lo);
+        (void)blend_glyph_4bpp(
+            (uint32_t *)(void *)(tile_data + ((uint32_t)t1 << 5)),
+            0, up, w1, 0u, colors);
+        (void)blend_glyph_4bpp(
+            (uint32_t *)(void *)(tile_data + ((uint32_t)(t1 + lower_delta) << 5)),
+            0, lo, w1, 0u, colors);
+    }
 
-    /* tilemap：本列 + 下一列（第二段总是占用下一列，故恒写两次） */
+    /* tilemap：本列必写；第二段存在时下一列也要写 */
     UpdateTilemap_Origin(win, t0, (uint16_t)(t0 + lower_delta));
-    win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(tx0 + 1u));
-    UpdateTilemap_Origin(win, t1, (uint16_t)(t1 + lower_delta));
+    if (w1 != 0u) {
+        win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(tx0 + 1u));
+        UpdateTilemap_Origin(win, t1, (uint16_t)(t1 + lower_delta));
+    }
     /* 游标净推进 = adv（不是 2）；下一字的起始 tile 由此决定 */
     win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(tx0 + adv));
 
     return adv;
+}
+#endif /* CHS_ADVANCE_12 */
+
+/* =====================================================================
+ * 相位补齐（2026-08-31，12px 半角混排修复）
+ *
+ * 官方 tm0/tm3 处理器只会从 startPixel=0 写整列 8px，**不知道像素相位**。
+ * 若在 phase=4 时把半角（标点/数字/拉丁）交给原生：
+ *   - 它被画到 [8c, 8c+8)，压掉前一个汉字的尾 4px（本该在 [8c, 8c+4)）；
+ *   - 它自己应占的 [8c+4, 8c+12) 中，落在下一列 tile px0-3 的那 4px 无人写，
+ *     而下一个汉字 phase 仍是 4、只写 px4-7 ⇒ 该 4px 永久空洞（透明小格子）。
+ *
+ * 补齐策略：调用原生前，先把当前 tile 剩余像素 [phase,8) 用底色填掉，
+ * 游标推到列首（px 补成 8 的倍数）。代价是半角前多 4px 空白（视觉上是
+ * 标点留白，可接受），换来：前字不被覆盖、无空洞、相位不变量保持。
+ * ===================================================================== */
+#if CHS_ADVANCE_12
+static void chs_flush_to_col(TextPrinter *win, uint16_t lower_delta,
+                             uint16_t col_stride, uint16_t tile)
+{
+    uint8_t *tpl = win_template(win);
+    uint8_t *tile_data;
+    uint8_t fg_ov, color_c, color_d, color_e;
+    uint8_t colors[16];
+    uint8_t zero[32];
+    uint8_t tx;
+    unsigned phase = chs_phase_get(win);
+    unsigned i;
+
+    if (phase == 0u)
+        return;
+    if (!tpl)
+        return;
+    tile_data = (uint8_t *)(uintptr_t)win_u32(tpl, TPL_TILE_DATA);
+    if (!tile_data)
+        return;
+
+    fg_ov   = *(volatile uint8_t *)ADDR_OPT_FG_COLOR;
+    color_c = fg_ov ? fg_ov : win_u8(win, WIN_COLOR_C);
+    color_d = win_u8(win, WIN_COLOR_D);
+    color_e = win_u8(win, WIN_COLOR_E);
+    for (i = 0; i < 16u; i++)
+        colors[i] = color_d;
+    colors[14] = color_e;
+    colors[15] = color_c;
+    for (i = 0; i < 32u; i++)
+        zero[i] = 0u;      /* 4bpp 值 0 → colors[0] = 底色 */
+
+    /* 填底色：跨度 [phase,8)（startPixel+width = 8，无溢出） */
+    (void)blend_glyph_4bpp(
+        (uint32_t *)(void *)(tile_data + ((uint32_t)tile << 5)),
+        0, zero, 8u - phase, phase, colors);
+    (void)blend_glyph_4bpp(
+        (uint32_t *)(void *)(tile_data + ((uint32_t)(tile + lower_delta) << 5)),
+        0, zero, 8u - phase, phase, colors);
+
+    /* 推到列首：tm0 需同时推 TILE_OFFSET（tile 号来源），tm3 只推 cursorTileX */
+    tx = win_u8(win, WIN_CURSOR_TILE_X);
+    win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(tx + 1u));
+    if ((win_u8(win, WIN_TEXTMODE) & 7u) == 0u)
+        win_set_u16(win, WIN_TILE_OFFSET,
+                    (uint16_t)(win_u16(win, WIN_TILE_OFFSET) + col_stride));
+    chs_phase_advance(win, 8u - phase);
 }
 #endif /* CHS_ADVANCE_12 */
 
@@ -296,8 +367,9 @@ static void print_glyph_mode0(TextPrinter *win, uint16_t gidx,
         unsigned adv;
 
         decompress_chs_glyph(buf, gidx, font_id);
-        adv = print_glyph_12px(win, (uint16_t)(base + off),
-                               TM0_LOWER_DELTA, TM0_COL_STRIDE, buf, phase);
+        adv = print_glyph_px(win, (uint16_t)(base + off),
+                             TM0_LOWER_DELTA, TM0_COL_STRIDE, buf,
+                             CHS_GLYPH_ADVANCE_PX, phase);
         /* TILE_OFFSET 单位同列步进（tm0 每列 2 个 tile 号） */
         win_set_u16(win, WIN_TILE_OFFSET,
                     (uint16_t)(off + (uint16_t)(adv * TM0_COL_STRIDE)));
@@ -320,13 +392,73 @@ static void print_glyph_mode0(TextPrinter *win, uint16_t gidx,
 #endif
 }
 
-/* mode0 SYM 标点：64B 容器 [U@+0][L@+32]，一列 8px（同官方半角节奏）。 */
-static void draw_sym_mode0(TextPrinter *win, uint32_t sym_idx)
+/* =====================================================================
+ * SYM 中文标点（PCS 0x36-0x3E）——**自绘，不回退原生**（2026-08-31 修复）
+ *
+ * ⚠ 为什么必须自绘：fontfunc thunk 的链路是
+ *   TranslateHandleChar（F9 协议 / SLT2 slot 表）‖ FontFunc_NativeDispatch。
+ *   标点作为单字节几乎不可能命中 slot 表 ⇒ 直接落到原生处理器 ⇒ 画出
+ *   **JP 字体的同码字形**（用户实测「标点符号显示成了奇怪的日文」）。
+ *   且原生只从 startPixel=0 写整列 8px，与 12px 相位无关 ⇒ 顺带造成
+ *   「奇数字后透明小格子」。故：tm0/tm3 一律走 print_glyph_px 自绘。
+ *
+ * 字库：ADDR_FONT_CHS_SYM，64B/枚，容器 [U@+0][L@+32]，8 列宽。
+ * 为复用 extract_cols（它认 128B/16 列的中文槽），这里把 U/L 填进
+ * 128B 暂存槽的 TL/BL，TR/BR 留 0 —— 半角只取列 [0,8)，永远读不到 TR/BR。
+ * ===================================================================== */
+static uint16_t tm3_tile_no(TextPrinter *win);   /* 定义在下方 */
+
+static int draw_sym_px(TextPrinter *win, uint32_t sym_idx)
 {
     const uint8_t *sym =
         (const uint8_t *)ADDR_FONT_CHS_SYM + sym_idx * 64u;
+    uint8_t tm = win_u8(win, WIN_TEXTMODE) & 7u;
+    uint8_t buf[CHS_CELL_BYTES];
+    uint16_t tile;
+    uint16_t lower_delta;
+    uint16_t col_stride;
+    unsigned phase;
+    unsigned adv;
+    unsigned i;
 
-    blit_column_mode0(win, sym, sym + 32u);
+    if (tm != 0u && tm != 3u)
+        return 0;               /* tm1/tm2 无像素路径：交原生 */
+
+    for (i = 0; i < CHS_CELL_BYTES; i++)
+        buf[i] = 0u;
+    copy_tile32(buf + 0x00u, sym + 0u);    /* TL ← upper */
+    copy_tile32(buf + 0x20u, sym + 32u);   /* BL ← lower */
+
+    if (tm == 0u) {
+        tile        = (uint16_t)(win_u16(win, WIN_TILE_BASE)
+                                 + win_u16(win, WIN_TILE_OFFSET));
+        lower_delta = TM0_LOWER_DELTA;
+        col_stride  = TM0_COL_STRIDE;
+    } else {
+        tile        = tm3_tile_no(win);
+        lower_delta = TM3_LOWER_DELTA;
+        col_stride  = TM3_COL_STRIDE;
+    }
+
+#if CHS_ADVANCE_12
+    phase = chs_phase_get(win);
+    adv = print_glyph_px(win, tile, lower_delta, col_stride, buf,
+                         CHS_GLYPH_ADVANCE_JP_PX, phase);
+    if (tm == 0u)
+        win_set_u16(win, WIN_TILE_OFFSET,
+                    (uint16_t)(win_u16(win, WIN_TILE_OFFSET)
+                               + (uint16_t)(adv * TM0_COL_STRIDE)));
+    chs_phase_advance(win, CHS_GLYPH_ADVANCE_JP_PX);
+#else
+    (void)phase;
+    (void)adv;
+    blit_column_at_tile(win, tile, lower_delta, buf + 0x00u, buf + 0x20u);
+    if (tm == 0u)
+        win_set_u16(win, WIN_TILE_OFFSET,
+                    (uint16_t)(win_u16(win, WIN_TILE_OFFSET)
+                               + (uint16_t)TM0_COL_STRIDE));
+#endif
+    return 1;
 }
 
 /* tm3 单列 tile 号（官方 tm3 2D 布局坐标，反汇编 @0x08003500 实证）：
@@ -358,8 +490,9 @@ static void print_glyph_mode3(TextPrinter *win, uint16_t gidx,
         unsigned phase = chs_phase_get(win);
 
         decompress_chs_glyph(buf, gidx, font_id);
-        (void)print_glyph_12px(win, tm3_tile_no(win),
-                               TM3_LOWER_DELTA, TM3_COL_STRIDE, buf, phase);
+        (void)print_glyph_px(win, tm3_tile_no(win),
+                             TM3_LOWER_DELTA, TM3_COL_STRIDE, buf,
+                             CHS_GLYPH_ADVANCE_PX, phase);
         chs_phase_advance(win, CHS_GLYPH_ADVANCE_PX);
         return;
     }
@@ -429,33 +562,55 @@ void PrintGlyph(TextPrinter *win, uint32_t gidx, unsigned glyphWidth)
     }
 }
 
-/* PCS 单字节渲染入口（text_translater.c 中文替换流内消费）。
- * 返回 1=已消费（引擎零回落：不可印位直接吞掉）。 */
-int DrawGlyph(TextPrinter *win, uint32_t cur_char)
+/* =====================================================================
+ * PCS 单字节（半角）统一入口 DrawHalfWidth
+ *
+ * 调用方：①fontfunc_hook.c 的 4 个 thunk（原生分发**之前**）；
+ *         ②DrawGlyph（slot/phrase 替换流内的半角字节）。
+ * 返回 1=已消费；0=交还调用方（仅 tm1/tm2 且非 SYM 时出现）。
+ *
+ * 分工：
+ *   SYM 标点带（0x36-0x3E，tm0/tm3）→ draw_sym_px 用中文标点字库自绘，
+ *     相位感知，不会画出 JP 同码字形，也不会打乱相位。
+ *   其余半角（数字/拉丁/空格/… ，tm0/tm3）→ 先 chs_flush_to_col 把相位
+ *     补齐到列首，再交原生从 startPixel=0 画（否则原生会压掉前一个汉字的
+ *     尾 4px，并留下 4px 无人写的空洞 = 透明小格子）。
+ *   tm1/tm2 无像素路径 → 直接交原生，不动相位。
+ * ===================================================================== */
+int DrawHalfWidth(TextPrinter *win, uint32_t cur_char)
 {
     uint8_t tm = win_u8(win, WIN_TEXTMODE) & 7u;
 
     if (cur_char >= SYM_GLYPH_BASE
-        && cur_char < SYM_GLYPH_BASE + SYM_GLYPH_COUNT) {
-        if (tm == 0u) {
-            draw_sym_mode0(win, cur_char - SYM_GLYPH_BASE);
-#if CHS_ADVANCE_12
-            chs_phase_advance(win, CHS_GLYPH_ADVANCE_JP_PX);
-#endif
-            return 1;
-        }
-        /* 非 mode0：落入下方原生分发，按 JP PCS 同码画半角形
-         * （SYM 编码即 JP PCS 标点码，回退视觉可接受）。 */
-    }
+        && cur_char < SYM_GLYPH_BASE + SYM_GLYPH_COUNT)
+        return draw_sym_px(win, cur_char - SYM_GLYPH_BASE);
 
+    if (tm != 0u && tm != 3u)
+        return 0;
+
+#if CHS_ADVANCE_12
+    if (tm == 0u)
+        chs_flush_to_col(win, TM0_LOWER_DELTA, TM0_COL_STRIDE,
+                         (uint16_t)(win_u16(win, WIN_TILE_BASE)
+                                    + win_u16(win, WIN_TILE_OFFSET)));
+    else
+        chs_flush_to_col(win, TM3_LOWER_DELTA, TM3_COL_STRIDE,
+                         tm3_tile_no(win));
+#endif
+    FontFunc_NativeDispatch(tm, win, cur_char);
+#if CHS_ADVANCE_12
+    chs_phase_advance(win, CHS_GLYPH_ADVANCE_JP_PX);
+#endif
+    return 1;
+}
+
+/* PCS 单字节渲染入口（text_translater.c 中文替换流内消费）。
+ * 返回 1=已消费（引擎零回落：不可印位直接吞掉）。 */
+int DrawGlyph(TextPrinter *win, uint32_t cur_char)
+{
     if (cur_char >= 0xF7u)
         return 1;   /* 控制码/终止符：不占像素，不推进相位 */
 
-    FontFunc_NativeDispatch(tm, win, cur_char);
-#if CHS_ADVANCE_12
-    /* 半角走原生路径：官方只推整列游标、不知像素相位 ⇒ 必须同步推进，
-     * 否则紧随其后的中文相位全错（docs/12PX_落地方案.md §5）。 */
-    chs_phase_advance(win, CHS_GLYPH_ADVANCE_JP_PX);
-#endif
+    (void)DrawHalfWidth(win, cur_char);
     return 1;
 }

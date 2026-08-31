@@ -13,9 +13,15 @@
  *   每列 UpdateTilemap_Origin + cursorTileX++ → 收尾 TILE_OFFSET+=4。
  *   官方游标语义零改动、零自研状态（无 pitch 槽/行键/last_off，v4 全废）。
  *
- * tm1/tm2/tm3：步骤 2 为「消费 + 推进」（像素路径步骤 3 逐窗收敛）：
- *   tm1/tm3：cursorTileX += cols（官方 tm1 每字 +1 的 16px 推广）；
- *   tm2：缓冲指针 win[0x20] += cols*0x40（官方每列 +0x40，血条 OBJ 刷走）。
+ * tm1/tm2/tm3（步骤 3 逐窗收敛，2026-08-31）：
+ *   tm3：已实现像素路径——落点 2D 布局公式（反汇编 @0x08003500 实证）
+ *     tile = (cursorX+cursorTileX)+2+TILE_BASE+(cursorY+cursorTileY)*30，
+ *     复用 blit_column_at_tile（blend_glyph_4bpp），每列 [0x1B]+=1。
+ *   tm1：暂消费 + 推进（cursorTileX += cols）——官方 tm1 只写 tilemap
+ *     （预渲染 tile 号，字形已在 ROM 预渲染库），无动态 tileData 游标；
+ *     中文像素路径需先定「动态 tile 号分配」方案。
+ *   tm2：缓冲指针 win[0x20] += cols*0x40（官方每列 +0x40，血条 OBJ 刷走；
+ *     8px 槽，中文 16px 塞不下，血条窗口本不该有中文）。
  *
  * DrawGlyph（中文替换流里的 PCS 字节）：
  *   SYM 标点带（0x36-0x3E，编码即 JP PCS 同码）→ mode0 自绘一列 8px；
@@ -53,15 +59,15 @@ static void decompress_chs_glyph(uint8_t out[CHS_CELL_BYTES],
     copy_tile32(out + 0x60, g + 96u);  /* BR */
 }
 
-/* mode0 单列绘制（官方 tm0 一列的逐语义复刻，混合写入式）：
+/* 按 tile 号写一列（upper@tile / lower@tile+1，8px 单列；tm0/tm3 共用）。
  * src_u/src_l = 32B 4bpp 字库 tile（索引 15=前景/14=阴影/0=底色）；
- * 落点 tileData[(TILE_BASE+TILE_OFFSET)*32]，经 blend_glyph_4bpp 混合写入
- * （colors[16] 值→色号 LUT 直通，方案 A；tile 无所有权、跨度外保留）；
- * UpdateTilemap 写表项列，cursorTileX/TILE_OFFSET 各推一格（8px 一列）。
+ * 经 blend_glyph_4bpp 混合写入（colors[16] 值→色号 LUT 直通，方案 A；
+ * tile 无所有权、跨度外保留）；UpdateTilemap 写表项列，cursorTileX 推一格。
  * 16px 整格 startPixel=0/width=8 无溢出（spillTile=0），blend 退化为整 tile
- * 重写但与 CopyGlyph 覆盖等价；blend 统一原语为后续 12px 相位/溢出留路。 */
-static void blit_column_mode0(TextPrinter *win,
-                              const uint8_t *src_u, const uint8_t *src_l)
+ * 重写但与 CopyGlyph 覆盖等价；blend 统一原语为后续 12px 相位/溢出留路。
+ * tile 号与物理地址：tile → tile_data + (tile<<5)，upper=tile/lower=tile+1。 */
+static void blit_column_at_tile(TextPrinter *win, uint16_t tile,
+                                const uint8_t *src_u, const uint8_t *src_l)
 {
     uint8_t *tpl = win_template(win);
     uint8_t *tile_data = (uint8_t *)(uintptr_t)win_u32(tpl, TPL_TILE_DATA);
@@ -70,9 +76,6 @@ static void blit_column_mode0(TextPrinter *win,
     uint8_t color_d = win_u8(win, WIN_COLOR_D);
     uint8_t color_e = win_u8(win, WIN_COLOR_E);
     uint8_t colors[16];
-    uint16_t base = win_u16(win, WIN_TILE_BASE);
-    uint16_t off = win_u16(win, WIN_TILE_OFFSET);
-    uint16_t t;
     uint8_t *dst_u;
     unsigned i;
 
@@ -85,14 +88,25 @@ static void blit_column_mode0(TextPrinter *win,
     colors[14] = color_e;
     colors[15] = color_c;
 
-    t = (uint16_t)(base + off);
-    dst_u = tile_data + ((uint32_t)t << 5);
+    dst_u = tile_data + ((uint32_t)tile << 5);
 
     blend_glyph_4bpp((uint32_t *)(void *)dst_u, 0, src_u, 8u, 0u, colors);
     blend_glyph_4bpp((uint32_t *)(void *)(dst_u + 0x20), 0, src_l, 8u, 0u, colors);
-    UpdateTilemap_Origin(win, t, (uint16_t)(t + 1u));
+    UpdateTilemap_Origin(win, tile, (uint16_t)(tile + 1u));
     win_set_u8(win, WIN_CURSOR_TILE_X,
                (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
+}
+
+/* mode0 单列：tile = TILE_BASE + TILE_OFFSET（官方 tm0 线性游标），
+ * 画完后额外推 TILE_OFFSET += 2（官方 [win+0x18]+=2，一列占上下两 tile）。 */
+static void blit_column_mode0(TextPrinter *win,
+                              const uint8_t *src_u, const uint8_t *src_l)
+{
+    uint16_t base = win_u16(win, WIN_TILE_BASE);
+    uint16_t off = win_u16(win, WIN_TILE_OFFSET);
+    uint16_t tile = (uint16_t)(base + off);
+
+    blit_column_at_tile(win, tile, src_u, src_l);
     win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
 }
 
@@ -122,6 +136,40 @@ static void draw_sym_mode0(TextPrinter *win, uint32_t sym_idx)
     blit_column_mode0(win, sym, sym + 32u);
 }
 
+/* tm3 单列 tile 号（官方 tm3 2D 布局坐标，反汇编 @0x08003500 实证）：
+ *   tile = (cursorX[0x1A] + cursorTileX[0x1B]) + 2 + TILE_BASE[0x16]
+ *          + (cursorY[0x1C] + cursorTileY[0x1D]) * 30
+ * 官方 tm3 每列只推 [0x1B]（cursorTileX += 1），落点用当前 [0x1B] 现算。
+ * 16px 整格 2 列 → 循环 2 次，每列 tile 号 +1（X 方向一格）。 */
+static uint16_t tm3_tile_no(TextPrinter *win)
+{
+    uint16_t x = (uint16_t)(win_u8(win, WIN_CURSOR_X)
+                            + win_u8(win, WIN_CURSOR_TILE_X));
+    uint8_t  y = (uint8_t)(win_u8(win, WIN_CURSOR_Y)
+                           + win_u8(win, WIN_CURSOR_TILE_Y));
+    uint16_t base = win_u16(win, WIN_TILE_BASE);
+
+    return (uint16_t)(x + 2u + base + (uint16_t)y * 30u);
+}
+
+/* tm3 汉字整格：16px 主字体（2 列）/ font4 小字（8px 1 列），
+ * 复用 blit_column_at_tile，落点走 2D 布局公式。 */
+static void print_glyph_mode3(TextPrinter *win, uint16_t gidx,
+                              uint8_t font_id, unsigned cols)
+{
+    uint8_t buf[CHS_CELL_BYTES];
+    unsigned col;
+
+    decompress_chs_glyph(buf, gidx, font_id);
+
+    for (col = 0; col < cols; col++) {
+        const uint8_t *src_u = buf + (col ? 0x40u : 0x00u);
+        const uint8_t *src_l = buf + (col ? 0x60u : 0x20u);
+
+        blit_column_at_tile(win, tm3_tile_no(win), src_u, src_l);
+    }
+}
+
 /* F9 汉字渲染入口（text_translater.c 消费）。
  * glyphWidth 形参仅为兼容既有签名——v5 步进由渲染模型决定：
  * 16px 整格（主字体 2 列）/ font4 小字 8px（1 列）。 */
@@ -144,9 +192,13 @@ void PrintGlyph(TextPrinter *win, uint32_t gidx, unsigned glyphWidth)
     case 0:
         print_glyph_mode0(win, (uint16_t)(gidx & 0xFFFFu), fn, cols);
         break;
-    case 1:
     case 3:
-        /* 步骤 2：消费 + 推进（像素路径步骤 3 逐窗收敛） */
+        print_glyph_mode3(win, (uint16_t)(gidx & 0xFFFFu), fn, cols);
+        break;
+    case 1:
+        /* tm1 官方只写 tilemap（预渲染 tile 号），无动态 tileData 区域；
+         * 中文像素路径需先定「动态 tile 号分配」方案（步骤 3 后续）。
+         * 暂维持消费 + 推进（cursorTileX += cols）。 */
         win_set_u8(win, WIN_CURSOR_TILE_X,
                    (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + cols));
         break;

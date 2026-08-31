@@ -79,11 +79,11 @@ static const uint32_t sGlyphMasks[9][8][3] =
         { 0x0000FFFF,0xFFFFFFF0,0x00000000, },
         { 0x000FFFFF,0xFFFFFF00,0x00000000, },
         { 0x00FFFFFF,0xFFFFF000,0x00000000, },
-        { 0x0FFFFFFF,0xFFFF0000,0x00000000, },xFFFFFFFF,0xFF000000, },
-                                                      { 0x0000000F,0xFFFFFFFF,0xF0000000, },
+        { 0x0FFFFFFF,0xFFFF0000,0x00000000, },
     },
     {
-        { 0x00000000,0
+        { 0x00000000,0xFFFFFFFF,0xFF000000, },
+        { 0x0000000F,0xFFFFFFFF,0xF0000000, },
         { 0x000000FF,0xFFFFFFFF,0x00000000, },
         { 0x00000FFF,0xFFFFFFF0,0x00000000, },
         { 0x0000FFFF,0xFFFFFF00,0x00000000, },

@@ -23,7 +23,11 @@
  * 像素序约定（GBA 4bpp tile：每 u32 一行 8 像素，低 nibble = 最左像素）：
  *   1bpp：rows = 8 字节，bit7 = 每行最左像素（官方 unshadowed 字模序）；
  *   2bpp：rows = 16 字节，GBA 2bpp 序——每字节低 2 位 = 最左像素；
- *         colors[4] 为值→色号 LUT 直通（0 建议映射 bg，描边/前景按字库实际）。
+ *         colors[4] 为值→色号 LUT 直通（0 建议映射 bg，描边/前景按字库实际）；
+ *   4bpp：rows = 32 字节，GBA 4bpp tile 序——每 u32 一行 8 像素，低 nibble =
+ *         每行最左像素；colors[16] 为值→色号 LUT 直通（中文字库索引 0=底色/
+ *         14=阴影/15=前景，调用方构造 colors[0]=bg,colors[14]=shadow,
+ *         colors[15]=fg，其余项可任意）。
  * ==========================================================================*/
 #ifndef BLEND_GLYPH_H
 #define BLEND_GLYPH_H
@@ -39,5 +43,10 @@ uint32_t blend_glyph_2bpp(uint32_t *destTile, uint32_t *spillTile,
                           const uint8_t *rows /* 16B */,
                           uint32_t width, uint32_t startPixel,
                           const uint8_t colors[4] /* 值→色号 LUT */);
+
+uint32_t blend_glyph_4bpp(uint32_t *destTile, uint32_t *spillTile,
+                          const uint8_t *rows /* 32B，GBA 4bpp tile */,
+                          uint32_t width, uint32_t startPixel,
+                          const uint8_t colors[16] /* 值→色号 LUT 直通 */);
 
 #endif /* BLEND_GLYPH_H */

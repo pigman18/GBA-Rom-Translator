@@ -8,7 +8,8 @@
  *   （8px 列对 upper/lower）→ UpdateTilemap（写 tilemap 列 cursorX+cursorTileX，
  *   不推进游标）→ TILE_OFFSET+=2、cursorTileX+=1。
  *   v5 汉字 = 16px 整格（2 列 × 4 tile）：字库容器 [TL@0][BL@32][TR@64][BR@96]
- *   解压 → 官方 CopyGlyph2bppTo4bpp 颜色重映射（15→C/14→E/0→D）直写 VRAM →
+ *   解压 → blend_glyph_4bpp 混合写入 VRAM（colors[16] 值→色号 LUT 直通，
+ *   0→底色/14→阴影/15→前景；tile 无所有权、跨度外像素保留）→
  *   每列 UpdateTilemap_Origin + cursorTileX++ → 收尾 TILE_OFFSET+=4。
  *   官方游标语义零改动、零自研状态（无 pitch 槽/行键/last_off，v4 全废）。
  *
@@ -24,6 +25,7 @@
  *   地址，**严禁经 FontFuncTable**——表项已指向我方 thunk，经表分发会无限递归）。
  * ===================================================================================== */
 #include "text.h"
+#include "blend_glyph.h"
 
 #define CHS_GLYPH_HALF_BIT   0x8000u
 #define CHS_GLYPH_IDX_MASK   0x7FFFu
@@ -51,11 +53,13 @@ static void decompress_chs_glyph(uint8_t out[CHS_CELL_BYTES],
     copy_tile32(out + 0x60, g + 96u);  /* BR */
 }
 
-/* mode0 单列绘制（官方 tm0 一列的逐语义复刻）：
- * src_u/src_l = 32B 4bpp 字库 tile（索引 15/14/0）；
- * 落点 tileData[(TILE_BASE+TILE_OFFSET)*32]，颜色重映射后直写 VRAM
- * （官方 FontFunc → CopyGlyph2bpp 链路本就直写 VRAM dst）；
- * UpdateTilemap 写表项列，cursorTileX/TILE_OFFSET 各推一格。 */
+/* mode0 单列绘制（官方 tm0 一列的逐语义复刻，混合写入式）：
+ * src_u/src_l = 32B 4bpp 字库 tile（索引 15=前景/14=阴影/0=底色）；
+ * 落点 tileData[(TILE_BASE+TILE_OFFSET)*32]，经 blend_glyph_4bpp 混合写入
+ * （colors[16] 值→色号 LUT 直通，方案 A；tile 无所有权、跨度外保留）；
+ * UpdateTilemap 写表项列，cursorTileX/TILE_OFFSET 各推一格（8px 一列）。
+ * 16px 整格 startPixel=0/width=8 无溢出（spillTile=0），blend 退化为整 tile
+ * 重写但与 CopyGlyph 覆盖等价；blend 统一原语为后续 12px 相位/溢出留路。 */
 static void blit_column_mode0(TextPrinter *win,
                               const uint8_t *src_u, const uint8_t *src_l)
 {
@@ -65,19 +69,27 @@ static void blit_column_mode0(TextPrinter *win,
     uint8_t color_c = fg_ov ? fg_ov : win_u8(win, WIN_COLOR_C);
     uint8_t color_d = win_u8(win, WIN_COLOR_D);
     uint8_t color_e = win_u8(win, WIN_COLOR_E);
+    uint8_t colors[16];
     uint16_t base = win_u16(win, WIN_TILE_BASE);
     uint16_t off = win_u16(win, WIN_TILE_OFFSET);
     uint16_t t;
     uint8_t *dst_u;
+    unsigned i;
 
     if (!tile_data)
         return;
 
+    /* 4bpp 值→色号 LUT：0→底色、14→阴影、15→前景（其余兜底底色）。 */
+    for (i = 0; i < 16u; i++)
+        colors[i] = color_d;
+    colors[14] = color_e;
+    colors[15] = color_c;
+
     t = (uint16_t)(base + off);
     dst_u = tile_data + ((uint32_t)t << 5);
 
-    CopyGlyph2bppTo4bpp_Origin(src_u, dst_u, color_c, color_e, color_d);
-    CopyGlyph2bppTo4bpp_Origin(src_l, dst_u + 0x20, color_c, color_e, color_d);
+    blend_glyph_4bpp((uint32_t *)(void *)dst_u, 0, src_u, 8u, 0u, colors);
+    blend_glyph_4bpp((uint32_t *)(void *)(dst_u + 0x20), 0, src_l, 8u, 0u, colors);
     UpdateTilemap_Origin(win, t, (uint16_t)(t + 1u));
     win_set_u8(win, WIN_CURSOR_TILE_X,
                (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));

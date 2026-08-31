@@ -172,16 +172,16 @@ static int hexval(char c)
 
 static int run_eval(void)
 {
-    char line[1024];
+    char line[2048];
 
     while (fgets(line, sizeof(line), stdin)) {
         char *p = line;
-        char *tok[64];
+        char *tok[128];
         int ntok = 0;
         int fmt, width, sp, bg, fg, r;
         uint32_t dst[8], spill[8];
-        uint8_t rows[16];
-        uint8_t cols2[4];
+        uint8_t rows[32];
+        uint8_t cols16[16];
         uint32_t adv;
 
         while (*p == ' ' || *p == '\t') p++;
@@ -215,7 +215,7 @@ static int run_eval(void)
             spill[r] = parse_hex8(tok[13 + r]);
 
         {
-            int nrows = (fmt == 2) ? 16 : 8;
+            int nrows = (fmt == 4) ? 32 : ((fmt == 2) ? 16 : 8);
             int t;
 
             for (t = 0; t < nrows; t++)
@@ -223,17 +223,27 @@ static int run_eval(void)
                         + (uint8_t)hexval(tok[21 + t][1]);
         }
 
-        cols2[0] = (uint8_t)bg;
-        cols2[1] = (uint8_t)fg;
-        cols2[2] = (uint8_t)fg;
-        cols2[3] = (uint8_t)fg;
+        cols16[0] = (uint8_t)bg;
+        cols16[1] = (uint8_t)fg;
+        cols16[2] = (uint8_t)fg;
+        cols16[3] = (uint8_t)fg;
 
-        if (fmt == 2)
+        if (fmt == 4) {
+            /* colors[16] 由行尾附加段提供（真实 LUT 形态：0=bg/14/15=fg 等）*/
+            int nrows = 32;
+            int t;
+
+            for (t = 0; t < 16; t++)
+                cols16[t] = (uint8_t)atoi(tok[21 + nrows + t]);
+            adv = blend_glyph_4bpp(dst, spill, rows, (uint32_t)width,
+                                   (uint32_t)sp, cols16);
+        } else if (fmt == 2) {
             adv = blend_glyph_2bpp(dst, spill, rows, (uint32_t)width,
-                                   (uint32_t)sp, cols2);
-        else
+                                   (uint32_t)sp, cols16);
+        } else {
             adv = blend_glyph_1bpp(dst, spill, rows, (uint32_t)width,
-                                   (uint32_t)sp, cols2);
+                                   (uint32_t)sp, cols16);
+        }
 
         printf("%u", adv);
         for (r = 0; r < 8; r++)

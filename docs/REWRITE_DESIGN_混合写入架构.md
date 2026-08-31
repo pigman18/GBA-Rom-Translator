@@ -116,6 +116,13 @@ uint32_t blend_glyph_2bpp(uint32_t *destTile, uint32_t *spillTile,
                           const uint8_t *rows /*16B, GBA 2bpp 序*/,
                           uint32_t width, uint32_t startPixel,
                           const uint8_t colors[4]);
+/* 中文 4bpp 字库入口（2026-08-31 步骤 2 修正时新增，方案 A）：
+ * rows = 32B GBA 4bpp tile（每 u32 一行 8 像素，低 nibble=最左）；
+ * colors[16] 值→色号 LUT 直通（字库索引 0=底色/14=阴影/15=前景）。 */
+uint32_t blend_glyph_4bpp(uint32_t *destTile, uint32_t *spillTile,
+                          const uint8_t *rows /*32B, GBA 4bpp tile*/,
+                          uint32_t width, uint32_t startPixel,
+                          const uint8_t colors[16]);
 ```
 
 - 纯函数、无全局状态 ⇒ 可离线单测（Python 参考实现 + C 实现对拍）。
@@ -149,10 +156,13 @@ uint32_t blend_glyph_2bpp(uint32_t *destTile, uint32_t *spillTile,
    - `src/text/fontfunc_hook.c`：4 thunk = `TranslateHandleChar(win,c) ‖
      FontFunc_NativeDispatch(tm,win,c)`（直调 Origin 地址，防经表递归）；
    - `src/text/text_render.c`：PrintGlyph mode0 = 16px 整格（解压 4 tile →
-     CopyGlyph2bppTo4bpp 颜色重映射直写 VRAM → 每列 UpdateTilemap +
-     cursorTileX++ → TILE_OFFSET+=4）；tm1/tm3 = cursorTileX+=cols、tm2 =
-     win[0x20]+=cols*0x40 的消费推进；DrawGlyph = SYM mode0 自绘（8px 单列）/
-     ≥0xF7 消费 / 其余原生分发。P01/P05/P24 随新架构废止。
+     **blend_glyph_4bpp 混合写入 VRAM**（colors[16] 值→色号 LUT 直通，
+     0→底色/14→阴影/15→前景；tile 无所有权、跨度外像素保留）→ 每列
+     UpdateTilemap + cursorTileX++ → TILE_OFFSET+=4）；tm1/tm3 = cursorTileX+=cols、
+     tm2 = win[0x20]+=cols*0x40 的消费推进；DrawGlyph = SYM mode0 自绘（8px
+     单列）/ ≥0xF7 消费 / 其余原生分发。P01/P05/P24 随新架构废止。
+     （2026-08-31 修正：初版误用 CopyGlyph2bppTo4bpp 整块覆盖，违背 §4.4
+     blend 架构不变量，已改回 blend_glyph_4bpp 混合写入。）
    - 已知留白：tm1/tm2/tm3 像素路径未实现（消费+推进），中文在这些窗口
      暂不可见——步骤 3 逐窗收敛；SYM 标点在非 mode0 走 JP 同码回退。
 3. **逐窗口收敛**：血条、寄放系统、捡拾提示等专用 hook 补齐（对照美版清单）。

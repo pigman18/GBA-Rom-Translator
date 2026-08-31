@@ -76,6 +76,18 @@ def expand_row_2bpp(rows, r, width, colors):
     return val
 
 
+def expand_row_4bpp(rows, r, width, colors):
+    """GBA 4bpp tile：第 r 行 = rows[4r..4r+3] 小端 u32，低 nibble=最左像素。
+    colors[16] 值→色号 LUT 直通。"""
+    row = rows[r * 4:(r + 1) * 4]
+    word = row[0] | (row[1] << 8) | (row[2] << 16) | (row[3] << 24)
+    val = 0
+    for p in range(width):
+        px = (word >> (p * 4)) & 0xF
+        val |= colors[px] << (p * 4)
+    return val
+
+
 def blend_ref(fmt, dest, spill, rows, width, start_pixel, colors):
     """官方语义参考实现。dest/spill: list[8] u32；返回 (adv, dest, spill)。"""
     width = min(width, 8) if width else 0
@@ -87,7 +99,7 @@ def blend_ref(fmt, dest, spill, rows, width, start_pixel, colors):
     m2 = MASKS[width][start_pixel][1]
     left, right = SHIFTS[start_pixel]
     do_spill = spill is not None and (start_pixel + width > 8)
-    exp = expand_row_1bpp if fmt == 1 else expand_row_2bpp
+    exp = {1: expand_row_1bpp, 2: expand_row_2bpp, 4: expand_row_4bpp}[fmt]
 
     out1, out2 = [], []
     for r in range(8):
@@ -165,20 +177,36 @@ def run_eval_fuzz(exe, n=800, seed=20260831):
     # 2) 随机补样
     params += [(rng.randrange(9), rng.randrange(8)) for _ in range(n)]
     for w, s in params:
-        fmt = 1 if rng.random() < 0.5 else 2
+        # 1/2/4bpp 轮转覆盖（4bpp 为中文新增，python vs C 对拍）
+        fmt = rng.choice((1, 2, 4))
         covered.add((fmt, w, s))
         bg, fg = rng.randrange(16), rng.randrange(16)
         dest = [rng.getrandbits(32) for _ in range(8)]
         spill = [rng.getrandbits(32) for _ in range(8)]
-        nrows = 16 if fmt == 2 else 8
+        if fmt == 4:
+            nrows = 32
+        elif fmt == 2:
+            nrows = 16
+        else:
+            nrows = 8
         rows = [rng.randrange(256) for _ in range(nrows)]
-        cols = [bg, fg, fg, fg] if fmt == 2 else [bg, fg]
+        if fmt == 4:
+            # colors[16]：0=bg、14=阴影、15=前景（其余随机），覆盖真实 LUT 形态
+            cols = [rng.randrange(16) for _ in range(16)]
+            cols[0] = bg
+            cols[14] = fg
+            cols[15] = fg
+        elif fmt == 2:
+            cols = [bg, fg, fg, fg]
+        else:
+            cols = [bg, fg]
 
         adv_exp, d_exp, s_exp = blend_ref(fmt, dest, spill, rows, w, s, cols)
         lines.append(" ".join(
             [str(fmt), str(w), str(s), str(bg), str(fg)]
             + [f"{x:08x}" for x in dest] + [f"{x:08x}" for x in spill]
-            + [f"{x:02x}" for x in rows]))
+            + [f"{x:02x}" for x in rows]
+            + ([" ".join(str(c) for c in cols)] if fmt == 4 else [])))
         expects.append((adv_exp, d_exp, s_exp, fmt, w, s))
 
     inp = "\n".join(lines) + "\n"

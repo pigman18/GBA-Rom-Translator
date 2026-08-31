@@ -79,11 +79,11 @@ static const uint32_t sGlyphMasks[9][8][3] =
         { 0x0000FFFF,0xFFFFFFF0,0x00000000, },
         { 0x000FFFFF,0xFFFFFF00,0x00000000, },
         { 0x00FFFFFF,0xFFFFF000,0x00000000, },
-        { 0x0FFFFFFF,0xFFFF0000,0x00000000, },
+        { 0x0FFFFFFF,0xFFFF0000,0x00000000, },xFFFFFFFF,0xFF000000, },
+                                                      { 0x0000000F,0xFFFFFFFF,0xF0000000, },
     },
     {
-        { 0x00000000,0xFFFFFFFF,0xFF000000, },
-        { 0x0000000F,0xFFFFFFFF,0xF0000000, },
+        { 0x00000000,0
         { 0x000000FF,0xFFFFFFFF,0x00000000, },
         { 0x00000FFF,0xFFFFFFF0,0x00000000, },
         { 0x0000FFFF,0xFFFFFF00,0x00000000, },
@@ -159,6 +159,24 @@ static uint32_t blend_row_2bpp(const uint8_t *rows, uint32_t r,
 
     for (p = 0; p < width; p++) {
         uint32_t px = (row[p >> 2] >> ((p & 3u) * 2u)) & 3u;
+
+        val |= (uint32_t)colors[px] << (p * 4u);
+    }
+
+    return val;
+}
+
+/* 4bpp：GBA 4bpp tile 序——rows[4r..4r+3] 为第 r 行的 u32（低 nibble =
+ * 最左像素），colors[16] 值→色号 LUT 直通（中文字库索引 0/14/15）。 */
+static uint32_t blend_row_4bpp(const uint8_t *rows, uint32_t r,
+                               uint32_t width, const uint8_t *colors)
+{
+    const uint8_t *row = &rows[r * 4u];
+    uint32_t val = 0;
+    uint32_t p;
+
+    for (p = 0; p < width; p++) {
+        uint32_t px = (row[p >> 1] >> ((p & 1u) * 4u)) & 0xFu;
 
         val |= (uint32_t)colors[px] << (p * 4u);
     }
@@ -243,4 +261,20 @@ uint32_t blend_glyph_2bpp(uint32_t *destTile, uint32_t *spillTile,
 
     return blend_core(destTile, spillTile, rows, width, startPixel,
                       blend_row_2bpp, colors);
+}
+
+uint32_t blend_glyph_4bpp(uint32_t *destTile, uint32_t *spillTile,
+                          const uint8_t *rows,
+                          uint32_t width, uint32_t startPixel,
+                          const uint8_t colors[16])
+{
+    if (width == 0u)
+        return startPixel / 8u;
+    if (width > 8u)
+        width = 8u;
+    if (startPixel > 7u)
+        startPixel = 7u;
+
+    return blend_core(destTile, spillTile, rows, width, startPixel,
+                      blend_row_4bpp, colors);
 }

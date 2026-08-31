@@ -36,6 +36,15 @@
 #define CHS_GLYPH_HALF_BIT   0x8000u
 #define CHS_GLYPH_IDX_MASK   0x7FFFu
 
+/* 下半 tile 相对上半 tile 的偏移（**随 textMode 而变，不可统一**）：
+ *   tm0 = 1  ——官方 tm0_core@0x08003520：upper=base+off, lower=upper+1。
+ *   tm3 = 30 ——官方 tm3@0x080034A8：upper=X+Y*30, lower=X+(Y+1)*30。
+ *     tm3 的 VRAM 网格行宽是 30（省空间），tilemap 行宽仍是 32（硬件），
+ *     两者本就不同；误用 tm0 的 +1 会让下一列的上半覆盖本列的下半，
+ *     并让 tilemap 下一行指到被覆盖的 tile ⇒ 文字上下错位（2026-08-31 实证）。 */
+#define TM0_LOWER_DELTA      1u
+#define TM3_LOWER_DELTA      30u
+
 /* 字形解压（v4 同款）：128B 容器原样拷出，保持
  * [TL@+0][BL@+32][TR@+64][BR@+96] 布局；bit15=半字右半（+64 起）。 */
 static void decompress_chs_glyph(uint8_t out[CHS_CELL_BYTES],
@@ -59,14 +68,16 @@ static void decompress_chs_glyph(uint8_t out[CHS_CELL_BYTES],
     copy_tile32(out + 0x60, g + 96u);  /* BR */
 }
 
-/* 按 tile 号写一列（upper@tile / lower@tile+1，8px 单列；tm0/tm3 共用）。
+/* 按 tile 号写一列（upper@tile / lower@tile+lower_delta，8px 单列；tm0/tm3 共用）。
  * src_u/src_l = 32B 4bpp 字库 tile（索引 15=前景/14=阴影/0=底色）；
  * 经 blend_glyph_4bpp 混合写入（colors[16] 值→色号 LUT 直通，方案 A；
  * tile 无所有权、跨度外保留）；UpdateTilemap 写表项列，cursorTileX 推一格。
  * 16px 整格 startPixel=0/width=8 无溢出（spillTile=0），blend 退化为整 tile
  * 重写但与 CopyGlyph 覆盖等价；blend 统一原语为后续 12px 相位/溢出留路。
- * tile 号与物理地址：tile → tile_data + (tile<<5)，upper=tile/lower=tile+1。 */
+ * tile 号与物理地址：tile → tile_data + (tile<<5)；
+ * lower_delta 见上方宏（tm0=1 / tm3=30），**不可写成常量 1**。 */
 static void blit_column_at_tile(TextPrinter *win, uint16_t tile,
+                                uint16_t lower_delta,
                                 const uint8_t *src_u, const uint8_t *src_l)
 {
     uint8_t *tpl = win_template(win);
@@ -76,7 +87,9 @@ static void blit_column_at_tile(TextPrinter *win, uint16_t tile,
     uint8_t color_d = win_u8(win, WIN_COLOR_D);
     uint8_t color_e = win_u8(win, WIN_COLOR_E);
     uint8_t colors[16];
+    uint16_t lower = (uint16_t)(tile + lower_delta);
     uint8_t *dst_u;
+    uint8_t *dst_l;
     unsigned i;
 
     if (!tile_data)
@@ -89,10 +102,11 @@ static void blit_column_at_tile(TextPrinter *win, uint16_t tile,
     colors[15] = color_c;
 
     dst_u = tile_data + ((uint32_t)tile << 5);
+    dst_l = tile_data + ((uint32_t)lower << 5);
 
     blend_glyph_4bpp((uint32_t *)(void *)dst_u, 0, src_u, 8u, 0u, colors);
-    blend_glyph_4bpp((uint32_t *)(void *)(dst_u + 0x20), 0, src_l, 8u, 0u, colors);
-    UpdateTilemap_Origin(win, tile, (uint16_t)(tile + 1u));
+    blend_glyph_4bpp((uint32_t *)(void *)dst_l, 0, src_l, 8u, 0u, colors);
+    UpdateTilemap_Origin(win, tile, lower);
     win_set_u8(win, WIN_CURSOR_TILE_X,
                (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
 }
@@ -106,7 +120,7 @@ static void blit_column_mode0(TextPrinter *win,
     uint16_t off = win_u16(win, WIN_TILE_OFFSET);
     uint16_t tile = (uint16_t)(base + off);
 
-    blit_column_at_tile(win, tile, src_u, src_l);
+    blit_column_at_tile(win, tile, TM0_LOWER_DELTA, src_u, src_l);
     win_set_u16(win, WIN_TILE_OFFSET, (uint16_t)(off + 2u));
 }
 
@@ -166,7 +180,8 @@ static void print_glyph_mode3(TextPrinter *win, uint16_t gidx,
         const uint8_t *src_u = buf + (col ? 0x40u : 0x00u);
         const uint8_t *src_l = buf + (col ? 0x60u : 0x20u);
 
-        blit_column_at_tile(win, tm3_tile_no(win), src_u, src_l);
+        blit_column_at_tile(win, tm3_tile_no(win), TM3_LOWER_DELTA,
+                            src_u, src_l);
     }
 }
 

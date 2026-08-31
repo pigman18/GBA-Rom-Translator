@@ -371,12 +371,16 @@ static void chs_flush_to_col(TextPrinter *win, uint16_t lower_delta,
     /* 填底色：跨度 [phase,8)（startPixel+width = 8，无溢出） */
     chs_fill_bg(win, tile, lower_delta, phase, 8u);
 
-    /* 推到列首：tm0 需同时推 TILE_OFFSET（tile 号来源），tm3 只推 cursorTileX */
+    /* 推到列首：tm0/tm1 需同时推 TILE_OFFSET（tile 号来源），tm3 只推 cursorTileX */
     tx = win_u8(win, WIN_CURSOR_TILE_X);
     win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(tx + 1u));
-    if ((win_u8(win, WIN_TEXTMODE) & 7u) == 0u)
-        win_set_u16(win, WIN_TILE_OFFSET,
-                    (uint16_t)(win_u16(win, WIN_TILE_OFFSET) + col_stride));
+    {
+        uint8_t tm = win_u8(win, WIN_TEXTMODE) & 7u;
+
+        if (tm == 0u || tm == 1u)
+            win_set_u16(win, WIN_TILE_OFFSET,
+                        (uint16_t)(win_u16(win, WIN_TILE_OFFSET) + col_stride));
+    }
     chs_phase_advance(win, 8u - phase);
 }
 #endif /* CHS_ADVANCE_12 */
@@ -449,6 +453,7 @@ static void print_glyph_mode0(TextPrinter *win, uint16_t gidx,
  * 128B 暂存槽的 TL/BL，TR/BR 留 0 —— 半角只取列 [0,8)，永远读不到 TR/BR。
  * ===================================================================== */
 static uint16_t tm3_tile_no(TextPrinter *win);   /* 定义在下方 */
+static int tm1_row_alloc(TextPrinter *win);      /* 定义在下方（tm1 段分配） */
 
 static int draw_sym_px(TextPrinter *win, uint32_t sym_idx)
 {
@@ -463,30 +468,32 @@ static int draw_sym_px(TextPrinter *win, uint32_t sym_idx)
     unsigned adv;
     unsigned i;
 
-    if (tm != 0u && tm != 3u)
-        return 0;               /* tm1/tm2 无像素路径：交原生 */
+    if (tm != 0u && tm != 3u && tm != 1u)
+        return 0;               /* tm2 等无像素路径：交原生 */
+    if (tm == 1u && !tm1_row_alloc(win))
+        return 0;               /* tm1 未登记窗口：交原生 */
 
     for (i = 0; i < CHS_CELL_BYTES; i++)
         buf[i] = 0u;
     copy_tile32(buf + 0x00u, sym + 0u);    /* TL ← upper */
     copy_tile32(buf + 0x20u, sym + 32u);   /* BL ← lower */
 
-    if (tm == 0u) {
+    if (tm == 3u) {
+        tile        = tm3_tile_no(win);
+        lower_delta = TM3_LOWER_DELTA;
+        col_stride  = TM3_COL_STRIDE;
+    } else {                    /* tm0 / tm1（已登记）：布局同构，下半相邻 */
         tile        = (uint16_t)(win_u16(win, WIN_TILE_BASE)
                                  + win_u16(win, WIN_TILE_OFFSET));
         lower_delta = TM0_LOWER_DELTA;
         col_stride  = TM0_COL_STRIDE;
-    } else {
-        tile        = tm3_tile_no(win);
-        lower_delta = TM3_LOWER_DELTA;
-        col_stride  = TM3_COL_STRIDE;
     }
 
 #if CHS_ADVANCE_12
     phase = chs_phase_get(win);
     adv = print_glyph_px(win, tile, lower_delta, col_stride, buf,
                          CHS_GLYPH_ADVANCE_JP_PX, phase);
-    if (tm == 0u)
+    if (tm != 3u)
         win_set_u16(win, WIN_TILE_OFFSET,
                     (uint16_t)(win_u16(win, WIN_TILE_OFFSET)
                                + (uint16_t)(adv * TM0_COL_STRIDE)));
@@ -554,6 +561,98 @@ static void print_glyph_mode3(TextPrinter *win, uint16_t gidx,
 #endif
 }
 
+/* =====================================================================
+ * tm1 中文行 tile 分配（2026-08-31，声明式配置表 + 场景门控）
+ *
+ * 官方 tm1 只写 tilemap 引用预渲染 tile 号（FontSubTable 反汇编实证：
+ * font0/3 = BASE+2*glyph、下半=+1；font1/4 查 FontType1Map），**零像素
+ * 绘制**；win[0x18]（TILE_OFFSET）是 mode0 专用草稿游标 —— tm1 从不推进，
+ * 且 AddTextPrinter 初始化每行清 0（v4 期 gdb 实证）。
+ *
+ * 中文落点：行首（TILE_OFFSET==0）按**窗口模板地址**查表取已验证空闲段，
+ * 段基址写入 TILE_OFFSET；此后与 tm0 完全同构（col_stride=2 / lower_delta=1
+ * / 相位机制照用），行内推进 TILE_OFFSET，行尾官方清 0 自动复位。
+ * **未登记窗口禁止猜空闲区** —— 维持「消费+推进」旧行为（零回归）。
+ * ===================================================================== */
+struct Tm1TileCfg {
+    uint32_t tpl;          /* 窗口模板地址（win[0x00]），配置表键 */
+    uint16_t base_tile;    /* 分配段首 tile（tilemap 10bit 索引空间） */
+    uint16_t slot_span;    /* 每 slot 宽（tile 数，≥ 行内最大列数×2） */
+    uint8_t  slot_n;       /* slot 数（按行位置取模 ⇒ 重绘幂等） */
+};
+
+static const struct Tm1TileCfg kTm1Windows[] = {
+    /* 图鉴列表：base 513，16 slot × 24 tile = 384，末 tile 896 < 1024。
+     * 空闲区 v4 期 gdb 实证：InitWindowTileData 预渲染占 tile 1..512，
+     * 初始 tilemap（ROM 0x0837BD90 LZ77→screenblock28）最大引用 254，
+     * 官方 mode1 只写 BASE+2*glyph ≤ 512 ⇒ 513..1023 全程无引用。 */
+    { ADDR_TPL_DEX_LIST, 513u, 24u, 16u },
+};
+
+/* 返回 1=已登记且段基址就绪（可画像素）；0=未登记（调用方维持旧行为） */
+static int tm1_row_alloc(TextPrinter *win)
+{
+    const struct Tm1TileCfg *cfg = 0;
+    uint32_t tpl = (uint32_t)(uintptr_t)win_template(win);
+    unsigned i;
+    unsigned y_total, slot;
+
+    for (i = 0; i < sizeof(kTm1Windows) / sizeof(kTm1Windows[0]); i++) {
+        if (kTm1Windows[i].tpl == tpl) {
+            cfg = &kTm1Windows[i];
+            break;
+        }
+    }
+    if (cfg == 0)
+        return 0;
+    if (win_u16(win, WIN_TILE_OFFSET) != 0u)
+        return 1;                     /* 行内已分配（0 = 新行标记） */
+
+    y_total = (unsigned)win_u8(win, WIN_CURSOR_Y)
+            + win_u8(win, WIN_CURSOR_TILE_Y);
+    slot    = (y_total >> 1) % cfg->slot_n;
+    win_set_u16(win, WIN_TILE_OFFSET,
+                (uint16_t)((uint16_t)(cfg->base_tile + slot * cfg->slot_span)
+                           - win_u16(win, WIN_TILE_BASE)));
+    return 1;
+}
+
+/* tm1 汉字：12px 两段式（cols=2 主字体）；tile 走 tm1_row_alloc 分配段，
+ * tilemap 写法与 tm0 相同（upper/lower 相邻，lower_delta=1）。
+ * 未登记窗口：维持「消费 + 推进」旧行为（设计稿步骤 3 逐窗收敛）。 */
+static void print_glyph_mode1(TextPrinter *win, uint16_t gidx,
+                              uint8_t font_id, unsigned cols)
+{
+#if CHS_ADVANCE_12
+    if (cols == 2u && tm1_row_alloc(win)) {
+        uint16_t base = win_u16(win, WIN_TILE_BASE);
+        uint16_t off  = win_u16(win, WIN_TILE_OFFSET);
+        unsigned phase = chs_phase_get(win);
+        unsigned adv;
+        uint8_t buf[CHS_CELL_BYTES];
+
+        decompress_chs_glyph(buf, gidx, font_id);
+        adv = print_glyph_px(win, (uint16_t)(base + off),
+                             TM0_LOWER_DELTA, TM0_COL_STRIDE, buf,
+                             CHS_GLYPH_ADVANCE_PX, phase);
+        win_set_u16(win, WIN_TILE_OFFSET,
+                    (uint16_t)(off + (uint16_t)(adv * TM0_COL_STRIDE)));
+        chs_phase_advance(win, CHS_GLYPH_ADVANCE_PX);
+        return;
+    }
+#else
+    (void)gidx;
+    (void)font_id;
+#endif
+
+    /* 未登记窗口 / 16px 回退：只消费游标（原 v5 行为，队伍等显示为空的根因） */
+    win_set_u8(win, WIN_CURSOR_TILE_X,
+               (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + cols));
+#if CHS_ADVANCE_12
+    chs_phase_advance(win, CHS_GLYPH_ADVANCE_PX);
+#endif
+}
+
 /* F9 汉字渲染入口（text_translater.c 消费）。
  * glyphWidth 形参仅为兼容既有签名——v5 步进由渲染模型决定：
  * 16px 整格（主字体 2 列）/ font4 小字 8px（1 列）。 */
@@ -580,14 +679,7 @@ void PrintGlyph(TextPrinter *win, uint32_t gidx, unsigned glyphWidth)
         print_glyph_mode3(win, (uint16_t)(gidx & 0xFFFFu), fn, cols);
         break;
     case 1:
-        /* tm1 官方只写 tilemap（预渲染 tile 号），无动态 tileData 区域；
-         * 中文像素路径需先定「动态 tile 号分配」方案（步骤 3 后续）。
-         * 暂维持消费 + 推进（cursorTileX += cols）。 */
-        win_set_u8(win, WIN_CURSOR_TILE_X,
-                   (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + cols));
-#if CHS_ADVANCE_12
-        chs_phase_advance(win, CHS_GLYPH_ADVANCE_PX);
-#endif
+        print_glyph_mode1(win, (uint16_t)(gidx & 0xFFFFu), fn, cols);
         break;
     case 2: {
         uint32_t dst = win_u32(win, WIN_TILE_DATA);
@@ -627,11 +719,17 @@ int DrawHalfWidth(TextPrinter *win, uint32_t cur_char)
         && cur_char < SYM_GLYPH_BASE + SYM_GLYPH_COUNT)
         return draw_sym_px(win, cur_char - SYM_GLYPH_BASE);
 
-    if (tm != 0u && tm != 3u)
+    if (tm != 0u && tm != 3u && tm != 1u)
         return 0;
+    if (tm == 1u && !tm1_row_alloc(win))
+        return 0;               /* tm1 未登记窗口：无中文落点，交原生 */
 
 #if CHS_ADVANCE_12
     if (tm == 0u)
+        chs_flush_to_col(win, TM0_LOWER_DELTA, TM0_COL_STRIDE,
+                         (uint16_t)(win_u16(win, WIN_TILE_BASE)
+                                    + win_u16(win, WIN_TILE_OFFSET)));
+    else if (tm == 1u)
         chs_flush_to_col(win, TM0_LOWER_DELTA, TM0_COL_STRIDE,
                          (uint16_t)(win_u16(win, WIN_TILE_BASE)
                                     + win_u16(win, WIN_TILE_OFFSET)));

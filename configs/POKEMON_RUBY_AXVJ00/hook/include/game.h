@@ -21,52 +21,35 @@
 #define ADDR_DEX_TEXT_UNKNOWN_POKE         0x083E9688u
 #define ADDR_DRAW_INITIAL_DOWN_ARROW       0x08003F4Cu
 #define ADDR_DRAW_INITIAL_DOWN_ARROW_BODY  0x08003DACu
+#define ADDR_FD_RESOLVER                   0x080046D4u
+#define ADDR_FD_SUBPRINT                   0x08002DB4u
 #define ADDR_FONT_CHS_NORMAL               0x09000000u
 #define ADDR_FONT_CHS_SMALL                0x09100000u
 #define ADDR_FONT_CHS_SYM                  0x091E0000u
 #define ADDR_FONT_FUNC_TABLE               0x081BB3ACu
+#define ADDR_FONT_FUNC_TM0_ORIGIN          0x08003568u
+#define ADDR_FONT_FUNC_TM2_ORIGIN          0x0800338Cu
+#define ADDR_FONT_FUNC_TM3_ORIGIN          0x08003494u
 #define ADDR_FONT_SUBTABLE                 0x081BB3BCu
 #define ADDR_FONT_TYPE1_MAP                0x081B34A8u
 #define ADDR_GAME_BIN                      0x08800000u
 #define ADDR_GET_GLYPH_TILE_PTRS           0x08003730u
 #define ADDR_GLYPH_ALLOC_NEXT              0x0203FFF8u
+#define ADDR_GLYPH_PAGE_CURTAB             0x0203FFD2u
 #define ADDR_GMENU                         0x03000618u
+#define ADDR_INIT_WINDOW_TILE_DATA         0x08002A50u
 #define ADDR_MENU_PRINT_TEXT               0x0806F16Cu
 #define ADDR_OPT_FG_COLOR                  0x0203FFD1u
 #define ADDR_OPT_PALETTE_OVERRIDE          0x0203FFD0u
 #define ADDR_PHRASE_OFFSETS                0x08810000u
 #define ADDR_PHRASE_TABLE                  0x08820000u
-/* FD 占位符官方展开对（2026-08-29 反汇编实证，见 .workbuddy 记忆）：
- *   RESOLVER(id≤13 查 0x081BBAC8 函数表，>13 自带分支) → 返回变量串指针
- *   SUBPRINT(win, str) = 官方内联子打印：换 text/index 跑快径循环打完整串后恢复。
- * 快径（0x08002DE8）的 state7 处理就是「index+=1; SUBPRINT(win, RESOLVER(id))」。 */
-#define ADDR_FD_RESOLVER                   0x080046D4u
-#define ADDR_FD_SUBPRINT                   0x08002DB4u
 #define ADDR_PLAY_BGM                      0x080724ACu
 #define ADDR_PLAY_SE                       0x080724CCu
+#define ADDR_PRINT_GLYPH_TM1_ORIGIN        0x0800360Cu
 #define ADDR_SLOT_TABLE                    0x09EA0000u
 #define ADDR_TEXT_CLEAR_WINDOW             0x08003BA8u
+#define ADDR_TPL_DEX_LIST                  0x081BB784u
 #define ADDR_UPDATE_TILEMAP                0x080036DCu
-#define ADDR_PRINT_GLYPH_TM1_ORIGIN        0x0800360Cu
-/* v5 FontFuncTable 原生处理器（2026-08-31 反汇编实证；FontFuncTable@0x081BB3AC
- * 共 4 项 [tm0..tm3]，二级 FontSubTable@0x081BB3BC fontNum 0..6）。
- * DrawGlyph 原生分发 & FontFunc 重定向 tail-call 用。 */
-#define ADDR_FONT_FUNC_TM0_ORIGIN          0x08003568u
-#define ADDR_FONT_FUNC_TM2_ORIGIN          0x0800338Cu
-#define ADDR_FONT_FUNC_TM3_ORIGIN          0x08003494u
-/* 字形绘制原语 sub_8003630(glyph, dst, fontNum, fg, bg, shadow)。
- * dst 是【参数】——这是全套桥接的支点：落址归我们，像素归官方。
- * 实证见 docs/调研_20260828_原生tm0协议与替换BUG根 */
-#define ADDR_DRAW_GLYPH_PRIM               0x08003630u
-/* tm3 专用字形绘制原语 sub_80033B4(glyph, dst, fontNum, fg, bg, shadow)。
- * 注意与 tm0/tm2 的 sub_8003630 不是同一个函数（sub_8003464 内实证）。 */
-#define ADDR_DRAW_GLYPH_TM3_PRIM           0x080033B4u
-#define ADDR_INIT_WINDOW_TILE_DATA         0x08002A50u
-/* 设置（选项）窗口模板：gdb 实证 InitWindowTileData 的 256/256 次调用 r0 都是
- * 它；其余 tm1 窗口走 LZ77 场景字库，不走 InitWindowTileData（README §F7）。
- * P24「削字库」据此门控，非本窗口一律照常渲染（零回归）。 */
-#define ADDR_OPTION_WINDOW_TEMPLATE        0x081BB874u
-#define ADDR_GLYPH_PAGE_CURTAB             0x0203FFD2u
 // <<<GEN_ADDR_END>>>
 /*
  * 短语表（PhraseTable）—— 固定长度字段突破字符数限制的方案。

@@ -1,5 +1,13 @@
 # 需求文档：官方绘制委托化重构（PrintNextChar / GetGlyphTilePointers / GetGlyphWidth）
 
+> ⚠ **已废弃（2026-08-31）**：本文档描述的是 v4 时代「三钩 + 半自绘」架构，
+> 与现行 v5 引擎在 hook 点上**直接冲突**——本文 §8 要求「不改 FontFuncTable
+> 表项，仅在上游 PrintNextChar 分流」，而 v5 恰恰是重定向 FontFuncTable 四表项
+> （已实机验证）。本文引用的 `DrawGlyphTiles_hook.c` / `PrintNextChar_hook.c` /
+> `chs_bind_pitch_slot` / `ChineseTileState` 等均已随 v5 删除。
+> **当前唯一权威：`REWRITE_DESIGN_混合写入架构.md`**（含 §4.1 tm1 静态段分配
+> 例外条款）。本文仅作 v4 期调研记录保留，其中 §2 的地址实证表仍有参考价值。
+
 > 目的：把 `hook/src/text` 从“全自绘”收敛为“三钩 + 半自绘”，其余 `tile 索引 / tilemap / 颜色重映射` 全部委托官方。仅保留 `12px 8+4 spill` 与 `F9 4字节消费` 必须自实现的部分。
 
 ## 1. 背景与现状

@@ -66,9 +66,12 @@ def render_block(macros: dict[str, str]) -> str:
 
 
 def update_game_h(game_root: Path, macros: dict[str, str], check: bool = False) -> bool:
-    h_path = game_root / "src" / "game.h"
+    # v5 起头文件在 include/（src/game.h 为旧布局）；两者兼容
+    h_path = game_root / "include" / "game.h"
     if not h_path.is_file():
-        raise FileNotFoundError(f"missing {h_path}")
+        h_path = game_root / "src" / "game.h"
+    if not h_path.is_file():
+        raise FileNotFoundError(f"missing {game_root}/include/game.h")
     text = h_path.read_text(encoding="utf-8")
     if BEGIN not in text or END not in text:
         raise SystemExit(

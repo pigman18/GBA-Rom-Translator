@@ -89,6 +89,15 @@ FontType1Map                           equ 0x081B34A8  ; C: ADDR_FONT_TYPE1_MAP
 PokeRSFontChsSymAddress                equ 0x091E0000  ; C: ADDR_FONT_CHS_SYM
 ; SlotTable: type=slot 查找表（JP hex → 中文 F9 流，PrintNextChar 运行时拦截）
 SlotTableVMA                         equ 0x09EA0000  ; C: ADDR_SLOT_TABLE
+; tm1 中文行 tile 分配：图鉴列表窗口模板（tile_alloc 配置表键，v4 期 gdb 实证）：
+;   InitWindowTileData 预渲染占 tile 1..512；初始 tilemap 最大引用 254；
+;   tile 513..1023 全程无引用 → 513 起 16 slot × 24 tile 为验证空闲区。
+DexListWindowTemplate                 equ 0x081BB784  ; C: ADDR_TPL_DEX_LIST
+; FD 占位符官方展开对（2026-08-29 反汇编实证）：
+;   RESOLVER(id≤13 查 0x081BBAC8 函数表，>13 自带分支) → 返回变量串指针
+;   SUBPRINT(win, str) = 官方内联子打印：换 text/index 跑快径循环打完整串后恢复
+FdResolver                            equ 0x080046D4  ; C: ADDR_FD_RESOLVER
+FdSubprint                            equ 0x08002DB4  ; C: ADDR_FD_SUBPRINT
 ; EWRAM pitch slots (JP+CN share CHS pool; do not dual-path FontFunc):
 ;   ChsPitchCtrl  @ 0x0203FF80 (16B): cur, gen, pad[2], age[8]
 ;   ChineseTileState slots[8] @ 0x0203FF90 (64B)

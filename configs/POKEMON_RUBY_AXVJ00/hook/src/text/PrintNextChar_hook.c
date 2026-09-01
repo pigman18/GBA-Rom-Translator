@@ -55,6 +55,8 @@
 struct V6Zone {
     uint8_t cx_hi;      /* curX < cx_hi 命中本区；末条 0xFF 兜底 */
     uint8_t font_px;    /* 16 = key 固定 / 12 = value 动态 */
+    uint8_t off;        /* 行内 tile 偏移起点（独立打印会话分区，沿用 v4 实测） */
+    const uint16_t *row_tab;  /* zone 级行基址表（NULL = 用主表 row_tab） */
 };
 
 struct V6SceneRule {
@@ -67,20 +69,30 @@ struct V6SceneRule {
     uint8_t  zone_n;
 };
 
-/* 设置菜单（模板 0x081BB874）：行基址避引用字形，key 16px / value 12px。
- * 行基址沿用 v4 kOptRows 实测值（0x33/0x8D/0xAD/0xCD/0x101/0x121/0x121），
- * 若 v6 下撞引用字形再按 gdb 重采调整。 */
+/* 设置菜单（模板 0x081BB874）：行基址避引用字形，标签列 / 候选列均 12px。
+ * 方案 B（用户拍板 2026-09-02）：标签列降 12px、复用候选 kOptRowBase 行带，
+ * 靠 12px 相位共享省连续空间，不再引入 v4 的 PTR 散碎槽机制。
+ * 行带 32 tile，固定 off 分区（相位独立——cursorTileX 回退触发失配归零）：
+ *   标签列  off=0   占 [0,12)   （4 字 = 12 tile，最长行）
+ *   候选A   off=12  占 [12,18)  （cx<19：慢/看/替换/单声道/普通/类型，最宽 3 字 8 tile）
+ *   候选B   off=18  占 [18,24)  （19≤cx<22：普通/不看/打到底/立体声）
+ *   候选C   off=24  占 [24,32)  （cx≥22：快/打到底/L/7）
+ * 最宽「对战规则」行 = 标签 4 字 12t + 替换 2 字 6t + 打到底 3 字 8t = 32t 到边界。 */
 static const uint16_t kOptRowBase[7] = {
     0x033u, 0x08Du, 0x0ADu, 0x0CDu, 0x101u, 0x121u, 0x121u,
 };
 static const struct V6Zone kOptZones[] = {
-    { .cx_hi = 8u,    .font_px = 16u },   /* 标签 key 列 */
-    { .cx_hi = 0xFFu, .font_px = 12u },   /* 候选 value 列 */
+    /* 标签列（key）：12px 相位共享，与候选共用行带，off=0。 */
+    { .cx_hi = 8u,    .font_px = 12u, .off = 0u,  .row_tab = 0 },
+    /* 候选列（value）：同一行多个候选是独立打印会话，按 curX 分区 + 固定 off 落址。 */
+    { .cx_hi = 19u,   .font_px = 12u, .off = 12u, .row_tab = 0 },
+    { .cx_hi = 22u,   .font_px = 12u, .off = 18u, .row_tab = 0 },
+    { .cx_hi = 0xFFu, .font_px = 12u, .off = 24u, .row_tab = 0 },
 };
 static const struct V6SceneRule kV6Scenes[] = {
     { .tpl = 0x081BB874u, .row_y0 = 3u, .row_shift = 1u,
       .row_tab = kOptRowBase, .row_n = 7u,
-      .zones = kOptZones, .zone_n = 2u },
+      .zones = kOptZones, .zone_n = 4u },
 };
 #define V6_SCENE_N  (sizeof(kV6Scenes) / sizeof(kV6Scenes[0]))
 
@@ -93,16 +105,30 @@ static const struct V6SceneRule *v6_scene_lookup(uint32_t tpl)
     return 0;
 }
 
-static uint8_t v6_scene_font(const struct V6SceneRule *r, uint8_t cx)
+static const struct V6Zone *v6_scene_zone(const struct V6SceneRule *r, uint8_t cx)
 {
     unsigned i;
     for (i = 0; i < r->zone_n; i++)
         if (cx < r->zones[i].cx_hi)
-            return r->zones[i].font_px;
-    return r->zones[r->zone_n - 1u].font_px;
+            return &r->zones[i];
+    return &r->zones[r->zone_n - 1u];
 }
 
-static uint16_t v6_scene_row_base(const struct V6SceneRule *r, uint8_t cy)
+static uint8_t v6_scene_font(const struct V6SceneRule *r, uint8_t cx)
+{
+    return v6_scene_zone(r, cx)->font_px;
+}
+
+/* 两个 curX 是否落在同一 zone（off 相同 ⇒ 同一并列区，共享同一段行带）。
+ * 续接判据用：同 zone + curX 右移 = 同行后继块（「类型」→「8」），续接相位；
+ * 异 zone（「慢」→「普通」）各占 off 分区，不续接。 */
+static int v6_same_zone(const struct V6SceneRule *r, uint8_t cx_a, uint8_t cx_b)
+{
+    return v6_scene_zone(r, cx_a)->off == v6_scene_zone(r, cx_b)->off;
+}
+
+/* 行号：r = (curY - row_y0) >> row_shift，clamp 到 [1, row_n]。 */
+static unsigned v6_scene_row_index(const struct V6SceneRule *r, uint8_t cy)
 {
     unsigned rr;
     if (cy <= r->row_y0) {
@@ -114,7 +140,15 @@ static uint16_t v6_scene_row_base(const struct V6SceneRule *r, uint8_t cy)
         if (rr > r->row_n)
             rr = r->row_n;
     }
-    return r->row_tab[rr - 1u];
+    return rr - 1u;
+}
+
+/* 行基址：zone 有独立 row_tab 则用 zone 表，否则用主表。 */
+static uint16_t v6_scene_row_base(const struct V6SceneRule *r, const struct V6Zone *z,
+                                  uint8_t cy)
+{
+    const uint16_t *tab = (z && z->row_tab) ? z->row_tab : r->row_tab;
+    return tab[v6_scene_row_index(r, cy)];
 }
 
 /* =====================================================================
@@ -217,6 +251,7 @@ static volatile struct ChsPhase *chs_phase_slot(TextPrinter *win, uint16_t key)
             tab[i].key = key;
             tab[i].px  = 0;
             tab[i].tx0 = win_u8(win, WIN_CURSOR_TILE_X);
+            tab[i].last_cx = win_u8(win, WIN_CURSOR_X);
             tab[i].cur_tile = 0;
             return &tab[i];
         }
@@ -224,21 +259,44 @@ static volatile struct ChsPhase *chs_phase_slot(TextPrinter *win, uint16_t key)
     tab[0].key = key;
     tab[0].px  = 0;
     tab[0].tx0 = win_u8(win, WIN_CURSOR_TILE_X);
+    tab[0].last_cx = win_u8(win, WIN_CURSOR_X);
     tab[0].cur_tile = 0;
     return &tab[0];
 }
 
-/* 当前行内相位（0..7）；失配（回退/跳列/重印）⇒ 归零重锚 */
+/* 当前行内相位（0..7）；失配（块切换/回退）⇒ 归零重锚。
+ * 例外（2026-09-02 类型7 混排修复）：同行后继块（同 zone + curX 严格变大）
+ * ——如 F9 汉字「类型」(curX=15) 后跟原生半角数字「8」(curX=18)，两者是
+ * 同一候选值内的顺序衔接，InitTextPrinter 重置 cursorTileX 会误触发归零，
+ * 导致「8」落回行首覆盖「类」。此时续接 px 而非归零。
+ *
+ * 判据用 curX（会话起始列，块间必变、块内不变）而非 cursorTileX：
+ *   curX 变化 + 变大 + 同 zone ⇒ 同行后继块，续接 px（px 是行内绝对像素，
+ *   落址 row_base + (px>>3)*2 只依赖 px，续接=不归零）；
+ *   否则（换 zone / curX 回退=重印）⇒ 归零。
+ *   cursorTileX 回退（tx < tx0）保留作防御：块内异常回退也归零。
+ *   不再用 (tx-tx0)==(px>>3) 做同步校验——块切换后 px(行内绝对) 与
+ *   tx(块内相对) 基准不同，该式在续接后必然失配，会误杀块内后续字。 */
 static unsigned chs_phase_px(TextPrinter *win)
 {
     uint16_t key = chs_phase_key(win);
     volatile struct ChsPhase *s = chs_phase_slot(win, key);
     uint8_t tx = win_u8(win, WIN_CURSOR_TILE_X);
+    uint8_t cx = win_u8(win, WIN_CURSOR_X);
 
-    if (tx < s->tx0 || (unsigned)(tx - s->tx0) != (unsigned)(s->px >> 3)) {
-        s->px  = 0;
-        s->tx0 = tx;
-        s->cur_tile = 0;
+    if (cx != s->last_cx || tx < s->tx0) {
+        /* 块切换（curX 变）or 块内 cursorTileX 回退 */
+        const struct V6SceneRule *rule =
+            v6_scene_lookup((uint32_t)(uintptr_t)win_template(win));
+        if (rule && cx > s->last_cx && v6_same_zone(rule, cx, s->last_cx)) {
+            /* 同行后继块：续接 px，仅重锚 tx0（后续块内 tx 从 0 递增） */
+            s->tx0 = tx;
+        } else {
+            s->px  = 0;
+            s->tx0 = tx;
+            s->cur_tile = 0;
+        }
+        s->last_cx = cx;
     }
     return (unsigned)s->px;
 }
@@ -339,12 +397,17 @@ static unsigned print_glyph_px(TextPrinter *win,
     colors[14] = color_e;
     colors[15] = color_c;
 
-    /* tile：命中场景规则 → 行基址 + 列偏移（确定性、重绘幂等）；否则高水位/相位复用 */
+    /* tile：命中场景规则 → zone 行基址 + zone.off + 列偏移（确定性、重绘幂等）；
+     * 否则高水位/相位复用 */
     {
         const struct V6SceneRule *rule =
             v6_scene_lookup((uint32_t)(uintptr_t)tpl);
-        if (rule && rule->row_tab)
-            row_base = v6_scene_row_base(rule, win_u8(win, WIN_CURSOR_Y));
+        if (rule && rule->row_tab) {
+            const struct V6Zone *z =
+                v6_scene_zone(rule, win_u8(win, WIN_CURSOR_X));
+            row_base = v6_scene_row_base(rule, z, win_u8(win, WIN_CURSOR_Y));
+            row_base = (uint16_t)(row_base + z->off);
+        }
     }
     if (row_base != 0u) {
         uint16_t col_off = (uint16_t)((px >> 3) * 2u);
@@ -511,10 +574,14 @@ static void chs_place(TextPrinter *win, uint8_t textMode,
     if (tm != 0u && tm != 1u && tm != 3u)
         return;
 
-    /* 场景规则：命中则用每行固定基址做确定性排列 */
+    /* 场景规则：命中则用每行固定基址做确定性排列（zone 可覆盖基址表） */
     rule = v6_scene_lookup((uint32_t)(uintptr_t)win_template(win));
-    if (rule && rule->row_tab)
-        row_base = v6_scene_row_base(rule, win_u8(win, WIN_CURSOR_Y));
+    if (rule && rule->row_tab) {
+        const struct V6Zone *z =
+            v6_scene_zone(rule, win_u8(win, WIN_CURSOR_X));
+        row_base = v6_scene_row_base(rule, z, win_u8(win, WIN_CURSOR_Y));
+        row_base = (uint16_t)(row_base + z->off);
+    }
 
 #if CHS_ADVANCE_12
     if (fontSize == 12u) {
@@ -534,8 +601,8 @@ static void chs_place(TextPrinter *win, uint8_t textMode,
 
 #if CHS_ADVANCE_12
     if (fontSize == 16u && row_base != 0u) {
-        /* 16px key（命中规则）：整格 2 列，tile = 行基址 + 列偏移(px>>3)*2，
-         * 确定性、每字 4 tile；px += 16 保行内偏移连续（16 是 8 倍数 phase 恒 0）。 */
+        /* 16px key（命中规则）：整格 2 列，tile = 行基址（已含 zone.off）+ 列偏移
+         * (px>>3)*2，确定性、每字 4 tile；px += 16 保行内偏移连续。 */
         unsigned px = chs_phase_px(win);
         uint16_t col_off = (uint16_t)((px >> 3) * 2u);
         for (col = 0; col < cols; col++) {

@@ -161,7 +161,7 @@ struct ChsPhase {
     uint16_t key;       /* +0 行指纹 */
     uint16_t px;        /* +2 行内已绘像素（相位 = px & 7） */
     uint8_t  tx0;       /* +4 行首表项列（失配检测锚点） */
-    uint8_t  rsv;       /* +5 保留 */
+    uint8_t  last_cx;   /* +5 上一文本块的 curX（同行后继块续接判据） */
     uint16_t cur_tile;  /* +6 当前列 tile 号（v6 tile 号独立分配；phase!=0 复用） */
 };                      /* 8B × 8 = 64B @ 0x0203FF90 → 至 0x0203FFCF（安全区内） */
 

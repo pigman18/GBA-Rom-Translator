@@ -14,4 +14,4 @@
 === Generating game.bin ===
 === Generating game_syms.asm ===
 Build OK: out\game.bin
-Size: 7068 bytes
+Size: 7132 bytes

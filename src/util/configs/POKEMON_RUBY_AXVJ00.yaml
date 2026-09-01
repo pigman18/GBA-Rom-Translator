@@ -624,6 +624,10 @@ gdb:
   address: '0x0800336E'
   description: 逐字符（r4=win, r3=char）；输出量大且与 InitTextPrinter 冗余
   default: false
+- name: GetGlyphTilePointers
+  address: '0x08003730'
+  description: 官方日文字库取字（r0=fontNum, r1=glyph, r2=&upper, r3=&lower）；采集日文/半角字符的 fontNum(1bpp/4bpp) 与 glyph 范围，验证 v6 统一绘制通道
+  default: false
 - name: PrintNextChar
   address: '0x080032F8'
   description: 字符处理器入口（r0=win）；入口处未取字符，handler 按 text[index] 读即将处理的字节流——FA..FF 控制码也在此可见

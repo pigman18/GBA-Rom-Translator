@@ -294,26 +294,8 @@ static unsigned print_glyph_px(TextPrinter *win,
     return adv;
 }
 
-/* 半角交原生前把相位补齐到列首（12px 半角混排）：
- *   原生 tm0/tm3 只从 startPixel=0 写整列，不知相位；若 phase!=0 直接交原生，
- *   前字尾 4px 被压掉且留空洞。补齐：当前列剩余 [phase,8) 填底色，游标推列首。 */
-static void chs_flush_to_col(TextPrinter *win, uint8_t tm)
-{
-    unsigned phase = chs_phase_get(win);
-    uint16_t tile;
-
-    if (phase == 0u)
-        return;
-
-    tile = chs_phase_cur_tile(win);
-    chs_fill_bg(win, tile, phase, 8u);
-    win_set_u8(win, WIN_CURSOR_TILE_X,
-               (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
-    if (tm == 0u || tm == 1u)
-        win_set_u16(win, WIN_TILE_OFFSET,
-                    (uint16_t)(win_u16(win, WIN_TILE_OFFSET) + 2u));
-    chs_phase_advance(win, 8u - phase, 0u);
-}
+/* 半角不再交原生 FontFunc，统一走 draw_jp_glyph（下方），故相位补齐 flush
+ * 不再需要：日文/半角也经 print_glyph_px 相位感知渲染，不会压字/留洞。 */
 #endif /* CHS_ADVANCE_12 */
 
 /* §V6 Stage3 单列写像素 + UTM（tile 号来自调用方 = v6_alloc_tile 领的）：
@@ -354,6 +336,63 @@ static void chs_place_col(TextPrinter *win, uint16_t tile, uint16_t lower_delta,
      * v6 重写时漏了此推进，导致 mode0/mode1 下一字落回同列 → 单字。 */
     win_set_u8(win, WIN_CURSOR_TILE_X,
                (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
+}
+
+/* =====================================================================
+ * §V6 日文/半角统一绘制（官方字库取字 + v6_alloc_tile 统一分配）
+ *   中文走中文字库 GetGlyph，日文/半角走官方字库 GetGlyphTilePointers，
+ *   字形统一进 128B 4bpp 容器 → print_glyph_px / chs_place_col，共用
+ *   v6_alloc_tile 分配 tile，不再交回官方 FontFunc（官方 base+TILE_OFFSET
+ *   每行清零 → 行间替换）。tm2 血条缓冲无像素/tilemap，仍交原生。
+ * ===================================================================== */
+static void jp_glyph_to_g128(uint8_t font_num, uint16_t glyph,
+                             uint8_t g128[CHS_CELL_BYTES])
+{
+    uint8_t *up, *lo;
+    unsigned i;
+
+    GetGlyphTilePointers_Origin(font_num, glyph, &up, &lo);
+    for (i = 0; i < CHS_CELL_BYTES; i++)
+        g128[i] = 0u;
+
+    if (FontIsShadowed(font_num)) {           /* font 3/4/5：4bpp 索引 0/14/15 */
+        copy_tile32(g128 + 0x00u, up);        /* TL */
+        copy_tile32(g128 + 0x20u, lo);        /* BL */
+    } else {                                  /* font 0/1/2/6：1bpp → 索引 15/0 */
+        CopyGlyph1bppTo4bpp_Origin(up, g128 + 0x00u, 15u, 0u);
+        CopyGlyph1bppTo4bpp_Origin(lo, g128 + 0x20u, 15u, 0u);
+    }
+}
+
+static int draw_jp_glyph(TextPrinter *win, uint8_t font_num, uint16_t glyph)
+{
+    uint8_t tm = win_u8(win, WIN_TEXTMODE) & 7u;
+    uint8_t g128[CHS_CELL_BYTES];
+
+    if (tm != 0u && tm != 1u && tm != 3u)
+        return 0;                             /* tm2 缓冲 / 未知：交原生 */
+    if (font_num > 6u)
+        font_num = 3u;
+
+    jp_glyph_to_g128(font_num, glyph, g128);
+
+#if CHS_ADVANCE_12
+    {
+        unsigned adv = print_glyph_px(win, g128, CHS_GLYPH_ADVANCE_JP_PX);
+        if (tm == 0u || tm == 1u)
+            win_set_u16(win, WIN_TILE_OFFSET,
+                        (uint16_t)(win_u16(win, WIN_TILE_OFFSET) + adv * 2u));
+    }
+#else
+    {
+        uint16_t tile = v6_alloc_tile();
+        chs_place_col(win, tile, 1u, g128 + 0x00u, g128 + 0x20u);
+        if (tm == 0u || tm == 1u)
+            win_set_u16(win, WIN_TILE_OFFSET,
+                        (uint16_t)(win_u16(win, WIN_TILE_OFFSET) + 2u));
+    }
+#endif
+    return 1;
 }
 
 /* =====================================================================
@@ -484,14 +523,11 @@ int DrawGlyph(TextPrinter *win, uint32_t cur_char)
     if (cur_char >= 0xF7u)
         return 1;
     if (!DrawHalfWidth(win, cur_char)) {
+        /* 数字/拉丁/假名：tm0/1/3 统一走 v6 分配器（官方字库取字 + 相位），
+         * tm2 缓冲仍交原生。 */
         uint8_t tm = win_u8(win, WIN_TEXTMODE) & 7u;
-#if CHS_ADVANCE_12
-        /* 数字/拉丁交原生前把相位补齐到列首（原生只写整列、不知相位，
-         * 否则前字尾 4px 被压 + 下一字留 4px 空洞） */
-        if (tm == 0u || tm == 1u || tm == 3u)
-            chs_flush_to_col(win, tm);
-#endif
-        FontFunc_NativeDispatch(tm, win, cur_char);
+        if (!draw_jp_glyph(win, win_u8(win, WIN_FONTNUM_REAL), cur_char))
+            FontFunc_NativeDispatch(tm, win, cur_char);
     }
     return 1;
 }
@@ -552,6 +588,7 @@ int PrintNextChar_Hook(TextPrinter *win)
     if (c < 0xF7u && DrawHalfWidth(win, c))
         return 1;
 
-    FontFunc_NativeDispatch(win_u8(win, WIN_TEXTMODE), win, c);
+    if (!draw_jp_glyph(win, win_u8(win, WIN_FONTNUM_REAL), c))
+        FontFunc_NativeDispatch(win_u8(win, WIN_TEXTMODE), win, c);
     return 1;
 }

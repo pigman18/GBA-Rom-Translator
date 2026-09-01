@@ -896,6 +896,21 @@ def _on_tile_num_ret(gdb: GdbClient, regs: dict, ctx: Ctx,
             f" cx={cx} cy={cy}")
 
 
+@handler("GetGlyphTilePointers")
+def _on_get_glyph_tile(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """官方日文字库取字（r0=fontNum, r1=glyph, r2=&upper, r3=&lower）。
+
+    按 (fontNum, glyph) 去重打印，采集日文/半角字符实际用的字体号
+    （font 0/1/2/6 = 1bpp 8B/tile；font 3/4/5 = shadowed 4bpp 32B/tile）
+    与 glyph 范围——用于验证 v6 统一绘制通道 draw_jp_glyph 的取字分支。"""
+    font_num = regs.get("r0", 0) & 0xFF
+    glyph = regs.get("r1", 0) & 0xFFFF
+    if not ctx._hit((font_num, glyph)):
+        return
+    kind = "4bpp" if 3 <= font_num <= 5 else "1bpp"
+    ctx.log(f"[GetGlyphTilePointers] fontNum={font_num} glyph=0x{glyph:04X} ({kind})")
+
+
 @handler("InitTextPrinter")
 def _on_init_text(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
     win = regs.get("r0", 0)

@@ -42,6 +42,82 @@
 #define V6_PITCH16          16u
 
 /* =====================================================================
+ * §V6 场景规则表（精细落址：条件分字号 + 每行固定基址；2026-09-01）
+ *   键 = 窗口模板地址（tpl = win[0x00]）。命中则：
+ *     - curX 分区决定字号（16 = key 标签固定 / 12 = value 候选动态）；
+ *     - 每行固定 tile 基址（row_tab），tile = 行基址 + 行内偏移(px>>3)*2，
+ *       确定性排列、重绘幂等；未命中回退全局高水位 v6_alloc_tile()。
+ *   ⚠ 分区独立：16px 区（key）在前、12px 区（value）在后，不任意混排
+ *     （16 是 8 的倍数 phase 恒 0，key 区结束 phase 归 0，12px 区从 0 续）。
+ *   参考 bak/text-v4/text_scene.c 的 kOptWindow，但只保留必要字段，不做
+ *   v4 的 WinCfg+kWindows[]+gen/check 脚本那套重流程。
+ * ===================================================================== */
+struct V6Zone {
+    uint8_t cx_hi;      /* curX < cx_hi 命中本区；末条 0xFF 兜底 */
+    uint8_t font_px;    /* 16 = key 固定 / 12 = value 动态 */
+};
+
+struct V6SceneRule {
+    uint32_t tpl;             /* win[0x00] 模板地址 = 唯一键 */
+    uint8_t  row_y0;          /* 行 0 的 curY */
+    uint8_t  row_shift;       /* r = (curY - y0) >> shift */
+    const uint16_t *row_tab;  /* 每行 tile 基址（[1..row_n]） */
+    uint8_t  row_n;
+    const struct V6Zone *zones;
+    uint8_t  zone_n;
+};
+
+/* 设置菜单（模板 0x081BB874）：行基址避引用字形，key 16px / value 12px。
+ * 行基址沿用 v4 kOptRows 实测值（0x33/0x8D/0xAD/0xCD/0x101/0x121/0x121），
+ * 若 v6 下撞引用字形再按 gdb 重采调整。 */
+static const uint16_t kOptRowBase[7] = {
+    0x033u, 0x08Du, 0x0ADu, 0x0CDu, 0x101u, 0x121u, 0x121u,
+};
+static const struct V6Zone kOptZones[] = {
+    { .cx_hi = 8u,    .font_px = 16u },   /* 标签 key 列 */
+    { .cx_hi = 0xFFu, .font_px = 12u },   /* 候选 value 列 */
+};
+static const struct V6SceneRule kV6Scenes[] = {
+    { .tpl = 0x081BB874u, .row_y0 = 3u, .row_shift = 1u,
+      .row_tab = kOptRowBase, .row_n = 7u,
+      .zones = kOptZones, .zone_n = 2u },
+};
+#define V6_SCENE_N  (sizeof(kV6Scenes) / sizeof(kV6Scenes[0]))
+
+static const struct V6SceneRule *v6_scene_lookup(uint32_t tpl)
+{
+    unsigned i;
+    for (i = 0; i < V6_SCENE_N; i++)
+        if (kV6Scenes[i].tpl == tpl)
+            return &kV6Scenes[i];
+    return 0;
+}
+
+static uint8_t v6_scene_font(const struct V6SceneRule *r, uint8_t cx)
+{
+    unsigned i;
+    for (i = 0; i < r->zone_n; i++)
+        if (cx < r->zones[i].cx_hi)
+            return r->zones[i].font_px;
+    return r->zones[r->zone_n - 1u].font_px;
+}
+
+static uint16_t v6_scene_row_base(const struct V6SceneRule *r, uint8_t cy)
+{
+    unsigned rr;
+    if (cy <= r->row_y0) {
+        rr = 1u;
+    } else {
+        rr = (unsigned)(cy - r->row_y0) >> r->row_shift;
+        if (rr < 1u)
+            rr = 1u;
+        if (rr > r->row_n)
+            rr = r->row_n;
+    }
+    return r->row_tab[rr - 1u];
+}
+
+/* =====================================================================
  * §V6 Stage2 栅格化（纯函数，零状态）
  *   把 128B 中文字模（[TL@0][BL@32][TR@64][BR@96]）按字号切成若干列对，
  *   每个列对 = 一块 upper 32B + 一块 lower 32B 的 4bpp tile 数据。
@@ -153,7 +229,7 @@ static volatile struct ChsPhase *chs_phase_slot(TextPrinter *win, uint16_t key)
 }
 
 /* 当前行内相位（0..7）；失配（回退/跳列/重印）⇒ 归零重锚 */
-static unsigned chs_phase_get(TextPrinter *win)
+static unsigned chs_phase_px(TextPrinter *win)
 {
     uint16_t key = chs_phase_key(win);
     volatile struct ChsPhase *s = chs_phase_slot(win, key);
@@ -164,7 +240,7 @@ static unsigned chs_phase_get(TextPrinter *win)
         s->tx0 = tx;
         s->cur_tile = 0;
     }
-    return (unsigned)(s->px & 7u);
+    return (unsigned)s->px;
 }
 
 static uint16_t chs_phase_cur_tile(TextPrinter *win)
@@ -223,9 +299,10 @@ static void chs_fill_bg(TextPrinter *win, uint16_t tile, unsigned x0, unsigned x
 
 /* 任意墨宽两段式渲染（12px 中文 ink=12 / 8px 标点 ink=8）：
  *   phase + ink 不是 8 的倍数时拆两段，两段都落在目标 tile 可用区间内，
- *   永不溢出。tile 号：phase==0 领新列；phase!=0 复用 cur_tile；第二段
- *   存在时再领下一列。返回推进列数 adv=(phase+ink)/8，已推 cursorTileX
- *   并记 cur_tile。TILE_OFFSET 由调用方按 adv*2 推进（mode0/1）。 */
+ *   永不溢出。tile 号：row_base!=0（命中场景规则）→ 行基址 + 列偏移(px>>3)*2
+ *   确定性；否则 phase==0 领新列 / phase!=0 复用 cur_tile，第二段再领下一列。
+ *   返回推进列数 adv=(phase+ink)/8，已推 cursorTileX 并记 cur_tile。
+ *   TILE_OFFSET 由调用方按 adv*2 推进（mode0/1）。 */
 static unsigned print_glyph_px(TextPrinter *win,
                                const uint8_t g128[CHS_CELL_BYTES],
                                unsigned ink)
@@ -235,11 +312,13 @@ static unsigned print_glyph_px(TextPrinter *win,
     uint8_t fg_ov, color_c, color_d, color_e;
     uint8_t colors[16];
     uint8_t up[32], lo[32];
-    unsigned phase = chs_phase_get(win);
+    unsigned px = chs_phase_px(win);
+    unsigned phase = px & 7u;
     unsigned w0 = (8u - phase < ink) ? (8u - phase) : ink;
     unsigned w1 = ink - w0;
     unsigned adv = (phase + ink) / 8u;
     uint16_t t0, t1;
+    uint16_t row_base = 0u;
     uint8_t tx0 = win_u8(win, WIN_CURSOR_TILE_X);
     unsigned i;
 
@@ -260,9 +339,21 @@ static unsigned print_glyph_px(TextPrinter *win,
     colors[14] = color_e;
     colors[15] = color_c;
 
-    /* tile：phase==0 领新列；phase!=0 复用上一字留下的半列 */
-    t0 = (phase == 0u) ? v6_alloc_tile() : chs_phase_cur_tile(win);
-    t1 = (w1 != 0u) ? v6_alloc_tile() : 0u;
+    /* tile：命中场景规则 → 行基址 + 列偏移（确定性、重绘幂等）；否则高水位/相位复用 */
+    {
+        const struct V6SceneRule *rule =
+            v6_scene_lookup((uint32_t)(uintptr_t)tpl);
+        if (rule && rule->row_tab)
+            row_base = v6_scene_row_base(rule, win_u8(win, WIN_CURSOR_Y));
+    }
+    if (row_base != 0u) {
+        uint16_t col_off = (uint16_t)((px >> 3) * 2u);
+        t0 = (uint16_t)(row_base + col_off);
+        t1 = (w1 != 0u) ? (uint16_t)(row_base + col_off + 2u) : 0u;
+    } else {
+        t0 = (phase == 0u) ? v6_alloc_tile() : chs_phase_cur_tile(win);
+        t1 = (w1 != 0u) ? v6_alloc_tile() : 0u;
+    }
 
     /* 第一段：源列 [0,w0) → t0 的 [phase, phase+w0) */
     extract_cols(g128, 0u, w0, up, lo);
@@ -406,6 +497,8 @@ static void chs_place(TextPrinter *win, uint8_t textMode,
     uint8_t tm = textMode & 7u;
     uint8_t buf[4][32];
     unsigned cols, col;
+    const struct V6SceneRule *rule;
+    uint16_t row_base = 0u;
 
     if (tm == 2u) {
         /* mode2 血条缓冲：无 VRAM 分配，推缓冲指针（8px 槽每列 +0x40） */
@@ -418,10 +511,15 @@ static void chs_place(TextPrinter *win, uint8_t textMode,
     if (tm != 0u && tm != 1u && tm != 3u)
         return;
 
+    /* 场景规则：命中则用每行固定基址做确定性排列 */
+    rule = v6_scene_lookup((uint32_t)(uintptr_t)win_template(win));
+    if (rule && rule->row_tab)
+        row_base = v6_scene_row_base(rule, win_u8(win, WIN_CURSOR_Y));
+
 #if CHS_ADVANCE_12
     if (fontSize == 12u) {
-        /* 12px 主字体：两段式 + 相位共享（tile 号仍从 v6_alloc_tile 领/复用，
-         * 屏幕位置仍交官方光标）。TILE_OFFSET 按 adv*2 推进供半角原生后续用。 */
+        /* 12px 主字体：两段式 + 相位共享。命中规则 → 行基址+列偏移确定性；
+         * 未命中 → v6_alloc_tile 高水位。TILE_OFFSET 按 adv*2 推进。 */
         unsigned adv = print_glyph_px(win, g128, 12u);
         if (tm == 0u || tm == 1u)
             win_set_u16(win, WIN_TILE_OFFSET,
@@ -430,12 +528,30 @@ static void chs_place(TextPrinter *win, uint8_t textMode,
     }
 #endif
 
-    /* 8px / 16px 整格：tile 号从 v6_alloc_tile() 领（高水位唯一递增），
-     * 与官方 TILE_BASE+TILE_OFFSET/cursorTileX 解耦。lower_delta 恒 =1。
-     * mode0/1 推 TILE_OFFSET += 2；mode3 只推 cursorTileX（chs_place_col 内）。 */
     cols = chs_rasterize(g128, fontSize, buf);
     if (cols == 0u)
         return;
+
+#if CHS_ADVANCE_12
+    if (fontSize == 16u && row_base != 0u) {
+        /* 16px key（命中规则）：整格 2 列，tile = 行基址 + 列偏移(px>>3)*2，
+         * 确定性、每字 4 tile；px += 16 保行内偏移连续（16 是 8 倍数 phase 恒 0）。 */
+        unsigned px = chs_phase_px(win);
+        uint16_t col_off = (uint16_t)((px >> 3) * 2u);
+        for (col = 0; col < cols; col++) {
+            uint16_t tile = (uint16_t)(row_base + col_off + col * 2u);
+            chs_place_col(win, tile, 1u, buf[col * 2u], buf[col * 2u + 1u]);
+            if (tm == 0u || tm == 1u)
+                win_set_u16(win, WIN_TILE_OFFSET,
+                            (uint16_t)(win_u16(win, WIN_TILE_OFFSET) + 2u));
+        }
+        chs_phase_advance(win, 16u, (uint16_t)(row_base + col_off + cols * 2u));
+        return;
+    }
+#endif
+
+    /* 8px / 16px 整格（未命中规则或 8px）：tile 号从 v6_alloc_tile() 领。
+     * mode0/1 推 TILE_OFFSET += 2；mode3 只推 cursorTileX（chs_place_col 内）。 */
     for (col = 0; col < cols; col++) {
         uint16_t tile = v6_alloc_tile();
         chs_place_col(win, tile, 1u, buf[col * 2u], buf[col * 2u + 1u]);
@@ -460,10 +576,17 @@ void chs_print(TextPrinter *win, uint32_t code, uint8_t fontSize)
         fn = 3u;
     if (tm == 2u)
         fn = 4u;                 /* tm2 缓冲为原生 8px 槽 */
-    if (fn == 4u)
+    if (fn == 4u) {
         fontSize = 8u;           /* font4 小字：fontSize 无效 */
-    else if (fontSize != V6_PITCH12 && fontSize != V6_PITCH16)
-        fontSize = V6_PITCH12;   /* 默认 12px（CHS_ADVANCE_12=1） */
+    } else {
+        /* 条件分字号：命中场景规则 → curX 分区字号（key 16 / value 12）；否则默认 12 */
+        const struct V6SceneRule *rule =
+            v6_scene_lookup((uint32_t)(uintptr_t)win_template(win));
+        if (rule)
+            fontSize = v6_scene_font(rule, win_u8(win, WIN_CURSOR_X));
+        else if (fontSize != V6_PITCH12 && fontSize != V6_PITCH16)
+            fontSize = V6_PITCH12;   /* 默认 12px（CHS_ADVANCE_12=1） */
+    }
 
     if (!GetGlyph(win, code, g128, &w))
         return;

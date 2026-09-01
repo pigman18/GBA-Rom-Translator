@@ -43,204 +43,7 @@ tiles:
     bank_list: 0,0,1,1,0,0,2,1,0,2,0,1,2,0,1,1,2,0,0,1,1,2,0
     pointers:
     - '0x0839747C'
-  - id: rt_083E1A98
-    label: rt tag=0x07D0 LoadCompressedObjectPic
-    default: false
-    address: '0x083E1A98'
-    format: 4bpp
-    compression: lz77_swap
-    sprite_size: 32x32
-    count: 10
-    raw_size: 5120
-    source: gdb_patcher
-    md5: 037ff00cd858fdd27c30322e6ea7e45a
-  - id: rt_083E6414
-    label: rt tag=0x07D2 LoadCompressedObjectPic
-    default: false
-    address: '0x083E6414'
-    format: 4bpp
-    compression: lz77_swap
-    sprite_size: 64x32
-    count: 1
-    raw_size: 1024
-    source: gdb_patcher
-    md5: 12e82cacd3f005ca1d4ae143a0b40576
-  - id: rt_0836FBD4
-    label: rt tag=0x03EA LoadCompressedObjectPic
-    default: false
-    address: '0x0836FBD4'
-    format: 4bpp
-    compression: lz77_swap
-    sprite_size: 64x64
-    count: 1
-    raw_size: 2048
-    source: gdb_patcher
-    md5: 27cc80a8382c5f5b9f6cec6e98077124
-  - id: rt_0836CDA4
-    label: rt tag=0x03E9 LoadCompressedObjectPic
-    default: false
-    address: '0x0836CDA4'
-    format: 4bpp
-    compression: lz77_swap
-    sprite_size: 32x8
-    count: 10
-    raw_size: 1312
-    source: gdb_patcher
-    md5: dd06beabde46cb5d39c9e8a9c931b1b3
-  - id: rt_083501F0
-    label: rt tag=0xD750 LoadSpriteSheet
-    default: false
-    address: '0x083501F0'
-    format: 4bpp
-    compression: none
-    sprite_size: 8x8
-    count: 2
-    raw_size: 64
-    source: gdb_patcher
-    md5: 3b2a71d745ba2d355c452c567011cc9b
-  - id: rt_083BC6C4
-    label: rt tag=0x7533 LoadSpriteSheet
-    default: false
-    address: '0x083BC6C4'
-    format: 4bpp
-    compression: none
-    sprite_size: 32x8
-    count: 16
-    raw_size: 2048
-    source: gdb_patcher
-    md5: 995d3f7799d88005bb98cc725453dc33
-  - id: rt_0837CB34
-    label: rt tag=0x1000 LoadCompressedObjectPic
-    default: false
-    address: '0x0837CB34'
-    format: 4bpp
-    compression: lz77_swap
-    sprite_size: 16x8
-    count: 76
-    raw_size: 4864
-    source: gdb_patcher
-    md5: 0e28a111c3dcf3265638136ccf827561
-  - id: rt_0869C31C
-    label: rt tag=0xD6FF LoadCompressedObjectPic
-    default: false
-    address: '0x0869C31C'
-    format: 4bpp
-    compression: lz77_swap
-    sprite_size: 64x32
-    count: 4
-    raw_size: 4096
-    source: gdb_patcher
-    md5: 3add5a60f6896d8269ae4aaf7ade1e2a
-  - id: rt_0869C5DC
-    label: rt tag=0xD701 LoadCompressedObjectPic
-    default: false
-    address: '0x0869C5DC'
-    format: 4bpp
-    compression: lz77_swap
-    sprite_size: 64x32
-    count: 2
-    raw_size: 2048
-    source: gdb_patcher
-    md5: 04f106e120187f1ca98535e80b2f4d00
-  - id: rt_083A2E78
-    label: rt tag=0x0007 LoadSpriteSheet
-    default: false
-    address: '0x083A2E78'
-    format: 4bpp
-    compression: none
-    sprite_size: 16x16
-    count: 1
-    raw_size: 128
-    source: gdb_patcher
-    md5: 7918a18de399d989d8554ddde55b63aa
-  - id: rt_083A2A18
-    label: rt tag=0x0002 LoadSpriteSheet
-    default: false
-    address: '0x083A2A18'
-    format: 4bpp
-    compression: none
-    sprite_size: 8x8
-    count: 20
-    raw_size: 640
-    source: gdb_patcher
-    md5: a0a2f7fd70064bb775b185e0e5599806
-  - id: rt_083A2D98
-    label: rt tag=0x0004 LoadSpriteSheet
-    default: false
-    address: '0x083A2D98'
-    format: 4bpp
-    compression: none
-    sprite_size: 8x8
-    count: 2
-    raw_size: 64
-    source: gdb_patcher
-    md5: 4e39f2203c17645f5a2bb3537602143c
-  - id: rt_083A2C98
-    label: rt tag=0x0003 LoadSpriteSheet
-    default: false
-    address: '0x083A2C98'
-    format: 4bpp
-    compression: none
-    sprite_size: 32x16
-    count: 1
-    raw_size: 256
-    source: gdb_patcher
-    md5: 954574d3efc5e3c4969d171561ece0e6
-  - id: rt_083A2618
-    label: rt tag=0x0000 LoadSpriteSheet
-    default: false
-    address: '0x083A2618'
-    format: 4bpp
-    compression: none
-    sprite_size: 8x8
-    count: 15
-    raw_size: 480
-    source: gdb_patcher
-    md5: d2ed285cfccdec3dbf52781dcdb05bbd
-  - id: rt_083A2818
-    label: rt tag=0x0001 LoadSpriteSheet
-    default: false
-    address: '0x083A2818'
-    format: 4bpp
-    compression: none
-    sprite_size: 8x8
-    count: 15
-    raw_size: 480
-    source: gdb_patcher
-    md5: 08471b763c164adf346f8353c2131fe4
-  - id: rt_083A27F8
-    label: rt tag=0x000A LoadSpriteSheet
-    default: false
-    address: '0x083A27F8'
-    format: 4bpp
-    compression: none
-    sprite_size: 8x8
-    count: 1
-    raw_size: 32
-    source: gdb_patcher
-    md5: 20ed7178d6690a3ec09f4b4882d4d597
-  - id: rt_083A29F8
-    label: rt tag=0x000B LoadSpriteSheet
-    default: false
-    address: '0x083A29F8'
-    format: 4bpp
-    compression: none
-    sprite_size: 8x8
-    count: 1
-    raw_size: 32
-    source: gdb_patcher
-    md5: 36e8131bc3016bd0218ed49bd9b0bdbd
-  - id: rt_087E740C
-    label: rt tag=0xD759 LoadCompressedObjectPic
-    default: false
-    address: '0x087E740C'
-    format: 4bpp
-    compression: lz77_swap
-    sprite_size: 32x8
-    count: 1
-    raw_size: 128
-    source: gdb_patcher
-    md5: c695bc0618b5667da532e4e80e3a1b6e
+
 texts:
   filters:
   - id: global_anim_cmd_filter
@@ -513,6 +316,13 @@ texts:
     start: '0x0'
     end: '0xFFFFFF'
     type: scan
+    ignored_reader:
+    - '\CC0505'
+    - '\CC0508'
+    - '\CC0509'
+    - '\CC050E'
+    - '\CC050F'
+    - '\CC050FＬ\CC0CFBＡ'
     filters:
     - id: ui_original_text_filter
       type: original_text_filter
@@ -593,6 +403,13 @@ texts:
     start: '0x0'
     end: '0xFFFFFF'
     type: scan
+    ignored_reader:
+    - '\CC0505'
+    - '\CC0508'
+    - '\CC0509'
+    - '\CC050E'
+    - '\CC050F'
+    - '\CC050FＬ\CC0CFBＡ'
     filters:
     - id: extra_story_pointer_filter
       type: require_pointer_filter

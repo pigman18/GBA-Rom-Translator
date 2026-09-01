@@ -38,6 +38,11 @@
       "type": "stride_ptr",
       "read": {
         "stride": 4
+      },
+      "write": {
+        "relocate": false,
+        "replace": false,
+        "slot": true
       }
     },
     "特性名": {
@@ -50,6 +55,11 @@
       "type": "stride",
       "read": {
         "stride": 8
+      },
+      "write": {
+        "relocate": false,
+        "replace": false,
+        "slot": true
       }
     },
     "宝可梦名": {
@@ -312,14 +322,6 @@
       "start": "0x0",
       "end": "0xFFFFFF",
       "type": "scan",
-      "ignored_reader": [
-        "\\CC0505",
-        "\\CC0508",
-        "\\CC0509",
-        "\\CC050E",
-        "\\CC050F",
-        "\\CC050FＬ\\CC0CFBＡ"
-      ],
       "filters": [
         {
           "id": "ui_original_text_filter",
@@ -418,14 +420,6 @@
       "start": "0x0",
       "end": "0xFFFFFF",
       "type": "scan",
-      "ignored_reader": [
-        "\\CC0505",
-        "\\CC0508",
-        "\\CC0509",
-        "\\CC050E",
-        "\\CC050F",
-        "\\CC050FＬ\\CC0CFBＡ"
-      ],
       "filters": [
         {
           "id": "extra_story_pointer_filter",
@@ -440,7 +434,7 @@
       }
     }
   },
-  "count": 12695,
+  "count": 12697,
   "entries": [
     {
       "id": "axvj_92f0510597a5",
@@ -57566,12 +57560,12 @@
       ]
     },
     {
-      "id": "axvj_7f6c48b75494",
+      "id": "axvj_5122c4778a20",
       "module": "UI界面",
       "address": "0x0837B50C",
-      "byte_length": 10,
-      "original": "せっていを かえる",
-      "original_hex": "0e 50 13 02 2d 00 06 04 29 ff",
+      "byte_length": 13,
+      "original": "\\CC0509せっていを かえる",
+      "original_hex": "fc 05 09 0e 50 13 02 2d 00 06 04 29 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -57582,12 +57576,12 @@
       ]
     },
     {
-      "id": "axvj_f4c4f2634add",
+      "id": "axvj_fcea5374fd2e",
       "module": "UI界面",
       "address": "0x0837B519",
-      "byte_length": 9,
-      "original": "はなしの はやさ",
-      "original_hex": "1a 15 0c 19 00 1a 24 0b ff",
+      "byte_length": 12,
+      "original": "\\CC0509はなしの はやさ",
+      "original_hex": "fc 05 09 1a 15 0c 19 00 1a 24 0b ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -57598,12 +57592,12 @@
       ]
     },
     {
-      "id": "axvj_22f5f3f470f8",
+      "id": "axvj_58c4cf002f6e",
       "module": "UI界面",
       "address": "0x0837B525",
-      "byte_length": 10,
-      "original": "せんとうエフェクト",
-      "original_hex": "0e 2e 14 03 54 6c 82 58 64 ff",
+      "byte_length": 13,
+      "original": "\\CC0509せんとうエフェクト",
+      "original_hex": "fc 05 09 0e 2e 14 03 54 6c 82 58 64 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -57614,12 +57608,12 @@
       ]
     },
     {
-      "id": "axvj_edfa33fd42f7",
+      "id": "axvj_a7b2b0158949",
       "module": "UI界面",
       "address": "0x0837B532",
-      "byte_length": 9,
-      "original": "しあいの ルール",
-      "original_hex": "0c 01 02 19 00 79 ae 79 ff",
+      "byte_length": 12,
+      "original": "\\CC0509しあいの ルール",
+      "original_hex": "fc 05 09 0c 01 02 19 00 79 ae 79 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -57630,12 +57624,12 @@
       ]
     },
     {
-      "id": "axvj_6269797860a0",
+      "id": "axvj_8f1a1ce10352",
       "module": "UI界面",
       "address": "0x0837B53E",
-      "byte_length": 5,
-      "original": "サウンド",
-      "original_hex": "5b 53 7e 95 ff",
+      "byte_length": 8,
+      "original": "\\CC0509サウンド",
+      "original_hex": "fc 05 09 5b 53 7e 95 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -57646,12 +57640,12 @@
       ]
     },
     {
-      "id": "axvj_e187cf344fad",
+      "id": "axvj_e7d018cf78c6",
       "module": "UI界面",
       "address": "0x0837B546",
-      "byte_length": 6,
-      "original": "ウインドウ",
-      "original_hex": "53 52 7e 95 53 ff",
+      "byte_length": 9,
+      "original": "\\CC0509ウインドウ",
+      "original_hex": "fc 05 09 53 52 7e 95 53 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -57662,12 +57656,12 @@
       ]
     },
     {
-      "id": "axvj_0d5fe8461e9c",
+      "id": "axvj_e629b35fac1f",
       "module": "UI界面",
       "address": "0x0837B54F",
-      "byte_length": 4,
-      "original": "おわる",
-      "original_hex": "05 2c 29 ff",
+      "byte_length": 7,
+      "original": "\\CC0509おわる",
+      "original_hex": "fc 05 09 05 2c 29 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -57678,12 +57672,12 @@
       ]
     },
     {
-      "id": "axvj_3ac454d964d5",
+      "id": "axvj_9a7240611503",
       "module": "UI界面",
       "address": "0x0837B556",
-      "byte_length": 9,
-      "original": "ボタンの モード",
-      "original_hex": "9a 60 7e 19 00 73 ae 95 ff",
+      "byte_length": 12,
+      "original": "\\CC0509ボタンの モード",
+      "original_hex": "fc 05 09 9a 60 7e 19 00 73 ae 95 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -57694,12 +57688,12 @@
       ]
     },
     {
-      "id": "axvj_f85d27ee14ab",
+      "id": "axvj_7ceaf0516a3b",
       "module": "UI界面",
       "address": "0x0837B562",
-      "byte_length": 4,
-      "original": "おそい",
-      "original_hex": "05 0f 02 ff",
+      "byte_length": 7,
+      "original": "\\CC050Fおそい",
+      "original_hex": "fc 05 0f 05 0f 02 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -57710,12 +57704,12 @@
       ]
     },
     {
-      "id": "axvj_75fa0def420e",
+      "id": "axvj_74ddb35e2814",
       "module": "UI界面",
       "address": "0x0837B569",
-      "byte_length": 4,
-      "original": "ふつう",
-      "original_hex": "1c 12 03 ff",
+      "byte_length": 7,
+      "original": "\\CC050Fふつう",
+      "original_hex": "fc 05 0f 1c 12 03 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -57726,12 +57720,12 @@
       ]
     },
     {
-      "id": "axvj_d380d782302f",
+      "id": "axvj_70c63c802447",
       "module": "UI界面",
       "address": "0x0837B570",
-      "byte_length": 4,
-      "original": "はやい",
-      "original_hex": "1a 24 02 ff",
+      "byte_length": 7,
+      "original": "\\CC050Fはやい",
+      "original_hex": "fc 05 0f 1a 24 02 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -57742,12 +57736,12 @@
       ]
     },
     {
-      "id": "axvj_51c58ebddc29",
+      "id": "axvj_d26e044eaaf1",
       "module": "UI界面",
       "address": "0x0837B577",
-      "byte_length": 3,
-      "original": "みる",
-      "original_hex": "20 29 ff",
+      "byte_length": 6,
+      "original": "\\CC050Fみる",
+      "original_hex": "fc 05 0f 20 29 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -57758,12 +57752,12 @@
       ]
     },
     {
-      "id": "axvj_3947757892ca",
+      "id": "axvj_a830c362768e",
       "module": "UI界面",
       "address": "0x0837B57D",
-      "byte_length": 4,
-      "original": "みない",
-      "original_hex": "20 15 02 ff",
+      "byte_length": 7,
+      "original": "\\CC050Fみない",
+      "original_hex": "fc 05 0f 20 15 02 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -57774,12 +57768,12 @@
       ]
     },
     {
-      "id": "axvj_272e11415cd7",
+      "id": "axvj_1ddd3cb6cf5b",
       "module": "UI界面",
       "address": "0x0837B584",
-      "byte_length": 5,
-      "original": "いれかえ",
-      "original_hex": "02 2a 06 04 ff",
+      "byte_length": 8,
+      "original": "\\CC050Fいれかえ",
+      "original_hex": "fc 05 0f 02 2a 06 04 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -57790,12 +57784,12 @@
       ]
     },
     {
-      "id": "axvj_bc9337284206",
+      "id": "axvj_59cb90579fc8",
       "module": "UI界面",
       "address": "0x0837B58C",
-      "byte_length": 5,
-      "original": "かちぬき",
-      "original_hex": "06 11 17 07 ff",
+      "byte_length": 8,
+      "original": "\\CC050Fかちぬき",
+      "original_hex": "fc 05 0f 06 11 17 07 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -57806,12 +57800,12 @@
       ]
     },
     {
-      "id": "axvj_d40808f9e42d",
+      "id": "axvj_102ed062790e",
       "module": "UI界面",
       "address": "0x0837B594",
-      "byte_length": 5,
-      "original": "モノラル",
-      "original_hex": "73 69 77 79 ff",
+      "byte_length": 8,
+      "original": "\\CC050Fモノラル",
+      "original_hex": "fc 05 0f 73 69 77 79 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -57822,12 +57816,12 @@
       ]
     },
     {
-      "id": "axvj_2836a23b8263",
+      "id": "axvj_74e14ecf4cdf",
       "module": "UI界面",
       "address": "0x0837B59C",
-      "byte_length": 5,
-      "original": "ステレオ",
-      "original_hex": "5d 63 7a 55 ff",
+      "byte_length": 8,
+      "original": "\\CC050Fステレオ",
+      "original_hex": "fc 05 0f 5d 63 7a 55 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -57838,12 +57832,12 @@
       ]
     },
     {
-      "id": "axvj_821024a83d36",
+      "id": "axvj_b5fdacceb256",
       "module": "UI界面",
       "address": "0x0837B5A4",
-      "byte_length": 4,
-      "original": "タイプ",
-      "original_hex": "60 52 9d ff",
+      "byte_length": 7,
+      "original": "\\CC050Fタイプ",
+      "original_hex": "fc 05 0f 60 52 9d ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -57854,12 +57848,12 @@
       ]
     },
     {
-      "id": "axvj_2cd4e0b0df68",
+      "id": "axvj_e8a8fd963150",
       "module": "UI界面",
       "address": "0x0837B5AF",
-      "byte_length": 5,
-      "original": "ノーマル",
-      "original_hex": "69 ae 6f 79 ff",
+      "byte_length": 8,
+      "original": "\\CC050Fノーマル",
+      "original_hex": "fc 05 0f 69 ae 6f 79 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -57870,12 +57864,12 @@
       ]
     },
     {
-      "id": "axvj_4a6e9293651a",
+      "id": "axvj_1266561ba377",
       "module": "UI界面",
       "address": "0x0837B5B7",
-      "byte_length": 3,
-      "original": "ＬＲ",
-      "original_hex": "c6 cc ff",
+      "byte_length": 6,
+      "original": "\\CC050FＬＲ",
+      "original_hex": "fc 05 0f c6 cc ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -57982,12 +57976,12 @@
       ]
     },
     {
-      "id": "axvj_807293ba791f",
+      "id": "axvj_e3990b257f21",
       "module": "UI界面",
       "address": "0x0839729A",
-      "byte_length": 14,
-      "original": "\\02\\CC050Fで あったようだ",
-      "original_hex": "fd 02 fc 05 0f 44 00 01 50 10 26 03 41 ff",
+      "byte_length": 17,
+      "original": "\\CC050E\\02\\CC050Fで あったようだ",
+      "original_hex": "fc 05 0e fd 02 fc 05 0f 44 00 01 50 10 26 03 41 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60076,12 +60070,12 @@
       ]
     },
     {
-      "id": "axvj_c239bdfec92a",
+      "id": "axvj_52790c3ad58c",
       "module": "UI界面",
       "address": "0x083DC9AF",
-      "byte_length": 25,
-      "original": "\\CC040D0E0Fたたかう  バッグ\nポケモン  にげる",
-      "original_hex": "fc 04 0d 0e 0f 10 10 06 03 00 00 96 a0 89 fe 9f 59 73 7e 00 00 16 3a 29 ff",
+      "byte_length": 28,
+      "original": "\\CC0505\\CC040D0E0Fたたかう  バッグ\nポケモン  にげる",
+      "original_hex": "fc 05 05 fc 04 0d 0e 0f 10 10 06 03 00 00 96 a0 89 fe 9f 59 73 7e 00 00 16 3a 29 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60094,12 +60088,12 @@
       ]
     },
     {
-      "id": "axvj_f6a809c1c9fe",
+      "id": "axvj_3280499f97db",
       "module": "UI界面",
       "address": "0x083DC9CB",
-      "byte_length": 26,
-      "original": "\\CC040D0E0Fボール   ポロック\nちかづく  にげる",
-      "original_hex": "fc 04 0d 0e 0f 9a ae 79 00 00 00 9f 7b a0 58 fe 11 06 43 08 00 00 16 3a 29 ff",
+      "byte_length": 29,
+      "original": "\\CC0505\\CC040D0E0Fボール   ポロック\nちかづく  にげる",
+      "original_hex": "fc 05 05 fc 04 0d 0e 0f 9a ae 79 00 00 00 9f 7b a0 58 fe 11 06 43 08 00 00 16 3a 29 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60110,12 +60104,12 @@
       ]
     },
     {
-      "id": "axvj_8c57d456d9c3",
+      "id": "axvj_64b916b6e3a4",
       "module": "UI界面",
       "address": "0x083DC9E8",
-      "byte_length": 15,
-      "original": "\\CC040D0E0FＰＰ\nわざタイプ／",
-      "original_hex": "fc 04 0d 0e 0f ca ca fe 2c 3c 60 52 9d ba ff",
+      "byte_length": 18,
+      "original": "\\CC0505\\CC040D0E0FＰＰ\nわざタイプ／",
+      "original_hex": "fc 05 05 fc 04 0d 0e 0f ca ca fe 2c 3c 60 52 9d ba ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60130,12 +60124,12 @@
       ]
     },
     {
-      "id": "axvj_381f0dc8c06b",
+      "id": "axvj_cd55c8f9f043",
       "module": "UI界面",
       "address": "0x083DCA03",
-      "byte_length": 21,
-      "original": "\\CC040D0E0Fどの わざを\nわすれさせたい？",
-      "original_hex": "fc 04 0d 0e 0f 45 19 00 2c 3c 2d fe 2c 0d 2a 0b 0e 10 02 ac ff",
+      "byte_length": 24,
+      "original": "\\CC0505\\CC040D0E0Fどの わざを\nわすれさせたい？",
+      "original_hex": "fc 05 05 fc 04 0d 0e 0f 45 19 00 2c 3c 2d fe 2c 0d 2a 0b 0e 10 02 ac ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60146,12 +60140,12 @@
       ]
     },
     {
-      "id": "axvj_3a616c37269a",
+      "id": "axvj_c4d220e7c460",
       "module": "UI界面",
       "address": "0x083DCA1B",
-      "byte_length": 12,
-      "original": "\\CC040D0E0Fはい\nいいえ",
-      "original_hex": "fc 04 0d 0e 0f 1a 02 fe 02 02 04 ff",
+      "byte_length": 15,
+      "original": "\\CC0505\\CC040D0E0Fはい\nいいえ",
+      "original_hex": "fc 05 05 fc 04 0d 0e 0f 1a 02 fe 02 02 04 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60170,12 +60164,12 @@
       ]
     },
     {
-      "id": "axvj_867c77f3066e",
+      "id": "axvj_109b4ef71673",
       "module": "UI界面",
       "address": "0x083DCA2A",
-      "byte_length": 25,
-      "original": "\\CC040D0E0Fいれかえる わざを\nえらんで ください",
-      "original_hex": "fc 04 0d 0e 0f 02 2a 06 04 29 00 2c 3c 2d fe 04 27 2e 44 00 08 41 0b 02 ff",
+      "byte_length": 28,
+      "original": "\\CC0505\\CC040D0E0Fいれかえる わざを\nえらんで ください",
+      "original_hex": "fc 05 05 fc 04 0d 0e 0f 02 2a 06 04 29 00 2c 3c 2d fe 04 27 2e 44 00 08 41 0b 02 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60390,12 +60384,12 @@
       ]
     },
     {
-      "id": "axvj_a76110f924c8",
+      "id": "axvj_01655d5d355c",
       "module": "UI界面",
       "address": "0x083E760C",
-      "byte_length": 14,
-      "original": "ポケットモンスター ルビー",
-      "original_hex": "9f 59 a0 64 73 7e 5d 60 ae 00 79 97 ae ff",
+      "byte_length": 17,
+      "original": "\\CC0509ポケットモンスター ルビー",
+      "original_hex": "fc 05 09 9f 59 a0 64 73 7e 5d 60 ae 00 79 97 ae ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60406,12 +60400,12 @@
       ]
     },
     {
-      "id": "axvj_efcdbf9557d0",
+      "id": "axvj_2ef1d5dad76b",
       "module": "UI界面",
       "address": "0x083E761D",
-      "byte_length": 8,
-      "original": "スタッフリスト",
-      "original_hex": "5d 60 a0 6c 78 5d 64 ff",
+      "byte_length": 11,
+      "original": "\\CC0509スタッフリスト",
+      "original_hex": "fc 05 09 5d 60 a0 6c 78 5d 64 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60422,12 +60416,12 @@
       ]
     },
     {
-      "id": "axvj_dc7d17b51ebf",
+      "id": "axvj_425bfaa5f4a6",
       "module": "UI界面",
       "address": "0x083E7628",
-      "byte_length": 15,
-      "original": "エグゼクティブ ディレクター",
-      "original_hex": "54 89 8f 58 63 80 98 00 94 80 7a 58 60 ae ff",
+      "byte_length": 18,
+      "original": "\\CC0509エグゼクティブ ディレクター",
+      "original_hex": "fc 05 09 54 89 8f 58 63 80 98 00 94 80 7a 58 60 ae ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60438,12 +60432,12 @@
       ]
     },
     {
-      "id": "axvj_8cebc19a9b37",
+      "id": "axvj_0cf03d1164d5",
       "module": "UI界面",
       "address": "0x083E763A",
-      "byte_length": 7,
-      "original": "ディレクター",
-      "original_hex": "94 80 7a 58 60 ae ff",
+      "byte_length": 10,
+      "original": "\\CC0509ディレクター",
+      "original_hex": "fc 05 09 94 80 7a 58 60 ae ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60454,12 +60448,12 @@
       ]
     },
     {
-      "id": "axvj_89cb4b0e124f",
+      "id": "axvj_272d0347c713",
       "module": "UI界面",
       "address": "0x083E7644",
-      "byte_length": 11,
-      "original": "アート ディレクター",
-      "original_hex": "51 ae 64 00 94 80 7a 58 60 ae ff",
+      "byte_length": 14,
+      "original": "\\CC0509アート ディレクター",
+      "original_hex": "fc 05 09 51 ae 64 00 94 80 7a 58 60 ae ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60470,12 +60464,12 @@
       ]
     },
     {
-      "id": "axvj_54bf3907ca84",
+      "id": "axvj_589341562272",
       "module": "UI界面",
       "address": "0x083E7652",
-      "byte_length": 11,
-      "original": "バトル ディレクター",
-      "original_hex": "96 64 79 00 94 80 7a 58 60 ae ff",
+      "byte_length": 14,
+      "original": "\\CC0509バトル ディレクター",
+      "original_hex": "fc 05 09 96 64 79 00 94 80 7a 58 60 ae ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60486,12 +60480,12 @@
       ]
     },
     {
-      "id": "axvj_8806f47f9d58",
+      "id": "axvj_1687294ab308",
       "module": "UI界面",
       "address": "0x083E7660",
-      "byte_length": 10,
-      "original": "メイン プログラム",
-      "original_hex": "72 52 7e 00 9d 7b 89 77 71 ff",
+      "byte_length": 13,
+      "original": "\\CC0509メイン プログラム",
+      "original_hex": "fc 05 09 72 52 7e 00 9d 7b 89 77 71 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60502,12 +60496,12 @@
       ]
     },
     {
-      "id": "axvj_67194f5c650b",
+      "id": "axvj_9ef66a44c7d6",
       "module": "UI界面",
       "address": "0x083E766D",
-      "byte_length": 15,
-      "original": "バトル システム プログラム",
-      "original_hex": "96 64 79 00 5c 5d 63 71 00 9d 7b 89 77 71 ff",
+      "byte_length": 18,
+      "original": "\\CC0509バトル システム プログラム",
+      "original_hex": "fc 05 09 96 64 79 00 5c 5d 63 71 00 9d 7b 89 77 71 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60518,12 +60512,12 @@
       ]
     },
     {
-      "id": "axvj_33aeae8a17ea",
+      "id": "axvj_72990151faac",
       "module": "UI界面",
       "address": "0x083E767F",
-      "byte_length": 17,
-      "original": "フィールド システム プログラム",
-      "original_hex": "6c 80 ae 79 95 00 5c 5d 63 71 00 9d 7b 89 77 71 ff",
+      "byte_length": 20,
+      "original": "\\CC0509フィールド システム プログラム",
+      "original_hex": "fc 05 09 6c 80 ae 79 95 00 5c 5d 63 71 00 9d 7b 89 77 71 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60534,12 +60528,12 @@
       ]
     },
     {
-      "id": "axvj_9cb24c6a0f2b",
+      "id": "axvj_d10aa2683664",
       "module": "UI界面",
       "address": "0x083E7693",
-      "byte_length": 6,
-      "original": "プログラム",
-      "original_hex": "9d 7b 89 77 71 ff",
+      "byte_length": 9,
+      "original": "\\CC0509プログラム",
+      "original_hex": "fc 05 09 9d 7b 89 77 71 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60550,12 +60544,12 @@
       ]
     },
     {
-      "id": "axvj_7856fd54f7a0",
+      "id": "axvj_48b7d4be72e3",
       "module": "UI界面",
       "address": "0x083E769C",
-      "byte_length": 16,
-      "original": "メイン グラフィック デザイン",
-      "original_hex": "72 52 7e 00 89 77 6c 80 a0 58 00 94 8c 52 7e ff",
+      "byte_length": 19,
+      "original": "\\CC0509メイン グラフィック デザイン",
+      "original_hex": "fc 05 09 72 52 7e 00 89 77 6c 80 a0 58 00 94 8c 52 7e ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60566,12 +60560,12 @@
       ]
     },
     {
-      "id": "axvj_b47001cf02d1",
+      "id": "axvj_092ef8e9f423",
       "module": "UI界面",
       "address": "0x083E76AF",
-      "byte_length": 21,
-      "original": "ポケモン \\CC0CFB グラフィック デザイン",
-      "original_hex": "9f 59 73 7e 00 fc 0c fb 00 89 77 6c 80 a0 58 00 94 8c 52 7e ff",
+      "byte_length": 24,
+      "original": "\\CC0509ポケモン \\CC0CFB グラフィック デザイン",
+      "original_hex": "fc 05 09 9f 59 73 7e 00 fc 0c fb 00 89 77 6c 80 a0 58 00 94 8c 52 7e ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60582,12 +60576,12 @@
       ]
     },
     {
-      "id": "axvj_bb1f9bdda677",
+      "id": "axvj_c4b9735515fc",
       "module": "UI界面",
       "address": "0x083E76C7",
-      "byte_length": 10,
-      "original": "ポケモン デザイン",
-      "original_hex": "9f 59 73 7e 00 94 8c 52 7e ff",
+      "byte_length": 13,
+      "original": "\\CC0509ポケモン デザイン",
+      "original_hex": "fc 05 09 9f 59 73 7e 00 94 8c 52 7e ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60598,12 +60592,12 @@
       ]
     },
     {
-      "id": "axvj_6c33abb4ee43",
+      "id": "axvj_ed287f660f74",
       "module": "UI界面",
       "address": "0x083E76D4",
-      "byte_length": 5,
-      "original": "おんがく",
-      "original_hex": "05 2e 37 08 ff",
+      "byte_length": 8,
+      "original": "\\CC0509おんがく",
+      "original_hex": "fc 05 09 05 2e 37 08 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60614,12 +60608,12 @@
       ]
     },
     {
-      "id": "axvj_cf7ce791dc1d",
+      "id": "axvj_87787544efbe",
       "module": "UI界面",
       "address": "0x083E76DC",
-      "byte_length": 24,
-      "original": "サウンド エフェクト \\CC0CFB ポケモン ボイス",
-      "original_hex": "5b 53 7e 95 00 54 6c 82 58 64 00 fc 0c fb 00 9f 59 73 7e 00 9a 52 5d ff",
+      "byte_length": 27,
+      "original": "\\CC0509サウンド エフェクト \\CC0CFB ポケモン ボイス",
+      "original_hex": "fc 05 09 5b 53 7e 95 00 54 6c 82 58 64 00 fc 0c fb 00 9f 59 73 7e 00 9a 52 5d ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60630,12 +60624,12 @@
       ]
     },
     {
-      "id": "axvj_8ec2764a62e7",
+      "id": "axvj_c05618cd8d1b",
       "module": "UI界面",
       "address": "0x083E76F7",
-      "byte_length": 9,
-      "original": "ゲーム デザイン",
-      "original_hex": "8a ae 71 00 94 8c 52 7e ff",
+      "byte_length": 12,
+      "original": "\\CC0509ゲーム デザイン",
+      "original_hex": "fc 05 09 8a ae 71 00 94 8c 52 7e ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60646,12 +60640,12 @@
       ]
     },
     {
-      "id": "axvj_acab34bcdaab",
+      "id": "axvj_e0c4e5231e51",
       "module": "UI界面",
       "address": "0x083E7703",
-      "byte_length": 9,
-      "original": "シナリオプロット",
-      "original_hex": "5c 65 78 55 9d 7b a0 64 ff",
+      "byte_length": 12,
+      "original": "\\CC0509シナリオプロット",
+      "original_hex": "fc 05 09 5c 65 78 55 9d 7b a0 64 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60662,12 +60656,12 @@
       ]
     },
     {
-      "id": "axvj_0de925541d72",
+      "id": "axvj_a051c82dad24",
       "module": "UI界面",
       "address": "0x083E770F",
-      "byte_length": 5,
-      "original": "シナリオ",
-      "original_hex": "5c 65 78 55 ff",
+      "byte_length": 8,
+      "original": "\\CC0509シナリオ",
+      "original_hex": "fc 05 09 5c 65 78 55 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60678,12 +60672,12 @@
       ]
     },
     {
-      "id": "axvj_2c1209ad9c25",
+      "id": "axvj_331047c208dd",
       "module": "UI界面",
       "address": "0x083E7717",
-      "byte_length": 11,
-      "original": "スクリプト せってい",
-      "original_hex": "5d 58 78 9d 64 00 0e 50 13 02 ff",
+      "byte_length": 14,
+      "original": "\\CC0509スクリプト せってい",
+      "original_hex": "fc 05 09 5d 58 78 9d 64 00 0e 50 13 02 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60694,12 +60688,12 @@
       ]
     },
     {
-      "id": "axvj_e0c85ce48dee",
+      "id": "axvj_bd9a77d79310",
       "module": "UI界面",
       "address": "0x083E7725",
-      "byte_length": 9,
-      "original": "マップ デザイン",
-      "original_hex": "6f a0 9d 00 94 8c 52 7e ff",
+      "byte_length": 12,
+      "original": "\\CC0509マップ デザイン",
+      "original_hex": "fc 05 09 6f a0 9d 00 94 8c 52 7e ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60710,12 +60704,12 @@
       ]
     },
     {
-      "id": "axvj_a963302e9d8f",
+      "id": "axvj_b7b7c1a357a8",
       "module": "UI界面",
       "address": "0x083E7731",
-      "byte_length": 12,
-      "original": "マップデータ せってい",
-      "original_hex": "6f a0 9d 94 ae 60 00 0e 50 13 02 ff",
+      "byte_length": 15,
+      "original": "\\CC0509マップデータ せってい",
+      "original_hex": "fc 05 09 6f a0 9d 94 ae 60 00 0e 50 13 02 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60726,12 +60720,12 @@
       ]
     },
     {
-      "id": "axvj_bbbb21355c11",
+      "id": "axvj_39d2966375d8",
       "module": "UI界面",
       "address": "0x083E7740",
-      "byte_length": 12,
-      "original": "パラメーター せってい",
-      "original_hex": "9b 77 72 ae 60 ae 00 0e 50 13 02 ff",
+      "byte_length": 15,
+      "original": "\\CC0509パラメーター せってい",
+      "original_hex": "fc 05 09 9b 77 72 ae 60 ae 00 0e 50 13 02 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60742,12 +60736,12 @@
       ]
     },
     {
-      "id": "axvj_ce5ba5458406",
+      "id": "axvj_fdb8f4db408a",
       "module": "UI界面",
       "address": "0x083E774F",
-      "byte_length": 9,
-      "original": "ずかん テキスト",
-      "original_hex": "3e 06 2e 00 63 57 5d 64 ff",
+      "byte_length": 12,
+      "original": "\\CC0509ずかん テキスト",
+      "original_hex": "fc 05 09 3e 06 2e 00 63 57 5d 64 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60758,12 +60752,12 @@
       ]
     },
     {
-      "id": "axvj_aa48abcfeb67",
+      "id": "axvj_c49643cc57b1",
       "module": "UI界面",
       "address": "0x083E775B",
-      "byte_length": 20,
-      "original": "かんきょう \\CC0CFB ツール プログラム",
-      "original_hex": "06 2e 07 36 03 00 fc 0c fb 00 62 ae 79 00 9d 7b 89 77 71 ff",
+      "byte_length": 23,
+      "original": "\\CC0509かんきょう \\CC0CFB ツール プログラム",
+      "original_hex": "fc 05 09 06 2e 07 36 03 00 fc 0c fb 00 62 ae 79 00 9d 7b 89 77 71 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60774,12 +60768,12 @@
       ]
     },
     {
-      "id": "axvj_8da2075437ba",
+      "id": "axvj_382de3b806d2",
       "module": "UI界面",
       "address": "0x083E7772",
-      "byte_length": 8,
-      "original": "デバッグプレイ",
-      "original_hex": "94 96 a0 89 9d 7a 52 ff",
+      "byte_length": 11,
+      "original": "\\CC0509デバッグプレイ",
+      "original_hex": "fc 05 09 94 96 a0 89 9d 7a 52 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60790,12 +60784,12 @@
       ]
     },
     {
-      "id": "axvj_4f1c3fcd73bd",
+      "id": "axvj_c21aecccc33c",
       "module": "UI界面",
       "address": "0x083E777D",
-      "byte_length": 10,
-      "original": "スペシャルサンクス",
-      "original_hex": "5d 9e 5c 84 79 5b 7e 58 5d ff",
+      "byte_length": 13,
+      "original": "\\CC0509スペシャルサンクス",
+      "original_hex": "fc 05 09 5d 9e 5c 84 79 5b 7e 58 5d ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60806,12 +60800,12 @@
       ]
     },
     {
-      "id": "axvj_949cab4bdc13",
+      "id": "axvj_1574719bf1f0",
       "module": "UI界面",
       "address": "0x083E778A",
-      "byte_length": 9,
-      "original": "コーディネーター",
-      "original_hex": "5a ae 94 80 68 ae 60 ae ff",
+      "byte_length": 12,
+      "original": "\\CC0509コーディネーター",
+      "original_hex": "fc 05 09 5a ae 94 80 68 ae 60 ae ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60822,12 +60816,12 @@
       ]
     },
     {
-      "id": "axvj_07eef5700078",
+      "id": "axvj_a8224a54c0dd",
       "module": "UI界面",
       "address": "0x083E7796",
-      "byte_length": 8,
-      "original": "プロデューサー",
-      "original_hex": "9d 7b 94 85 ae 5b ae ff",
+      "byte_length": 11,
+      "original": "\\CC0509プロデューサー",
+      "original_hex": "fc 05 09 9d 7b 94 85 ae 5b ae ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60838,12 +60832,12 @@
       ]
     },
     {
-      "id": "axvj_edb2864abc9f",
+      "id": "axvj_d522ad11152e",
       "module": "UI界面",
       "address": "0x083E77A1",
-      "byte_length": 16,
-      "original": "エグゼクティブ プロデューサー",
-      "original_hex": "54 89 8f 58 63 80 98 00 9d 7b 94 85 ae 5b ae ff",
+      "byte_length": 19,
+      "original": "\\CC0509エグゼクティブ プロデューサー",
+      "original_hex": "fc 05 09 54 89 8f 58 63 80 98 00 9d 7b 94 85 ae 5b ae ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60854,12 +60848,12 @@
       ]
     },
     {
-      "id": "axvj_02dd6cea9327",
+      "id": "axvj_b266b672b4e1",
       "module": "UI界面",
       "address": "0x083E77B4",
-      "byte_length": 10,
-      "original": "じょうほう かんり",
-      "original_hex": "3d 36 03 1e 03 00 06 2e 28 ff",
+      "byte_length": 13,
+      "original": "\\CC0509じょうほう かんり",
+      "original_hex": "fc 05 09 3d 36 03 1e 03 00 06 2e 28 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60870,12 +60864,12 @@
       ]
     },
     {
-      "id": "axvj_c3a588778e7a",
+      "id": "axvj_b102ca4b793f",
       "module": "UI界面",
       "address": "0x083E77C1",
-      "byte_length": 15,
-      "original": "ファンクション マネージャー",
-      "original_hex": "6c 7f 7e 58 5c 86 7e 00 6f 68 ae 8d 84 ae ff",
+      "byte_length": 18,
+      "original": "\\CC0509ファンクション マネージャー",
+      "original_hex": "fc 05 09 6c 7f 7e 58 5c 86 7e 00 6f 68 ae 8d 84 ae ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -60886,12 +60880,12 @@
       ]
     },
     {
-      "id": "axvj_848465d06978",
+      "id": "axvj_9288b0c74a83",
       "module": "UI界面",
       "address": "0x083E77D3",
-      "byte_length": 10,
-      "original": "てんじ かんしゅう",
-      "original_hex": "13 2e 3d 00 06 2e 0c 35 03 ff",
+      "byte_length": 13,
+      "original": "\\CC0509てんじ かんしゅう",
+      "original_hex": "fc 05 09 13 2e 3d 00 06 2e 0c 35 03 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -64054,12 +64048,12 @@
       ]
     },
     {
-      "id": "axvj_0aa24b51117e",
+      "id": "axvj_aa54cb4ef11d",
       "module": "UI界面",
       "address": "0x083EB6BE",
-      "byte_length": 5,
-      "original": "さくせん",
-      "original_hex": "0b 08 0e 2e ff",
+      "byte_length": 8,
+      "original": "\\CC0505さくせん",
+      "original_hex": "fc 05 05 0b 08 0e 2e ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -64070,12 +64064,12 @@
       ]
     },
     {
-      "id": "axvj_60ad52517543",
+      "id": "axvj_d25fdf635117",
       "module": "UI界面",
       "address": "0x083EB6D3",
-      "byte_length": 8,
-      "original": "じこしょうかい",
-      "original_hex": "3d 0a 0c 36 03 06 02 ff",
+      "byte_length": 11,
+      "original": "\\CC0505じこしょうかい",
+      "original_hex": "fc 05 05 3d 0a 0c 36 03 06 02 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -187691,6 +187685,38 @@
       ]
     },
     {
+      "id": "axvj_ce1fec13cc51",
+      "module": "补漏剧情",
+      "address": "0x0837B5AB",
+      "byte_length": 4,
+      "original": "\\CC0508",
+      "original_hex": "fc 05 08 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x08088CD0"
+      ],
+      "pointer_addresses": [
+        "0x08088CD0"
+      ]
+    },
+    {
+      "id": "axvj_5b1d0a415839",
+      "module": "补漏剧情",
+      "address": "0x0837B5BD",
+      "byte_length": 9,
+      "original": "\\CC050FＬ\\CC0CFBＡ",
+      "original_hex": "fc 05 0f c6 fc 0c fb bb ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x08088DB8"
+      ],
+      "pointer_addresses": [
+        "0x08088DB8"
+      ]
+    },
+    {
       "id": "axvj_0e2c063c04e5",
       "module": "补漏剧情",
       "address": "0x0837B5C8",
@@ -194277,12 +194303,12 @@
       ]
     },
     {
-      "id": "axvj_4600f0364f61",
+      "id": "axvj_5ab1fc08c9af",
       "module": "补漏剧情",
       "address": "0x083DC9FA",
-      "byte_length": 6,
-      "original": "\\CC040D0E0F",
-      "original_hex": "fc 04 0d 0e 0f ff",
+      "byte_length": 9,
+      "original": "\\CC0505\\CC040D0E0F",
+      "original_hex": "fc 05 05 fc 04 0d 0e 0f ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -194297,12 +194323,12 @@
       ]
     },
     {
-      "id": "axvj_15b3f8b9e6d6",
+      "id": "axvj_2fb6b0ac1b65",
       "module": "补漏剧情",
       "address": "0x083DCA46",
-      "byte_length": 6,
-      "original": "\\CC040D0E0F",
-      "original_hex": "fc 04 0d 0e 0f ff",
+      "byte_length": 9,
+      "original": "\\CC0505\\CC040D0E0F",
+      "original_hex": "fc 05 05 fc 04 0d 0e 0f ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -195713,8 +195739,8 @@
       "module": "补漏剧情",
       "address": "0x083E9640",
       "byte_length": 4,
-      "original": "リクヤ",
-      "original_hex": "78 58 74 ff",
+      "original": "ユウキ",
+      "original_hex": "75 53 57 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -195761,8 +195787,8 @@
       "module": "补漏剧情",
       "address": "0x083E9658",
       "byte_length": 4,
-      "original": "ムツミ",
-      "original_hex": "71 62 70 ff",
+      "original": "ハルカ",
+      "original_hex": "6a 79 56 ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [

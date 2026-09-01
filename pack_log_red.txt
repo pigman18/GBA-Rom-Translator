@@ -1,0 +1,46 @@
+﻿[閰嶇疆] 鎵弿閰嶇疆鐩綍: C:\code\GBA-Rom-Translator\configs
+[閰嶇疆]   鍙戠幇娓告垙: POKEMON_RUBY_AXVJ00 -> C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\game.json
+[閰嶇疆] 鎵弿閰嶇疆鐩綍: C:\code\GBA-Rom-Translator\configs
+[閰嶇疆] 璇诲彇妯″潡: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
+[閰嶇疆]   妯″潡鏁? 22
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\font.config.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\hook\config.json
+[閰嶇疆] 璇诲彇娓告垙閰嶇疆: POKEMON_RUBY_AXVJ00
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\font.config.json
+[閰嶇疆] charmap: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\charmap.txt
+[texts] 璇诲彇 C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
+[閰嶇疆] 璇诲彇鑷畾涔夌炕璇戠洰褰? C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\lexicon (9 涓枃浠?
+[閰嶇疆]   UI.json: 25 鏉?
+[閰嶇疆]   鍥鹃壌.json: 1025 鏉?
+[閰嶇疆]   鍦扮偣.json: 915 鏉?
+[閰嶇疆]   灞炴€?json: 17 鏉?
+[閰嶇疆]   鎬ф牸.json: 25 鏉?
+[閰嶇疆]   鎷涘紡.json: 935 鏉?
+[閰嶇疆]   鐗规€?json: 313 鏉?
+[閰嶇疆]   鐭.json: 362 鏉?
+[閰嶇疆]   閬撳叿.json: 1470 鏉?
+[閰嶇疆] 鑷畾涔夌炕璇戞€昏: 5087 鏉?
+[缈昏瘧缂撳瓨] 鍔犺浇 C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts_translated.json: 14572 鏉?
+[閰嶇疆] 璇诲彇鑷畾涔夌炕璇戠洰褰? C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\lexicon (9 涓枃浠?
+[閰嶇疆]   UI.json: 25 鏉?
+[閰嶇疆]   鍥鹃壌.json: 1025 鏉?
+[閰嶇疆]   鍦扮偣.json: 915 鏉?
+[閰嶇疆]   灞炴€?json: 17 鏉?
+[閰嶇疆]   鎬ф牸.json: 25 鏉?
+[閰嶇疆]   鎷涘紡.json: 935 鏉?
+[閰嶇疆]   鐗规€?json: 313 鏉?
+[閰嶇疆]   鐭.json: 362 鏉?
+[閰嶇疆]   閬撳叿.json: 1470 鏉?
+[閰嶇疆] 鑷畾涔夌炕璇戞€昏: 5087 鏉?
+[缈昏瘧缂撳瓨] 缈昏瘧鍓?lexicon 鍙樻洿 12 鏉?鈫?C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts_translated.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[鏍￠獙] rejects/allows: 鎷掔粷 9/12697 鏉★紙鍊欓€?妯″潡鍐?12697/12697锛?
+[缈昏瘧宸泦] 寰呯炕 0 / free_texts 12697锛堣烦杩?鍗犱綅 458銆佸凡缂撳瓨/404 12230锛?
+[缈昏瘧缂撳瓨] 钀界洏 texts_translated.json: 14572 鏉?
+[缈昏瘧缂撳瓨] 鍥炲～ entries 11003 鏉?

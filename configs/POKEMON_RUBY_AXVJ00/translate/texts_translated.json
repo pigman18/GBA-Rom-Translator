@@ -1586,6 +1586,11 @@
   },
   {
     "status": 200,
+    "original": "\\02\\CC050Fで あったようだ",
+    "translated": "似乎就是这样"
+  },
+  {
+    "status": 200,
     "original": "\\02から\n\\03を あずかりました！\\CC09",
     "translated": "从\\03那里接收了\\n\\CC09！\\CC09"
   },
@@ -3757,6 +3762,36 @@
     "status": 200,
     "original": "\\CC020F\\CC0101オダマキはかせが ピンチだ！\nポケモンを だして たすけてあげよう！",
     "translated": "\\CC020F\\CC0101小田卷博士有危险！\n快放出宝可梦去救他！"
+  },
+  {
+    "status": 200,
+    "original": "\\CC040D0E0Fいれかえる わざを\nえらんで ください",
+    "translated": "请选择要替换的招式"
+  },
+  {
+    "status": 200,
+    "original": "\\CC040D0E0Fたたかう  バッグ\nポケモン  にげる",
+    "translated": "战斗 背包\\n宝可梦 逃跑"
+  },
+  {
+    "status": 200,
+    "original": "\\CC040D0E0Fどの わざを\nわすれさせたい？",
+    "translated": "想忘哪个招式？"
+  },
+  {
+    "status": 200,
+    "original": "\\CC040D0E0Fはい\nいいえ",
+    "translated": "是\\n否"
+  },
+  {
+    "status": 200,
+    "original": "\\CC040D0E0Fボール   ポロック\nちかづく  にげる",
+    "translated": "球   波鲁克\\n靠近 逃跑"
+  },
+  {
+    "status": 200,
+    "original": "\\CC040D0E0FＰＰ\nわざタイプ／",
+    "translated": "招式类型／"
   },
   {
     "status": 200,
@@ -11950,6 +11985,11 @@
   },
   {
     "status": 200,
+    "original": "おそい",
+    "translated": "慢"
+  },
+  {
+    "status": 200,
     "original": "おそい。 みが ちいさいほど おいしい。",
     "translated": "好慢。身体越小越好吃。"
   },
@@ -14183,6 +14223,11 @@
   },
   {
     "status": 200,
+    "original": "かちぬき",
+    "translated": "打到底"
+  },
+  {
+    "status": 200,
     "original": "かっこいい",
     "translated": "帅气"
   },
@@ -15025,6 +15070,11 @@
     "status": 200,
     "original": "かんきゃくは\n\\04を みつづけている！\\CC083C",
     "translated": "观众一直注视着\\n\\04！\\CC083C"
+  },
+  {
+    "status": 200,
+    "original": "かんきょう \\CC0CFB ツール プログラム",
+    "translated": "环境\\CC0CFB工具程序"
   },
   {
     "status": 200,
@@ -20979,6 +21029,11 @@
   },
   {
     "status": 200,
+    "original": "しあいの ルール",
+    "translated": "对战规则"
+  },
+  {
+    "status": 200,
     "original": "しあわせ",
     "translated": "幸福"
   },
@@ -22154,6 +22209,11 @@
   },
   {
     "status": 200,
+    "original": "じこしょうかい",
+    "translated": "自我介绍"
+  },
+  {
+    "status": 200,
     "original": "じごくぐるま",
     "translated": "地狱翻滚"
   },
@@ -22676,6 +22736,11 @@
     "status": 200,
     "original": "じょうほう",
     "translated": "信息"
+  },
+  {
+    "status": 200,
+    "original": "じょうほう かんり",
+    "translated": "信息管理"
   },
   {
     "status": 200,
@@ -23578,6 +23643,11 @@
   },
   {
     "status": 200,
+    "original": "ずかん テキスト",
+    "translated": "图鉴文本"
+  },
+  {
+    "status": 200,
     "original": "ずかんで しらべまくった トレーナー",
     "translated": "查遍图鉴的训练家"
   },
@@ -24012,6 +24082,11 @@
     "status": 200,
     "original": "せんとうへ",
     "translated": "去战斗"
+  },
+  {
+    "status": 200,
+    "original": "せんとうエフェクト",
+    "translated": "战斗动画"
   },
   {
     "status": 404,
@@ -28600,6 +28675,11 @@
   },
   {
     "status": 200,
+    "original": "てんじ かんしゅう",
+    "translated": "展览监督"
+  },
+  {
+    "status": 200,
     "original": "てんねん",
     "translated": "纯朴"
   },
@@ -33056,6 +33136,11 @@
   },
   {
     "status": 200,
+    "original": "はなしの はやさ",
+    "translated": "对话速度"
+  },
+  {
+    "status": 200,
     "original": "はなの かおりは きもちを おだやかにする。\nたたかいの ときは かおりを はっさんさせて\nあいての たたかう きもちを にぶらせるのだ。",
     "translated": "花的香气能让人心情平\\n静。\\p战斗时会散发香气，\\n削弱对手的战斗意志。"
   },
@@ -33173,6 +33258,11 @@
     "status": 200,
     "original": "はやあし",
     "translated": "飞毛腿"
+  },
+  {
+    "status": 200,
+    "original": "はやい",
+    "translated": "快"
   },
   {
     "status": 200,
@@ -34607,6 +34697,11 @@
     "status": 200,
     "original": "ふっふっふ",
     "translated": "呵呵呵"
+  },
+  {
+    "status": 200,
+    "original": "ふつう",
+    "translated": "普通"
   },
   {
     "status": 200,
@@ -37754,6 +37849,11 @@
   },
   {
     "status": 200,
+    "original": "みない",
+    "translated": "不看"
+  },
+  {
+    "status": 200,
     "original": "みなおしたわ！\nあなたって ほんとうに つよいのね！\n\nどうしたら そんなに つよく なれるのか\nおしえて もらいたいわ",
     "translated": "重新审视了一下！\\n你真的很强呢！\\p好想请教一下，怎样才\\n能变得像你这么强呢"
   },
@@ -37844,7 +37944,7 @@
   {
     "status": 200,
     "original": "みる",
-    "translated": "查看"
+    "translated": "看"
   },
   {
     "status": 200,
@@ -43298,6 +43398,11 @@
   },
   {
     "status": 200,
+    "original": "アート ディレクター",
+    "translated": "艺术总监"
+  },
+  {
+    "status": 200,
     "original": "アーボ",
     "translated": "阿柏蛇"
   },
@@ -43783,6 +43888,11 @@
   },
   {
     "status": 200,
+    "original": "ウインドウ",
+    "translated": "窗口"
+  },
+  {
+    "status": 200,
     "original": "ウェザーボール",
     "translated": "气象球"
   },
@@ -44239,6 +44349,16 @@
     "status": 200,
     "original": "エクセレント ",
     "translated": "太棒了"
+  },
+  {
+    "status": 200,
+    "original": "エグゼクティブ ディレクター",
+    "translated": "执行总监"
+  },
+  {
+    "status": 200,
+    "original": "エグゼクティブ プロデューサー",
+    "translated": "执行制作人"
   },
   {
     "status": 200,
@@ -48408,6 +48528,11 @@
   },
   {
     "status": 200,
+    "original": "ゲーム デザイン",
+    "translated": "游戏设计"
+  },
+  {
+    "status": 200,
     "original": "ゲームない じかんの しゅうせい システムが\nつかえる ように なりました！",
     "translated": "游戏内时间修正系统\n已经可以使用了！"
   },
@@ -49152,6 +49277,11 @@
   },
   {
     "status": 200,
+    "original": "コーディネーター",
+    "translated": "协调员"
+  },
+  {
+    "status": 200,
     "original": "コートチェンジ",
     "translated": "换场"
   },
@@ -49655,6 +49785,16 @@
     "status": 200,
     "original": "サウスサイドストリート",
     "translated": "南侧大道"
+  },
+  {
+    "status": 200,
+    "original": "サウンド",
+    "translated": "声音"
+  },
+  {
+    "status": 200,
+    "original": "サウンド エフェクト \\CC0CFB ポケモン ボイス",
+    "translated": "音效效果\\CC0CFB宝可梦语音"
   },
   {
     "status": 200,
@@ -50326,6 +50466,16 @@
     "status": 200,
     "original": "シティ",
     "translated": "市"
+  },
+  {
+    "status": 200,
+    "original": "シナリオ",
+    "translated": "剧本"
+  },
+  {
+    "status": 200,
+    "original": "シナリオプロット",
+    "translated": "剧情大纲"
   },
   {
     "status": 200,
@@ -51297,6 +51447,11 @@
   },
   {
     "status": 200,
+    "original": "スクリプト せってい",
+    "translated": "脚本设定"
+  },
+  {
+    "status": 200,
     "original": "スクリューおびれ",
     "translated": "螺旋尾鳍"
   },
@@ -51362,6 +51517,11 @@
   },
   {
     "status": 200,
+    "original": "スタッフリスト",
+    "translated": "工作人员列表"
+  },
+  {
+    "status": 200,
     "original": "スターのみ",
     "translated": "星桃果"
   },
@@ -51414,6 +51574,11 @@
     "status": 200,
     "original": "ステルスロック",
     "translated": "隐形岩"
+  },
+  {
+    "status": 200,
+    "original": "ステレオ",
+    "translated": "立体声"
   },
   {
     "status": 200,
@@ -51639,6 +51804,11 @@
     "status": 200,
     "original": "スペシャルガード",
     "translated": "特防强化"
+  },
+  {
+    "status": 200,
+    "original": "スペシャルサンクス",
+    "translated": "特别感谢"
   },
   {
     "status": 200,
@@ -54488,6 +54658,11 @@
   },
   {
     "status": 200,
+    "original": "ディレクター",
+    "translated": "总监"
+  },
+  {
+    "status": 200,
     "original": "ディンルー",
     "translated": "古鼎鹿"
   },
@@ -54585,6 +54760,11 @@
     "status": 200,
     "original": "デトルネ通り",
     "translated": "绕行道路"
+  },
+  {
+    "status": 200,
+    "original": "デバッグプレイ",
+    "translated": "调试游玩"
   },
   {
     "status": 200,
@@ -57771,6 +57951,16 @@
   },
   {
     "status": 200,
+    "original": "バトル システム プログラム",
+    "translated": "战斗系统程序"
+  },
+  {
+    "status": 200,
+    "original": "バトル ディレクター",
+    "translated": "战斗总监"
+  },
+  {
+    "status": 200,
     "original": "バトルカフェ",
     "translated": "对战咖啡馆"
   },
@@ -58418,6 +58608,11 @@
     "status": 200,
     "original": "パラメータへんこう",
     "translated": "参数变更"
+  },
+  {
+    "status": 200,
+    "original": "パラメーター せってい",
+    "translated": "参数设定"
   },
   {
     "status": 200,
@@ -59459,6 +59654,11 @@
   },
   {
     "status": 200,
+    "original": "ファンクション マネージャー",
+    "translated": "功能经理"
+  },
+  {
+    "status": 200,
     "original": "ファントムガード",
     "translated": "幻影防守"
   },
@@ -59491,6 +59691,11 @@
     "status": 200,
     "original": "フィーバー",
     "translated": "狂热"
+  },
+  {
+    "status": 200,
+    "original": "フィールド システム プログラム",
+    "translated": "野外系统程序"
   },
   {
     "status": 200,
@@ -60590,8 +60795,18 @@
   },
   {
     "status": 200,
+    "original": "プログラム",
+    "translated": "程序"
+  },
+  {
+    "status": 200,
     "original": "プロテクター",
     "translated": "护具"
+  },
+  {
+    "status": 200,
+    "original": "プロデューサー",
+    "translated": "制作人"
   },
   {
     "status": 200,
@@ -61264,6 +61479,11 @@
   },
   {
     "status": 200,
+    "original": "ボタンの モード",
+    "translated": "按键模式"
+  },
+  {
+    "status": 200,
     "original": "ボチ",
     "translated": "墓仔狗"
   },
@@ -61533,6 +61753,11 @@
   },
   {
     "status": 200,
+    "original": "ポケットモンスター ルビー",
+    "translated": "宝可梦红宝石"
+  },
+  {
+    "status": 200,
     "original": "ポケトレ",
     "translated": "宝可追踪"
   },
@@ -61560,6 +61785,11 @@
     "status": 200,
     "original": "ポケモン",
     "translated": "宝可梦"
+  },
+  {
+    "status": 200,
+    "original": "ポケモン \\CC0CFB グラフィック デザイン",
+    "translated": "宝可梦\\CC0CFB图形设计"
   },
   {
     "status": 200,
@@ -61665,6 +61895,11 @@
     "status": 200,
     "original": "ポケモン コンテスト\nハイパーランク ステージ！",
     "translated": "宝可梦华丽大赛\\n超级组舞台！"
+  },
+  {
+    "status": 200,
+    "original": "ポケモン デザイン",
+    "translated": "宝可梦设计"
   },
   {
     "status": 200,
@@ -63707,6 +63942,16 @@
   },
   {
     "status": 200,
+    "original": "マップ デザイン",
+    "translated": "地图设计"
+  },
+  {
+    "status": 200,
+    "original": "マップデータ せってい",
+    "translated": "地图数据设定"
+  },
+  {
+    "status": 200,
     "original": "マツブサ",
     "translated": "赤焰松"
   },
@@ -65429,6 +65674,16 @@
   },
   {
     "status": 200,
+    "original": "メイン グラフィック デザイン",
+    "translated": "主图形设计"
+  },
+  {
+    "status": 200,
+    "original": "メイン プログラム",
+    "translated": "主程序"
+  },
+  {
+    "status": 200,
     "original": "メェークル",
     "translated": "坐骑小羊"
   },
@@ -65934,6 +66189,11 @@
     "status": 200,
     "original": "モノマネ だいすきな ひとが\nあつまって つくった モノマネサークル！\n\nであった そのとき\nしょうぶが はじまる！",
     "translated": "喜欢模仿的人\\n聚集在一起创建的模仿\\p俱乐部！\\p相遇之时，对战开始！"
+  },
+  {
+    "status": 200,
+    "original": "モノラル",
+    "translated": "单声道"
   },
   {
     "status": 200,

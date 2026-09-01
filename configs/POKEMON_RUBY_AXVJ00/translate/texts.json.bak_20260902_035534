@@ -317,8 +317,7 @@
         "\\CC0508",
         "\\CC0509",
         "\\CC050E",
-        "\\CC050F",
-        "\\CC050FＬ\\CC0CFBＡ"
+        "\\CC050F"
       ],
       "filters": [
         {
@@ -418,14 +417,6 @@
       "start": "0x0",
       "end": "0xFFFFFF",
       "type": "scan",
-      "ignored_reader": [
-        "\\CC0505",
-        "\\CC0508",
-        "\\CC0509",
-        "\\CC050E",
-        "\\CC050F",
-        "\\CC050FＬ\\CC0CFBＡ"
-      ],
       "filters": [
         {
           "id": "extra_story_pointer_filter",
@@ -440,7 +431,7 @@
       }
     }
   },
-  "count": 12695,
+  "count": 12697,
   "entries": [
     {
       "id": "axvj_92f0510597a5",
@@ -187691,6 +187682,38 @@
       ]
     },
     {
+      "id": "axvj_ce1fec13cc51",
+      "module": "补漏剧情",
+      "address": "0x0837B5AB",
+      "byte_length": 4,
+      "original": "\\CC0508",
+      "original_hex": "fc 05 08 ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x08088CD0"
+      ],
+      "pointer_addresses": [
+        "0x08088CD0"
+      ]
+    },
+    {
+      "id": "axvj_5b1d0a415839",
+      "module": "补漏剧情",
+      "address": "0x0837B5BD",
+      "byte_length": 9,
+      "original": "\\CC050FＬ\\CC0CFBＡ",
+      "original_hex": "fc 05 0f c6 fc 0c fb bb ff",
+      "translated": "",
+      "is_pointer_based": true,
+      "pointer_sources": [
+        "0x08088DB8"
+      ],
+      "pointer_addresses": [
+        "0x08088DB8"
+      ]
+    },
+    {
       "id": "axvj_0e2c063c04e5",
       "module": "补漏剧情",
       "address": "0x0837B5C8",
@@ -194277,12 +194300,12 @@
       ]
     },
     {
-      "id": "axvj_4600f0364f61",
+      "id": "axvj_5ab1fc08c9af",
       "module": "补漏剧情",
       "address": "0x083DC9FA",
-      "byte_length": 6,
-      "original": "\\CC040D0E0F",
-      "original_hex": "fc 04 0d 0e 0f ff",
+      "byte_length": 9,
+      "original": "\\CC0505\\CC040D0E0F",
+      "original_hex": "fc 05 05 fc 04 0d 0e 0f ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [
@@ -194297,12 +194320,12 @@
       ]
     },
     {
-      "id": "axvj_15b3f8b9e6d6",
+      "id": "axvj_2fb6b0ac1b65",
       "module": "补漏剧情",
       "address": "0x083DCA46",
-      "byte_length": 6,
-      "original": "\\CC040D0E0F",
-      "original_hex": "fc 04 0d 0e 0f ff",
+      "byte_length": 9,
+      "original": "\\CC0505\\CC040D0E0F",
+      "original_hex": "fc 05 05 fc 04 0d 0e 0f ff",
       "translated": "",
       "is_pointer_based": true,
       "pointer_sources": [

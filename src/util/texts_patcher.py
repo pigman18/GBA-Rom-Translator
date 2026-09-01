@@ -2177,6 +2177,83 @@ class MsgReader:
         )
 
 
+class IgnoredReader:
+    """reader=ignored_reader：在源头上剥离正文**开头**的控制码前缀。
+
+    典型场景：日版菜单行字符串表每行自带 ``fc 05 0f``（灰）前缀，选中时官方
+    代码**原位**把 ``0f`` 改写成 ``08``（红）。若把该前缀当正文编进 F980 短语体，
+    译文体内残留的 ``fc 05 0f`` 会在打印时把菜单改好的红色盖回灰（选中高亮丢失）。
+
+    本 reader 把配置列出的前缀从**解码后的 original 文本**与**original_hex
+    原始字节**里一并剥掉，使翻译流水线不再把它当可译正文；运行时控制码前缀
+    本就被官方渲染接管、不进 slot 匹配，因此剥掉后 ``\\CC050Fおそい`` 与
+    ``\\CC0508おそい`` 落到 slot 的原文都是 ``おそい``，无需准备两份。
+
+    value 为字符串数组，**全枚举**：每个元素是一个**完整前缀串**（转义形式与
+    decode 输出一致），既可以是纯控制码 ``\\CC050F``，也可以是带正文的整串
+    （如键位提示整行 ``\\CC050FＬ\\CC0CFBＡ``）。前缀字节由 encode_pcs 精确还原，
+    同时用于剥 text（startswith）与 raw（字节切片）；匹配按**字节长度降序**，
+    长整串优先于短的 ``\\CC050F`` 前缀命中。
+
+    截断后若正文为空，strip 返回 ``None``，调用方据此**整条过滤**（该行无
+    翻译价值，如空行占位 ``\\CC0508``、纯键位提示 ``\\CC050FＬ\\CC0CFBＡ``）。
+
+    只剥**开头**的前缀，正文其它位置的控制码保持不动。
+    """
+
+    type_name = "ignored_reader"
+
+    def __init__(self, spec: dict[str, Any]) -> None:
+        from meowth.runtime_cache import encode_pcs
+
+        self.spec = spec
+        self.value = spec.get("value") or spec.get("reader_value")
+        if self.value is None:
+            raise SystemExit(f"ignored_reader 须提供 value 数组 id={spec.get('id')!r}")
+        if isinstance(self.value, str):
+            self.value = [self.value]
+        if not isinstance(self.value, (list, tuple)):
+            raise SystemExit(
+                f"ignored_reader.value 须为字符串数组 id={spec.get('id')!r}"
+            )
+        self._prefixes: list[tuple[str, bytes]] = []
+        for x in self.value:
+            s = str(x)
+            if not s:
+                continue
+            try:
+                pfx_bytes = encode_pcs(s)
+            except ValueError as e:
+                raise SystemExit(
+                    f"ignored_reader.value 前缀无法编码: {s!r} ({e})"
+                )
+            if not pfx_bytes:
+                raise SystemExit(f"ignored_reader.value 前缀编码为空: {s!r}")
+            self._prefixes.append((s.upper(), pfx_bytes))
+        # 字节长度降序：长整串（如 \CC050FＬ\CC0CFBＡ）先于短前缀（\CC050F）命中
+        self._prefixes.sort(key=lambda t: len(t[1]), reverse=True)
+
+    def strip(self, original: str, raw: bytes) -> tuple[str, bytes] | None:
+        """剥掉 original 文本与 raw 字节**开头**的已配置前缀。
+
+        命中前缀后截断；截断后正文为空（无翻译价值）返回 ``None``，否则返回
+        ``(text, raw)``。未命中任何前缀则原样返回。
+        """
+        text = original or ""
+        body = bytes(raw)
+        upper = text.upper()
+
+        for pfx, pfx_bytes in self._prefixes:
+            if upper.startswith(pfx) and body.startswith(pfx_bytes):
+                text = text[len(pfx):]
+                body = body[len(pfx_bytes):]
+                break
+
+        if not text.strip():
+            return None
+        return text, body
+
+
 def extract_scan(
     rom: bytes,
     mod: dict,
@@ -2201,11 +2278,17 @@ def extract_scan(
     # reader=msg_reader：scan 读取内容改为用 msg 语料 needle 定位「垃圾前缀 + msg
     # 文本」的真实起点（如「べえねくぽえ…ママ『ほら…」）。返回修整内容或 None。
     msg_reader: MsgReader | None = None
+    ignored_reader: IgnoredReader | None = None
     reader_spec = mod.get("reader")
     if isinstance(reader_spec, dict) and str(reader_spec.get("type") or "") == "msg_reader":
         msg_reader = MsgReader(reader_spec)
     elif str(reader_spec or "") == "msg_reader":
         msg_reader = MsgReader({"id": "msg_reader", "value": mod.get("reader_value")})
+    # reader=ignored_reader：剥正文开头的 FC 颜色码前缀（\\CC050F/\\CC0508…），
+    # 与 msg_reader 可叠加使用（msg_reader 定位起点 → ignored_reader 剥前缀）。
+    ign_spec = mod.get("ignored_reader")
+    if ign_spec is not None:
+        ignored_reader = IgnoredReader({"id": "ignored_reader", "value": ign_spec})
     bands = effective_module_bands(mod, omit_ranges or [])
     if not bands:
         return []
@@ -2273,6 +2356,11 @@ def extract_scan(
                     return
                 raw = body
         text = decode_pcs(raw)
+        if ignored_reader is not None:
+            stripped = ignored_reader.strip(text, raw)
+            if stripped is None:
+                return
+            text, raw = stripped
         ptrs = list(ptrs_map.get(a, []))
         ctx = make_filter_context(
             fo=a,
@@ -2440,11 +2528,19 @@ def extract_scan(
                     # 收「指针索引型台词」（战斗消息等无逐条指针锚的文本）。
                     if fallback_filters and not _in_exclude(a, len(raw)):
                         fb_text = decode_pcs(raw)
+                        fb_raw = raw
+                        if ignored_reader is not None:
+                            fb_stripped = ignored_reader.strip(fb_text, fb_raw)
+                            if fb_stripped is None:
+                                fb_text = ""
+                                fb_raw = raw
+                            else:
+                                fb_text, fb_raw = fb_stripped
                         if (plain_original(fb_text) or "").strip(" \t\n"):
                             fb_ptrs = list(ptrs_map.get(a, []))
                             fbctx = make_filter_context(
                                 fo=a,
-                                raw=raw,
+                                raw=fb_raw,
                                 original=fb_text,
                                 ptrs=fb_ptrs,
                                 module_id=str(mid),
@@ -2457,8 +2553,8 @@ def extract_scan(
                                         {
                                             "address": f"0x{BASE + a:08X}",
                                             "original": fb_text,
-                                            "original_hex": raw.hex(" "),
-                                            "byte_length": len(raw),
+                                            "original_hex": fb_raw.hex(" "),
+                                            "byte_length": len(fb_raw),
                                             "is_pointer_based": bool(fb_ptrs),
                                             "pointer_sources": [
                                                 f"0x{BASE + q:08X}"
@@ -2501,14 +2597,21 @@ def extract_scan(
                 if use_filt and not apply_filters(hctx, use_filt):
                     a = end + 1
                     continue
+                h_text, h_raw = hit.original, hit.raw
+                if ignored_reader is not None:
+                    h_stripped = ignored_reader.strip(h_text, h_raw)
+                    if h_stripped is None:
+                        a = end + 1
+                        continue
+                    h_text, h_raw = h_stripped
                 seen.add(hit.fo)
                 out.append(
                     _stamp(
                         {
                             "address": f"0x{BASE + hit.fo:08X}",
-                            "original": hit.original,
-                            "original_hex": hit.raw.hex(" "),
-                            "byte_length": len(hit.raw),
+                            "original": h_text,
+                            "original_hex": h_raw.hex(" "),
+                            "byte_length": len(h_raw),
                             "is_pointer_based": bool(hit.ptrs),
                             "pointer_sources": [
                                 f"0x{BASE + q:08X}" for q in hit.ptrs
@@ -2531,6 +2634,12 @@ def extract_scan(
             if _in_exclude(best_a, len(best_raw)):
                 a = end + 1
                 continue
+            if ignored_reader is not None:
+                best_stripped = ignored_reader.strip(best_text, best_raw)
+                if best_stripped is None:
+                    a = end + 1
+                    continue
+                best_text, best_raw = best_stripped
             seen.add(best_a)
             out.append(
                 _stamp(

@@ -37,9 +37,9 @@ int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth
 
 /* ---- 引擎渲染件（PrintNextChar_hook.c 提供，text_translate.c 消费）---- */
 
-/* v6 统一渲染入口：GetGlyph 解压 → 按 fontSize 栅格化 → 按 textMode 落址。
- * fontNum==4 → 自动 8px（fontSize 忽略）；其余 fontSize=12/16（默认 16）。 */
-void chs_print(TextPrinter *win, uint32_t code, uint8_t fontSize);
+/* F9 00 汉字渲染：gidx = pack_glyph_index(lead, trail)，宽度随 fontNum
+ * （font4 → FontChsSmall 8px，其余 → FontChsNormal 12px）。 */
+void PrintGlyph(TextPrinter *win, uint32_t gidx, unsigned glyphWidth);
 
 /* PCS 单字节（半角）统一渲染入口。
  *   SYM 标点带（0x36-0x3E，tm0/tm3）→ 中文标点字库相位感知自绘；
@@ -52,13 +52,10 @@ int DrawHalfWidth(TextPrinter *win, uint32_t cur_char);
  * 恒返回 1=已消费（引擎零回落：不可印位直接吞掉）。 */
 int DrawGlyph(TextPrinter *win, uint32_t cur_char);
 
-/* 原生 FontFunc 处理器分发（PrintNextChar_hook.c）。
- * 直调 Origin 地址常量；textMode 4-7 静默消费。 */
+/* 原生 FontFunc 处理器分发（fontfunc_hook.c 提供）。
+ * 直调 Origin 地址常量（防经 FontFuncTable 递归）；textMode 4-7 静默消费。
+ * thunk（FontFuncTm*_Hook）与 DrawGlyph 共用。 */
 void FontFunc_NativeDispatch(uint8_t tm, TextPrinter *win, uint32_t c);
-
-/* v6：非 F9 控制码回落官方 PrintNextChar（entry.s 续跑）。 */
-int PrintNextChar_Origin(TextPrinter *win);
-int PrintNextChar_Hook(TextPrinter *win);
 
 /* ---- 翻译链路（src/text_translate.c 提供，text.c 状态机消费）---- */
 

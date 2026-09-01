@@ -1,0 +1,574 @@
+﻿[閰嶇疆] 鎵弿閰嶇疆鐩綍: C:\code\GBA-Rom-Translator\configs
+[閰嶇疆]   鍙戠幇娓告垙: POKEMON_RUBY_AXVJ00 -> C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\game.json
+[閰嶇疆] 鎵弿閰嶇疆鐩綍: C:\code\GBA-Rom-Translator\configs
+[閰嶇疆] 璇诲彇妯″潡: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
+[閰嶇疆]   妯″潡鏁? 22
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\font.config.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\hook\config.json
+[閰嶇疆] 璇诲彇娓告垙閰嶇疆: POKEMON_RUBY_AXVJ00
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\font.config.json
+[閰嶇疆] charmap: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\charmap.txt
+[texts] 璇诲彇 C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
+[閰嶇疆] 璇诲彇鑷畾涔夌炕璇戠洰褰? C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\lexicon (9 涓枃浠?
+[閰嶇疆]   UI.json: 25 鏉?
+[閰嶇疆]   鍥鹃壌.json: 1025 鏉?
+[閰嶇疆]   鍦扮偣.json: 915 鏉?
+[閰嶇疆]   灞炴€?json: 17 鏉?
+[閰嶇疆]   鎬ф牸.json: 25 鏉?
+[閰嶇疆]   鎷涘紡.json: 935 鏉?
+[閰嶇疆]   鐗规€?json: 313 鏉?
+[閰嶇疆]   鐭.json: 362 鏉?
+[閰嶇疆]   閬撳叿.json: 1470 鏉?
+[閰嶇疆] 鑷畾涔夌炕璇戞€昏: 5087 鏉?
+[缈昏瘧缂撳瓨] 鍔犺浇 C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts_translated.json: 14572 鏉?
+[閰嶇疆] 璇诲彇鑷畾涔夌炕璇戠洰褰? C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\lexicon (9 涓枃浠?
+[閰嶇疆]   UI.json: 25 鏉?
+[閰嶇疆]   鍥鹃壌.json: 1025 鏉?
+[閰嶇疆]   鍦扮偣.json: 915 鏉?
+[閰嶇疆]   灞炴€?json: 17 鏉?
+[閰嶇疆]   鎬ф牸.json: 25 鏉?
+[閰嶇疆]   鎷涘紡.json: 935 鏉?
+[閰嶇疆]   鐗规€?json: 313 鏉?
+[閰嶇疆]   鐭.json: 362 鏉?
+[閰嶇疆]   閬撳叿.json: 1470 鏉?
+[閰嶇疆] 鑷畾涔夌炕璇戞€昏: 5087 鏉?
+[缈昏瘧缂撳瓨] 缈昏瘧鍓?lexicon 鏃犲彉鏇达紝璺宠繃鍐欏叆 texts_translated.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[鏍￠獙] rejects/allows: 鎷掔粷 9/12697 鏉★紙鍊欓€?妯″潡鍐?12697/12697锛?
+[缈昏瘧] seed_only锛氳烦杩?API锛堟祦绋?1鈫?鈫?锛?
+[缈昏瘧缂撳瓨] 钀界洏 texts_translated.json: 14572 鏉?
+[缈昏瘧缂撳瓨] 鍥炲～ entries 11003 鏉?
+[缈昏瘧閫氳矾] translate.build.json 鈫?replace=9415, keep=1694, slot=1588
+Detected game: POKEMON_RUBY_AXVJ00
+浠?translate.build.json 閲嶅缓 12697 鏉℃敞鍏ユ暟鎹紝缂撳瓨瑕嗙洊 11003 鏉＄炕璇?
+[閰嶇疆] 璇诲彇鑷畾涔夌炕璇戠洰褰? C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\lexicon (9 涓枃浠?
+[閰嶇疆]   UI.json: 25 鏉?
+[閰嶇疆]   鍥鹃壌.json: 1025 鏉?
+[閰嶇疆]   鍦扮偣.json: 915 鏉?
+[閰嶇疆]   灞炴€?json: 17 鏉?
+[閰嶇疆]   鎬ф牸.json: 25 鏉?
+[閰嶇疆]   鎷涘紡.json: 935 鏉?
+[閰嶇疆]   鐗规€?json: 313 鏉?
+[閰嶇疆]   鐭.json: 362 鏉?
+[閰嶇疆]   閬撳叿.json: 1470 鏉?
+[閰嶇疆] 鑷畾涔夌炕璇戞€昏: 5087 鏉?
+[閰嶇疆] lexicon 宸插姞杞? 5087 鏉?
+[閰嶇疆] charmap: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\charmap.txt
+[鐭] 澶嶇敤 translate.build.json 鐮佽〃: 12606 鏉?
+[鐭] 鑷姩杩?F9 80: 390 鏉?(浠呭畾闀挎Ы stride/struct 瓒婃Ы)
+Loading ROM...
+Applying font patch...
+Font generated from Normal.bdf -> work\POKEMON_RUBY_AXVJ00\graphic\fonts
+Punctuation glyphs patched (baseline + no right spill)
+[font] patched 2 empty primary slot(s) from hook/work reference
+[font] restored 48 tuned unshadow/Sym bin(s) from hook/work reference
+Keep BDF-built fonts: 6 existing bin(s); synced 0 missing -> work\POKEMON_RUBY_AXVJ00\graphic\fonts
+[鐭] PhraseTable 12996 鏉℃祦, 684156B -> phrase_data.asm
+[data] from translate.build.json 鈫?phrases=12606/661497B
+[slot] translated_slot.asm: 1150 type=slot entries
+Font patch applied
+[鑷畾涔夌炕璇慮 绮剧‘鍖归厤: 1879, 瀛愪覆鏇挎崲: 48, 鎬昏: 1927/12688 鏉?
+[鑷畾涔夌炕璇慮 绮剧‘鍖归厤: 1879, 瀛愪覆鏇挎崲: 48, 鎬昏: 1927/12688 鏉?
+[鑷畾涔夌炕璇慮 娉ㄥ叆杩囨护: 12688 -> 11428 (鍘绘帀 1260 鏉＄┖/鏈炕璇?璺宠繃)
+[鑷畾涔夌炕璇慮 娉ㄥ叆杩囨护: 12688 -> 11428 (鍘绘帀 1260 鏉＄┖/鏈炕璇?璺宠繃)
+AXVJ build inject set: 11428/12688 entries [modules=['灞炴€у悕', '灞炴€у悕-鍗庝附澶ц禌', '鎬ф牸鍚?, '鐗规€у悕', '瀹濆彲姊﹀悕', '鎷涘紡鍚?, '鎷涘紡鍚?鍗庝附澶ц禌', '璁粌瀹跺悕', '璁粌瀹朵釜浜哄悕', '鍦扮偣鍚?, '绉樺瘑鍩哄湴瑁呴グ鍚?, '閬撳叿鍚?, '鏍戞灉鍚?, '閬撳叿璇存槑', '鎷涘紡璇存槑', '鎷涘紡璇存槑-鍗庝附澶ц禌', '鐗规€ц鏄?, '鍥鹃壌鍒嗙被鍚?, '鍥鹃壌璇存槑', 'UI鐣岄潰', '鍓ф儏', '琛ユ紡鍓ф儏']]
+Injecting 11428 translated texts...
+Scanning LZ bands once (a few seconds), then injecting鈥?
+[缈昏瘧閫氳矾] 杞藉叆 translate.build.json: 12697 鏉″喅绛栵紙鏉＄洰鍘婚噸鍚?11428锛?
+Expansion region start: 0x01200000 (floor=0x01200000, available=14,495,744)
+Inject progress 1/11428
+Inject progress 201/11428
+  KEEP axvj_b8cb36f24e56 @ 0x1CA93C (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_a8da5ceea3e9 @ 0x1CA942 (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_963ec6c14bf2 @ 0x1CA948 (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_0a67dbcf73b2 @ 0x1CA94E (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_3954bbbc2eec @ 0x1CA954 (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_fead36b2ab32 @ 0x1CA95A (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_bd221e1b84f0 @ 0x1CA960 (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5cc79872f42f @ 0x1CA966 (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_4b56a507b167 @ 0x1CA96C (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b89fae8fcdad @ 0x1CA972 (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_17a62f905d44 @ 0x1CA978 (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_d5b119b65992 @ 0x1CA97E (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_52f5a3f3df22 @ 0x1CA984 (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_9ca0cb0d9879 @ 0x1CA98A (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_cb16f654e8eb @ 0x1CA990 (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_0a5c2800d034 @ 0x1CA996 (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8dcfbec50fdf @ 0x1CA99C (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_e499863a08e3 @ 0x1CA9A2 (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_400490158ce8 @ 0x1CA9A8 (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_2c3ec1bcb2bd @ 0x1CA9AE (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+Inject progress 401/11428
+  KEEP axvj_ebfbd0279cc4 @ 0x1CA9B4 (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f084436af584 @ 0x1CA9BA (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8a1788d86ef0 @ 0x1CA9C0 (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_32aab0932069 @ 0x1CA9C6 (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_95e1615dd47a @ 0x1CA9CC (cat=瀹濆彲姊﹀悕): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+Inject progress 601/11428
+Inject progress 801/11428
+Inject progress 1001/11428
+Inject progress 1201/11428
+Inject progress 1401/11428
+Inject progress 1601/11428
+Inject progress 1801/11428
+Inject progress 2001/11428
+Inject progress 2201/11428
+Inject progress 2401/11428
+Inject progress 2601/11428
+Inject progress 2801/11428
+Inject progress 3001/11428
+Inject progress 3201/11428
+Inject progress 3401/11428
+Inject progress 3601/11428
+  KEEP axvj_bfac93a561dc @ 0x39DE83 (cat=UI鐣岄潰): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+Inject progress 3801/11428
+Inject progress 4001/11428
+Inject progress 4201/11428
+Inject progress 4401/11428
+Inject progress 4601/11428
+Inject progress 4801/11428
+Inject progress 5001/11428
+Inject progress 5201/11428
+Inject progress 5401/11428
+Inject progress 5601/11428
+Inject progress 5801/11428
+Inject progress 6001/11428
+Inject progress 6201/11428
+Inject progress 6401/11428
+Inject progress 6601/11428
+Inject progress 6801/11428
+Inject progress 7001/11428
+Inject progress 7201/11428
+Inject progress 7401/11428
+Inject progress 7601/11428
+Inject progress 7801/11428
+Inject progress 8001/11428
+  KEEP axvj_ab5c006d25f8 @ 0x195879 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+Inject progress 8201/11428
+  KEEP axvj_fe6a02139d98 @ 0x1D4094 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_031c7ce3eeab @ 0x1DC5FC (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_31729feb1cbe @ 0x1EC1B4 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_a24488190e52 @ 0x1EC1BA (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_de43cad6b458 @ 0x1EC1C0 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+Inject progress 8401/11428
+Inject progress 8601/11428
+  KEEP axvj_a4a59825e4f5 @ 0x3A33DC (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_fd7d1b9d309a @ 0x3A33F0 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8877cbe1faf2 @ 0x3A3404 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6ba20a0d2d6c @ 0x3A57BA (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6f01b898037e @ 0x3A57FB (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_396db3c3a415 @ 0x3A5805 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_40e561b57083 @ 0x3A580F (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_e4500135136e @ 0x3A5819 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_efc755820864 @ 0x3A5823 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_e6a95ff7e36d @ 0x3A582D (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_29412a1fb5c1 @ 0x3A5837 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5575998c2093 @ 0x3A5841 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_67adfd1e684f @ 0x3A584B (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_88e6eb2ca64e @ 0x3A58E2 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_c4031daaef12 @ 0x3A58E7 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_ddf2d8ba9f36 @ 0x3A58EF (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f7cd2dc0dd34 @ 0x3A58F7 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_493f814aded6 @ 0x3A58FF (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_ec9f57223635 @ 0x3A5906 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_66dc87656947 @ 0x3A590D (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_88cec4dba1f7 @ 0x3A5918 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_12b3420afde6 @ 0x3A591D (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_64c89a41deb0 @ 0x3A5924 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_a4f4eb4fb4bf @ 0x3A5953 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5803fe4becf8 @ 0x3A595C (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_07f4fb01b63c @ 0x3A5962 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_43f02b5f4046 @ 0x3A5979 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_4911724ff8de @ 0x3A5980 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_4d5867024891 @ 0x3A598F (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_021d427257b2 @ 0x3A59B3 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_996c33fa3b47 @ 0x3A59C4 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_9f529e699235 @ 0x3A59CE (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1228c3c25907 @ 0x3A59D5 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1f1018409e7f @ 0x3A59E4 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_c8d664f207cd @ 0x3A59F4 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_69d2cc236c0c @ 0x3A59FC (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_92642442eb4b @ 0x3A5A3A (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_58d75c8d1f9e @ 0x3A5A40 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_ee5939590f39 @ 0x3A5A46 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_7c15bea8cd1a @ 0x3A5A4C (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_edb544b2b7a7 @ 0x3A5A52 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_92099bed95c0 @ 0x3A5A57 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_88570dd63bec @ 0x3A5A60 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8a9d60ebd61d @ 0x3A5A67 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_3192f3509db6 @ 0x3A5A6F (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_0301b20cd147 @ 0x3A5A78 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_23721c7588a7 @ 0x3A5A81 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_338cdf7d39a4 @ 0x3A5A89 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_614df4d53d2e @ 0x3A5A92 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b7f667dd4692 @ 0x3A5A9A (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_189f61f35ee6 @ 0x3A5AA0 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_69504203a25f @ 0x3A5AA8 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_85038358e958 @ 0x3A5AAF (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8978801bcf53 @ 0x3A5AB7 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_302687258fb2 @ 0x3A5ABE (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_ea74c5cbc8d3 @ 0x3A5AC7 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1cd78af6aaaf @ 0x3A5ACE (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_4c8e2ed95266 @ 0x3A5AD5 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_3f4008ee42ca @ 0x3A5AE4 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_e851fd82a7a5 @ 0x3A5AED (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_95bb2f59b3cd @ 0x3A5AF5 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1de5dd5cb5ea @ 0x3A5B04 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_dd50f996eb90 @ 0x3A5B15 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6b46dde06fd5 @ 0x3A5B1D (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_3f5da60c0aaf @ 0x3A5B24 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_691f90e33be0 @ 0x3A5B2B (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6b01da4235b3 @ 0x3A5B33 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_d45e671d7258 @ 0x3A5B3A (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_941535d15c08 @ 0x3A5B43 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_3a7985e09fe4 @ 0x3A5B51 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_3aa5cfa5c92a @ 0x3A5B67 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_97fabd63b105 @ 0x3A5B70 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_0d4fb3cd95c4 @ 0x3A5B81 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_9a43e3b1cd45 @ 0x3A5B88 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_52c0d50034d0 @ 0x3A5B91 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5105e723cd17 @ 0x3A5BA2 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_22d5dc184487 @ 0x3A5BAB (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6454ef351494 @ 0x3A5BB9 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_43241ae52bf6 @ 0x3A5BBF (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_53707de8f45a @ 0x3A5BC6 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_fbb119cb13b0 @ 0x3A5BDD (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_ad9f7b43e33f @ 0x3A5BE6 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_d6ec7e2af847 @ 0x3A5BED (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b12540955c0b @ 0x3A5BFF (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+Inject progress 8801/11428
+  KEEP axvj_09c1478be0b1 @ 0x3A5C10 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b51b392e616c @ 0x3A5C16 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6cfec3833c20 @ 0x3A5C23 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_7353ba45b5f9 @ 0x3A5C2C (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_a3a21b4f5256 @ 0x3A5C35 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_c64d9f9bb69b @ 0x3A5C3E (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_98fd7c670166 @ 0x3A5C47 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_453c5e597839 @ 0x3A5C50 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5784afa5b8ec @ 0x3A5C59 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_525160b09b48 @ 0x3A5C62 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_15a9ef9cc0fa @ 0x3A5C6B (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_2048561a51fc @ 0x3A5C74 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_ce68451f6dd2 @ 0x3A5E58 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_9d79f4ce74ae @ 0x3A5E5D (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6732181505ec @ 0x3A5E7B (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_cbdee64466e0 @ 0x3A5E94 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_3ab451c4da6f @ 0x3A5E99 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1a46ce442256 @ 0x3A5EA0 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_ec076a6e6cd3 @ 0x3A5EA6 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_717c686907f3 @ 0x3A5EC7 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6b07224fcb85 @ 0x3A5ED7 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1e091339f069 @ 0x3A5EE7 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6164e3a890fe @ 0x3A5EFC (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_96f8d53a8eb3 @ 0x3A5F01 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_29aa5e01fc4f @ 0x3A5F13 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_dbe1c49dbf2c @ 0x3A5F1A (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_16e3947d59e3 @ 0x3A5FDC (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8971594c777a @ 0x3A5FE2 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_38f2c8d5e5fb @ 0x3A5FE7 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_2d7577caa297 @ 0x3A5FF0 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_3aafb7c6c145 @ 0x3A5FF5 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_03253713f405 @ 0x3A5FFA (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_980d08602391 @ 0x3A5FFF (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_247713284125 @ 0x3A6007 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b5dd4abf8c91 @ 0x3A603F (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_11a39f9c8c17 @ 0x3A6044 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_cae753b9a196 @ 0x3A604A (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_fd78238bc688 @ 0x3A6050 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_46846ed73b91 @ 0x3A6057 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_194208925eef @ 0x3A605F (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8debe613fbec @ 0x3A6067 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_e37d8290eefa @ 0x3A6082 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_cf7ac05c7fe4 @ 0x3A6087 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6571bf31d937 @ 0x3A60CE (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_d2893fab0135 @ 0x3A60D6 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b4843ab40903 @ 0x3A60DC (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_3f1050a39fc3 @ 0x3A60E3 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_29189a8194aa @ 0x3A60F7 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_a9eae3f46e31 @ 0x3A6100 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_01ee887ace24 @ 0x3A6133 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_4a1284b29507 @ 0x3A614D (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_4b3871b906ec @ 0x3A6154 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_4b104f0f2dca @ 0x3A615C (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_14114ebaa06a @ 0x3A6187 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b9fea1e6be65 @ 0x3A61A6 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_9927386e70bf @ 0x3A61AD (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_92d747f62d30 @ 0x3A61B2 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_df9bdb678618 @ 0x3A61B8 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8ab5c922cdb1 @ 0x3A61BD (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_3b47c0fdecb2 @ 0x3A61C2 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f9ce69ed1100 @ 0x3A61C7 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f4b5c2cccb8b @ 0x3A61CD (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_c5c76a65d60f @ 0x3A61D2 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_9da8de04c1e1 @ 0x3A61D8 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1d8ea3f3c2a5 @ 0x3A61DE (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b8dac61dd11c @ 0x3A61E3 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f816abbcc18d @ 0x3A61E8 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_ede55eebede0 @ 0x3A61ED (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_a285ecab26e2 @ 0x3A61F3 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_7bb96811d9df @ 0x3A61F8 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_cdf8dffa5513 @ 0x3A61FD (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8b16d7e1929c @ 0x3A6203 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b1f87b90af63 @ 0x3A6208 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_617d14fe0a54 @ 0x3A620D (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1e37abafbb51 @ 0x3A6212 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8a48d67155f7 @ 0x3A6217 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f38a0b3797aa @ 0x3A621C (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_269614131e3e @ 0x3A6221 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_9c693eb448fc @ 0x3A6226 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_436fc775e14a @ 0x3A622C (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5f9e9f3c8bdc @ 0x3A6231 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8f5157f68d62 @ 0x3A6236 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_4278a4f6427e @ 0x3A623B (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_2812fefd5401 @ 0x3A6241 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_77e347c22eb3 @ 0x3A6246 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_992b66d767e7 @ 0x3A624B (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_ab145bf5d3bc @ 0x3A6250 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_53f9a477cd02 @ 0x3A6255 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_cab8bc2829b6 @ 0x3A625B (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_18b2ca379b20 @ 0x3A6260 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_356b690e1e36 @ 0x3A6265 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f486da4d1bb9 @ 0x3A626A (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_0c4623d139ea @ 0x3A6270 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_3bd9a1112cc9 @ 0x3A6275 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_26deaf5d0be1 @ 0x3A627A (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5ba9f5a577c1 @ 0x3A627F (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5d310163753d @ 0x3A6284 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8e4dbf8534e3 @ 0x3A6289 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8217043f3306 @ 0x3A628F (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_a2940120f502 @ 0x3A6294 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1f80910d5fe1 @ 0x3A6299 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6a73fe101d2f @ 0x3A629E (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_194958fa14b4 @ 0x3A62A3 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_567fb26213ec @ 0x3A62A8 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_65967426e1ee @ 0x3A62AD (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f416444e5442 @ 0x3A62B2 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_66957117bcff @ 0x3A62B7 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_604a5fa817f6 @ 0x3A62BC (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_c801800306ac @ 0x3A62C1 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_32b6cf3c012b @ 0x3A62C6 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b9b9851d64bb @ 0x3A62CB (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_63067f3797f3 @ 0x3A62D0 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b35d746fb7b9 @ 0x3A62D5 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_de5b8094888d @ 0x3A62DA (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_04095bb4e554 @ 0x3A62DF (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_4e7106fe8d6e @ 0x3A62E4 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_82c2410767ab @ 0x3A62E9 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_dcfe1c023466 @ 0x3A62EF (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b78cefb7da2c @ 0x3A62F4 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_2a9c8b3dd622 @ 0x3A62F9 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_04a75d6d690a @ 0x3A62FE (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_192a89ec7f15 @ 0x3A6304 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_7fd5922888b6 @ 0x3A6309 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b69ff6aa3c99 @ 0x3A630E (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_d0011c99c6b6 @ 0x3A6313 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8de03db09e46 @ 0x3A6318 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_648a2f5b6e45 @ 0x3A631D (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1a07a42356f2 @ 0x3A6322 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_143d4bcf2985 @ 0x3A6327 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f993723b3ec4 @ 0x3A632C (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_31f4420dbb47 @ 0x3A6331 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_179dd84e78ed @ 0x3A6336 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_82fc70b37b42 @ 0x3A633C (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5022aded05bb @ 0x3A6341 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_98f5ecac6f74 @ 0x3A6346 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_eefa8090bcf1 @ 0x3A634B (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_2a0bc89fc78a @ 0x3A6350 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_21cb3f825d09 @ 0x3A6355 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_3005b47e9d9c @ 0x3A635B (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6b41411a1bd9 @ 0x3A6360 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5f96e37c3c8a @ 0x3A6365 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_0dbb3a1ace8a @ 0x3A636A (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f8dc224d7531 @ 0x3A636F (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_08412d94e467 @ 0x3A6374 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f3ca24d30b88 @ 0x3A6379 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_124c295c6de3 @ 0x3A637E (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6db3f74329b5 @ 0x3A6383 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_fa07ac85c291 @ 0x3A6388 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_440f5d578407 @ 0x3A638D (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_0fb15dd4ebd4 @ 0x3A6392 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_7ec2e5734291 @ 0x3A6397 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_2e12ac4d653b @ 0x3A639C (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_7cd6b54addf2 @ 0x3A63A1 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_c94bd94115f9 @ 0x3A63A6 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_ca31058704ce @ 0x3A63AB (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f133f8e8f81e @ 0x3A63B0 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_9588bb3b45b8 @ 0x3A63B5 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_340da46fcb9f @ 0x3A63BA (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1e357ffb2870 @ 0x3A63BF (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_0ed05d3d9b42 @ 0x3A63C5 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f2889936417b @ 0x3A63CA (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b13799cc7240 @ 0x3A63D0 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_55dcfeb7141c @ 0x3A63D5 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_ff73bbd00051 @ 0x3A63DA (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_0a2914b92370 @ 0x3A63DF (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+Inject progress 9001/11428
+  KEEP axvj_5453393bd88b @ 0x3A63E5 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_511d4c779cc0 @ 0x3A63EA (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_452da823ac2d @ 0x3A63EF (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_84f6c3ee489f @ 0x3A63F4 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_c2d5df72f312 @ 0x3A63F9 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b5ec5f0c4db5 @ 0x3A63FE (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8077e8087a8d @ 0x3A6403 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_2e1c3fddcc8a @ 0x3A6408 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_4fac7f8a0cab @ 0x3A640D (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_910335cebc83 @ 0x3A6412 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1c89969206e5 @ 0x3A6417 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8aa0ec9529a5 @ 0x3A641C (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b976e7b0b0a6 @ 0x3A6421 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_fc5fae8bb5df @ 0x3A6426 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_7c645d5be79b @ 0x3A642B (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_dd6731f2dec9 @ 0x3A6430 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6b26f98a5e55 @ 0x3A6435 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_3268a1f4aab1 @ 0x3A643A (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_2a38fc0fe88c @ 0x3A6440 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_4ef25701df94 @ 0x3A6445 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+Inject progress 9201/11428
+Inject progress 9401/11428
+  KEEP axvj_510cc1c6face @ 0x3B3BBA (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+Inject progress 9601/11428
+Inject progress 9801/11428
+Inject progress 10001/11428
+Inject progress 10201/11428
+  KEEP axvj_593c63b6025e @ 0x3DCA59 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+Inject progress 10401/11428
+  KEEP axvj_5f34780aa096 @ 0x3E9692 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5bfcc712a5b4 @ 0x3E9699 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_2bd576924a26 @ 0x3E9A20 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_ca8c0955182b @ 0x3E9A2B (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_3b38d010349e @ 0x3E9E04 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+Inject progress 10601/11428
+Inject progress 10801/11428
+  KEEP axvj_fdd94a805582 @ 0x3EB34E (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_02c4026a0649 @ 0x116F11 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_4193163002ca @ 0x1518BB (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_68a6fde75bde @ 0x153160 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_a3eedd3b0911 @ 0x15ED2C (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_22f46c2f0a26 @ 0x17DABF (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+Inject progress 11001/11428
+  KEEP axvj_59b5d51dc567 @ 0x180F5A (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8b61720ab748 @ 0x1819B8 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_9bf34632a467 @ 0x1889D5 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5fcf54e4c65c @ 0x18C30A (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_35da4a0923ed @ 0x196AD6 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_d5c52e118124 @ 0x1A856E (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_05391c6bd794 @ 0x1AB6B5 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5d7b01c89804 @ 0x1ABD74 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_65c0bd4a023d @ 0x1ABF59 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f6aa64fc8189 @ 0x1AC1A1 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_732582ab2703 @ 0x1AC5EF (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8234505f383b @ 0x1AC762 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6317c18d3859 @ 0x1D38BC (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_a0bf9f1b086b @ 0x1D3ACA (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_443a9f3e069b @ 0x1D3AF8 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b358bf6fb636 @ 0x1D3B0C (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_0640b650b15f @ 0x1D3CC8 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_46e4e430948c @ 0x1D3CE0 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_fc502674e3fb @ 0x1D3CFC (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_06b8d1f829fe @ 0x1D41DC (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1c8b1baca381 @ 0x1D420E (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1e801601f846 @ 0x1D4222 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_cf553492a04b @ 0x1D4252 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_2c0399446ee6 @ 0x1D4282 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_3c8e8ec01494 @ 0x1D4298 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_9f9ba36671a5 @ 0x1D4D66 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_2a3a1b0fb8bb @ 0x1D507A (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_0f6973b185bb @ 0x1D5092 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1019575a7420 @ 0x1D511A (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_ff4d5ec5b35e @ 0x1D5130 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1279aadd29d8 @ 0x1D52DE (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_499b49dc5639 @ 0x1D571C (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5c896d5e75a7 @ 0x1D5786 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f724af5feadf @ 0x1D579E (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5b619f756e6d @ 0x1D57BE (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_09af74573021 @ 0x1DB8D6 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_0ac950f39ca6 @ 0x1DC60C (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_34426aaba09a @ 0x1E04B9 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_c9eea6990133 @ 0x1E04BB (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_293a2bcc83ed @ 0x1E04C4 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_fd048d4d6249 @ 0x1E04C6 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8ef2fbf44cf2 @ 0x1EC104 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_7be2a3f23890 @ 0x1EC1E8 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_436632a0b48a @ 0x1EC2BD (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_214ec285932e @ 0x1EC2C1 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f1701a53b277 @ 0x1EC63E (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_ac06680a33f5 @ 0x200060 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_d8f9d92adceb @ 0x344868 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8ea72e42683a @ 0x350093 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_643c9e4b0b78 @ 0x350876 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_72c85a799aa9 @ 0x377116 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_ce1fec13cc51 @ 0x37B5AB (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5b1d0a415839 @ 0x37B5BD (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1eb9dca70885 @ 0x389771 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6b42e8013e56 @ 0x389D83 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_2675b9504bc1 @ 0x397410 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_79e1a5951cc1 @ 0x3A05CD (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_0dc6657043b7 @ 0x3A07CA (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_e50175f6c259 @ 0x3A57A5 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_e0492f510894 @ 0x3A57A9 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_65027377a728 @ 0x3A58D4 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_d52f27a92fe7 @ 0x3A5914 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_c9f08348bf4c @ 0x3A594F (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_0c308da6ac4f @ 0x3A5C1F (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1e29adb651a3 @ 0x3A5EF0 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_a7e4baebc181 @ 0x3A5EF4 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_883a3ad30ca2 @ 0x3A5EF8 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_384fff80d28b @ 0x3A5F07 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f2f9b70e8110 @ 0x3A5F09 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_c831e66d7e5a @ 0x3A5F0B (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_ea7b555830d9 @ 0x3A5F0D (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_757f22e231cd @ 0x3A5F0F (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6616e576475d @ 0x3A5F11 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b54bb3d75ee2 @ 0x3A5F21 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_a11b491b27fe @ 0x3A5FEC (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b359f9e6184a @ 0x3A6E05 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_bd2ec314ef6d @ 0x3A6E09 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1e144aa2f097 @ 0x3A6E0B (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f27878032d2d @ 0x3A6EB8 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_97834b95d13c @ 0x3B2DEC (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+Inject progress 11201/11428
+  KEEP axvj_0433bb915337 @ 0x3BD6D8 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_bb209146e543 @ 0x3D4441 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_34ca80d6dd1f @ 0x3D444B (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_d6fb5206d0db @ 0x3D776C (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5a09451f6852 @ 0x3DBECA (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b5456f9d0a5f @ 0x3DBEEB (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5ab1fc08c9af @ 0x3DC9FA (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_2fb6b0ac1b65 @ 0x3DCA46 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1f5949d955d9 @ 0x3DCA53 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_41060fb5ac8a @ 0x3DCB6C (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6c3667635eb8 @ 0x3DE1BC (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_e4f7d647cf99 @ 0x3E9413 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_64c0ecb46294 @ 0x3E9966 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_902cc3f38c83 @ 0x3E9A19 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_9774dba6a4b7 @ 0x3E9A1D (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b64b62450ed8 @ 0x3E9AF9 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b0b1fa667133 @ 0x3E9B04 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_57e1089991c7 @ 0x3E9B06 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b151bbfd703b @ 0x3E9B0B (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_c2b1753cbc9b @ 0x3E9B28 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f551756dc245 @ 0x3EA736 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f677c4317a68 @ 0x3EAD4D (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+Inject progress 11401/11428
+  KEEP axvj_46eaec6c8dac @ 0x428888 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_9478c165f9d3 @ 0x477E55 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_166b0194e5c2 @ 0x4803FE (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_76a32f292e28 @ 0x480618 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_41e4897e0306 @ 0x4AAA00 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_ff8253a2045c @ 0x4C4708 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b3cd8093c59e @ 0x4C674D (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_bb594a1a5304 @ 0x789968 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6c1bf21e069d @ 0x7A0724 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+Inject progress 11428/11428
+Done: 9415 replaced, 0 relocated, 0 skipped, 0 partial-ptr skipped, 0 unsafe ptrs filtered
+Saved: C:\code\GBA-Rom-Translator\roms\outputs\POKEMON_RUBY_AXVJ00_translated.gba
+[鐭] 鑷姩杩?F9 80 璁板綍 鈫?work\POKEMON_RUBY_AXVJ00\lexicon.extra.json (390 鏉?
+tiles: 3 meta(s) from C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\tiles -> POKEMON_RUBY_AXVJ00_translated_tiles.gba, new_palette=0x09EA6C1C (ignore yaml 0x09200000)
+tiles patched from C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\tiles
+ROM aligned to 32MB (32,142,036 -> 33,554,432 bytes)

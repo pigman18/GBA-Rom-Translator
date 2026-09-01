@@ -2,23 +2,20 @@
  * text_translate.c — 翻译链路（F9 协议层）
  *
  * 职责：文本流中翻译标记的解释与分派，不含任何渲染实现。
- *   F9 00 ll tt        单汉字 → pack_glyph_index → chs_print（渲染层统一入口）
+ *   F9 00 ll tt        单汉字 → pack_glyph_index → PrintGlyph（引擎渲染件）
  *   F9 <op> hi lo      短语引用 → PhraseTable（内联绘制或切流）
  *   PCS 单字节          → SLT2 slot 表匹配 → 替换流绘制
  *   宽度工具            → phrase_width_px / GetStringWidth（F9 感知流遍历）
  *
- * 与渲染层的边界（v6 三段管线）：本文件只做 Stage1「解压」GetGlyph（字模数据）
- * 与翻译决策，把要画的字形 code 交给渲染层统一入口 chs_print（渲染层内部再
- * GetGlyph→栅格化→落址）。本文件不碰 tile/VRAM/游标，不依赖任何窗口模板。
+ * 与引擎的边界：只经 include/text.h 的 PrintGlyph / DrawGlyph 触达渲染，
+ * 只经 game.h 的 win_* 访问器触达窗口状态——引擎内部（渲染行/分配）对本文件不可见，
+ * 便于引擎侧重构与 upstream 对照更新互不影响。
  *
- * 来源：原 src/text.c §2/§12/§13/§16 原样迁出。协议常量 CHS_ESCAPE 等见 game.h。
+ * 来源：原 src/text.c §2/§12/§13/§16 原样迁出（除 pitch 槽 write_op 记账随
+ * 槽位机制一并移除）。协议常量 CHS_ESCAPE/CHS_PHRASE_DEFAULT/ADDR_* 见 game.h。
  * ===================================================================================== */
 #include "text.h"
-#include "blend_glyph.h" /* 仅 GetGlyph 的 copy_tile32 / CopyGlyph* 取字原语 */
-
-/* F9 汉字默认字号：font4 小字 8px 由 chs_print 内部兜底，这里传 12（主字体，
- * 12px 相位两态 0/4，CHS_ADVANCE_12=1）。未来 16+12 混排时调用方按需传 12/16。 */
-#define CHS_PRINT_FONT_PX   12u
+#include "blend_glyph.h" /* v5：渲染接口收敛中，本文件只用 PrintGlyph/win_*（text.h/game.h） */
 
 /* =====================================================================
  * §glyph — 字形源统一解析（自 text_render.c 迁入）
@@ -51,23 +48,25 @@ int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth
         return 1;
     }
 
-    /* 中文字形：直接从自定义中文点阵字库解压（v5 decompress_chs_glyph 语义）。
-     * ⚠ 不能用 GetGlyphTilePointers_Origin（那是官方日文字形，gidx 是中文
-     *   索引，查官方表会返回 null → 全空）。fontNum==4 → 8px 小字库；
-     *   其余 → 16px 主字库。字模容器 128B：TL@0 / BL@0x20 / TR@0x40 / BR@0x60。 */
     {
-        const uint8_t *base =
-            (fontNum == 4u) ? (const uint8_t *)ADDR_FONT_CHS_SMALL
-                            : (const uint8_t *)ADDR_FONT_CHS_NORMAL;
-        const uint8_t *g =
-            base + ((uint32_t)((uint16_t)code & 0x7FFFu) << 7);
-        if ((uint16_t)code & 0x8000u)
-            g += 64u;
+        uint8_t *upper = 0;
+        uint8_t *lower = 0;
 
-        copy_tile32(out128 + 0x00, g + 0u);   /* TL */
-        copy_tile32(out128 + 0x20, g + 32u);  /* BL */
-        copy_tile32(out128 + 0x40, g + 64u);  /* TR */
-        copy_tile32(out128 + 0x60, g + 96u);  /* BR */
+        if (code >= 0xF7)
+            return 0;
+        GetGlyphTilePointers_Origin(fontNum, (uint16_t)code, &upper, &lower);
+        if (!upper || !lower)
+            return 0;
+
+        for (unsigned i = 0; i < 64u; i++)
+            out128[0x40 + i] = 0;
+        if (FontIsShadowed(fontNum)) {
+            copy_tile32(out128 + 0x00, upper);
+            copy_tile32(out128 + 0x20, lower);
+        } else {
+            CopyGlyph1bppTo4bpp_Origin(upper, (uint32_t *)(uintptr_t)(out128 + 0x00), 0xFu, 0x0u);
+            CopyGlyph1bppTo4bpp_Origin(lower, (uint32_t *)(uintptr_t)(out128 + 0x20), 0xFu, 0x0u);
+        }
         *outWidth = 8u;
         return 1;
     }
@@ -163,10 +162,6 @@ static void fd_expand_print(TextPrinter *win, uint8_t id)
     ((fn_fd_subprint)(ADDR_FD_SUBPRINT | 1u))(win, str);
 }
 
-/* 通用 slot 查找（可作用于任意流，供替换流内日文字符递归翻译）。定义见 §T3。 */
-static int slot_lookup_stream(TextPrinter *win, uint32_t cur_char,
-                              const uint8_t *text, uint16_t index);
-
 static int inline_phrase_no_controls(TextPrinter *win, uint16_t index, uint16_t code)
 {
     const uint8_t *stream = phrase_stream_lookup(code);
@@ -185,17 +180,14 @@ static int inline_phrase_no_controls(TextPrinter *win, uint16_t index, uint16_t 
                 return 0;
             gidx = pack_glyph_index(lead, trail);
             if (gidx < CHS_FONT_GLYPH_MAX)
-                chs_print(win, gidx, CHS_PRINT_FONT_PX);
+                PrintGlyph(win, gidx, CHS_GLYPH_ADVANCE_PX);
             i += 4;
         } else if (stream[i] == 0xFD) {
             fd_expand_print(win, stream[i + 1]);
             i += 2;
         } else {
-            /* 日文字符：先在本短语流上递归查 slot → f900 中文，查不到才画日文 */
-            if (!slot_lookup_stream(win, stream[i], stream,
-                                    (uint16_t)(i + 1)))
-                if (!DrawGlyph(win, stream[i]))
-                    return 0;
+            if (!DrawGlyph(win, stream[i]))
+                return 0;
             i++;
         }
         if (++n > 32u)
@@ -235,10 +227,6 @@ static uint32_t slot_rd_le32(const uint8_t *p)
          | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
 }
 
-/* 通用 slot 查找（可作用于任意流，供替换流内日文字符递归翻译）。定义见下。 */
-static int slot_lookup_stream(TextPrinter *win, uint32_t cur_char,
-                              const uint8_t *text, uint16_t index);
-
 static int slot_draw_chinese(TextPrinter *win, const uint8_t *chinese,
                              uint16_t next_index)
 {
@@ -252,22 +240,17 @@ static int slot_draw_chinese(TextPrinter *win, const uint8_t *chinese,
             if (lead_trail_ok(lead, trail)) {
                 gidx = pack_glyph_index(lead, trail);
                 if (gidx < CHS_FONT_GLYPH_MAX)
-                    chs_print(win, gidx, CHS_PRINT_FONT_PX);
+                    PrintGlyph(win, gidx, CHS_GLYPH_ADVANCE_PX);
             }
             ci += 4;
         } else if (chinese[ci] == 0xFD) {
             fd_expand_print(win, chinese[ci + 1]);
             ci += 2;
         } else {
-            /* 日文字符：先在本替换流上递归查 slot → 对应 f900 中文（用户拍板：
-             * slot 本身支持日文字符查 f900，替换流内日文不应直接画日文）。 */
-            if (!slot_lookup_stream(win, chinese[ci], chinese,
-                                    (uint16_t)(ci + 1)))
-                DrawGlyph(win, chinese[ci]);
+            DrawGlyph(win, chinese[ci]);
             ci++;
         }
     }
-    /* 覆盖内层递归临时写入的 TEXT_INDEX，恢复本层消费位置。 */
     win_set_u16(win, WIN_TEXT_INDEX, next_index);
     return 1;
 }
@@ -417,29 +400,20 @@ static int slot_lookup_legacy(TextPrinter *win, uint32_t cur_char,
     return 0;
 }
 
-/* 通用 slot 查找：对指定流 text 的 index 位置做 slot 匹配并绘制。
- *   index 语义同官方（pos=index-1 为 cur_char 前驱游标）。
- *   slot_draw_chinese / inline_phrase_no_controls 的替换流内日文字符复用此
- *   入口递归翻译（用户拍板：slot 支持日文字符直接查对应 f900）。 */
-static int slot_lookup_stream(TextPrinter *win, uint32_t cur_char,
-                              const uint8_t *text, uint16_t index)
-{
-    const uint8_t *table = (const uint8_t *)ADDR_SLOT_TABLE;
-
-    if (cur_char >= 0x100u)
-        return 0;
-    if (slot_rd_le32(table) == SLOT_TABLE_MAGIC_V2)
-        return slot_lookup_v2(win, cur_char, table, text, index);
-    return slot_lookup_legacy(win, cur_char, text, index);
-}
-
 static int slot_lookup_and_draw(TextPrinter *win, uint32_t cur_char)
 {
+    const uint8_t *table = (const uint8_t *)ADDR_SLOT_TABLE;
     const uint8_t *text =
         (const uint8_t *)(uintptr_t)win_u32(win, WIN_TEXT_PTR);
     uint16_t index = win_u16(win, WIN_TEXT_INDEX);
 
-    return slot_lookup_stream(win, cur_char, text, index);
+    if (cur_char >= 0x100u)
+        return 0;
+
+    if (slot_rd_le32(table) == SLOT_TABLE_MAGIC_V2)
+        return slot_lookup_v2(win, cur_char, table, text, index);
+
+    return slot_lookup_legacy(win, cur_char, text, index);
 }
 
 /* =====================================================================
@@ -475,7 +449,7 @@ int TranslateHandleChar(TextPrinter *win, uint32_t c)
         win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(idx2 + 3));
         gidx = pack_glyph_index(lead, trail);
         if (gidx < CHS_FONT_GLYPH_MAX)
-            chs_print(win, gidx, CHS_PRINT_FONT_PX);
+            PrintGlyph(win, gidx, CHS_GLYPH_ADVANCE_PX);
         return 1;
     }
 

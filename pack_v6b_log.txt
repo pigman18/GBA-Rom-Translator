@@ -1,0 +1,198 @@
+﻿
+C:\code\GBA-Rom-Translator>cd /d C:\code\GBA-Rom-Translator 
+
+C:\code\GBA-Rom-Translator>set PYTHONPATH=C:\code\GBA-Rom-Translator\src 
+
+C:\code\GBA-Rom-Translator>C:\Python314\python.exe -m meowth full C:/code/GBA-Rom-Translator/roms/origin/POKEMON_RUBY_AXVJ00.gba -o C:/code/GBA-Rom-Translator/roms/outputs --work-dir work --source ja --target zh-Hans --modules 属性名,属性名-华丽大赛,性格名,特性名,宝可梦名,招式名,招式名-华丽大赛,训练家名,训练家个人名,地点名,秘密基地装饰名,道具名,树果名,道具说明,招式说明,招式说明-华丽大赛,特性说明,图鉴分类名,图鉴说明,UI界面,剧情,补漏剧情 --provider qwen --model qwen3.5-omni-flash --api-key=sk-ws-H.EPEEYLI.23Wg.MEUCIEoQAxB0K61KF0rCVcm3qWRKHQbm-8G4fpo2rEgUtFBiAiEAvFexfTmMLYHkgv6GQPqgcdX3u00YNtfrcahuIgvvJf0 
+[閰嶇疆] 鎵弿閰嶇疆鐩綍: C:\code\GBA-Rom-Translator\configs
+[閰嶇疆]   鍙戠幇娓告垙: POKEMON_RUBY_AXVJ00 -> C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\game.json
+[閰嶇疆] 鎵弿閰嶇疆鐩綍: C:\code\GBA-Rom-Translator\configs
+[閰嶇疆] 璇诲彇妯″潡: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
+[閰嶇疆]   妯″潡鏁? 22
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\font.config.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\hook\config.json
+[閰嶇疆] 璇诲彇娓告垙閰嶇疆: POKEMON_RUBY_AXVJ00
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\font.config.json
+[閰嶇疆] charmap: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\charmap.txt
+[texts] 璇诲彇 C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
+[閰嶇疆] 璇诲彇鑷畾涔夌炕璇戠洰褰? C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\lexicon (9 涓枃浠?
+[閰嶇疆]   UI.json: 25 鏉?
+[閰嶇疆]   鍥鹃壌.json: 1025 鏉?
+[閰嶇疆]   鍦扮偣.json: 915 鏉?
+[閰嶇疆]   灞炴€?json: 17 鏉?
+[閰嶇疆]   鎬ф牸.json: 25 鏉?
+[閰嶇疆]   鎷涘紡.json: 935 鏉?
+[閰嶇疆]   鐗规€?json: 313 鏉?
+[閰嶇疆]   鐭.json: 362 鏉?
+[閰嶇疆]   閬撳叿.json: 1470 鏉?
+[閰嶇疆] 鑷畾涔夌炕璇戞€昏: 5087 鏉?
+[缈昏瘧缂撳瓨] 鍔犺浇 C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts_translated.json: 14572 鏉?
+[閰嶇疆] 璇诲彇鑷畾涔夌炕璇戠洰褰? C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\lexicon (9 涓枃浠?
+[閰嶇疆]   UI.json: 25 鏉?
+[閰嶇疆]   鍥鹃壌.json: 1025 鏉?
+[閰嶇疆]   鍦扮偣.json: 915 鏉?
+[閰嶇疆]   灞炴€?json: 17 鏉?
+[閰嶇疆]   鎬ф牸.json: 25 鏉?
+[閰嶇疆]   鎷涘紡.json: 935 鏉?
+[閰嶇疆]   鐗规€?json: 313 鏉?
+[閰嶇疆]   鐭.json: 362 鏉?
+[閰嶇疆]   閬撳叿.json: 1470 鏉?
+[閰嶇疆] 鑷畾涔夌炕璇戞€昏: 5087 鏉?
+[缈昏瘧缂撳瓨] 缈昏瘧鍓?lexicon 鏃犲彉鏇达紝璺宠繃鍐欏叆 texts_translated.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[閰嶇疆] 璇诲彇: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[鏍￠獙] rejects/allows: 鎷掔粷 9/12697 鏉★紙鍊欓€?妯″潡鍐?12697/12697锛?
+[缈昏瘧宸泦] 寰呯炕 0 / free_texts 12697锛堣烦杩?鍗犱綅 458銆佸凡缂撳瓨/404 12230锛?
+[缈昏瘧缂撳瓨] 钀界洏 texts_translated.json: 14572 鏉?
+[缈昏瘧缂撳瓨] 鍥炲～ entries 11003 鏉?
+[缈昏瘧閫氳矾] translate.build.json 鈫?replace=9415, keep=1694, slot=1588
+Detected game: POKEMON_RUBY_AXVJ00
+浠?translate.build.json 閲嶅缓 12697 鏉℃敞鍏ユ暟鎹紝缂撳瓨瑕嗙洊 11003 鏉＄炕璇?
+[閰嶇疆] 璇诲彇鑷畾涔夌炕璇戠洰褰? C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\lexicon (9 涓枃浠?
+[閰嶇疆]   UI.json: 25 鏉?
+[閰嶇疆]   鍥鹃壌.json: 1025 鏉?
+[閰嶇疆]   鍦扮偣.json: 915 鏉?
+[閰嶇疆]   灞炴€?json: 17 鏉?
+[閰嶇疆]   鎬ф牸.json: 25 鏉?
+[閰嶇疆]   鎷涘紡.json: 935 鏉?
+[閰嶇疆]   鐗规€?json: 313 鏉?
+[閰嶇疆]   鐭.json: 362 鏉?
+[閰嶇疆]   閬撳叿.json: 1470 鏉?
+[閰嶇疆] 鑷畾涔夌炕璇戞€昏: 5087 鏉?
+[閰嶇疆] lexicon 宸插姞杞? 5087 鏉?
+[閰嶇疆] charmap: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\charmap.txt
+[鐭] 澶嶇敤 translate.build.json 鐮佽〃: 12606 鏉?
+[鐭] 鑷姩杩?F9 80: 390 鏉?(浠呭畾闀挎Ы stride/struct 瓒婃Ы)
+Loading ROM...
+Applying font patch...
+Font generated from Normal.bdf -> work\POKEMON_RUBY_AXVJ00\graphic\fonts
+Punctuation glyphs patched (baseline + no right spill)
+[font] patched 2 empty primary slot(s) from hook/work reference
+[font] restored 48 tuned unshadow/Sym bin(s) from hook/work reference
+Keep BDF-built fonts: 6 existing bin(s); synced 0 missing -> work\POKEMON_RUBY_AXVJ00\graphic\fonts
+[鐭] PhraseTable 12996 鏉℃祦, 684156B -> phrase_data.asm
+[data] from translate.build.json 鈫?phrases=12606/661497B
+[slot] translated_slot.asm: 1150 type=slot entries
+Font patch applied
+[鑷畾涔夌炕璇慮 绮剧‘鍖归厤: 1879, 瀛愪覆鏇挎崲: 50, 鎬昏: 1929/12688 鏉?
+[鑷畾涔夌炕璇慮 绮剧‘鍖归厤: 1879, 瀛愪覆鏇挎崲: 50, 鎬昏: 1929/12688 鏉?
+[鑷畾涔夌炕璇慮 娉ㄥ叆杩囨护: 12688 -> 11046 (鍘绘帀 1642 鏉＄┖/鏈炕璇?璺宠繃)
+[鑷畾涔夌炕璇慮 娉ㄥ叆杩囨护: 12688 -> 11046 (鍘绘帀 1642 鏉＄┖/鏈炕璇?璺宠繃)
+AXVJ build inject set: 11046/12688 entries [modules=['灞炴€у悕', '灞炴€у悕-鍗庝附澶ц禌', '鎬ф牸鍚?, '鐗规€у悕', '瀹濆彲姊﹀悕', '鎷涘紡鍚?, '鎷涘紡鍚?鍗庝附澶ц禌', '璁粌瀹跺悕', '璁粌瀹朵釜浜哄悕', '鍦扮偣鍚?, '绉樺瘑鍩哄湴瑁呴グ鍚?, '閬撳叿鍚?, '鏍戞灉鍚?, '閬撳叿璇存槑', '鎷涘紡璇存槑', '鎷涘紡璇存槑-鍗庝附澶ц禌', '鐗规€ц鏄?, '鍥鹃壌鍒嗙被鍚?, '鍥鹃壌璇存槑', 'UI鐣岄潰', '鍓ф儏', '琛ユ紡鍓ф儏']]
+Injecting 11046 translated texts...
+Scanning LZ bands once (a few seconds), then injecting鈥?
+[缈昏瘧閫氳矾] 杞藉叆 translate.build.json: 12697 鏉″喅绛栵紙鏉＄洰鍘婚噸鍚?11046锛?
+Expansion region start: 0x01200000 (floor=0x01200000, available=14,495,744)
+Inject progress 1/11046
+Inject progress 201/11046
+Inject progress 401/11046
+Inject progress 601/11046
+Inject progress 801/11046
+Inject progress 1001/11046
+Inject progress 1201/11046
+Inject progress 1401/11046
+Inject progress 1601/11046
+Inject progress 1801/11046
+Inject progress 2001/11046
+Inject progress 2201/11046
+Inject progress 2401/11046
+Inject progress 2601/11046
+Inject progress 2801/11046
+Inject progress 3001/11046
+Inject progress 3201/11046
+Inject progress 3401/11046
+Inject progress 3601/11046
+Inject progress 3801/11046
+Inject progress 4001/11046
+Inject progress 4201/11046
+Inject progress 4401/11046
+Inject progress 4601/11046
+Inject progress 4801/11046
+Inject progress 5001/11046
+Inject progress 5201/11046
+Inject progress 5401/11046
+Inject progress 5601/11046
+Inject progress 5801/11046
+Inject progress 6001/11046
+Inject progress 6201/11046
+Inject progress 6401/11046
+Inject progress 6601/11046
+Inject progress 6801/11046
+Inject progress 7001/11046
+Inject progress 7201/11046
+Inject progress 7401/11046
+Inject progress 7601/11046
+Inject progress 7801/11046
+Inject progress 8001/11046
+Inject progress 8201/11046
+  KEEP axvj_fe6a02139d98 @ 0x1D4094 (cat=鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+Inject progress 8401/11046
+Inject progress 8601/11046
+Inject progress 8801/11046
+Inject progress 9001/11046
+Inject progress 9201/11046
+Inject progress 9401/11046
+Inject progress 9601/11046
+Inject progress 9801/11046
+Inject progress 10001/11046
+Inject progress 10201/11046
+Inject progress 10401/11046
+Inject progress 10601/11046
+  KEEP axvj_4193163002ca @ 0x1518BB (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_68a6fde75bde @ 0x153160 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_a3eedd3b0911 @ 0x15ED2C (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_22f46c2f0a26 @ 0x17DABF (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8b61720ab748 @ 0x1819B8 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_9bf34632a467 @ 0x1889D5 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5fcf54e4c65c @ 0x18C30A (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_35da4a0923ed @ 0x196AD6 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_d5c52e118124 @ 0x1A856E (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_05391c6bd794 @ 0x1AB6B5 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5d7b01c89804 @ 0x1ABD74 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_65c0bd4a023d @ 0x1ABF59 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f6aa64fc8189 @ 0x1AC1A1 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_732582ab2703 @ 0x1AC5EF (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_8234505f383b @ 0x1AC762 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6317c18d3859 @ 0x1D38BC (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_a0bf9f1b086b @ 0x1D3ACA (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_443a9f3e069b @ 0x1D3AF8 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_b358bf6fb636 @ 0x1D3B0C (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_0640b650b15f @ 0x1D3CC8 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_46e4e430948c @ 0x1D3CE0 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_fc502674e3fb @ 0x1D3CFC (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_06b8d1f829fe @ 0x1D41DC (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1c8b1baca381 @ 0x1D420E (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1e801601f846 @ 0x1D4222 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_cf553492a04b @ 0x1D4252 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_2c0399446ee6 @ 0x1D4282 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_3c8e8ec01494 @ 0x1D4298 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_9f9ba36671a5 @ 0x1D4D66 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_2a3a1b0fb8bb @ 0x1D507A (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_0f6973b185bb @ 0x1D5092 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1019575a7420 @ 0x1D511A (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_ff4d5ec5b35e @ 0x1D5130 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_1279aadd29d8 @ 0x1D52DE (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_499b49dc5639 @ 0x1D571C (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5c896d5e75a7 @ 0x1D5786 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_f724af5feadf @ 0x1D579E (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_5b619f756e6d @ 0x1D57BE (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+Inject progress 10801/11046
+  KEEP axvj_d6fb5206d0db @ 0x3D776C (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_41060fb5ac8a @ 0x3DCB6C (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+Inject progress 11001/11046
+  KEEP axvj_46eaec6c8dac @ 0x428888 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+  KEEP axvj_6c1bf21e069d @ 0x7A0724 (cat=琛ユ紡鍓ф儏): 淇濈暀鍘熸枃锛堟棤缈昏瘧鎴栬瘧鏂囦笌鍘熸枃鐩稿悓锛?
+Inject progress 11046/11046
+Done: 9415 replaced, 0 relocated, 0 skipped, 0 partial-ptr skipped, 0 unsafe ptrs filtered
+Saved: C:\code\GBA-Rom-Translator\roms\outputs\POKEMON_RUBY_AXVJ00_translated.gba
+[鐭] 鑷姩杩?F9 80 璁板綍 鈫?work\POKEMON_RUBY_AXVJ00\lexicon.extra.json (390 鏉?
+tiles: 3 meta(s) from C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\tiles -> POKEMON_RUBY_AXVJ00_translated_tiles.gba, new_palette=0x09EA6C1C (ignore yaml 0x09200000)
+tiles patched from C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\tiles
+tiles: cannot overwrite POKEMON_RUBY_AXVJ00_translated.gba ([WinError 1224] 璇锋眰鐨勬搷浣滄棤娉曞湪浣跨敤鐢ㄦ埛鏄犲皠鍖哄煙鎵撳紑鐨勬枃浠朵笂鎵ц銆?; left POKEMON_RUBY_AXVJ00_translated_tiles.gba
+ROM aligned to 32MB (32,142,036 -> 33,554,432 bytes)
+output POKEMON_RUBY_AXVJ00_translated.gba locked ([WinError 1224] 璇锋眰鐨勬搷浣滄棤娉曞湪浣跨敤鐢ㄦ埛鏄犲皠鍖哄煙鎵撳紑鐨勬枃浠朵笂鎵ц銆?; deliverable is POKEMON_RUBY_AXVJ00_translated_new.gba 鈥?close mGBA and rename

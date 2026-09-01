@@ -2,6 +2,19 @@
 === Compiling text\PrintNextChar_hook.c ===
 === Compiling text\blend_glyph.c ===
 === Compiling text\text_translater.c ===
+=== Compiling text\text_render.c ===
+build.bat : src\text\text_render.c: In function 'draw_sym_px':
+所在位置 行:445 字符: 75
++ ... anslator\configs\POKEMON_RUBY_AXVJ00\hook; & .\build.bat *>&1 | Out-F ...
++                                                ~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (src\text\text_r... 'draw_sym_px': 
+   :String) [], RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+src\text\text_render.c:590:14: warning: variable 'col_stride' set but not used 
+[-Wunused-but-set-variable]
+  590 |     uint16_t col_stride;
+      |              ^~~~~~~~~~
 === Assembling map_name_popup\entry.s ===
 === Compiling map_name_popup\MapNamePopup_hook.c ===
 === Assembling battle\UpdateNickInHealthbox_entry.s ===
@@ -14,4 +27,4 @@
 === Generating game.bin ===
 === Generating game_syms.asm ===
 Build OK: out\game.bin
-Size: 7068 bytes
+Size: 9916 bytes

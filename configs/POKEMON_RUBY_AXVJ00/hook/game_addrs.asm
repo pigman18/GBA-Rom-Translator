@@ -9,6 +9,7 @@
 ; --- Core text printer ---
 ; PrintNextChar ≈ pret/pokeruby PrintNextChar (src/text.c)；P01 订其入口整函数替换
 PrintNextChar                          equ 0x080032F8
+TilePtrTm3                             equ 0x080034E0  ; C: ADDR_TILE_PTR_TM3
 CallViaR2                              equ 0x081B12DC  ; C: ADDR_CALL_VIA_R2
 FontFuncTable                          equ 0x081BB3AC  ; C: ADDR_FONT_FUNC_TABLE
 
@@ -17,6 +18,9 @@ CopyGlyph1bppTo4bpp                    equ 0x08003830  ; C: ADDR_COPY_GLYPH_1BPP
 CopyGlyph2bppTo4bpp                    equ 0x080038A0  ; C: ADDR_COPY_GLYPH_2BPP_4BPP
 GetGlyphTilePointers                   equ 0x08003730  ; C: ADDR_GET_GLYPH_TILE_PTRS
 UpdateTilemap                          equ 0x080036DC  ; C: ADDR_UPDATE_TILEMAP
+; pokeruby WriteGlyphTilemap 内调 GetCursorTilemapPointer；日版同构独立函数：
+;   r0=win → r0=&tilemap[((CY+TY)<<5)+(CX+TX)]（×2 字节）
+GetCursorTilemapPointer                equ 0x08003708  ; C: ADDR_GET_CURSOR_TILEMAP_PTR
 ; 原生 tm1 等宽打印（FontFuncTable[1] @0x081BB3AC[1]）：FontSubTable[fontNum]
 ; 写预渲染字体 tile 表项 + [win+0x1B](cursorTileX)+=1。PCS 字形分发专用。
 PrintGlyph_TextMode1_Origin            equ 0x0800360C  ; C: ADDR_PRINT_GLYPH_TM1_ORIGIN

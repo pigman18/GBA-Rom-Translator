@@ -1,4 +1,4 @@
-﻿[配置] 扫描配置目录: C:\code\GBA-Rom-Translator\configs
+[配置] 扫描配置目录: C:\code\GBA-Rom-Translator\configs
 [配置]   发现游戏: POKEMON_RUBY_AXVJ00 -> C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\game.json
 [配置] 扫描配置目录: C:\code\GBA-Rom-Translator\configs
 [配置] 读取模块: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
@@ -64,6 +64,18 @@ Detected game: POKEMON_RUBY_AXVJ00
 [短语] 自动进 F9 80: 390 条 (仅定长槽 stride/struct 越槽)
 Loading ROM...
 Applying font patch...
+Exception in thread Thread-1 (_readerthread):
+Traceback (most recent call last):
+  File "C:\Python314\Lib\threading.py", line 1082, in _bootstrap_inner
+    self._context.run(self.run)
+    ~~~~~~~~~~~~~~~~~^^^^^^^^^^
+  File "C:\Python314\Lib\threading.py", line 1024, in run
+    self._target(*self._args, **self._kwargs)
+    ~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\Python314\Lib\subprocess.py", line 1614, in _readerthread
+    buffer.append(fh.read())
+                  ~~~~~~~^^
+UnicodeDecodeError: 'gbk' codec can't decode byte 0x80 in position 186: illegal multibyte sequence
 Font generated from Normal.bdf -> work\POKEMON_RUBY_AXVJ00\graphic\fonts
 Punctuation glyphs patched (baseline + no right spill)
 [font] patched 2 empty primary slot(s) from hook/work reference

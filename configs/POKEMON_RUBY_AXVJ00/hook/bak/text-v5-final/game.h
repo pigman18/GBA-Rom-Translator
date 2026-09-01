@@ -33,7 +33,6 @@
 #define ADDR_FONT_SUBTABLE                 0x081BB3BCu
 #define ADDR_FONT_TYPE1_MAP                0x081B34A8u
 #define ADDR_GAME_BIN                      0x08800000u
-#define ADDR_V6_TILE_HW                    0x0203FEB0u  /* v6 全局 tile 高水位游标 */
 #define ADDR_GET_CURSOR_TILEMAP_PTR        0x08003708u
 #define ADDR_GET_GLYPH_TILE_PTRS           0x08003730u
 #define ADDR_GLYPH_ALLOC_NEXT              0x0203FFF8u
@@ -158,12 +157,11 @@ struct GlyphBuffer {
 #define CHS_PHASE_COUNT 8u
 #define ADDR_CHS_PHASE  0x0203FF90u   /* 复用原 PITCH_SLOTS 区（v5 已释放） */
 struct ChsPhase {
-    uint16_t key;       /* +0 行指纹 */
-    uint16_t px;        /* +2 行内已绘像素（相位 = px & 7） */
-    uint8_t  tx0;       /* +4 行首表项列（失配检测锚点） */
-    uint8_t  rsv;       /* +5 保留 */
-    uint16_t cur_tile;  /* +6 当前列 tile 号（v6 tile 号独立分配；phase!=0 复用） */
-};                      /* 8B × 8 = 64B @ 0x0203FF90 → 至 0x0203FFCF（安全区内） */
+    uint16_t key;    /* +0 行指纹 */
+    uint16_t px;     /* +2 行内已绘像素（相位 = px & 7） */
+    uint8_t  tx0;    /* +4 行首表项列（失配检测锚点） */
+    uint8_t  rsv[3]; /* +5..+7 保留（保持 8B 对齐） */
+};                    /* 8B × 8 = 64B @ 0x0203FF90 → 至 0x0203FFCF（安全区内） */
 
 /*
  * v5 混合写入架构（2026-08-31）：汉字渲染。
@@ -179,7 +177,7 @@ struct ChsPhase {
  * 12px 需自存相位（行指纹 key 失配即归零），见 struct ChsPhase。
  */
 #ifndef CHS_ADVANCE_12
-#define CHS_ADVANCE_12       1
+#define CHS_ADVANCE_12       0
 #endif
 #if CHS_ADVANCE_12
 #define CHS_GLYPH_ADVANCE_PX 12

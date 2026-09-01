@@ -3,7 +3,8 @@
 ## 用户偏好（最高优先级）
 - **听命令**：用户指出的路径/方法就是路径本身。先复述计划确认再动手。
 - **修 BUG 不擅自回退旧版本**：在当前方案上定位修掉；确要回退先说明等确认。
-- **场景门控边界**：✅ 按窗口模板地址键控的声明式静态配置表；❌ 启发式 scene 猜测（tileBase 区间/光标值）。裸字面量最糟。
+- **场景门控边界（2026-09-01 v6 拍板）**：❌ 逐窗登记/声明式配置表(kTm1Windows)/atlas 扫描/OBJ 运行时避让——统统否掉。✅ tile 分配器 = **tile 号独立高水位分配器 v6_alloc_tile()**（唯一递增领号，不跟官方每行清零的 TILE_OFFSET 走），屏幕位置继续交官方光标(UpdateTilemap→GetCursorTilemapPointer)。区间 [0x100,0x1C8) 避开官方字库/场景映射/UI 图标带。
+- **翻译链路统一（2026-09-01 用户确认）**：slot 表以日文字符(PCS 字节)为 bucket 索引，能查对应 f900 中文流。**不要用 F9 判断来决定翻译**——替换流(F9 短语/slot 替换流)内遇日文字符也应走 slot 查 f900，查不到才 DrawGlyph 画日文。
 - **运行时故障先怀疑注入机制**（relocate 改指针/hook 写坏字节），用配置开关二分定位，别纠结文本内容。
 
 ## 日版函数地址定位（2026-08-30 实证）
@@ -44,6 +45,25 @@
 - 设计稿唯一权威：docs/REWRITE_DESIGN_混合写入架构.md（§4.3 已按 spillTile 定案修订）。
 - 增删 src/text/*.c 后 build.bat（configs 与 work 两份同步改）编译段+链接段都要改；REM 保持全 ASCII。
 
+## 🔴 tile 分配器坐标系（2026-09-01 实证，动态区正确语义）
+- `chs_emit_column` 写 `tile_data + free_tile*32`，free_tile 是**相对当前 BG charBase 的偏移**，
+  合法范围 **0~1023**（tilemap 10bit + VRAM 4 charBlock），**不是 0~511**。上界封顶 512 = 错。
+- atlas = 官方字库区 = `[BASE, BASE+512)`（官方 tm1 窗口创建时 InitWindowTileData 静态预渲染
+  256 glyph×2 tile，v4 tile_alloc.c 实证），**不可**标满 `[BASE,512)`（会把 base 小窗口动态区
+  吞空 ⇒ 字体全空，2026-09-01 回归根因）。
+- 动态区 = 相对 charBase 偏移 `[BASE+512, hi)`，hi = `min(1024, OBJ 避让上界)`。
+- **战斗窗花屏根因**：charBase=0 时动态区高段相对号 513+ = 物理 charBlock1 = OBJ 精灵区（精灵
+  是 OBJ 非 BG，tilemap 活引用扫不到）⇒ 花屏。修法 `tm1_obj_rel_hi(win)`：OBJ 起始
+  charBlock=(REG_DISPCNT>>4)&3，若 >BG charBase 则 hi=(obj-cb)*512（战斗窗=512，动态区截断）；
+  否则 hi=1024。charBase=2 主力窗高段 = 物理 charBlock3+，不与 OBJ(charBlock1) 冲突 ⇒ 安全。
+- tilemap 活引用(tm1_mark_one_map)须标 **0~1023 全部**（≥512 高段是官方引用，丢弃会让动态区
+  领走官方已用 tile）；调用方已按 charBase 过滤，相对号一致。
+- 无空闲时回落 lo=base 从 atlas 起点找（靠活引用精确避开），宁部分不显示也不写坏精灵。
+- gdb 模板分布（AXVJ00）：主力对话框 0x081BB5BC/46C/784/484/874 charBase=2 base=0x0001（~2161 次）；
+  战斗招式 0x081BB3F4 charBase=0 base=0x0000/0x0090/0x0190/0x01B8；队伍窗 0x081BB43C charBase=1 font4。
+- ⚠ 上条「根治方向=声明式配置表 kTm1Windows 逐窗登记」**已被用户否定（2026-09-01 v6 拍板）**。
+  根治方向改为：**按 textMode 分派的简单固定区间分配器**，不做任何窗口登记。见下方 v6 章节。
+
 ## relocate / F980（2026-08-30 定案）
 - relocate 改指针是高危：rom_writer 无对齐无区域过滤滑窗，巧合字节也改 ⇒ 黑屏。诊断脚本 scripts/diag_relocate_collisions.py；改 relocate 配置后必跑。**relocate 已改 opt-in（默认 False）**，改动点 translate_plan.py/assign_modules.py/texts_patcher.py；改默认值必须重跑 translate 才生效。
 - F980 短语引用（5 字节，不改指针）基本够用：phrase 上限 16384、表体 6%。仅 62 条槽位<5B 走 SLT2 通路；1 条 650B 超 MAX_PHRASE_STREAM=512 会静默截断。🔴 护栏待补：phrase_stream_lookup 不判 code 上界；build_rom_data 无数量上限检查。
@@ -63,3 +83,17 @@
 
 ## 相关文档
 docs/START_HERE.md（判断树）/ 复盘_20260830_混排文本块踩踏 / 复盘_20260829_设置菜单tm1落址BUG链 / FONT_12PX_DRAW.md / HOOK_RELOCATE_PLAN.md
+
+## v6 架构（2026-09-01 拍板，text_render.c 已删）
+- **文件**：text_translater.c=翻译层(GetGlyph 解字 f900/slot/GetStringWidth，无渲染)；PrintNextChar_hook.c=渲染层(管线三段)；blend_glyph.c=像素原语。
+- **管线三段独立**：解压(GetGlyph)→栅格化(chs_rasterize，按 fontSize 8/12/16 生成 tile 列对)→落址(chs_place，按 textMode 固定区间分配)。16+12+8 可混排，字号只影响栅格化。
+- **统一入口** chs_print(win,code,fontSize)：GetGlyph→rasterize→place。translater 调它（传 f900 gidx + 16）。
+- **🔴 GetGlyph 取字必须从中文字库**：ADDR_FONT_CHS_NORMAL(0x09000000)/SMALL(0x09100000)，索引=(code&0x7FFF)<<7，code&0x8000 再+64。**严禁用 GetGlyphTilePointers_Origin(官方日文字形)**——gidx 是中文索引查官方表返 null→全空。
+- **🔴 落址定案（2026-09-01「第三层正确解法」，最重要认知）**：画一个字恒两步、缺一不可——①写 tile data（要 tile 号）②写 tilemap（要屏幕位置）。官方两条腿里**位置这条腿管得对**（GetCursorTilemapPointer @0x08003708 = `&tilemap[(CY+TY)*32+(CX+TX)]`，UpdateTilemap @0x080036DC 写 tilemap[0]/[+0x40]，palette=win[0x0F]<<12），保留；**tile 号这条腿是病灶**（`tile=base+TILE_OFFSET`，TILE_OFFSET 每行 AddTextPrinter 清零 ⇒ 每行复用同批 tile ⇒ 行2盖行1=替换）。治本=**tile 号从自家高水位 v6_alloc_tile() 领唯一递增号，与官方游标解耦；屏幕位置继续调 UpdateTilemap**。每字独享 tile，替换/叠加不再发生。
+  · 各 mode 只决定「屏幕光标怎么推」：mode0/1 推 TILE_OFFSET+=2+cursorTileX+=1；mode3 只推 cursorTileX+=1（不推 TILE_OFFSET）；mode2 缓冲指针无分配。
+  · lower_delta **恒=1**（v6_alloc_tile 每列领连续 2 tile，下半个=tile+1）；⚠ 曾误用 mode3=30（官方网格行距残留）⇒ 每字浪费 28 tile + 上界越界撞 UI。
+  · 区间 [0x100,0x1C8)（cb=2 自由带；[0x1C9,0x1F7] 详情页场景映射、[0x1E0,0x1FF] UI 图标章避开）。高水位绝对地址 ADDR_V6_TILE_HW=0x0203FEB0。cb=1 自由带 [0x102,0x14B] 更窄，单全局高水位对其偏宽，可后续按 charBase 分桶。
+  · chs_place_col = 统一原语（写像素+UTM+推 cursorTileX），cursorTileX 推进必须在原子里（曾漏推⇒多字变单字）。
+- **🔴 12px 主字体（2026-09-01 落地，CHS_ADVANCE_12=1 默认）**：12px 步进 12 mod 8 = 4 ⇒ 相位两态 0/4，官方游标只有整列粒度 ⇒ 相位自存 struct ChsPhase @0x0203FF90（8B×8，key=行指纹 TILE_BASE^CURSOR_Y<<8^CURSOR_TILE_Y<<4^template>>2，失配即归零）。**print_glyph_px(win,g128,ink)** 两段式：w0=min(8-phase,ink)/w1=ink-w0，extract_cols 拼列+blend(startPixel=phase/0)；tile 号 phase==0 领新列 v6_alloc_tile、phase!=0 复用 cur_tile（**ChsPhase 加 cur_tile 字段**，相邻字共享半列 tile，每 2 字省 1 列）；尾像素 chs_fill_bg 补底色；返回 adv=(phase+ink)/8，TILE_OFFSET 推 adv*2。ink=8(标点)不改变 phase(8 是 8 倍数)。半角交原生前 chs_flush_to_col 相位补齐。**回退**：game.h CHS_ADVANCE_12=0 → 16px 整格零状态。
+- **slot 递归翻译**：slot_lookup_stream(win,cur_char,text,index) 接受任意流；替换流内日文字符也走 slot 查 f900，失败才 DrawGlyph。index 语义 pos=index-1；内层递归写 TEXT_INDEX 由外层 slot_draw_chinese 末尾统一覆盖。
+- 打包：hook build.bat→根 build.bat→check_rom_hook。v6 game.bin 7068B（2026-09-01 12px 落地后），.data 0 / .bss 0。

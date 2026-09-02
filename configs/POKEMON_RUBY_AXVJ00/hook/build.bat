@@ -95,7 +95,7 @@ if errorlevel 1 exit /b 1
 echo === Generating game_syms.asm ===
 > %OUT%\game_syms.asm (
     echo ; Auto-generated from out/game.map - do not edit
-    for %%S in (MapName_DisplayCellLength UnusedPrintMonName_Hook DrawOptionMenuChoice_Hook UpdateNickInHealthbox_Hook UpdateNickInHealthbox_Hook_Other UpdateTilemap_Origin) do (
+    for %%S in (MapName_DisplayCellLength UnusedPrintMonName_Hook DrawOptionMenuChoice_Hook UpdateNickInHealthbox_Hook UpdateNickInHealthbox_Hook_Other UpdateTilemap_Origin InitTextPrinter_Hook) do (
         for /f "tokens=1" %%a in ('findstr /R "%%S$" %OUT%\game.map') do @echo %%S equ %%a
     )
 )

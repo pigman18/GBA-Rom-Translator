@@ -9,6 +9,10 @@
 ; --- Core text printer ---
 ; PrintNextChar ≈ pret/pokeruby PrintNextChar (src/text.c)；P01 订其入口整函数替换
 PrintNextChar                          equ 0x080032F8
+; InitTextPrinter：文本块开始（r0=win, r1=text, r2=tile_base, r3=cur_x,
+; 第5参数 cur_y @[sp+0x18]，入口已 push {r4,r5,r6,lr}+{r5,r6} 共 6 寄存器）。
+; P0x 订其入口 8B（B570 464E 4645 B460）→ 块边界钩子，复位 ChsPhase 相位。
+InitTextPrinter                        equ 0x08002C68  ; C: ADDR_INIT_TEXT_PRINTER
 TilePtrTm3                             equ 0x080034E0  ; C: ADDR_TILE_PTR_TM3
 CallViaR2                              equ 0x081B12DC  ; C: ADDR_CALL_VIA_R2
 FontFuncTable                          equ 0x081BB3AC  ; C: ADDR_FONT_FUNC_TABLE

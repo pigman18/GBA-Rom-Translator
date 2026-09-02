@@ -39,6 +39,7 @@
 #define ADDR_GLYPH_ALLOC_NEXT              0x0203FFF8u
 #define ADDR_GLYPH_PAGE_CURTAB             0x0203FFD2u
 #define ADDR_GMENU                         0x03000618u
+#define ADDR_INIT_TEXT_PRINTER             0x08002C68u
 #define ADDR_INIT_WINDOW_TILE_DATA         0x08002A50u
 #define ADDR_MENU_PRINT_TEXT               0x0806F16Cu
 #define ADDR_OPT_FG_COLOR                  0x0203FFD1u

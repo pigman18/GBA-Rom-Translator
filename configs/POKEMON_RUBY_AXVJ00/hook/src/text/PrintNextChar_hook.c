@@ -67,6 +67,8 @@ struct V6SceneRule {
     uint8_t  row_n;
     const struct V6Zone *zones;
     uint8_t  zone_n;
+    const uint16_t *avoid;    /* 官方引用字形/保留区 tile 清单（相对 charBase 偏移，各占 2 格） */
+    uint8_t  avoid_n;         /* avoid 项数；0 = 无避让（默认） */
 };
 
 /* 设置菜单（模板 0x081BB874）：行基址避引用字形，标签列 / 候选列均 12px。
@@ -89,10 +91,24 @@ static const struct V6Zone kOptZones[] = {
     { .cx_hi = 22u,   .font_px = 12u, .off = 18u, .row_tab = 0 },
     { .cx_hi = 0xFFu, .font_px = 12u, .off = 24u, .row_tab = 0 },
 };
+
+/* 不得被中文占用的 tile（各占 2 格：t 与 t+1），相对 charBase 偏移。
+ * ① gdb 实测被本窗口（cb=2 选项窗）引用的字形  ② 已知特殊保留区（▶/菜单光标）。
+ * 沿用 v3/v4 kOptGlyphAvoid 实测清单（2026-08-25 采集）。
+ * ⚠ 清单不完整是主要风险：发现新乱码字符 → 反推 tile（=1+PCS*2）→ 补进 → 重编。 */
+static const uint16_t kOptGlyphAvoid[26] = {
+    0x001u, 0x021u, 0x031u, 0x06Fu, 0x077u, 0x08Bu, 0x0FFu, /* 1 33 49 111 119 139 255 */
+    0x143u, 0x145u, 0x147u, 0x149u, 0x14Bu, 0x14Du, 0x14Fu, /* 323 325 327 329 331 333 335 */
+    0x151u, 0x153u, 0x159u, 0x15Du, 0x171u, 0x18Du, 0x199u, /* 337 339 345 349 369 397 409 */
+    0x1B7u, 0x1BFu, 0x1C3u,                                  /* 439 447 451 */
+    0x1DFu, 0x1E1u,                                          /* ② 479 ▶字形 / 481 菜单光标 */
+};
+
 static const struct V6SceneRule kV6Scenes[] = {
     { .tpl = 0x081BB874u, .row_y0 = 3u, .row_shift = 1u,
       .row_tab = kOptRowBase, .row_n = 7u,
-      .zones = kOptZones, .zone_n = 4u },
+      .zones = kOptZones, .zone_n = 4u,
+      .avoid = kOptGlyphAvoid, .avoid_n = 26u },
 };
 #define V6_SCENE_N  (sizeof(kV6Scenes) / sizeof(kV6Scenes[0]))
 
@@ -238,6 +254,18 @@ static uint16_t chs_phase_key(TextPrinter *win)
                        ^ w) | 0x8000u);
 }
 
+/* 用 InitTextPrinter 的参数直接构造「新块」行指纹 key（不读 win 字段——
+ * hook 时 win[0x16]/[0x1C]/[0x1D] 还是旧值，本体尚未写入）。
+ * 新块 CURSOR_TILE_Y 必然被 InitTextPrinter 归零 ⇒ 该项恒 0。 */
+static uint16_t chs_phase_key_from(uint8_t *tpl, uint16_t tile_base, uint8_t cur_y)
+{
+    uint16_t w = tpl ? (uint16_t)(((uintptr_t)tpl >> 2) & 0xFFFFu) : 0;
+
+    return (uint16_t)((tile_base
+                       ^ ((uint16_t)cur_y << 8)
+                       ^ w) | 0x8000u);
+}
+
 static volatile struct ChsPhase *chs_phase_slot(TextPrinter *win, uint16_t key)
 {
     volatile struct ChsPhase *tab = (volatile struct ChsPhase *)ADDR_CHS_PHASE;
@@ -264,19 +292,79 @@ static volatile struct ChsPhase *chs_phase_slot(TextPrinter *win, uint16_t key)
     return &tab[0];
 }
 
-/* 当前行内相位（0..7）；失配（块切换/回退）⇒ 归零重锚。
- * 例外（2026-09-02 类型7 混排修复）：同行后继块（同 zone + curX 严格变大）
- * ——如 F9 汉字「类型」(curX=15) 后跟原生半角数字「8」(curX=18)，两者是
- * 同一候选值内的顺序衔接，InitTextPrinter 重置 cursorTileX 会误触发归零，
- * 导致「8」落回行首覆盖「类」。此时续接 px 而非归零。
- *
- * 判据用 curX（会话起始列，块间必变、块内不变）而非 cursorTileX：
- *   curX 变化 + 变大 + 同 zone ⇒ 同行后继块，续接 px（px 是行内绝对像素，
- *   落址 row_base + (px>>3)*2 只依赖 px，续接=不归零）；
- *   否则（换 zone / curX 回退=重印）⇒ 归零。
- *   cursorTileX 回退（tx < tx0）保留作防御：块内异常回退也归零。
- *   不再用 (tx-tx0)==(px>>3) 做同步校验——块切换后 px(行内绝对) 与
- *   tx(块内相对) 基准不同，该式在续接后必然失配，会误杀块内后续字。 */
+/* =====================================================================
+ * §V6 块边界相位复位（InitTextPrinter hook，2026-09-02 半透明空格 BUG）
+ * ── 根因 ────────────────────────────────────────────────────────
+ *  ChsPhase 是全局 8×8 槽表，靠行指纹 key 区分，但**没有文本块生命周期**——
+ *  块结束/窗口重建后旧 px 赖在表里。主菜单「新游戏」每次进入 curX/tpl/TILE_BASE
+ *  相同 ⇒ key 命中同一 slot、px 停在上一轮非零值(phase=4) ⇒ 第一字左 4px 既没
+ *  画字也没补底色，露出 tile 脏数据 = 半透明空格。
+ *  旧 `tx==0` 判据是**事后间接信号**（依赖 PrintNextChar 首字时 cursorTileX 恰
+ *  为 0），在窗口复用/未重走 InitTextPrinter 的场景下不可靠 ⇒ 用户定夺必须
+ *  **hook InitTextPrinter**：块边界是文本生命周期最权威的直接证据。
+ * ── 续接保留 ────────────────────────────────────────────────────
+ *  类型7「类型」(curX=15) →「8」(curX=18) 是两个独立文本块（两次 InitTextPrinter），
+ *  但属同一候选值的顺序衔接，须续接 px（否则「8」落回行首覆盖「类」）。
+ *  判据：scene 规则命中 + 新 curX 严格变大 + 同 zone（off 相同）⇒ 续接；
+ *  否则（重进同一块 / 换行 / 换 zone / 非 scene 窗口）⇒ 复位 px。
+ *  非 scene 窗口（主菜单等）恒复位——它们没有「同行后继块」场景，复位即消空格。
+ * ===================================================================== */
+static void chs_init_phase(TextPrinter *win, uint16_t tile_base,
+                           uint8_t cur_x, uint8_t cur_y)
+{
+    uint8_t *tpl = win_template(win);
+    uint16_t key = chs_phase_key_from(tpl, tile_base, cur_y);
+    volatile struct ChsPhase *tab = (volatile struct ChsPhase *)ADDR_CHS_PHASE;
+    volatile struct ChsPhase *s = 0;
+    const struct V6SceneRule *rule =
+        v6_scene_lookup((uint32_t)(uintptr_t)tpl);
+    unsigned i;
+
+    for (i = 0; i < CHS_PHASE_COUNT; i++) {
+        if (tab[i].key == key) {
+            s = &tab[i];
+            break;
+        }
+    }
+    if (!s) {
+        for (i = 0; i < CHS_PHASE_COUNT; i++) {
+            if (tab[i].key == 0u) {
+                s = &tab[i];
+                break;
+            }
+        }
+        if (!s)
+            s = &tab[0];
+        s->key = key;
+        s->px  = 0;
+        s->tx0 = 0;
+        s->last_cx = cur_x;
+        s->cur_tile = 0;
+        return;                       /* 新分配：恒复位 */
+    }
+
+    /* 命中既有槽：同行后继块续接，否则复位 */
+    if (rule && cur_x > s->last_cx && v6_same_zone(rule, cur_x, s->last_cx)) {
+        s->tx0 = 0u;                  /* 续接：仅重锚块内游标锚点，px 保留 */
+        s->last_cx = cur_x;
+    } else {
+        s->px  = 0u;
+        s->tx0 = 0u;
+        s->cur_tile = 0u;
+        s->last_cx = cur_x;
+    }
+}
+
+/* InitTextPrinter 入口钩（entry.s 跳板已重放前 8B、保 r0-r3、重排参数）。
+ * 参数：win / tile_base(r2) / cur_x(r3) / cur_y(第5参数，栈)。只读不改 win。 */
+void InitTextPrinter_hook_C(TextPrinter *win, uint16_t tile_base,
+                            uint8_t cur_x, uint8_t cur_y)
+{
+    chs_init_phase(win, tile_base, cur_x, cur_y);
+}
+
+/* 当前行内相位（0..7）。块边界复位已上移到 InitTextPrinter hook（chs_init_phase），
+ * 这里只保留块内异常防御：curX 漂移或 cursorTileX 回退 ⇒ 归零。 */
 static unsigned chs_phase_px(TextPrinter *win)
 {
     uint16_t key = chs_phase_key(win);
@@ -285,17 +373,10 @@ static unsigned chs_phase_px(TextPrinter *win)
     uint8_t cx = win_u8(win, WIN_CURSOR_X);
 
     if (cx != s->last_cx || tx < s->tx0) {
-        /* 块切换（curX 变）or 块内 cursorTileX 回退 */
-        const struct V6SceneRule *rule =
-            v6_scene_lookup((uint32_t)(uintptr_t)win_template(win));
-        if (rule && cx > s->last_cx && v6_same_zone(rule, cx, s->last_cx)) {
-            /* 同行后继块：续接 px，仅重锚 tx0（后续块内 tx 从 0 递增） */
-            s->tx0 = tx;
-        } else {
-            s->px  = 0;
-            s->tx0 = tx;
-            s->cur_tile = 0;
-        }
+        /* 块内异常：curX 漂移 or cursorTileX 回退 ⇒ 归零防御 */
+        s->px  = 0;
+        s->tx0 = tx;
+        s->cur_tile = 0;
         s->last_cx = cx;
     }
     return (unsigned)s->px;

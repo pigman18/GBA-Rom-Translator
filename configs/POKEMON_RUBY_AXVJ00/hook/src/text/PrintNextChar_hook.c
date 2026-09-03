@@ -65,6 +65,7 @@ struct V6SceneRule {
     uint8_t  row_shift;       /* r = (curY - y0) >> shift */
     const uint16_t *row_tab;  /* 每行 tile 基址（[1..row_n]） */
     uint8_t  row_n;
+    uint16_t title_base;      /* 标题行（curY <= row_y0）专用 tile 基址；0 = 无标题 */
     const struct V6Zone *zones;
     uint8_t  zone_n;
     const uint16_t *avoid;    /* 官方引用字形/保留区 tile 清单（相对 charBase 偏移，各占 2 格） */
@@ -115,6 +116,7 @@ static const uint16_t kOptGlyphAvoid[26] = {
 static const struct V6SceneRule kV6Scenes[] = {
     { .tpl = 0x081BB874u, .row_y0 = 3u, .row_shift = 1u,
       .row_tab = kOptRowBase, .row_n = 7u,
+      .title_base = 0x183u,          /* 标题「设置」2 字 16px = 8 tile，独立带避开标签/候选/引用字形 */
       .zones = kOptZones, .zone_n = 4u,
       .avoid = kOptGlyphAvoid, .avoid_n = 26u },
 };
@@ -173,12 +175,19 @@ static unsigned v6_scene_row_index(const struct V6SceneRule *r, uint8_t cy)
     return rr - 1u;
 }
 
-/* 行基址：zone 有独立 row_tab 则用 zone 表，否则用主表。 */
+/* 行基址：zone 有独立 row_tab 则用 zone 表，否则用主表。
+ * 标题行（curY <= row_y0）走 rule->title_base 专用带，不再 clamp 到行 0 与
+ * 首行标签（curY=5 ⇒ row 0）共用一条带（2026-09-04 标题「设置」被「对话速度」
+ * 覆盖的根因）。 */
 static uint16_t v6_scene_row_base(const struct V6SceneRule *r, const struct V6Zone *z,
                                   uint8_t cy)
 {
-    const uint16_t *tab = (z && z->row_tab) ? z->row_tab : r->row_tab;
-    return tab[v6_scene_row_index(r, cy)];
+    if (cy <= r->row_y0 && r->title_base != 0u)
+        return r->title_base;
+    {
+        const uint16_t *tab = (z && z->row_tab) ? z->row_tab : r->row_tab;
+        return tab[v6_scene_row_index(r, cy)];
+    }
 }
 
 /* =====================================================================

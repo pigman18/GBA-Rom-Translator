@@ -23,6 +23,7 @@
 #include "text.h"
 #include "blend_glyph.h"
 #include "scene_cfg.h"
+#include "tile_alloc.h"
 
 /* =====================================================================
  * §V6 Stage3 落址分配器（tile 号独立 + 位置交官方；2026-09-01 定案）
@@ -161,34 +162,15 @@ static unsigned chs_rasterize(const uint8_t g128[CHS_CELL_BYTES],
 
 /* =====================================================================
  * §V6 分配器核心修复（2026-09-01）：
- *   **tile 号从自家高水位领，与官方 TILE_BASE+TILE_OFFSET/cursorTileX 解耦**。
+ *   **tile 号从自家分配器领，与官方 TILE_BASE+TILE_OFFSET/cursorTileX 解耦**。
  *   屏幕光标继续走官方语义（mode0 推 TILE_OFFSET += 2、mode3 推 cursorTileX
  *   += 1），因为 UpdateTilemap_PreserveCursorX 内部用 cursor 算 tilemap 表项
  *   **位置**——这是必要的（否则字错位）。但**表项值**和 tile_data 索引不再
  *   用官方算出的 tile 号（多窗并发时该值被多个 win 的 InitTextPrinter 重置
- *   成 0，必然互撞），而是从 v6_alloc_tile() 领一个唯一递增的相对号。
- *   区间 [0x100, 0x1C8)：据 docs/场景特征与偏移量表.md 四，cb=2 自由带
- *   [0x100,0x1C8]，[0x1C9,0x1F7] 是详情页原生「场景映射」，[0x1E0,0x1FF]
- *   是 UI 光标/图标章——一律避开。跨 charBase 物理地址不同天然不撞；同
- *   charBase 多窗单线程顺序领 tile 天然防撞。满了回卷到起点（覆盖最早的
- *   旧中文——属于"撞自家"，不影响官方图标）。TODO：cb=1 自由带更窄
- *   [0x102,0x14B]、cb=0 [0x101,0x1AB]，单全局高水位对 cb=1 偏宽，可后续
- *   按 charBase 分桶；当前各窗中文量少，实践中够用。
+ *   成 0，必然互撞）。
+ *   v6 起先为高水位 v6_alloc_tile()；2026-09-04 起升级为 v7 动态分配器
+ *   v7_alloc_tile(win)（读 tilemap 避让带 + 确定性绕开，见 tile_alloc.c）。
  * ===================================================================== */
-#define V6_TILE_HW_LO       0x100u
-#define V6_TILE_HW_HI       0x1C8u
-#define V6_TILE_HW_RSV      0x08u     /* 接近上界回卷，留半行余量 */
-
-static uint16_t v6_alloc_tile(void)
-{
-    volatile uint16_t *hw = (volatile uint16_t *)ADDR_V6_TILE_HW;
-    uint16_t t = *hw;
-
-    if (t < V6_TILE_HW_LO || t >= V6_TILE_HW_HI - V6_TILE_HW_RSV)
-        t = V6_TILE_HW_LO;
-    *hw = (uint16_t)(t + 2u);
-    return t;
-}
 
 /* =====================================================================
  * §V6 12px 相位（CHS_ADVANCE_12=1）
@@ -373,8 +355,9 @@ static unsigned print_glyph_px(TextPrinter *win,
         t0 = (uint16_t)(row_base + col_off);
         t1 = (w1 != 0u) ? (uint16_t)(row_base + col_off + 2u) : 0u;
     } else {
-        t0 = (phase == 0u) ? v6_alloc_tile() : chs_phase_cur_tile(win);
-        t1 = (w1 != 0u) ? v6_alloc_tile() : 0u;
+        /* 未命中静态表 → 动态分配器（读 tilemap 避让带 + 确定性绕开） */
+        t0 = (phase == 0u) ? v7_alloc_tile(win) : chs_phase_cur_tile(win);
+        t1 = (w1 != 0u) ? v7_alloc_tile(win) : 0u;
     }
 
     /* 第一段：源列 [0,w0) → t0 的 [phase, phase+w0) */
@@ -411,7 +394,7 @@ static unsigned print_glyph_px(TextPrinter *win,
  * 不再需要：日文/半角也经 print_glyph_px 相位感知渲染，不会压字/留洞。 */
 #endif /* CHS_ADVANCE_12 */
 
-/* §V6 Stage3 单列写像素 + UTM（tile 号来自调用方 = v6_alloc_tile 领的）：
+/* §V6 Stage3 单列写像素 + UTM（tile 号来自调用方 = 静态表或 v7 动态分配器）：
  *   tile_data[tile*32] 和 tile_data[(tile+lower_delta)*32] 各写一个 8x8 tile。
  *   UpdateTilemap_PreserveCursorX 用传入的 tile/lower 作表项**值**，表项**位置**
  *   由内部 cursorX/cursorTileX/cursorY/cursorTileY 算（必须保留官方语义）。
@@ -452,10 +435,10 @@ static void chs_place_col(TextPrinter *win, uint16_t tile, uint16_t lower_delta,
 }
 
 /* =====================================================================
- * §V6 日文/半角统一绘制（官方字库取字 + v6_alloc_tile 统一分配）
+ * §V6 日文/半角统一绘制（官方字库取字 + 统一分配）
  *   中文走中文字库 GetGlyph，日文/半角走官方字库 GetGlyphTilePointers，
  *   字形统一进 128B 4bpp 容器 → print_glyph_px / chs_place_col，共用
- *   v6_alloc_tile 分配 tile，不再交回官方 FontFunc（官方 base+TILE_OFFSET
+ *   静态表/v7 动态分配器领 tile，不再交回官方 FontFunc（官方 base+TILE_OFFSET
  *   每行清零 → 行间替换）。tm2 血条缓冲无像素/tilemap，仍交原生。
  * ===================================================================== */
 static void jp_glyph_to_g128(uint8_t font_num, uint16_t glyph,
@@ -498,7 +481,7 @@ static int draw_jp_glyph(TextPrinter *win, uint8_t font_num, uint16_t glyph)
     }
 #else
     {
-        uint16_t tile = v6_alloc_tile();
+        uint16_t tile = v7_alloc_tile(win);
         chs_place_col(win, tile, 1u, g128 + 0x00u, g128 + 0x20u);
         if (tm == 0u || tm == 1u)
             win_set_u16(win, WIN_TILE_OFFSET,
@@ -545,7 +528,7 @@ static void chs_place(TextPrinter *win, uint8_t textMode,
 #if CHS_ADVANCE_12
     if (fontSize == 12u) {
         /* 12px 主字体：两段式 + 相位共享。命中规则 → 行基址+列偏移确定性；
-         * 未命中 → v6_alloc_tile 高水位。TILE_OFFSET 按 adv*2 推进。 */
+         * 未命中 → v7 动态分配器（读 tilemap 避让带）。TILE_OFFSET 按 adv*2 推进。 */
         unsigned adv = print_glyph_px(win, g128, 12u);
         if (tm == 0u || tm == 1u)
             win_set_u16(win, WIN_TILE_OFFSET,
@@ -576,10 +559,10 @@ static void chs_place(TextPrinter *win, uint8_t textMode,
     }
 #endif
 
-    /* 8px / 16px 整格（未命中规则或 8px）：tile 号从 v6_alloc_tile() 领。
+    /* 8px / 16px 整格（未命中规则或 8px）：tile 号从动态分配器 v7_alloc_tile 领。
      * mode0/1 推 TILE_OFFSET += 2；mode3 只推 cursorTileX（chs_place_col 内）。 */
     for (col = 0; col < cols; col++) {
-        uint16_t tile = v6_alloc_tile();
+        uint16_t tile = v7_alloc_tile(win);
         chs_place_col(win, tile, 1u, buf[col * 2u], buf[col * 2u + 1u]);
         if (tm == 0u || tm == 1u)
             win_set_u16(win, WIN_TILE_OFFSET,
@@ -722,6 +705,13 @@ int PrintNextChar_Hook(TextPrinter *win)
 
     if (!win)
         return 0;
+
+    /* 裸透传开关：ADDR_V6_BYPASS 非 0 时，啥都不处理直接消费当前字符
+     * （return 1 = 不打印官方串，也不画中文）。用于：
+     *   ① 验证「统一屏蔽输出」第 1 步是否干净（关掉后窗口只剩官方预渲染背景）
+     *   ② 配合 gdb_patcher 观察 tilemap 活引用 = 导出避让带（画中文前的占用基线） */
+    if (*(volatile uint8_t *)ADDR_V6_BYPASS != 0u)
+        return 1;
 
     text = (const uint8_t *)(uintptr_t)win_u32(win, WIN_TEXT_PTR);
     idx = win_u16(win, WIN_TEXT_INDEX);

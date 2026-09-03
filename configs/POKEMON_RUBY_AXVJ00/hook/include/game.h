@@ -34,6 +34,8 @@
 #define ADDR_FONT_TYPE1_MAP                0x081B34A8u
 #define ADDR_GAME_BIN                      0x08800000u
 #define ADDR_V6_TILE_HW                    0x0203FEB0u  /* v6 全局 tile 高水位游标 */
+#define ADDR_V6_BYPASS                     0x0203FEB8u  /* v6 裸透传开关：非 0 → PrintNextChar 直接 return 1（连官方串都不打印） */
+#define ADDR_V7_ALLOC_STATE                0x0203FEC0u  /* v7 动态分配器状态（占用位图快照 128B + 游标），FEC0~FF40 空闲带 */
 #define ADDR_GET_CURSOR_TILEMAP_PTR        0x08003708u
 #define ADDR_GET_GLYPH_TILE_PTRS           0x08003730u
 #define ADDR_GLYPH_ALLOC_NEXT              0x0203FFF8u
@@ -138,6 +140,7 @@ struct GlyphBuffer {
 #define WIN_CURSOR_Y        0x1C
 #define WIN_CURSOR_TILE_Y   0x1D
 /* WindowTemplate（win_template 指向）：+0x0C tileData +0x10 tilemap（NULL=缓冲直绘） */
+#define TPL_CHARBASE       0x01  /* charBaseBlock：charBlock 号 0~3（v1 draw_glyph.c:355 实证 tpl[1]） */
 #define TPL_TILE_DATA       0x0C
 #define TPL_TILEMAP         0x10
 /* JP RenderTextHandleBold (0x08002CC0): dest buffer ptr (FontFunc[2] blit). */

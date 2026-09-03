@@ -40,8 +40,6 @@ struct V6SceneRule {
     uint16_t         title_base;   /* 标题行（curY <= row_y0）专用 tile 基址；0 = 无标题 */
     const struct V6Zone *zones;
     uint8_t          zone_n;
-    const uint16_t  *avoid;        /* 官方引用字形/保留区 tile 清单（相对 charBase 偏移，各占 2 格） */
-    uint8_t          avoid_n;      /* avoid 项数；0 = 无避让（默认） */
 };
 
 /* 场景规则表（实例在 scene_cfg.c） */

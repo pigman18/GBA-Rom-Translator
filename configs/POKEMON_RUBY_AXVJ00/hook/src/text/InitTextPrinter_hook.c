@@ -27,6 +27,7 @@
  * ===================================================================== */
 #include "text.h"
 #include "scene_cfg.h"
+#include "tile_alloc.h"
 
 /* 用 InitTextPrinter 的参数直接构造「新块」行指纹 key（不读 win 字段——
  * hook 时 win[0x16]/[0x1C]/[0x1D] 还是旧值，本体尚未写入）。
@@ -92,4 +93,7 @@ void InitTextPrinter_hook_C(TextPrinter *win, uint16_t tile_base,
                             uint8_t cur_x, uint8_t cur_y)
 {
     chs_init_phase(win, tile_base, cur_x, cur_y);
+    /* 块边界快照 tilemap 活引用位图：本轮动态分配（v7_alloc_tile）查这张快照，
+     * 不看自己刚写入的表项 ⇒ 防自画污染 + 避让官方字。 */
+    v7_alloc_begin(win);
 }

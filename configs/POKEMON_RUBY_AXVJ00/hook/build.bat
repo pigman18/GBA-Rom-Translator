@@ -44,6 +44,10 @@ echo === Compiling text\blend_glyph.c ===
 %CC% %CFLAGS% %TEXT%\blend_glyph.c -o %BUILD%\blend_glyph.o
 if errorlevel 1 exit /b 1
 
+echo === Compiling text\tile_alloc.c ===
+%CC% %CFLAGS% %TEXT%\tile_alloc.c -o %BUILD%\tile_alloc.o
+if errorlevel 1 exit /b 1
+
 echo === Compiling text\text_translater.c ===
 %CC% %CFLAGS% %TEXT%\text_translater.c -o %BUILD%\text_translater.o
 if errorlevel 1 exit /b 1
@@ -87,6 +91,7 @@ echo === Linking game.elf ===
   %BUILD%/InitTextPrinter_hook.o ^
   %BUILD%/PrintNextChar_hook.o ^
   %BUILD%/blend_glyph.o ^
+  %BUILD%/tile_alloc.o ^
   %BUILD%/text_translater.o ^
   %BUILD%/MapNamePopup_entry.o ^
   %BUILD%/MapNamePopup_hook.o ^

@@ -28,6 +28,14 @@ echo === Assembling text\entry.s (EngineEntry MUST be link-first) ===
 %CC% %ASFLAGS% %TEXT%\entry.s -o %BUILD%\text_entry.o
 if errorlevel 1 exit /b 1
 
+echo === Compiling text\scene_cfg.c ===
+%CC% %CFLAGS% %TEXT%\scene_cfg.c -o %BUILD%\scene_cfg.o
+if errorlevel 1 exit /b 1
+
+echo === Compiling text\InitTextPrinter_hook.c ===
+%CC% %CFLAGS% %TEXT%\InitTextPrinter_hook.c -o %BUILD%\InitTextPrinter_hook.o
+if errorlevel 1 exit /b 1
+
 echo === Compiling text\PrintNextChar_hook.c ===
 %CC% %CFLAGS% %TEXT%\PrintNextChar_hook.c -o %BUILD%\PrintNextChar_hook.o
 if errorlevel 1 exit /b 1
@@ -75,6 +83,8 @@ if errorlevel 1 exit /b 1
 echo === Linking game.elf ===
 %CC% %LDFLAGS% -o %OUT%/game.elf ^
   %BUILD%/text_entry.o ^
+  %BUILD%/scene_cfg.o ^
+  %BUILD%/InitTextPrinter_hook.o ^
   %BUILD%/PrintNextChar_hook.o ^
   %BUILD%/blend_glyph.o ^
   %BUILD%/text_translater.o ^

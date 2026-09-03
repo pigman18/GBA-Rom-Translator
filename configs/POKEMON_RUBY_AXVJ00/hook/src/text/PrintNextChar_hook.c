@@ -1,5 +1,5 @@
 /* =====================================================================================
- * PrintNextChar_hook.c — v6 渲染层（唯一 hook 的消费端）
+ * PrintNextChar_hook.c — v6 渲染层（PrintNextChar hook 的消费端）
  *
  * 设计原则（用户拍板 2026-09-01）：
  *   - 摆脱 v4/v5 的逐窗登记 / 声明式配置表 / atlas 扫描：不做任何窗口模板
@@ -22,6 +22,7 @@
  * ===================================================================================== */
 #include "text.h"
 #include "blend_glyph.h"
+#include "scene_cfg.h"
 
 /* =====================================================================
  * §V6 Stage3 落址分配器（tile 号独立 + 位置交官方；2026-09-01 定案）
@@ -51,87 +52,20 @@
  *     （16 是 8 的倍数 phase 恒 0，key 区结束 phase 归 0，12px 区从 0 续）。
  *   参考 bak/text-v4/text_scene.c 的 kOptWindow，但只保留必要字段，不做
  *   v4 的 WinCfg+kWindows[]+gen/check 脚本那套重流程。
+ *   （结构定义与配置实例见 scene_cfg.h / scene_cfg.c）。
  * ===================================================================== */
-struct V6Zone {
-    uint8_t cx_hi;      /* curX < cx_hi 命中本区；末条 0xFF 兜底 */
-    uint8_t font_px;    /* 16 = key 固定 / 12 = value 动态 */
-    uint8_t off;        /* 行内 tile 偏移起点（独立打印会话分区，沿用 v4 实测） */
-    const uint16_t *row_tab;  /* zone 级行基址表（NULL = 用主表 row_tab） */
-};
 
-struct V6SceneRule {
-    uint32_t tpl;             /* win[0x00] 模板地址 = 唯一键 */
-    uint8_t  row_y0;          /* 行 0 的 curY */
-    uint8_t  row_shift;       /* r = (curY - y0) >> shift */
-    const uint16_t *row_tab;  /* 每行 tile 基址（[1..row_n]） */
-    uint8_t  row_n;
-    uint16_t title_base;      /* 标题行（curY <= row_y0）专用 tile 基址；0 = 无标题 */
-    const struct V6Zone *zones;
-    uint8_t  zone_n;
-    const uint16_t *avoid;    /* 官方引用字形/保留区 tile 清单（相对 charBase 偏移，各占 2 格） */
-    uint8_t  avoid_n;         /* avoid 项数；0 = 无避让（默认） */
-};
-
-/* 设置菜单（模板 0x081BB874）：左标签列 16px、右候选列 12px（用户拍板 2026-09-04）。
- * 标签列与候选列**分用两条独立行带**（字号不同 ⇒ tile 步进不同，不能共用一条）：
- *   标签列  → kOptLabelRowBase[7]（16px 整格，每字 4 tile，最长 4 字 = 16 tile/行）
- *   候选列  → kOptRowBase[7]（12px 相位共享，最长 3 字 = 10 tile，独占 32-tile 行带）
- * 行带基址避开引用字形（kOptGlyphAvoid）与高段 [0x1C8,0x1FF]（场景映射/UI 图标）。
- * 相位隔离：标签 16px 与候选 12px 分属不同 zone（font_px 不同），v6_same_zone
- *   判定异区 ⇒ InitTextPrinter 时相位正确复位，不互相续接。
- * 候选列 off 分区（同区共享行带、异区互不覆盖）：
- *   候选A  off=0   占 [0,10)   （cx<19：慢/看/替换/单声道/普通/类型，最宽 3 字）
- *   候选B  off=10  占 [10,20)  （19≤cx<22：普通/不看/打到底/立体声）
- *   候选C  off=20  占 [20,30)  （cx≥22：快/打到底/L/7）
- * 标签行带（7 段 × 16 tile，选自 cb=2 空闲缝，避 kOptGlyphAvoid 与候选行带）：
- *   r1 0x003 对话速度 | r2 0x053 战斗动画 | r3 0x079 对战规则 | r4 0x0ED 声音
- *   r5 0x15F 按键模式 | r6 0x173 窗口 | r7 0x19B 关闭 */
-static const uint16_t kOptLabelRowBase[7] = {
-    0x003u, 0x053u, 0x079u, 0x0EDu, 0x15Fu, 0x173u, 0x19Bu,
-};
-static const uint16_t kOptRowBase[7] = {
-    0x033u, 0x08Du, 0x0ADu, 0x0CDu, 0x101u, 0x121u, 0x121u,
-};
-static const struct V6Zone kOptZones[] = {
-    /* 标签列（key）：16px 整格，独立行带 kOptLabelRowBase，off=0。 */
-    { .cx_hi = 8u,    .font_px = 16u, .off = 0u,  .row_tab = kOptLabelRowBase },
-    /* 候选列（value）：同一行多个候选是独立打印会话，按 curX 分区 + 固定 off 落址。 */
-    { .cx_hi = 19u,   .font_px = 12u, .off = 0u,  .row_tab = 0 },
-    { .cx_hi = 22u,   .font_px = 12u, .off = 10u, .row_tab = 0 },
-    { .cx_hi = 0xFFu, .font_px = 12u, .off = 20u, .row_tab = 0 },
-};
-
-/* 不得被中文占用的 tile（各占 2 格：t 与 t+1），相对 charBase 偏移。
- * ① gdb 实测被本窗口（cb=2 选项窗）引用的字形  ② 已知特殊保留区（▶/菜单光标）。
- * 沿用 v3/v4 kOptGlyphAvoid 实测清单（2026-08-25 采集）。
- * ⚠ 清单不完整是主要风险：发现新乱码字符 → 反推 tile（=1+PCS*2）→ 补进 → 重编。 */
-static const uint16_t kOptGlyphAvoid[26] = {
-    0x001u, 0x021u, 0x031u, 0x06Fu, 0x077u, 0x08Bu, 0x0FFu, /* 1 33 49 111 119 139 255 */
-    0x143u, 0x145u, 0x147u, 0x149u, 0x14Bu, 0x14Du, 0x14Fu, /* 323 325 327 329 331 333 335 */
-    0x151u, 0x153u, 0x159u, 0x15Du, 0x171u, 0x18Du, 0x199u, /* 337 339 345 349 369 397 409 */
-    0x1B7u, 0x1BFu, 0x1C3u,                                  /* 439 447 451 */
-    0x1DFu, 0x1E1u,                                          /* ② 479 ▶字形 / 481 菜单光标 */
-};
-
-static const struct V6SceneRule kV6Scenes[] = {
-    { .tpl = 0x081BB874u, .row_y0 = 3u, .row_shift = 1u,
-      .row_tab = kOptRowBase, .row_n = 7u,
-      .title_base = 0x183u,          /* 标题「设置」2 字 16px = 8 tile，独立带避开标签/候选/引用字形 */
-      .zones = kOptZones, .zone_n = 4u,
-      .avoid = kOptGlyphAvoid, .avoid_n = 26u },
-};
-#define V6_SCENE_N  (sizeof(kV6Scenes) / sizeof(kV6Scenes[0]))
-
-static const struct V6SceneRule *v6_scene_lookup(uint32_t tpl)
+/* 查询访问器（结构/配置实例 extern 自 scene_cfg.h；本文件是唯一实现方） */
+const struct V6SceneRule *v6_scene_lookup(uint32_t tpl)
 {
     unsigned i;
-    for (i = 0; i < V6_SCENE_N; i++)
+    for (i = 0; i < kV6SceneN; i++)
         if (kV6Scenes[i].tpl == tpl)
             return &kV6Scenes[i];
     return 0;
 }
 
-static const struct V6Zone *v6_scene_zone(const struct V6SceneRule *r, uint8_t cx)
+const struct V6Zone *v6_scene_zone(const struct V6SceneRule *r, uint8_t cx)
 {
     unsigned i;
     for (i = 0; i < r->zone_n; i++)
@@ -140,7 +74,7 @@ static const struct V6Zone *v6_scene_zone(const struct V6SceneRule *r, uint8_t c
     return &r->zones[r->zone_n - 1u];
 }
 
-static uint8_t v6_scene_font(const struct V6SceneRule *r, uint8_t cx)
+uint8_t v6_scene_font(const struct V6SceneRule *r, uint8_t cx)
 {
     return v6_scene_zone(r, cx)->font_px;
 }
@@ -151,7 +85,7 @@ static uint8_t v6_scene_font(const struct V6SceneRule *r, uint8_t cx)
  * ⚠ font_px 也参与判据：16px 标签列与 12px 候选列 off 可能同为 0，但字号不同
  *   = 不同行带、不同 tile 步进，必须判异区（否则候选列被误判为标签列后继块、
  *   相位不复位 ⇒ 落址错位）。 */
-static int v6_same_zone(const struct V6SceneRule *r, uint8_t cx_a, uint8_t cx_b)
+int v6_same_zone(const struct V6SceneRule *r, uint8_t cx_a, uint8_t cx_b)
 {
     const struct V6Zone *za = v6_scene_zone(r, cx_a);
     const struct V6Zone *zb = v6_scene_zone(r, cx_b);
@@ -177,10 +111,10 @@ static unsigned v6_scene_row_index(const struct V6SceneRule *r, uint8_t cy)
 
 /* 行基址：zone 有独立 row_tab 则用 zone 表，否则用主表。
  * 标题行（curY <= row_y0）走 rule->title_base 专用带，不再 clamp 到行 0 与
- * 首行标签（curY=5 ⇒ row 0）共用一条带（2026-09-04 标题「设置」被「对话速度」
- * 覆盖的根因）。 */
-static uint16_t v6_scene_row_base(const struct V6SceneRule *r, const struct V6Zone *z,
-                                  uint8_t cy)
+ * 首行标签（curY=1 ⇒ row 0）共用一条带（2026-09-04 标题「设置」被「对话速度」
+ * 覆盖的根因；gdb 实证标题 curY=0、r1 curY=1、r2 curY=5）。 */
+uint16_t v6_scene_row_base(const struct V6SceneRule *r, const struct V6Zone *z,
+                           uint8_t cy)
 {
     if (cy <= r->row_y0 && r->title_base != 0u)
         return r->title_base;
@@ -277,18 +211,6 @@ static uint16_t chs_phase_key(TextPrinter *win)
                        ^ w) | 0x8000u);
 }
 
-/* 用 InitTextPrinter 的参数直接构造「新块」行指纹 key（不读 win 字段——
- * hook 时 win[0x16]/[0x1C]/[0x1D] 还是旧值，本体尚未写入）。
- * 新块 CURSOR_TILE_Y 必然被 InitTextPrinter 归零 ⇒ 该项恒 0。 */
-static uint16_t chs_phase_key_from(uint8_t *tpl, uint16_t tile_base, uint8_t cur_y)
-{
-    uint16_t w = tpl ? (uint16_t)(((uintptr_t)tpl >> 2) & 0xFFFFu) : 0;
-
-    return (uint16_t)((tile_base
-                       ^ ((uint16_t)cur_y << 8)
-                       ^ w) | 0x8000u);
-}
-
 static volatile struct ChsPhase *chs_phase_slot(TextPrinter *win, uint16_t key)
 {
     volatile struct ChsPhase *tab = (volatile struct ChsPhase *)ADDR_CHS_PHASE;
@@ -316,76 +238,9 @@ static volatile struct ChsPhase *chs_phase_slot(TextPrinter *win, uint16_t key)
 }
 
 /* =====================================================================
- * §V6 块边界相位复位（InitTextPrinter hook，2026-09-02 半透明空格 BUG）
- * ── 根因 ────────────────────────────────────────────────────────
- *  ChsPhase 是全局 8×8 槽表，靠行指纹 key 区分，但**没有文本块生命周期**——
- *  块结束/窗口重建后旧 px 赖在表里。主菜单「新游戏」每次进入 curX/tpl/TILE_BASE
- *  相同 ⇒ key 命中同一 slot、px 停在上一轮非零值(phase=4) ⇒ 第一字左 4px 既没
- *  画字也没补底色，露出 tile 脏数据 = 半透明空格。
- *  旧 `tx==0` 判据是**事后间接信号**（依赖 PrintNextChar 首字时 cursorTileX 恰
- *  为 0），在窗口复用/未重走 InitTextPrinter 的场景下不可靠 ⇒ 用户定夺必须
- *  **hook InitTextPrinter**：块边界是文本生命周期最权威的直接证据。
- * ── 续接保留 ────────────────────────────────────────────────────
- *  类型7「类型」(curX=15) →「8」(curX=18) 是两个独立文本块（两次 InitTextPrinter），
- *  但属同一候选值的顺序衔接，须续接 px（否则「8」落回行首覆盖「类」）。
- *  判据：scene 规则命中 + 新 curX 严格变大 + 同 zone（off 相同）⇒ 续接；
- *  否则（重进同一块 / 换行 / 换 zone / 非 scene 窗口）⇒ 复位 px。
- *  非 scene 窗口（主菜单等）恒复位——它们没有「同行后继块」场景，复位即消空格。
+ * §V6 块边界相位复位已迁出到 InitTextPrinter_hook.c（2026-09-04 拆分）。
+ * chs_phase_px 以下仍是本文件的渲染层相位原语（块内异常防御）。
  * ===================================================================== */
-static void chs_init_phase(TextPrinter *win, uint16_t tile_base,
-                           uint8_t cur_x, uint8_t cur_y)
-{
-    uint8_t *tpl = win_template(win);
-    uint16_t key = chs_phase_key_from(tpl, tile_base, cur_y);
-    volatile struct ChsPhase *tab = (volatile struct ChsPhase *)ADDR_CHS_PHASE;
-    volatile struct ChsPhase *s = 0;
-    const struct V6SceneRule *rule =
-        v6_scene_lookup((uint32_t)(uintptr_t)tpl);
-    unsigned i;
-
-    for (i = 0; i < CHS_PHASE_COUNT; i++) {
-        if (tab[i].key == key) {
-            s = &tab[i];
-            break;
-        }
-    }
-    if (!s) {
-        for (i = 0; i < CHS_PHASE_COUNT; i++) {
-            if (tab[i].key == 0u) {
-                s = &tab[i];
-                break;
-            }
-        }
-        if (!s)
-            s = &tab[0];
-        s->key = key;
-        s->px  = 0;
-        s->tx0 = 0;
-        s->last_cx = cur_x;
-        s->cur_tile = 0;
-        return;                       /* 新分配：恒复位 */
-    }
-
-    /* 命中既有槽：同行后继块续接，否则复位 */
-    if (rule && cur_x > s->last_cx && v6_same_zone(rule, cur_x, s->last_cx)) {
-        s->tx0 = 0u;                  /* 续接：仅重锚块内游标锚点，px 保留 */
-        s->last_cx = cur_x;
-    } else {
-        s->px  = 0u;
-        s->tx0 = 0u;
-        s->cur_tile = 0u;
-        s->last_cx = cur_x;
-    }
-}
-
-/* InitTextPrinter 入口钩（entry.s 跳板已重放前 8B、保 r0-r3、重排参数）。
- * 参数：win / tile_base(r2) / cur_x(r3) / cur_y(第5参数，栈)。只读不改 win。 */
-void InitTextPrinter_hook_C(TextPrinter *win, uint16_t tile_base,
-                            uint8_t cur_x, uint8_t cur_y)
-{
-    chs_init_phase(win, tile_base, cur_x, cur_y);
-}
-
 /* 当前行内相位（0..7）。块边界复位已上移到 InitTextPrinter hook（chs_init_phase），
  * 这里只保留块内异常防御：curX 漂移或 cursorTileX 回退 ⇒ 归零。 */
 static unsigned chs_phase_px(TextPrinter *win)

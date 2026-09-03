@@ -542,19 +542,18 @@ static void chs_place(TextPrinter *win, uint8_t textMode,
         return;
 
 #if CHS_ADVANCE_12
-    if (fontSize == 16u && row_base != 0u) {
-        /* 16px key（命中规则）：整格 2 列，tile = 行基址（已含 zone.off）+ 列偏移
-         * (px>>3)*2，确定性、每字 4 tile；px += 16 保行内偏移连续。 */
-        unsigned px = chs_phase_px(win);
-        uint16_t col_off = (uint16_t)((px >> 3) * 2u);
+    if (fontSize == 16u) {
+        /* 16px 整格 = 1 字 2 tile，已栅格化为 2 列。tile 号走 v7_alloc_tile 动态
+         * 分配（不再依赖 row_base，所有窗口统一）。相位隔离：16px 不进 chs_phase
+         * 共享通道，chs_phase_advance 传 tile=0 即可。 */
         for (col = 0; col < cols; col++) {
-            uint16_t tile = (uint16_t)(row_base + col_off + col * 2u);
+            uint16_t tile = v7_alloc_tile(win);
             chs_place_col(win, tile, 1u, buf[col * 2u], buf[col * 2u + 1u]);
             if (tm == 0u || tm == 1u)
                 win_set_u16(win, WIN_TILE_OFFSET,
                             (uint16_t)(win_u16(win, WIN_TILE_OFFSET) + 2u));
         }
-        chs_phase_advance(win, 16u, (uint16_t)(row_base + col_off + cols * 2u));
+        chs_phase_advance(win, 16u, 0u);
         return;
     }
 #endif

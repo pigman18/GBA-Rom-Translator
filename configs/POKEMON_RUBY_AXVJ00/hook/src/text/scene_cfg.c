@@ -22,33 +22,37 @@
 #include "scene_cfg.h"
 
 /* ---- 设置菜单：左标签列行带（16px 整格，7 行 × 16 tile）----
- * ⚠ 2026-09-04 临时注释：静态选址关闭，下列行带/分区表暂不参与编译，测完恢复。 */
-/*
+ * cb=2 空闲缝。⚠ 2026-09-04 v7 阶段：行带基址保留供 zone 配置使用，
+ * 但渲染层已脱离 row_tab 领号（16px 路径走 v7_alloc_tile 动态分配）。 */
 static const uint16_t kOptLabelRowBase[7] = {
     0x003u, 0x053u, 0x079u, 0x0EDu, 0x15Fu, 0x173u, 0x19Bu,
 };
+
+/* ---- 设置菜单：右候选列行带（12px 相位共享，7 行 × 32 tile）---- */
 static const uint16_t kOptRowBase[7] = {
     0x033u, 0x08Du, 0x0ADu, 0x0CDu, 0x101u, 0x121u, 0x121u,
 };
+
+/* ---- 设置菜单：curX 分区（16px key / 12px value）----
+ * 注意：row_tab 字段为 compat 保留，16px 路径不再读它分配 tile。 */
 static const struct V6Zone kOptZones[] = {
+    /* 标签列（key）：16px 整格，off=0。 */
     { .cx_hi = 8u,    .font_px = 16u, .off = 0u,  .row_tab = kOptLabelRowBase },
+    /* 候选列（value）：同一行多个候选是独立打印会话，按 curX 分区 + 固定 off 落址。 */
     { .cx_hi = 19u,   .font_px = 12u, .off = 0u,  .row_tab = 0 },
     { .cx_hi = 22u,   .font_px = 12u, .off = 10u, .row_tab = 0 },
     { .cx_hi = 0xFFu, .font_px = 12u, .off = 20u, .row_tab = 0 },
 };
-*/
 
 /* ---- 场景规则表（一窗一条）----
- * ⚠ 2026-09-04 临时注释：为验证 v7 动态分配器（tilemap 避让带 + 确定性绕开），
- *   关闭静态选址，让设置菜单强制走动态路径。静态表数据保留，测完恢复。 */
-/*
+ * kV6SceneN>0 ⇒ v6_scene_lookup 命中 ⇒ chs_print 用 zones.font_px 决定字号
+ * （仍由 zone 配置驱动）。tile 号一律走 v7_alloc_tile（row_tab 不再读，
+ * 保留作未来参考/调试）。 */
 const struct V6SceneRule kV6Scenes[] = {
     { .tpl = 0x081BB874u, .row_y0 = 3u, .row_shift = 1u,
       .row_tab = kOptRowBase, .row_n = 7u,
-      .title_base = 0x183u,          // 标题「设置」2 字 16px = 8 tile，独立带避开标签/候选
+      .title_base = 0x183u,          /* 标题「设置」2 字 16px = 8 tile，独立带 */
       .zones = kOptZones, .zone_n = 4u },
 };
-*/
-const struct V6SceneRule kV6Scenes[] = { { 0 } };
 
-const unsigned kV6SceneN = 0u;
+const unsigned kV6SceneN = (unsigned)(sizeof(kV6Scenes) / sizeof(kV6Scenes[0]));

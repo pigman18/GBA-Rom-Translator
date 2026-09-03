@@ -71,25 +71,33 @@ struct V6SceneRule {
     uint8_t  avoid_n;         /* avoid 项数；0 = 无避让（默认） */
 };
 
-/* 设置菜单（模板 0x081BB874）：行基址避引用字形，标签列 / 候选列均 12px。
- * 方案 B（用户拍板 2026-09-02）：标签列降 12px、复用候选 kOptRowBase 行带，
- * 靠 12px 相位共享省连续空间，不再引入 v4 的 PTR 散碎槽机制。
- * 行带 32 tile，固定 off 分区（相位独立——cursorTileX 回退触发失配归零）：
- *   标签列  off=0   占 [0,12)   （4 字 = 12 tile，最长行）
- *   候选A   off=12  占 [12,18)  （cx<19：慢/看/替换/单声道/普通/类型，最宽 3 字 8 tile）
- *   候选B   off=18  占 [18,24)  （19≤cx<22：普通/不看/打到底/立体声）
- *   候选C   off=24  占 [24,32)  （cx≥22：快/打到底/L/7）
- * 最宽「对战规则」行 = 标签 4 字 12t + 替换 2 字 6t + 打到底 3 字 8t = 32t 到边界。 */
+/* 设置菜单（模板 0x081BB874）：左标签列 16px、右候选列 12px（用户拍板 2026-09-04）。
+ * 标签列与候选列**分用两条独立行带**（字号不同 ⇒ tile 步进不同，不能共用一条）：
+ *   标签列  → kOptLabelRowBase[7]（16px 整格，每字 4 tile，最长 4 字 = 16 tile/行）
+ *   候选列  → kOptRowBase[7]（12px 相位共享，最长 3 字 = 10 tile，独占 32-tile 行带）
+ * 行带基址避开引用字形（kOptGlyphAvoid）与高段 [0x1C8,0x1FF]（场景映射/UI 图标）。
+ * 相位隔离：标签 16px 与候选 12px 分属不同 zone（font_px 不同），v6_same_zone
+ *   判定异区 ⇒ InitTextPrinter 时相位正确复位，不互相续接。
+ * 候选列 off 分区（同区共享行带、异区互不覆盖）：
+ *   候选A  off=0   占 [0,10)   （cx<19：慢/看/替换/单声道/普通/类型，最宽 3 字）
+ *   候选B  off=10  占 [10,20)  （19≤cx<22：普通/不看/打到底/立体声）
+ *   候选C  off=20  占 [20,30)  （cx≥22：快/打到底/L/7）
+ * 标签行带（7 段 × 16 tile，选自 cb=2 空闲缝，避 kOptGlyphAvoid 与候选行带）：
+ *   r1 0x003 对话速度 | r2 0x053 战斗动画 | r3 0x079 对战规则 | r4 0x0ED 声音
+ *   r5 0x15F 按键模式 | r6 0x173 窗口 | r7 0x19B 关闭 */
+static const uint16_t kOptLabelRowBase[7] = {
+    0x003u, 0x053u, 0x079u, 0x0EDu, 0x15Fu, 0x173u, 0x19Bu,
+};
 static const uint16_t kOptRowBase[7] = {
     0x033u, 0x08Du, 0x0ADu, 0x0CDu, 0x101u, 0x121u, 0x121u,
 };
 static const struct V6Zone kOptZones[] = {
-    /* 标签列（key）：12px 相位共享，与候选共用行带，off=0。 */
-    { .cx_hi = 8u,    .font_px = 12u, .off = 0u,  .row_tab = 0 },
+    /* 标签列（key）：16px 整格，独立行带 kOptLabelRowBase，off=0。 */
+    { .cx_hi = 8u,    .font_px = 16u, .off = 0u,  .row_tab = kOptLabelRowBase },
     /* 候选列（value）：同一行多个候选是独立打印会话，按 curX 分区 + 固定 off 落址。 */
-    { .cx_hi = 19u,   .font_px = 12u, .off = 12u, .row_tab = 0 },
-    { .cx_hi = 22u,   .font_px = 12u, .off = 18u, .row_tab = 0 },
-    { .cx_hi = 0xFFu, .font_px = 12u, .off = 24u, .row_tab = 0 },
+    { .cx_hi = 19u,   .font_px = 12u, .off = 0u,  .row_tab = 0 },
+    { .cx_hi = 22u,   .font_px = 12u, .off = 10u, .row_tab = 0 },
+    { .cx_hi = 0xFFu, .font_px = 12u, .off = 20u, .row_tab = 0 },
 };
 
 /* 不得被中文占用的 tile（各占 2 格：t 与 t+1），相对 charBase 偏移。
@@ -135,12 +143,18 @@ static uint8_t v6_scene_font(const struct V6SceneRule *r, uint8_t cx)
     return v6_scene_zone(r, cx)->font_px;
 }
 
-/* 两个 curX 是否落在同一 zone（off 相同 ⇒ 同一并列区，共享同一段行带）。
- * 续接判据用：同 zone + curX 右移 = 同行后继块（「类型」→「8」），续接相位；
- * 异 zone（「慢」→「普通」）各占 off 分区，不续接。 */
+/* 两个 curX 是否落在同一 zone（off 与 font_px 均相同 ⇒ 同一并列区，共享同一段
+ * 行带）。续接判据用：同 zone + curX 右移 = 同行后继块（「类型」→「8」），续接
+ * 相位；异 zone（「慢」→「普通」）各占 off 分区，不续接。
+ * ⚠ font_px 也参与判据：16px 标签列与 12px 候选列 off 可能同为 0，但字号不同
+ *   = 不同行带、不同 tile 步进，必须判异区（否则候选列被误判为标签列后继块、
+ *   相位不复位 ⇒ 落址错位）。 */
 static int v6_same_zone(const struct V6SceneRule *r, uint8_t cx_a, uint8_t cx_b)
 {
-    return v6_scene_zone(r, cx_a)->off == v6_scene_zone(r, cx_b)->off;
+    const struct V6Zone *za = v6_scene_zone(r, cx_a);
+    const struct V6Zone *zb = v6_scene_zone(r, cx_b);
+
+    return za->off == zb->off && za->font_px == zb->font_px;
 }
 
 /* 行号：r = (curY - row_y0) >> row_shift，clamp 到 [1, row_n]。 */

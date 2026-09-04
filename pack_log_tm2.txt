@@ -580,8 +580,10 @@ Inject progress 11401/11428
   KEEP axvj_6c1bf21e069d @ 0x7A0724 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
 Inject progress 11428/11428
 Done: 9510 replaced, 0 relocated, 0 skipped, 0 partial-ptr skipped, 0 unsafe ptrs filtered
-Saved: C:\code\GBA-Rom-Translator\roms\outputs\POKEMON_RUBY_AXVJ00_translated.gba
+Could not write POKEMON_RUBY_AXVJ00_translated.gba ([Errno 22] Invalid argument: 'C:\\code\\GBA-Rom-Translator\\roms\\outputs\\POKEMON_RUBY_AXVJ00_translated.gba'); wrote POKEMON_RUBY_AXVJ00_translated_new.gba instead — close the emulator and rename if needed
+Saved: C:\code\GBA-Rom-Translator\roms\outputs\POKEMON_RUBY_AXVJ00_translated_new.gba
 [短语] 自动进 F9 80 记录 → work\POKEMON_RUBY_AXVJ00\lexicon.extra.json (390 条)
-tiles: 3 meta(s) from C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\tiles -> POKEMON_RUBY_AXVJ00_translated_tiles.gba, new_palette=0x09EA63C4 (ignore yaml 0x09200000)
+tiles: 3 meta(s) from C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\tiles -> POKEMON_RUBY_AXVJ00_translated_new_tiles.gba, new_palette=0x09EA63C4 (ignore yaml 0x09200000)
 tiles patched from C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\tiles
 ROM aligned to 32MB (32,139,900 -> 33,554,432 bytes)
+output POKEMON_RUBY_AXVJ00_translated.gba locked ([WinError 1224] 请求的操作无法在使用用户映射区域打开的文件上执行。); deliverable is POKEMON_RUBY_AXVJ00_translated_new.gba — close mGBA and rename

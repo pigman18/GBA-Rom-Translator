@@ -10,12 +10,20 @@
 ## v8 架构（2026-09-04 定稿，当前方案）
 - **tile 号 = 唯一顺序分配器 `v8_alloc_tile(win,font_px,glyph_len)`**（`src/text/tile_alloc.c`）：运行时扫 tilemap 活引用得避让带，顺序放入、跳过占用、领连续 glyph_len 空闲。屏幕位置继续交官方光标（UpdateTilemap）。**一字一个 tile 来源，16/12/8 统一走同一条路径，无静态表/off 分区/行带表分裂**。
 - **字号 = `getFontSize(win)` 钩子**：font4/tm2→8px；设置菜单(模板 0x081BB874) curX<8→16 否则12；其余12。
-- **12px 相位 = 按行隔离单变量**（`ADDR_V8_PHASE` + 行标识 `ADDR_V8_PHASE_ROW=tpl^curY`），非全局 8 槽表。**tile 号分配 与 相位 px 正交**：前者顺序分配器，后者行内像素游标。
+- **12px 相位 = 按行隔离单变量**（`ADDR_V8_PHASE` + 行标识 `ADDR_V8_PHASE_ROW=tpl^curY^tileY`），非全局 8 槽表。**tile 号分配 与 相位 px 正交**：前者顺序分配器，后者行内像素游标。
 - **渲染分层（src/text/）**：text_translater.c=翻译层；PrintNextChar_hook.c=渲染层（解压→栅格化→落址三段）；blend_glyph.c=像素原语（1bpp/2bpp 纯函数零状态）；tile_alloc.c=分配器；InitTextPrinter_hook.c=会话边界（v8_alloc_begin 快照位图+复位游标/相位）。scene_cfg.c=纯字号配置数据。
 - **根治来回切换残留 BUG 的根本** = 所有跨窗口状态（游标/相位/last_tile/行标识）在 InitTextPrinter 边界复位，不依赖任何「行指纹 key 续接」启发式。
-- **RAM（EWRAM）**：位图 0x0203FEC0(128B→FF40) / 游标 0x0203FF42 / 相位 0x0203FF44 / 行标识 0x0203FF46 / last_tile 0x0203FF48。⚠ **0x0203FFD2 起为游戏数据区严禁占用**（背包/队伍死机根因）。
-- **翻译链路统一**：slot 表以日文字符(PCS)为 bucket 索引查 f900 中文流；**不要用 F9 判断决定翻译**——替换流内日文字符也走 slot 查 f900，查不到才画日文。
-- **GetGlyph 取字必须从中文字库**：ADDR_FONT_CHS_NORMAL(0x09000000)/SMALL(0x09100000)，索引=(code&0x7FFF)<<7，code&0x8000 再+64。严禁查官方日文字形（gidx 是中文索引查官方表返 null→全空）。
+- **RAM（EWRAM）**：位图 0x0203FEC0(128B→FF40) / 游标 0x0203FF42 / 相位 0x0203FF44 / 行标识 0x0203FF46 / last_tile 0x0203FF48 / **NL_MARK 0x0203FF4A**（上次绘字 tileY<<8|tileX）。⚠ **0x0203FFD2 起为游戏数据区严禁占用**（背包/队伍死机根因）。
+- **翻译链路统一**：非 `FA..FF` 一律 `TranslateHandleChar` → 否则 `DrawGlyph`；slot 表以日文 PCS 为 bucket 查 f900；**不要用 F9 判断决定翻译**。
+- **GetGlyph 只走中文字库**：ADDR_FONT_CHS_NORMAL/SMALL。**禁止**把 `code∈[0x36,0x3E]` 当 SYM——F9 打包索引也会落此带（「白」=0x0036 → 曾画成「；」）。PCS 标点由 `DrawHalfWidth` 直接读 `ADDR_FONT_CHS_SYM`。
+- **tm2/fn4 血条名**：tpl `0x081BB40C`，dest=`win[0x20]`，每列 `+=0x40`，强制 8px/`FontChsSmall`；落在现有 `chs_place_col` 分支，不开平行方法。
+
+## 🔴 经常犯：12px 奇数位换行（「壤」切半 / 句首冒号鬼影）
+- **症状**：行末奇数个汉字后 `FE` 换行 → 上行尾半截 + 下行首「：」状碎片（图鉴说明「土壤」经典）。
+- **机制**：12px → phase 只在 0/4；奇数个字收尾 phase=4，半列挂在 last_tile。
+- **致命陷阱**：`PrintNextChar_Origin` 是**尾调用进 ROM**（`bx` 不回到 hook）。在 `if (c==FE) { Origin(); 清相位; }` 里写的清理**永远跑不到**——以为修了其实没修。
+- **定案（对齐 FONT_12PX_DRAW.md）**：在**下一字绘制前** `v8_phase_before_glyph`：TY 变或 TX 回落 → 清相位/last_tile；tm0/1 **恒** `TILE_OFFSET+=2`。行键须含 `CURSOR_TILE_Y`（FE 有时先推 tileY）。
+- **作者标注（2026-09-04）**：Auto（Cursor Agent Router）/ Composer。
 
 ## v8 已知边界（2026-09-04 实机实证，下一轮任务）
 1. **队伍页 HP 条上方 Pokemon 状态图标被中文覆盖（稳定撞血条）** —— 根因=队伍窗 charBase=1 占用段 [0x0EE-0x11A] 罩住 lo=0x100，中文压在状态图标上。已接 kV8AvoidScenes 避让（kPartyScene），**待实机验证**。

@@ -142,6 +142,7 @@ void v8_alloc_begin(TextPrinter *win)
     *(volatile uint16_t *)ADDR_V8_PHASE = 0u;
     *(volatile uint16_t *)ADDR_V8_PHASE_ROW = 0u;
     *(volatile uint16_t *)ADDR_V8_LAST_TILE = 0u;
+    *(volatile uint16_t *)ADDR_V8_NL_MARK = 0xFFFFu; /* 无上次坐标 */
 
     if (!tpl)
         return;
@@ -237,8 +238,12 @@ uint16_t v8_alloc_tile(TextPrinter *win, uint8_t font_px, uint8_t glyph_len)
 uint16_t v8_phase_get(TextPrinter *win)
 {
     uint8_t *tpl = win_template(win);
+    /* 行键必须含 tileY：官方 FE 有时先推 CURSOR_TILE_Y，CURSOR_Y 稍后才变；
+     * 只 xor curY 会漏检换行 → 奇数字行末相位 4 延续到下行首字。 */
     uint16_t row = tpl
-        ? (uint16_t)((uintptr_t)tpl ^ ((uint16_t)win_u8(win, WIN_CURSOR_Y) << 8))
+        ? (uint16_t)((uintptr_t)tpl
+                     ^ ((uint16_t)win_u8(win, WIN_CURSOR_Y) << 8)
+                     ^ (uint16_t)win_u8(win, WIN_CURSOR_TILE_Y))
         : 0u;
 
     /* 行标识失配（换行/换窗口）→ 相位与 last_tile 归零 */
@@ -248,6 +253,42 @@ uint16_t v8_phase_get(TextPrinter *win)
         *(volatile uint16_t *)ADDR_V8_LAST_TILE = 0u;
     }
     return *(volatile uint16_t *)ADDR_V8_PHASE;
+}
+
+void v8_phase_before_glyph(TextPrinter *win)
+{
+    uint8_t tm = win_u8(win, WIN_TEXTMODE) & 7u;
+    uint8_t tx = win_u8(win, WIN_CURSOR_TILE_X);
+    uint8_t ty = win_u8(win, WIN_CURSOR_TILE_Y);
+    uint16_t prev = *(volatile uint16_t *)ADDR_V8_NL_MARK;
+
+    if (prev == 0xFFFFu)
+        return;
+
+    {
+        uint8_t prev_tx = (uint8_t)(prev & 0xFFu);
+        uint8_t prev_ty = (uint8_t)(prev >> 8);
+
+        /* TY 变 或 同行 TX 回落 = 官方已换行（FE/FB 尾调用后的下一字） */
+        if (ty != prev_ty || tx < prev_tx) {
+            *(volatile uint16_t *)ADDR_V8_PHASE = 0u;
+            *(volatile uint16_t *)ADDR_V8_LAST_TILE = 0u;
+            *(volatile uint16_t *)ADDR_V8_PHASE_ROW = 0xFFFFu;
+            /* Linear：换行 TILE_OFFSET+=2（文档铁律，奇数位行末必做） */
+            if (tm == 0u || tm == 1u)
+                win_set_u16(win, WIN_TILE_OFFSET,
+                            (uint16_t)(win_u16(win, WIN_TILE_OFFSET) + 2u));
+        }
+    }
+}
+
+void v8_phase_after_glyph(TextPrinter *win)
+{
+    uint8_t tx = win_u8(win, WIN_CURSOR_TILE_X);
+    uint8_t ty = win_u8(win, WIN_CURSOR_TILE_Y);
+
+    *(volatile uint16_t *)ADDR_V8_NL_MARK =
+        (uint16_t)(((uint16_t)ty << 8) | tx);
 }
 
 void v8_phase_advance(uint16_t adv)

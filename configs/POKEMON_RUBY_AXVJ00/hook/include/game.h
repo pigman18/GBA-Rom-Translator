@@ -38,8 +38,9 @@
 #define ADDR_V7_ALLOC_STATE                0x0203FEC0u  /* v7/v8 动态分配器状态：占用位图快照 128B（FEC0~FF40 空闲带） */
 #define ADDR_V8_CURSOR                     0x0203FF42u  /* v8 分配游标（相对 charBase，会话边界复位） */
 #define ADDR_V8_PHASE                      0x0203FF44u  /* v8 12px 行内相位 px（phase=px&7） */
-#define ADDR_V8_PHASE_ROW                  0x0203FF46u  /* v8 相位所属行标识（tpl^curY，失配即归零） */
+#define ADDR_V8_PHASE_ROW                  0x0203FF46u  /* v8 相位所属行标识（失配即归零） */
 #define ADDR_V8_LAST_TILE                  0x0203FF48u  /* v8 上一列已领 tile 号（phase!=0 复用） */
+#define ADDR_V8_NL_MARK                    0x0203FF4Au  /* 上次绘字 (tileY<<8)|tileX；行首/TX 回落检测 */
 #define ADDR_GET_CURSOR_TILEMAP_PTR        0x08003708u
 #define ADDR_GET_GLYPH_TILE_PTRS           0x08003730u
 #define ADDR_GLYPH_ALLOC_NEXT              0x0203FFF8u

@@ -189,14 +189,20 @@ static unsigned print_glyph_px(TextPrinter *win,
     uint8_t fg_ov, color_c, color_d, color_e;
     uint8_t colors[16];
     uint8_t up[32], lo[32];
-    unsigned px = v8_phase_get(win);
-    unsigned phase = px & 7u;
-    unsigned w0 = (8u - phase < ink) ? (8u - phase) : ink;
-    unsigned w1 = ink - w0;
-    unsigned adv = (phase + ink) / 8u;
+    unsigned px, phase, w0, w1, adv;
     uint16_t t0, t1;
-    uint8_t tx0 = win_u8(win, WIN_CURSOR_TILE_X);
+    uint8_t tx0;
     unsigned i;
+
+    /* FE Origin 尾调用 → hook 内换行清理无效；在下一字这里做（文档定案） */
+    v8_phase_before_glyph(win);
+
+    px = v8_phase_get(win);
+    phase = px & 7u;
+    w0 = (8u - phase < ink) ? (8u - phase) : ink;
+    w1 = ink - w0;
+    adv = (phase + ink) / 8u;
+    tx0 = win_u8(win, WIN_CURSOR_TILE_X);
 
     if (adv < 1u)
         adv = 1u;
@@ -253,6 +259,7 @@ static unsigned print_glyph_px(TextPrinter *win,
 
     v8_phase_advance((uint16_t)ink);
     v8_phase_set_last_tile((w1 != 0u) ? t1 : t0);
+    v8_phase_after_glyph(win);
     return adv;
 }
 
@@ -528,18 +535,11 @@ void FontFunc_NativeDispatch(uint8_t tm, TextPrinter *win, uint32_t c)
     fn(win, c);
 }
 
-/* 换行后强制清 12px 相位（FE/FB 走官方后 curY 已变，但相位若残留
- * 会把下行首字半截画进上行尾 → 句末碎片 + 句首「：」类鬼影）。 */
-static void v8_phase_reset_after_newline(void)
-{
-    *(volatile uint16_t *)ADDR_V8_PHASE = 0u;
-    *(volatile uint16_t *)ADDR_V8_LAST_TILE = 0u;
-    *(volatile uint16_t *)ADDR_V8_PHASE_ROW = 0xFFFFu; /* 下次 get 必重建 */
-}
-
 /* =====================================================================
  * PrintNextChar 唯一 hook：读编码 → 译（translater）→ 半角/回落。
- *   FA..FF：完整交还官方（含 index 推进）；FE/FB 换行后清相位。
+ *   FA..FF：完整交还官方（含 index 推进）。
+ *   ⚠ FE/FB 经 Origin 是尾调用进 ROM，本函数在 Origin 之后的语句跑不到；
+ *     奇数字换行相位清理在 print_glyph_px → v8_phase_before_glyph。
  *   F9 汉字/短语/slot：TranslateHandleChar（内部经 chs_print 渲染）。
  *   其余非控制码：DrawGlyph。
  * ===================================================================== */
@@ -556,22 +556,9 @@ int PrintNextChar_Hook(TextPrinter *win)
     idx = win_u16(win, WIN_TEXT_INDEX);
     c = text[idx];
 
-    /* 控制码 FA..FF：整段交官方（含 index 推进） */
-    if (c >= 0xFAu) {
-        uint8_t tm = win_u8(win, WIN_TEXTMODE) & 7u;
-        unsigned phase_rem = (unsigned)(*(volatile uint16_t *)ADDR_V8_PHASE) & 7u;
-        int ret = PrintNextChar_Origin(win);
-
-        /* FE=\n / FB=\l：换行通路统一收尾 */
-        if (c == 0xFEu || c == 0xFBu) {
-            v8_phase_reset_after_newline();
-            /* 线性区：上行若有 12px 半列残留，TILE_OFFSET+2 避免下行覆写 */
-            if ((tm == 0u || tm == 1u) && phase_rem != 0u)
-                win_set_u16(win, WIN_TILE_OFFSET,
-                            (uint16_t)(win_u16(win, WIN_TILE_OFFSET) + 2u));
-        }
-        return ret;
-    }
+    /* 控制码 FA..FF：整段交官方（含 index 推进；Origin 尾调用不返回此处） */
+    if (c >= 0xFAu)
+        return PrintNextChar_Origin(win);
 
     win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(idx + 1u));
 

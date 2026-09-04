@@ -37,19 +37,9 @@ int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth
         return 1;
     }
 
-    if (code >= SYM_GLYPH_BASE && code < SYM_GLYPH_BASE + SYM_GLYPH_COUNT) {
-        const uint8_t *src = (const uint8_t *)(ADDR_FONT_CHS_SYM
-                                               + (code - SYM_GLYPH_BASE) * 64u);
-        unsigned i;
-        for (i = 0; i < 32u; i++) {
-            out128[0x00 + i] = src[i];
-            out128[0x20 + i] = src[32u + i];
-        }
-        for (i = 0; i < 64u; i++)
-            out128[0x40 + i] = 0;
-        *outWidth = 8u;
-        return 1;
-    }
+    /* ⚠ 禁止把 code∈[0x36,0x3E] 当 SYM 标点：F9 00 打包索引也会落在此带
+     * （例：白天的「白」=0x0036），图鉴说明会把「白」画成「；」。
+     * PCS 标点由 DrawHalfWidth 直接读 ADDR_FONT_CHS_SYM，不经本函数。 */
 
     /* 中文字形：直接从自定义中文点阵字库解压（v5 decompress_chs_glyph 语义）。
      * ⚠ 不能用 GetGlyphTilePointers_Origin（那是官方日文字形，gidx 是中文

@@ -1,0 +1,196 @@
+[配置] 扫描配置目录: C:\code\GBA-Rom-Translator\configs
+[配置]   发现游戏: POKEMON_RUBY_AXVJ00 -> C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\game.json
+[配置] 扫描配置目录: C:\code\GBA-Rom-Translator\configs
+[配置] 读取模块: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
+[配置]   模块数: 22
+[配置] 读取: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
+[配置] 读取: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
+[配置] 读取: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\font.config.json
+[配置] 读取: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\hook\config.json
+[配置] 读取游戏配置: POKEMON_RUBY_AXVJ00
+[配置] 读取: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[配置] 读取: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\font.config.json
+[配置] charmap: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\charmap.txt
+[texts] 读取 C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts.json
+[配置] 读取自定义翻译目录: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\lexicon (9 个文件)
+[配置]   UI.json: 44 条
+[配置]   图鉴.json: 1025 条
+[配置]   地点.json: 915 条
+[配置]   属性.json: 16 条
+[配置]   性格.json: 25 条
+[配置]   招式.json: 935 条
+[配置]   特性.json: 313 条
+[配置]   短语.json: 340 条
+[配置]   道具.json: 1470 条
+[配置] 自定义翻译总计: 5083 条
+[翻译缓存] 加载 C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts_translated.json: 14624 条
+[配置] 读取自定义翻译目录: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\lexicon (9 个文件)
+[配置]   UI.json: 44 条
+[配置]   图鉴.json: 1025 条
+[配置]   地点.json: 915 条
+[配置]   属性.json: 16 条
+[配置]   性格.json: 25 条
+[配置]   招式.json: 935 条
+[配置]   特性.json: 313 条
+[配置]   短语.json: 340 条
+[配置]   道具.json: 1470 条
+[配置] 自定义翻译总计: 5083 条
+[翻译缓存] 翻译前 lexicon 变更 2 条 → C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\texts_translated.json
+[配置] 读取: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[配置] 读取: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[配置] 读取: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[配置] 读取: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\config.json
+[校验] rejects/allows: 拒绝 9/12693 条（候选 模块内 12693/12693）
+[翻译差集] 待翻 6 / free_texts 12693（跳过 占位 454、已缓存/404 12224）
+[翻译] 模块=剧情 pending=6 batches=1 rules=0
+Total 1 batches, using 10 parallel threads
+[1/1] Batch 1 completed (+cache 6)
+  e.g. 'で あったようだ' → '好像是这样'
+[翻译缓存] 落盘 texts_translated.json: 14632 条
+[翻译缓存] 回填 entries 10996 条
+[翻译通路] translate.build.json → replace=9510, keep=1691, slot=1492
+Detected game: POKEMON_RUBY_AXVJ00
+从 translate.build.json 重建 12693 条注入数据，缓存覆盖 11002 条翻译
+[配置] 读取自定义翻译目录: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\translate\lexicon (9 个文件)
+[配置]   UI.json: 44 条
+[配置]   图鉴.json: 1025 条
+[配置]   地点.json: 915 条
+[配置]   属性.json: 16 条
+[配置]   性格.json: 25 条
+[配置]   招式.json: 935 条
+[配置]   特性.json: 313 条
+[配置]   短语.json: 340 条
+[配置]   道具.json: 1470 条
+[配置] 自定义翻译总计: 5083 条
+[配置] lexicon 已加载: 5083 条
+[配置] charmap: C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\charmap.txt
+[短语] 复用 translate.build.json 码表: 12634 条
+[短语] 自动进 F9 80: 390 条 (仅定长槽 stride/struct 越槽)
+Loading ROM...
+Applying font patch...
+Font generated from Normal.bdf -> work\POKEMON_RUBY_AXVJ00\graphic\fonts
+Punctuation glyphs patched (baseline + no right spill)
+[font] patched 2 empty primary slot(s) from hook/work reference
+[font] restored 48 tuned unshadow/Sym bin(s) from hook/work reference
+Keep BDF-built fonts: 6 existing bin(s); synced 0 missing -> work\POKEMON_RUBY_AXVJ00\graphic\fonts
+[短语] PhraseTable 13024 条流, 684768B -> phrase_data.asm
+[data] from translate.build.json → phrases=12634/662109B
+[slot] translated_slot.asm: 1055 type=slot entries
+Font patch applied
+[自定义翻译] 精确匹配: 1839, 子串替换: 52, 总计: 1891/12684 条
+[自定义翻译] 精确匹配: 1839, 子串替换: 52, 总计: 1891/12684 条
+[自定义翻译] 注入过滤: 12684 -> 11047 (去掉 1637 条空/未翻译/跳过)
+[自定义翻译] 注入过滤: 12684 -> 11047 (去掉 1637 条空/未翻译/跳过)
+AXVJ build inject set: 11047/12684 entries [modules=['属性名', '属性名-华丽大赛', '性格名', '特性名', '宝可梦名', '招式名', '招式名-华丽大赛', '训练家名', '训练家个人名', '地点名', '秘密基地装饰名', '道具名', '树果名', '道具说明', '招式说明', '招式说明-华丽大赛', '特性说明', '图鉴分类名', '图鉴说明', 'UI界面', '剧情', '补漏剧情']]
+Injecting 11047 translated texts...
+Scanning LZ bands once (a few seconds), then injecting…
+[翻译通路] 载入 translate.build.json: 12693 条决策（条目去重后 11047）
+Expansion region start: 0x01200000 (floor=0x01200000, available=14,495,744)
+Inject progress 1/11047
+Inject progress 201/11047
+Inject progress 401/11047
+Inject progress 601/11047
+Inject progress 801/11047
+Inject progress 1001/11047
+Inject progress 1201/11047
+Inject progress 1401/11047
+Inject progress 1601/11047
+Inject progress 1801/11047
+Inject progress 2001/11047
+Inject progress 2201/11047
+Inject progress 2401/11047
+Inject progress 2601/11047
+Inject progress 2801/11047
+Inject progress 3001/11047
+Inject progress 3201/11047
+Inject progress 3401/11047
+Inject progress 3601/11047
+Inject progress 3801/11047
+Inject progress 4001/11047
+Inject progress 4201/11047
+Inject progress 4401/11047
+Inject progress 4601/11047
+Inject progress 4801/11047
+Inject progress 5001/11047
+Inject progress 5201/11047
+Inject progress 5401/11047
+Inject progress 5601/11047
+Inject progress 5801/11047
+Inject progress 6001/11047
+Inject progress 6201/11047
+Inject progress 6401/11047
+Inject progress 6601/11047
+Inject progress 6801/11047
+Inject progress 7001/11047
+Inject progress 7201/11047
+Inject progress 7401/11047
+Inject progress 7601/11047
+Inject progress 7801/11047
+Inject progress 8001/11047
+Inject progress 8201/11047
+  KEEP axvj_fe6a02139d98 @ 0x1D4094 (cat=剧情): 保留原文（无翻译或译文与原文相同）
+Inject progress 8401/11047
+Inject progress 8601/11047
+Inject progress 8801/11047
+Inject progress 9001/11047
+Inject progress 9201/11047
+Inject progress 9401/11047
+Inject progress 9601/11047
+Inject progress 9801/11047
+Inject progress 10001/11047
+Inject progress 10201/11047
+Inject progress 10401/11047
+Inject progress 10601/11047
+  KEEP axvj_9750e610b09e @ 0x1196C4 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_75d35bb8022d @ 0x132A7C (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_4193163002ca @ 0x1518BB (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_68a6fde75bde @ 0x153160 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_a3eedd3b0911 @ 0x15ED2C (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_22f46c2f0a26 @ 0x17DABF (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_8b61720ab748 @ 0x1819B8 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_9bf34632a467 @ 0x1889D5 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_5fcf54e4c65c @ 0x18C30A (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_35da4a0923ed @ 0x196AD6 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_d5c52e118124 @ 0x1A856E (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_05391c6bd794 @ 0x1AB6B5 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_5d7b01c89804 @ 0x1ABD74 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_65c0bd4a023d @ 0x1ABF59 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_f6aa64fc8189 @ 0x1AC1A1 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_732582ab2703 @ 0x1AC5EF (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_8234505f383b @ 0x1AC762 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_6317c18d3859 @ 0x1D38BC (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_a0bf9f1b086b @ 0x1D3ACA (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_443a9f3e069b @ 0x1D3AF8 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_b358bf6fb636 @ 0x1D3B0C (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_0640b650b15f @ 0x1D3CC8 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_46e4e430948c @ 0x1D3CE0 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_fc502674e3fb @ 0x1D3CFC (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_06b8d1f829fe @ 0x1D41DC (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_1c8b1baca381 @ 0x1D420E (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_1e801601f846 @ 0x1D4222 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_cf553492a04b @ 0x1D4252 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_2c0399446ee6 @ 0x1D4282 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_3c8e8ec01494 @ 0x1D4298 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_9f9ba36671a5 @ 0x1D4D66 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_2a3a1b0fb8bb @ 0x1D507A (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_0f6973b185bb @ 0x1D5092 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_1019575a7420 @ 0x1D511A (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_ff4d5ec5b35e @ 0x1D5130 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_1279aadd29d8 @ 0x1D52DE (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_499b49dc5639 @ 0x1D571C (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_5c896d5e75a7 @ 0x1D5786 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_f724af5feadf @ 0x1D579E (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_5b619f756e6d @ 0x1D57BE (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+Inject progress 10801/11047
+  KEEP axvj_d6fb5206d0db @ 0x3D776C (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_41060fb5ac8a @ 0x3DCB6C (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+Inject progress 11001/11047
+  KEEP axvj_46eaec6c8dac @ 0x428888 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+  KEEP axvj_6c1bf21e069d @ 0x7A0724 (cat=补漏剧情): 保留原文（无翻译或译文与原文相同）
+Inject progress 11047/11047
+Done: 9510 replaced, 0 relocated, 0 skipped, 0 partial-ptr skipped, 0 unsafe ptrs filtered
+Saved: C:\code\GBA-Rom-Translator\roms\outputs\POKEMON_RUBY_AXVJ00_translated.gba
+[短语] 自动进 F9 80 记录 → work\POKEMON_RUBY_AXVJ00\lexicon.extra.json (390 条)
+tiles: 3 meta(s) from C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\tiles -> POKEMON_RUBY_AXVJ00_translated_tiles.gba, new_palette=0x09EA63C4 (ignore yaml 0x09200000)
+tiles patched from C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\tiles
+ROM aligned to 32MB (32,139,900 -> 33,554,432 bytes)

@@ -9092,6 +9092,11 @@
   },
   {
     "status": 200,
+    "original": "いれかえる わざを\nえらんで ください",
+    "translated": "请选择要替换的招式"
+  },
+  {
+    "status": 200,
     "original": "いれた たね",
     "translated": "放入了种子"
   },
@@ -25993,6 +25998,11 @@
   },
   {
     "status": 200,
+    "original": "たたかう  バッグ\nポケモン  にげる",
+    "translated": "战斗  背包\n宝可梦  逃跑"
+  },
+  {
+    "status": 200,
     "original": "たたかう すがたの\nうつくしさで まけましたわ‥‥",
     "translated": "在对战姿态的\\n美丽程度上，是我输了……"
   },
@@ -28715,6 +28725,11 @@
   },
   {
     "status": 200,
+    "original": "で あったようだ",
+    "translated": "好像是这样"
+  },
+  {
+    "status": 200,
     "original": "で かえった",
     "translated": "从……回来了"
   },
@@ -30497,6 +30512,11 @@
     "status": 200,
     "original": "どの わざを\nわすれ させるんじゃ？",
     "translated": "要让它忘掉\\n哪个招式呢？"
+  },
+  {
+    "status": 200,
+    "original": "どの わざを\nわすれさせたい？",
+    "translated": "你想让哪个招式\\n忘记？"
   },
   {
     "status": 200,
@@ -32665,6 +32685,11 @@
     "status": 200,
     "original": "はい",
     "translated": "是"
+  },
+  {
+    "status": 200,
+    "original": "はい\nいいえ",
+    "translated": "是\\n否"
   },
   {
     "status": 200,
@@ -61638,6 +61663,16 @@
   },
   {
     "status": 200,
+    "original": "ボール   ポロック\nちかづく  にげる",
+    "translated": "球   波洛克\\n靠近 逃跑"
+  },
+  {
+    "status": 200,
+    "original": "ボール   ポロック\\nちかづく  にげる",
+    "translated": "球   宝可方块\n靠近  逃跑"
+  },
+  {
+    "status": 200,
     "original": "ボールの クッション\nマットや つくえの\nうえに おくもの",
     "translated": "放在球的缓冲垫{\\n}或桌子{\\p}上的东西"
   },
@@ -71627,6 +71662,11 @@
     "status": 200,
     "original": "ＰＯＫＥーＤＥＡＤ",
     "translated": "宝可梦死亡"
+  },
+  {
+    "status": 200,
+    "original": "ＰＰ\nわざタイプ／",
+    "translated": "ＰＰ\\n招式类型／"
   },
   {
     "status": 200,

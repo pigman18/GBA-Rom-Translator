@@ -62,6 +62,12 @@
 - relocate 改指针高危（无对齐无区域过滤滑窗，巧合字节也改⇒黑屏），已改 opt-in 默认 False；改后必跑 scripts/diag_relocate_collisions.py。
 - F980 短语引用(5B 不改指针)基本够用；🔴 护栏待补：phrase_stream_lookup 不判 code 上界、build_rom_data 无数量上限检查。
 
+## 🔴 reader 语义铁律 + FC 颜色码（2026-09-04 实证，tools 侧）
+- **reader（msg_reader / ignored_reader）= 读取原始解析出的串 → 修改 → 产出新串，地址必须随之偏移**（返回 `ReaderHit(fo=新地址)`）。只改串不改地址 ⇒ in-place `replace` 会把前缀控制码一起覆盖 ⇒ 颜色/高亮全丢（设置菜单左列由橙变灰即此坑，63 条 delta=3）。
+- reader 配置形态统一：`reader: {type: ignored_reader, value: [...]}`（**不是**模块属性 `mod.get(...)`，`extract_scan` 只认**单个** reader）。ignored_reader 剥完无正文返回 None=整条过滤；未命中前缀返回原样。指针回退：`ptrs_map.get(new_a) or ptrs_map.get(a)`（指针挂在含前缀的串头）。
+- **FC 颜色码不是 InitTextPrinter 阶段转成 pal+CDE 的**：它是文本流里的控制码，打印循环逐字符执行（`c>=0xFA` → Origin）时才改当前颜色；InitTextPrinter 日志里的 `色C/D/E pal` 只是模板初值。已实证：`fc 05 09`=橙（菜单左列标签）、`fc 05 0f`=灰白（值）、`fc 05 08`=红（选中时官方**原位**把 0f 改写为 08）。
+- 排查同类「掉色/掉高亮」：先比对 `translate.build.json` 的 `address` 处 **ROM 原盘字节 vs original_hex** 是否对齐（错位即 reader/地址问题），别先怀疑 hook 的 `fill_colors`。
+
 ## 打包约定
 - 🔴 每次改完 hook 源码走完整流水线：hook build.bat → 根 build.bat → check_rom_hook.py。**编译通过≠交付**。
 - 🔴 打包一律执行仓库根 build.bat（唯一权威模块清单，勿手抄 meowth full；手抄清单漏「图鉴分类名」出过事故）。验 hook 用复制命令+--seed-only，--modules 照抄。

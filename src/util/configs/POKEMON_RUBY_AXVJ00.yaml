@@ -316,13 +316,16 @@ texts:
     start: '0x0'
     end: '0xFFFFFF'
     type: scan
-    ignored_reader:
-    - '\CC0505'
-    - '\CC0508'
-    - '\CC0509'
-    - '\CC050E'
-    - '\CC050F'
-    - '\CC050FＬ\CC0CFBＡ'
+    reader:
+      type: ignored_reader
+      value:
+      - '\CC0505'
+      - '\CC0508'
+      - '\CC0509'
+      - '\CC050E'
+      - '\CC050F'
+      - '\CC050FＬ\CC0CFBＡ'
+      - '\CC040D0E0F'
     filters:
     - id: ui_original_text_filter
       type: original_text_filter
@@ -403,13 +406,15 @@ texts:
     start: '0x0'
     end: '0xFFFFFF'
     type: scan
-    ignored_reader:
-    - '\CC0505'
-    - '\CC0508'
-    - '\CC0509'
-    - '\CC050E'
-    - '\CC050F'
-    - '\CC050FＬ\CC0CFBＡ'
+    reader:
+      type: ignored_reader
+      value:
+      - '\CC0505'
+      - '\CC0508'
+      - '\CC0509'
+      - '\CC050E'
+      - '\CC050F'
+      - '\CC050FＬ\CC0CFBＡ'
     filters:
     - id: extra_story_pointer_filter
       type: require_pointer_filter

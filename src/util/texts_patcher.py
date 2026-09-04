@@ -2178,7 +2178,15 @@ class MsgReader:
 
 
 class IgnoredReader:
-    """reader=ignored_reader：在源头上剥离正文**开头**的控制码前缀。
+    """reader=ignored_reader：在源头上剥离正文**开头**的控制码前缀，地址随之前移。
+
+    与 msg_reader 同构（单个 reader，配置形态 ``reader: {type, value}``）：
+    读取原始解析出的串 → 剥前缀产生新串 → **地址跟着偏移**（ReaderHit.fo），
+    这样后续 replace 写回时把译文写在控制码**之后**，原控制码前缀被完整保留。
+
+    ⚠ 地址不偏移是致命的：设置菜单每行自带 ``fc 05 09``（橙）/``fc 05 0f``（灰）
+    前缀，若把译文写在 ``fc`` 所在地址上，颜色码会被译文字节盖掉，左列标签
+    从橙色变灰（2026-09-04 实机实证）。
 
     典型场景：日版菜单行字符串表每行自带 ``fc 05 0f``（灰）前缀，选中时官方
     代码**原位**把 ``0f`` 改写成 ``08``（红）。若把该前缀当正文编进 F980 短语体，
@@ -2195,7 +2203,7 @@ class IgnoredReader:
     同时用于剥 text（startswith）与 raw（字节切片）；匹配按**字节长度降序**，
     长整串优先于短的 ``\\CC050F`` 前缀命中。
 
-    截断后若正文为空，strip 返回 ``None``，调用方据此**整条过滤**（该行无
+    截断后若正文为空，read 返回 ``None``，调用方据此**整条过滤**（该行无
     翻译价值，如空行占位 ``\\CC0508``、纯键位提示 ``\\CC050FＬ\\CC0CFBＡ``）。
 
     只剥**开头**的前缀，正文其它位置的控制码保持不动。
@@ -2233,25 +2241,49 @@ class IgnoredReader:
         # 字节长度降序：长整串（如 \CC050FＬ\CC0CFBＡ）先于短前缀（\CC050F）命中
         self._prefixes.sort(key=lambda t: len(t[1]), reverse=True)
 
-    def strip(self, original: str, raw: bytes) -> tuple[str, bytes] | None:
-        """剥掉 original 文本与 raw 字节**开头**的已配置前缀。
-
-        命中前缀后截断；截断后正文为空（无翻译价值）返回 ``None``，否则返回
-        ``(text, raw)``。未命中任何前缀则原样返回。
-        """
-        text = original or ""
-        body = bytes(raw)
-        upper = text.upper()
-
+    def prefix_len(self, original: str, raw: bytes) -> int:
+        """返回 original/raw 开头命中前缀的**字节长度**（未命中返回 0）。"""
+        upper = (original or "").upper()
         for pfx, pfx_bytes in self._prefixes:
-            if upper.startswith(pfx) and body.startswith(pfx_bytes):
-                text = text[len(pfx):]
-                body = body[len(pfx_bytes):]
-                break
+            if upper.startswith(pfx) and raw.startswith(pfx_bytes):
+                return len(pfx_bytes)
+        return 0
 
-        if not text.strip():
+    def read(
+        self,
+        rom: bytes,
+        a: int,
+        raw: bytes,
+        ptrs_map: dict[int, list[int]],
+        pcs_maxlen: int = 512,
+    ) -> ReaderHit | None:
+        """剥掉 raw 开头的已配置前缀，返回**地址已前移**的 ReaderHit。
+
+        命中前缀：正文起点 = a + 前缀长度，以该起点重新 read_pcs 取到 EOS 的
+        完整正文；正文剥离控制码后全空白（无翻译价值）→ 返回 None 整条过滤。
+        未命中任何前缀：原样返回 ReaderHit(fo=a)，由主流程按普通候选处理。
+        """
+        from meowth.jp_pcs import decode_pcs
+
+        off = self.prefix_len(decode_pcs(raw), raw)
+        if off == 0:
+            return ReaderHit(
+                fo=a,
+                raw=bytes(raw),
+                original=decode_pcs(raw),
+                ptrs=list(ptrs_map.get(a, [])),
+            )
+        real_a = a + off
+        real_raw = read_pcs(rom, real_a, pcs_maxlen)
+        if real_raw is None:
             return None
-        return text, body
+        real_text = decode_pcs(real_raw)
+        if not (plain_original(real_text) or "").strip(" \t\n"):
+            return None
+        # 起点前移后，游戏指针通常仍挂在**含控制码前缀的串头**（原地址）上，
+        # 故指针回退一次，避免 require_pointer_filter 误杀剥前缀后的条目。
+        ptrs = list(ptrs_map.get(real_a) or ptrs_map.get(a, []))
+        return ReaderHit(fo=real_a, raw=real_raw, original=real_text, ptrs=ptrs)
 
 
 def extract_scan(
@@ -2275,20 +2307,29 @@ def extract_scan(
     # 模块级开关：默认 false。true 时才在 FF 扫描路径调 looks_like_jp_text 做
     # 形态预校验。该函数误判率高，后续新模块尽量不用（用地址带/语料白名单/结构定址）。
     use_looks_like = bool(mod.get("looks_like_jp_text", False))
-    # reader=msg_reader：scan 读取内容改为用 msg 语料 needle 定位「垃圾前缀 + msg
-    # 文本」的真实起点（如「べえねくぽえ…ママ『ほら…」）。返回修整内容或 None。
-    msg_reader: MsgReader | None = None
-    ignored_reader: IgnoredReader | None = None
+    # reader：**单个**。语义统一为「读取原始解析出的串 → 修整 → 产出新串，
+    # 地址随之偏移（ReaderHit.fo）」。两个实现，配置形态一致：
+    #   reader: {type: msg_reader,     value: {file, mapping}}  语料 needle 定位
+    #                                                           真实正文起点（剥垃圾前缀）
+    #   reader: {type: ignored_reader, value: ["\\CC050F", …]}  剥正文开头的控制码
+    #                                                           前缀（如菜单行 fc 颜色码）
+    # 简写 reader: msg_reader / reader: ignored_reader 时 value 取 mod.reader_value。
+    reader: MsgReader | IgnoredReader | None = None
     reader_spec = mod.get("reader")
-    if isinstance(reader_spec, dict) and str(reader_spec.get("type") or "") == "msg_reader":
-        msg_reader = MsgReader(reader_spec)
-    elif str(reader_spec or "") == "msg_reader":
-        msg_reader = MsgReader({"id": "msg_reader", "value": mod.get("reader_value")})
-    # reader=ignored_reader：剥正文开头的 FC 颜色码前缀（\\CC050F/\\CC0508…），
-    # 与 msg_reader 可叠加使用（msg_reader 定位起点 → ignored_reader 剥前缀）。
-    ign_spec = mod.get("ignored_reader")
-    if ign_spec is not None:
-        ignored_reader = IgnoredReader({"id": "ignored_reader", "value": ign_spec})
+    if isinstance(reader_spec, dict):
+        _rtype = str(reader_spec.get("type") or "")
+        if _rtype == "msg_reader":
+            reader = MsgReader(reader_spec)
+        elif _rtype == "ignored_reader":
+            reader = IgnoredReader(reader_spec)
+    else:
+        _rtype = str(reader_spec or "")
+        if _rtype == "msg_reader":
+            reader = MsgReader({"id": "msg_reader", "value": mod.get("reader_value")})
+        elif _rtype == "ignored_reader":
+            reader = IgnoredReader(
+                {"id": "ignored_reader", "value": mod.get("reader_value")}
+            )
     bands = effective_module_bands(mod, omit_ranges or [])
     if not bands:
         return []
@@ -2356,11 +2397,12 @@ def extract_scan(
                     return
                 raw = body
         text = decode_pcs(raw)
-        if ignored_reader is not None:
-            stripped = ignored_reader.strip(text, raw)
-            if stripped is None:
+        if reader is not None:
+            # reader 修整（剥前缀）→ 新串 + 地址前移；返回 None 表示整条过滤
+            _hit = reader.read(rom, a, raw, ptrs_map, 512)
+            if _hit is None:
                 return
-            text, raw = stripped
+            a, raw, text = _hit.fo, _hit.raw, _hit.original
         ptrs = list(ptrs_map.get(a, []))
         ctx = make_filter_context(
             fo=a,
@@ -2517,25 +2559,24 @@ def extract_scan(
                 a = max(a + 1, ff - (pcs_maxlen - 1))
                 continue
             end = a + len(raw) - 1
-            if msg_reader is not None:
-                # reader=msg_reader：用语料 needle 定位真实正文起点；命中返回修整
-                # 内容（ReaderHit），未命中/全空白返回 None。以修整后的 fo/raw 走
-                # 单点 filter 闸门后输出，不做择优（择优会污染 msg 语料锚定）。
-                hit = msg_reader.read(rom, a, raw, ptrs_map, pcs_maxlen)
+            if reader is not None:
+                # reader 修整：命中返回 ReaderHit（含前移后的 fo/raw/original），
+                # 未命中/全空白返回 None。以修整后的 fo/raw 走单点 filter 闸门后
+                # 输出，不做择优（择优会污染 msg 语料锚定）。
+                hit = reader.read(rom, a, raw, ptrs_map, pcs_maxlen)
                 if hit is None:
                     # 启发式兜底通道：语料 needle 未命中的整段候选，改走
                     # fallback_filters（如 有指针+对白形态+垃圾过滤）判定；
                     # 收「指针索引型台词」（战斗消息等无逐条指针锚的文本）。
-                    if fallback_filters and not _in_exclude(a, len(raw)):
+                    # 仅 msg_reader 走此兜底：ignored_reader 返回 None 表示
+                    # 「剥完无正文」，本就不该收录。
+                    if (
+                        isinstance(reader, MsgReader)
+                        and fallback_filters
+                        and not _in_exclude(a, len(raw))
+                    ):
                         fb_text = decode_pcs(raw)
                         fb_raw = raw
-                        if ignored_reader is not None:
-                            fb_stripped = ignored_reader.strip(fb_text, fb_raw)
-                            if fb_stripped is None:
-                                fb_text = ""
-                                fb_raw = raw
-                            else:
-                                fb_text, fb_raw = fb_stripped
                         if (plain_original(fb_text) or "").strip(" \t\n"):
                             fb_ptrs = list(ptrs_map.get(a, []))
                             fbctx = make_filter_context(
@@ -2587,7 +2628,7 @@ def extract_scan(
                 # （无指针不再一票否决，garbage/counter_run 等签名不再误杀）
                 # 与 anim_cmd_filter（真台词 anim 形态误杀）；ime/地址带保留。
                 use_filt = filt
-                if use_filt and msg_reader.exact_hit(hit.original):
+                if use_filt and isinstance(reader, MsgReader) and reader.exact_hit(hit.original):
                     use_filt = [
                         f
                         for f in use_filt
@@ -2598,12 +2639,6 @@ def extract_scan(
                     a = end + 1
                     continue
                 h_text, h_raw = hit.original, hit.raw
-                if ignored_reader is not None:
-                    h_stripped = ignored_reader.strip(h_text, h_raw)
-                    if h_stripped is None:
-                        a = end + 1
-                        continue
-                    h_text, h_raw = h_stripped
                 seen.add(hit.fo)
                 out.append(
                     _stamp(
@@ -2634,12 +2669,6 @@ def extract_scan(
             if _in_exclude(best_a, len(best_raw)):
                 a = end + 1
                 continue
-            if ignored_reader is not None:
-                best_stripped = ignored_reader.strip(best_text, best_raw)
-                if best_stripped is None:
-                    a = end + 1
-                    continue
-                best_text, best_raw = best_stripped
             seen.add(best_a)
             out.append(
                 _stamp(

@@ -52,10 +52,6 @@ int DrawHalfWidth(TextPrinter *win, uint32_t cur_char);
  * 恒返回 1=已消费（引擎零回落：不可印位直接吞掉）。 */
 int DrawGlyph(TextPrinter *win, uint32_t cur_char);
 
-/* 原生 FontFunc 处理器分发（PrintNextChar_hook.c）。
- * 直调 Origin 地址常量；textMode 4-7 静默消费。 */
-void FontFunc_NativeDispatch(uint8_t tm, TextPrinter *win, uint32_t c);
-
 /* v6：非 F9 控制码回落官方 PrintNextChar（entry.s 续跑）。 */
 int PrintNextChar_Origin(TextPrinter *win);
 int PrintNextChar_Hook(TextPrinter *win);

@@ -18,17 +18,21 @@
 - **GetGlyph 取字必须从中文字库**：ADDR_FONT_CHS_NORMAL(0x09000000)/SMALL(0x09100000)，索引=(code&0x7FFF)<<7，code&0x8000 再+64。严禁查官方日文字形（gidx 是中文索引查官方表返 null→全空）。
 
 ## v8 已知边界（2026-09-04 实机实证，下一轮任务）
-1. **队伍页 HP 条上方 Pokemon 状态图标被中文覆盖（稳定撞血条）**。
-2. **设置界面关闭按钮为橙色**（疑似关闭按钮 tile 被中文覆盖，按钮调色板映射成橙色）。
+1. **队伍页 HP 条上方 Pokemon 状态图标被中文覆盖（稳定撞血条）** —— 根因=队伍窗 charBase=1 占用段 [0x0EE-0x11A] 罩住 lo=0x100，中文压在状态图标上。已接 kV8AvoidScenes 避让（kPartyScene），**待实机验证**。
+2. **设置界面关闭按钮为橙色**（关闭按钮 tile 被中文覆盖、调色板串色）—— 根因=该 tile 不在 tilemap 活引用里、未被避让带覆盖。已接消费方（kOptionAvoidScene 的 [0x001,0x208]），**待实机验证**。
 3. 设置菜单偶发缺角（相位共享+动态领号在「字符短+边界 tile 紧邻」下溢出，治本=glyph_len 加安全余量）。
-- **根因方向（用户 2026-09-04 判断「缺避让区配置」）**：当前避让带**只来自 tilemap 活引用扫描 + lo=0x100 + OBJ charBlock 上界截断**，漏掉「关闭按钮/血条/状态图标」等不在文本 tilemap 扫描范围的 UI 元素（OBJ 精灵 / 其它 BG 层 / 扫描后才绘制）。设计文档 §2.2 列了「详情页场景映射带 ~0x1C9..0x1F7 场景/UI 图标」硬编码避让带，但**代码未落地**。
+- **根因方向（用户 2026-09-04 判断「缺避让区配置」）**：当前避让带**只来自 tilemap 活引用扫描 + lo=0x100 + OBJ charBlock 上界截断**，漏掉「关闭按钮/血条/状态图标」等不在文本 tilemap 扫描范围的 UI 元素（OBJ 精灵 / 其它 BG 层 / 扫描后才绘制）。
+  ✅ **避让带数据已于 2026-09-04 补齐并接入消费方**（`scene_cfg.c:kV8AvoidScenes` → `tile_alloc.c:v8_alloc_begin`/`v8_lookup_avoid`，14 签名全录，见「tile 分配器坐标系」节）。硬件验证待用户实机确认。
+  - 已对上的根因：队伍窗 charBase=1，占用段 [0x0EE-0x11A] 正好罩住 `lo=0x100` ⇒ 中文压在状态图标上（与 BUG ① 完全吻合）。
 
 ## tile 分配器坐标系（实证，仍有效）
 - tile 号 = 相对当前 BG charBase 的偏移，合法范围 **0~1023**（tilemap 10bit + 4 charBlock），**非 0~511**。
 - atlas = 官方字库区 = [BASE, BASE+512)，不可标满 [BASE,512)。
-- OBJ 起始 charBlock = (REG_DISPCNT>>4)&3；分配上界 hi = obj_cb>char_base ? (obj_cb-char_base)*512 : 1024。
+- ✅ **OBJ 起始 charBlock 恒为 4**（OBJ tile 固定占 VRAM 0x06010000 起，即 charBlock 4/5）。GBA 的 DISPCNT 没有 OBJ charBlock 字段（bits[4]=Display Frame Select、bits[5]=HBlank Interval Free）。`v8_alloc_hi()` 已改正确公式 `hi=(4-char_base)*512 clamp 1024`（2026-09-04 修复）：char_base=0/1/2→1024；**char_base=3→512（正确拦住相对 512+ = cb4 = OBJ 区）**。旧 `v8_obj_charblock()`（误读 DISPCNT bits[5:4]）已删除。
+- ✅ **避让带已全量落盘并已接消费方**（2026-09-04 下午）：`kV8AvoidScenes`（14 签名/7 模板/37 段，从 gdb `[CBAVOID]` 录入，每条带注释）。`tile_alloc.c` 已 `#include "scene_cfg.h"`，`v8_alloc_begin()` 在扫完 tilemap 后调 `v8_lookup_avoid()`：按硬件签名（DISPCNT+BGxCNT，掩码 0x1F8C 归一）查表，命中即把 bands 标进位图；签名未命中按 tpl 兜底。消费策略=**全量避让带（含 atlas 段）**，中文整体挪到 atlas 之上（设置菜单 0x209 起）；14 场景 bands 上限均 ≤0x3FF，仍在各自 cb 相对 0~1023 内，不跨 OBJ 区。待用户实机验证。
 - 战斗窗(charBase=0)动态区高段相对号 513+ = 物理 charBlock1 = OBJ 精灵区 ⇒ 花屏；charBase=2 主力窗安全。
-- gdb 模板分布（AXVJ00）：主力对话框 0x081BB5BC/46C/784/484/874 charBase=2 base=0x0001；战斗招式 0x081BB3F4 charBase=0；队伍窗 0x081BB43C charBase=1 font4。
+- gdb 模板分布（AXVJ00）：主力对话框 0x081BB5BC/46C/784/484/874 charBase=2 base=0x0001；战斗招式 0x081BB3F4 charBase=0；队伍窗 0x081BB43C charBase=1 font4；**战斗 UI 0x081BB514 charBase=3；地图名弹窗 0x081BB49C charBase=0；战斗血条 0x081BB40C charBase=0 font4/tm2**。
+- gdb_patcher `--cb-survey` 采集端扫 **cb0~cb5 全 6 块**（`for cb in range(6)`，标签 cb4(OBJ)/cb5(OBJ)），cb4 数据一直有，不是"没开放"。
 
 ## 历史教训（诊断思路仍有效；v4/v5/v6 实现细节已删）
 - 8px 小字库(font=4)字形有误（v4 曾令设置菜单一律 font=0）。

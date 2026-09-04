@@ -35,6 +35,7 @@ from __future__ import annotations
 
 import argparse
 import os
+import re
 import sys
 import time
 from collections import Counter
@@ -2405,6 +2406,280 @@ def run_log(args: argparse.Namespace) -> int:
     return 0
 
 
+# ---------------------------------------------------------------------------
+# export-scene：把日志里的 [CBAVOID] 段反向生成 scene_cfg.c 的避让带 C 代码 ---
+# ---------------------------------------------------------------------------
+# 采集（log --cb-survey --bypass-text）与导出（export-scene）是一对：重采日志后
+# 直接重跑 export-scene 就能重建表，不必手抄。--reuse-names 指向现有 scene_cfg.c
+# 可保留人工起的语义名（kPartyAvoid 之类）与手写注释，不退化成 kTpl43C_1。
+#
+# 用法：
+#   python src/util/gdb_patcher.py export-scene
+#   python src/util/gdb_patcher.py export-scene --out scene_avoid.c \
+#          --reuse-names configs/POKEMON_RUBY_AXVJ00/hook/src/text/scene_cfg.c
+
+_CBAVOID_HDR_RE = re.compile(
+    r"^\[CBAVOID\]\s+场景签名\s+mode=(\d+)\s+DISPCNT=0x([0-9A-Fa-f]{4})")
+_BG_LINE_RE = re.compile(
+    r"^\s*BG(\d):\s*charBase=(\d+)\s+screenBase=(\d+)\s+8bpp=(\d+)\s+启用=(\d+)")
+_CB_SURVEY_LINE_RE = re.compile(
+    r"^\s*cb(\d)(?:\(OBJ\))?\s*\(0x[0-9A-Fa-f]+\):\s*(.*)$")
+_TPL_LINE_RE = re.compile(
+    r"模板@(0x[0-9A-Fa-f]+):\s*charBase=(\d+)\s+pal=\d+\s+C/D/E=\S+\s+"
+    r"font=(\d+)\s+textMode=(\d+)")
+
+# 与 hook 侧 include/scene_cfg.h 的 kV8SigBgMask 必须保持一致
+_SCENE_BG_MASK = 0x1F8C
+# 避让带数组复用的键：相对号区间元组完全相同 ⇒ 共用同一 static 数组
+BandKey = tuple
+
+
+def _parse_band_ranges(text: str) -> list[tuple[int, int]]:
+    """'[0x001-0x0D4] [0x0D6-0x0DC]' / '（全空）' → [(lo,hi)] 闭区间。"""
+    if not text or ("全空" in text) or ("失败" in text) or ("不足" in text):
+        return []
+    return [(int(a, 16), int(b, 16))
+            for a, b in re.findall(r"\[(0x[0-9A-Fa-f]+)-(0x[0-9A-Fa-f]+)\]", text)]
+
+
+def _merge_bands(ranges: list[tuple[int, int]],
+                 gap: int = 3) -> list[tuple[int, int]]:
+    """闭区间合并：与上一区间缝隙 <= gap 即合并（保守：多避让几个孤立空 tile）。"""
+    out: list[list[int]] = []
+    for lo, hi in sorted(ranges):
+        if out and lo - out[-1][1] <= gap:
+            out[-1][1] = max(out[-1][1], hi)
+        else:
+            out.append([lo, hi])
+    return [(lo, hi) for lo, hi in out]
+
+
+def _bg_norm(bg: tuple[int, int, int, int]) -> int:
+    """(charBase, screenBase, 8bpp, 启用) → bgcnt 按 _SCENE_BG_MASK 归一。"""
+    cb, sb, bpp, _en = bg
+    return ((sb << 8) | (bpp << 7) | (cb << 2)) & _SCENE_BG_MASK
+
+
+def _parse_cbavoid_scenes(log_path: str, gap: int = 3) -> list[dict]:
+    """从 gdb 日志抽取 [CBAVOID] 段，按「DISPCNT + BG0~3CNT」签名去重。
+
+    返回每项 dict：line / dispcnt / bgs[(cb,sb,bpp,en)×4] / tpl / char_base /
+    font / text_mode / cont[内容片段] / cb_raw{cb号: 原文} / bands[(lo,hi)] / raw_n
+    """
+    with open(log_path, encoding="utf-8", errors="replace") as f:
+        lines = f.read().split("\n")
+    scenes: list[dict] = []
+    seen: set[tuple] = set()
+    for i, line in enumerate(lines):
+        if not _CBAVOID_HDR_RE.match(line):
+            continue
+        m = _CBAVOID_HDR_RE.match(line)
+        dispcnt = int(m.group(2), 16)          # type: ignore[union-attr]
+        bgs: list[tuple[int, int, int, int]] = []
+        for L in range(4):
+            bm = (_BG_LINE_RE.match(lines[i + 1 + L])
+                  if i + 1 + L < len(lines) else None)
+            bgs.append(
+                (int(bm.group(2)), int(bm.group(3)),
+                 int(bm.group(4)), int(bm.group(5))) if bm else (0, 0, 0, 0))
+        sig = (dispcnt, tuple(bgs))
+        if sig in seen:                         # 同签名只取首次出现
+            continue
+        seen.add(sig)
+
+        cb_raw: dict[int, str] = {}
+        for j in range(i + 5, min(i + 13, len(lines))):
+            cm = _CB_SURVEY_LINE_RE.match(lines[j])
+            if cm:
+                cb_raw[int(cm.group(1))] = cm.group(2).strip()
+
+        # 该签名下实际打印的窗口模板（CBAVOID 之后紧随的 InitTextPrinter 记录）
+        tpl = char_base = font = text_mode = None
+        conts: list[str] = []
+        for j in range(i, min(i + 45, len(lines))):
+            tm_ = _TPL_LINE_RE.search(lines[j])
+            if tm_ and tpl is None:
+                tpl = int(tm_.group(1), 16)
+                char_base = int(tm_.group(2))
+                font = int(tm_.group(3))
+                text_mode = int(tm_.group(4))
+            if lines[j].startswith("  内容:") and len(conts) < 2:
+                conts.append(lines[j][7:].strip())
+        if char_base is None:                   # 日志末尾截断，无法折算坐标
+            continue
+
+        # 折算：相对号 = cb[char_base] 原值，或 cb[char_base+1] 原值 + 0x200
+        rel: list[tuple[int, int]] = []
+        for k in (char_base, char_base + 1):
+            off = 0 if k == char_base else 512
+            for lo, hi in _parse_band_ranges(cb_raw.get(k, "")):
+                rel.append((lo + off, hi + off))
+        bands = _merge_bands(rel, gap)
+
+        scenes.append(dict(line=i + 1, dispcnt=dispcnt, bgs=bgs, tpl=tpl,
+                           char_base=char_base, font=font, text_mode=text_mode,
+                           cont=conts, cb_raw=cb_raw, bands=bands, raw_n=len(rel)))
+    return scenes
+
+
+def _parse_existing_scene_names(path: Optional[str]) -> dict[tuple, dict]:
+    """从已有 scene_cfg.c 抽取 (tpl,dispcnt,bgcnt) → {scene,band,doc}。
+
+    让 export-scene 重采后仍保留人工起的语义名与手写注释。
+    """
+    if not path or not os.path.exists(path):
+        return {}
+    with open(path, encoding="utf-8", errors="replace") as f:
+        src = f.read()
+    out: dict[tuple, dict] = {}
+    pat = re.compile(
+        r"static\s+const\s+struct\s+V8AvoidScene\s+(\w+)\s*=\s*\{(.*?)\};", re.S)
+    for m in pat.finditer(src):
+        name, body = m.group(1), m.group(2)
+
+        def _num(field: str) -> Optional[int]:
+            mm = re.search(rf"\.{field}\s*=\s*(0x[0-9A-Fa-f]+|\d+)u?", body)
+            return int(mm.group(1), 0) if mm else None
+
+        tpl, dispcnt = _num("tpl"), _num("dispcnt")
+        bgm = re.search(r"\.bgcnt\s*=\s*\{([^}]*)\}", body)
+        if tpl is None or dispcnt is None or not bgm:
+            continue
+        bgcnt = tuple(int(x, 0) & _SCENE_BG_MASK
+                      for x in re.findall(r"0x[0-9A-Fa-f]+|\d+", bgm.group(1)))
+        if len(bgcnt) != 4:
+            continue
+        bmm = re.search(r"\.bands\s*=\s*(\w+)", body)
+        # 往上抓紧邻的连续 // 注释行
+        doc: list[str] = []
+        for ln in reversed(src[:m.start()].rstrip().split("\n")):
+            s = ln.strip()
+            if s.startswith("//"):
+                doc.insert(0, s)
+            else:
+                break
+        out[(tpl, dispcnt, bgcnt)] = dict(
+            scene=name, band=bmm.group(1) if bmm else None, doc=doc)
+    return out
+
+
+
+
+
+def _gen_avoid_c(scenes: list[dict], reuse: Optional[dict] = None,
+                 gap: int = 3) -> str:
+    """生成 scene_cfg.c 的避让带片段。
+
+    每个场景一个独立命名实例（static const struct V8AvoidScene kXxxScene），
+    bands 直接内联在 .bands 字段（复合字面量），不引用任何共享 band 数组。
+    """
+    reuse = reuse or {}
+    tpl_seq: dict[int, int] = {}
+    used: set[str] = set()
+    names: list[str] = []
+
+    def _fresh(sig: tuple) -> str:
+        tpl, _d, _b = sig
+        n = tpl_seq.get(tpl, 0) + 1
+        tpl_seq[tpl] = n
+        base = f"kTpl{(tpl & 0xFFF):03X}_{n}Scene"
+        cand, k = base, 2
+        while cand in used:
+            cand = f"{base}_{k}"
+            k += 1
+        used.add(cand)
+        return cand
+
+    def _bg_desc(sc: dict) -> str:
+        parts = []
+        for n, bg in enumerate(sc["bgs"]):
+            cb, sb, bpp, en = bg
+            parts.append(f"BG{n} cb{cb} sb{sb} {'8bpp' if bpp else '4bpp'}"
+                         f"{'*' if en else ''}")
+        return " | ".join(parts)
+
+    out: list[str] = []
+    for sc in scenes:
+        sig = (sc["tpl"], sc["dispcnt"],
+               tuple(_bg_norm(b) for b in sc["bgs"]))
+        old = reuse.get(sig)
+        name = old["scene"] if old else _fresh(sig)
+        names.append(name)
+        if old and old.get("doc"):
+            out.extend(old["doc"])                     # 保留人工注释
+        else:
+            out.append("// " + "-" * 74)
+            out.append(f"//   日志行号 {sc['line']} / tpl 0x{sc['tpl']:08X} "
+                       f"/ charBase {sc['char_base']} / "
+                       f"font{sc['font']} / textMode {sc['text_mode']}")
+            out.append(f"//   DISPCNT 0x{sc['dispcnt']:04X} | {_bg_desc(sc)}")
+            if sc["cont"]:
+                out.append("//   内容: " + " / ".join(sc["cont"])[:64])
+            for k in (sc["char_base"], sc["char_base"] + 1):
+                raw = sc["cb_raw"].get(k, "（全空）")
+                if raw and "全空" not in raw:
+                    out.append(f"//   原始 cb{k}: {raw[:96]}")
+            out.append(f"//   合并后 {len(sc['bands'])} 段"
+                       f"（原 {sc['raw_n']} 段，缝隙 <= {gap} 合并）")
+            out.append("// " + "-" * 74)
+        out.append(f"static const struct V8AvoidScene {name} = {{")
+        out.append(f"    .tpl       = 0x{sc['tpl']:08X}u,")
+        out.append(f"    .char_base = {sc['char_base']}u,")
+        out.append(f"    .dispcnt   = 0x{sc['dispcnt']:04X}u,")
+        bgc = ", ".join(f"0x{_bg_norm(b):04X}u" for b in sc["bgs"])
+        out.append(f"    .bgcnt     = {{ {bgc} }},")
+        out.append("    .bands     = (const struct V8AvoidBand[]) {")
+        for lo, hi in sc["bands"]:
+            out.append(f"        {{ .lo = 0x{lo:03X}u, .hi = 0x{hi:03X}u }},")
+        out.append("    },")
+        out.append(f"    .band_n    = {len(sc['bands'])}u,")
+        out.append("};")
+        out.append("")
+
+    out.append("const struct V8AvoidScene kV8AvoidScenes[] = {")
+    for name in names:
+        out.append(f"    {name},")
+    out.append("};")
+    out.append("")
+    out.append("const unsigned kV8AvoidSceneN =")
+    out.append("    (unsigned)(sizeof(kV8AvoidScenes) / sizeof(kV8AvoidScenes[0]));")
+    return "\n".join(out) + "\n"
+
+
+def run_export_scene(args: argparse.Namespace) -> int:
+    """导出日志里的避让带场景为 scene_cfg.c 片段（纯离线，不连 gdb）。"""
+    logpath = args.log or str(REPO_ROOT / "src" / "util" / "work"
+                              / args.game / "gdb_patcher_log.log")
+    if not os.path.exists(logpath):
+        print(f"[export-scene] 日志文件不存在: {logpath}", file=sys.stderr)
+        print("提示：先跑 log --cb-survey --bypass-text 采集，或用 --log 指定路径。",
+              file=sys.stderr)
+        return 1
+
+    scenes = _parse_cbavoid_scenes(logpath, gap=args.gap)
+    if not scenes:
+        print(f"[export-scene] 日志里没有 [CBAVOID] 段: {logpath}", file=sys.stderr)
+        return 1
+
+    reuse = _parse_existing_scene_names(args.reuse_names)
+    code = _gen_avoid_c(scenes, reuse, gap=args.gap)
+
+    if args.out in (None, "-"):
+        sys.stdout.write(code)
+    else:
+        with open(args.out, "w", encoding="utf-8", newline="\n") as f:
+            f.write(code)
+        print(f"[export-scene] {len(scenes)} 个场景 → {args.out}")
+
+    reused = sum(1 for s in scenes
+                 if (s["tpl"], s["dispcnt"],
+                     tuple(_bg_norm(b) for b in s["bgs"])) in reuse)
+    print(f"[export-scene] 签名 {len(scenes)} 条 / "
+          f"复用旧名 {reused} 条（--reuse-names={args.reuse_names or '未指定'}）",
+          file=sys.stderr)
+    return 0
+
+
 def main(argv: Optional[Sequence[str]] = None) -> int:
     for stream in (sys.stdout, sys.stderr):
         try:
@@ -2419,7 +2694,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
             "加新监控点只需在 yaml 追加条目，Python 侧可按 name 注册增强 handler。"
         ),
     )
-    ap.add_argument("cmd", choices=["log"], help="log：追踪 yaml 定义的监听点")
+    ap.add_argument(
+        "cmd",
+        choices=["log", "export-scene"],
+        help="log：追踪 yaml 定义的监听点；"
+             "export-scene：把日志里的 [CBAVOID] 段导出为 scene_cfg.c 避让带代码",
+    )
     ap.add_argument(
         "--game",
         default=DEFAULT_GAME,
@@ -2454,9 +2734,28 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument("--log", default=None,
                     help=r"日志文件路径；缺省 src\util\work\{gameId}\gdb_patcher_log.log（按游戏分目录）")
     ap.add_argument("--origin", default=str(DEFAULT_ORIGIN), help="原盘 ROM 路径（同址对照用；美版请传美版 ROM 路径）")
+    ap.add_argument(
+        "--out",
+        default=None,
+        help="export-scene：输出文件路径；'-' 或省略则打到 stdout",
+    )
+    ap.add_argument(
+        "--reuse-names",
+        default=None,
+        help="export-scene：已有 scene_cfg.c 路径，按 tpl+DISPCNT+BGxCNT 复用其"
+             "场景名/手写注释，避免重采后退化成 kTplXXX_1Scene",
+    )
+    ap.add_argument(
+        "--gap",
+        type=int,
+        default=3,
+        help="export-scene：相邻避让带缝隙 <= N tile 即合并（默认 3）",
+    )
     args = ap.parse_args(argv)
 
     try:
+        if args.cmd == "export-scene":
+            return run_export_scene(args)
         return run_log(args)
     except GdbError as e:
         print(str(e), file=sys.stderr)

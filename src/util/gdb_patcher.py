@@ -219,6 +219,7 @@ class Ctx:
         origin: Optional[bytes],
         dedup: bool,
         vram_survey: bool = False,
+        cb_survey: bool = False,
     ):
         self.gdb = gdb
         self.logpath = logpath
@@ -227,7 +228,9 @@ class Ctx:
         self.origin = origin
         self.dedup = dedup
         self.vram_survey = vram_survey
+        self.cb_survey = cb_survey
         self._vram_sig: object = None
+        self._cb_sig: object = None
         self._last: object = None
         self._skipped = 0
 
@@ -919,6 +922,10 @@ def _on_init_text(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> 
     cx = regs.get("r3", 0) & 0xFF
     lr = regs.get("r14", 0) & ~1
     data = _read_ff_text(gdb, sp)
+    if ctx.cb_survey:
+        # cb 区占用采集（避让带）：屏蔽文本打印后，扫 VRAM 非零 tile = 官方占用。
+        # 内部按场景签名（DISPCNT+BGxCNT）去重，同页只采一次。
+        _survey_cb_avoid(gdb, ctx)
     if not ctx._hit((sp, data[:64])):
         return
     end = sp + len(data) - 1
@@ -1205,6 +1212,105 @@ def _maybe_vram_survey(gdb: GdbClient, ctx: Ctx) -> None:
         ctx.log(f"  cb2尾 0x1F8-0x1FF (0x0600BF00) 非零={'有' if any(tail) else '全零'}")
     except GdbError:
         pass
+
+
+# ---------------------------------------------------------------------------
+# cb 区占用采集（避让带）------------------------------------------------------
+# 用途：配合「屏蔽文本打印开关」（hook 侧 ADDR_V6_BYPASS=0x0203FEB8 写 1）一起用。
+#   —— 屏蔽后中文/官方字符都不再往 VRAM 写 tile，此时扫 VRAM 各 charblock 的
+#   非零 tile 得到的就是「纯官方占用」= 避让带（官方预渲染 atlas + UI 图标 +
+#   场景映射 + OBJ 精灵），这正是 v8 顺序分配器缺的那部分（关闭按钮/血条/状态
+#   图标等不在文本 tilemap 扫描范围内的 UI 元素）。
+# 采集单位：物理 charblock（cb0~cb3 是 BG 区，cb4~cb5 是 OBJ 精灵区），每个
+#   cb = 16KB = 512 tile（4bpp 32B/tile）。输出每个 cb 的非零 tile 连续区间。
+# 触发：挂在 InitTextPrinter handler（屏蔽开关只短路 PrintNextChar，不影响
+#   InitTextPrinter 的窗口初始化 + 字形预渲染）。场景签名（DISPCNT+BGxCNT×4）
+#   变化时采集一次，避免同页刷屏。
+
+CB_SURVEY_BASE = 0x06000000
+CB_SURVEY_SIZE = 0x4000          # 16KB = 512 tile
+CB_SURVEY_TILE = 32              # 4bpp 每 tile 字节
+CB_SURVEY_LABELS = ("cb0", "cb1", "cb2", "cb3", "cb4(OBJ)", "cb5(OBJ)")
+
+
+def _cb_ranges(data: bytes) -> list[tuple[int, int]]:
+    """一个 cb 的 512 tile（每 tile 32B）→ 非零 tile 连续区间 [(s,e) 左闭右开]。"""
+    ranges: list[tuple[int, int]] = []
+    s = None
+    for t in range(512):
+        tile = data[t * CB_SURVEY_TILE:(t + 1) * CB_SURVEY_TILE]
+        if any(tile):
+            if s is None:
+                s = t
+        elif s is not None:
+            ranges.append((s, t))
+            s = None
+    if s is not None:
+        ranges.append((s, 512))
+    return ranges
+
+
+def _fmt_cb_ranges(ranges: list[tuple[int, int]]) -> str:
+    if not ranges:
+        return "（全空）"
+    return " ".join(f"[0x{s:03X}-0x{e-1:03X}]" for s, e in ranges)
+
+
+def _survey_cb_avoid(gdb: GdbClient, ctx: Ctx) -> None:
+    """采集当前场景 cb 区占用（避让带）。场景签名变化时采集一次。"""
+    try:
+        dispcnt_b = bytes(gdb.read_mem(0x04000000, 2))
+        bgcnt_b = bytes(gdb.read_mem(0x04000008, 8))
+    except GdbError:
+        return
+    if len(dispcnt_b) < 2 or len(bgcnt_b) < 8:
+        return
+    dispcnt = u16(dispcnt_b, 0)
+    bgcnt = [u16(bgcnt_b, i * 2) for i in range(4)]
+    sig = (dispcnt, tuple(bgcnt))
+    if sig == ctx._cb_sig:
+        return
+    ctx._cb_sig = sig
+
+    mode = dispcnt & 7
+    obj_on = (dispcnt >> 12) & 1
+    ctx.log(f"\n[CBAVOID] 场景签名 mode={mode} DISPCNT=0x{dispcnt:04X} OBJ启用={obj_on}")
+    for layer in range(4):
+        cnt = bgcnt[layer]
+        en = (dispcnt >> (8 + layer)) & 1
+        ctx.log(f"  BG{layer}: charBase={(cnt >> 2) & 3} screenBase={(cnt >> 8) & 0x1F} "
+                f"8bpp={(cnt >> 7) & 1} 启用={en}")
+
+    for cb in range(6):
+        base = CB_SURVEY_BASE + cb * CB_SURVEY_SIZE
+        try:
+            data = _read_chunks(gdb, base, CB_SURVEY_SIZE, step=0x100)
+        except GdbError as e:
+            ctx.log(f"  {CB_SURVEY_LABELS[cb]} (0x{base:08X}): 读取失败 {e}")
+            continue
+        if len(data) < CB_SURVEY_SIZE:
+            ctx.log(f"  {CB_SURVEY_LABELS[cb]} (0x{base:08X}): 读取不足 {len(data)}B")
+            continue
+        ranges = _cb_ranges(data)
+        ctx.log(f"  {CB_SURVEY_LABELS[cb]} (0x{base:08X}): {_fmt_cb_ranges(ranges)}")
+
+
+# hook 侧屏蔽文本打印开关（ADDR_V6_BYPASS，见 configs/.../hook/include/game.h）。
+# 非 0 → PrintNextChar_Hook 直接 return 1，连官方串都不打印。
+ADDR_TEXT_BYPASS = 0x0203FEB8
+
+
+def _write_bypass_text(gdb: GdbClient, ctx: Ctx) -> None:
+    """写 ADDR_V6_BYPASS=1 屏蔽文本打印（配合 --cb-survey 采纯官方避让带）。"""
+    try:
+        r = gdb.cmd(f"M{ADDR_TEXT_BYPASS:x},1:01")
+    except GdbError as e:
+        ctx.log(f"  ⚠ 写屏蔽开关 0x{ADDR_TEXT_BYPASS:08X}=1 失败: {e}")
+        return
+    if r.startswith("E") or not r:
+        ctx.log(f"  ⚠ 写屏蔽开关 0x{ADDR_TEXT_BYPASS:08X}=1 失败: {r}")
+    else:
+        ctx.log(f"  屏蔽文本打印开关已置位（0x{ADDR_TEXT_BYPASS:08X}=1）")
 
 
 @handler("ChsFontFunc")
@@ -2217,7 +2323,8 @@ def run_log(args: argparse.Namespace) -> int:
         return 2
 
     ctx = Ctx(gdb, logpath, single, double, origin, dedup=not args.no_dedup,
-              vram_survey=bool(getattr(args, "vram_survey", False)))
+              vram_survey=bool(getattr(args, "vram_survey", False)),
+              cb_survey=bool(getattr(args, "cb_survey", False)))
 
     global _TILES_HARVESTER
     _TILES_HARVESTER = None
@@ -2239,6 +2346,9 @@ def run_log(args: argparse.Namespace) -> int:
         f" [{args.game}: {', '.join(h.name for h in hooks)}] {mode} ====="
     )
     ctx.log(f"  {tiles_note}")
+
+    if getattr(args, "bypass_text", False):
+        _write_bypass_text(gdb, ctx)
 
     armed = [h for h in hooks if _arm(ctx, h)]
     if not armed:
@@ -2328,6 +2438,14 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument(
         "--vram-survey", action="store_true",
         help="cb3 勘验：场景签名变化时自动报告 BG 层 charbase/tilemap 引用/cb3 占用")
+    ap.add_argument(
+        "--cb-survey", action="store_true",
+        help="cb 区占用采集（避让带）：配合屏蔽文本打印开关（ADDR_V6_BYPASS=1），"
+        "在 InitTextPrinter 命中时扫 VRAM 6 个 charblock 非零 tile，输出官方避让带区间")
+    ap.add_argument(
+        "--bypass-text", action="store_true",
+        help="连接后写 ADDR_V6_BYPASS(0x0203FEB8)=1 屏蔽所有文本打印，"
+        "让 --cb-survey 采到纯官方避让带")
     ap.add_argument(
         "--no-tiles",
         action="store_true",

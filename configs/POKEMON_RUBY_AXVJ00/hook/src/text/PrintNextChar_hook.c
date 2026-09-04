@@ -522,9 +522,6 @@ int PrintNextChar_Hook(TextPrinter *win)
     if (!win)
         return 0;
 
-    if (*(volatile uint8_t *)ADDR_V6_BYPASS != 0u)
-        return 1;
-
     text = (const uint8_t *)(uintptr_t)win_u32(win, WIN_TEXT_PTR);
     idx = win_u16(win, WIN_TEXT_INDEX);
     c = text[idx];
@@ -533,6 +530,9 @@ int PrintNextChar_Hook(TextPrinter *win)
         return PrintNextChar_Origin(win);
 
     win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(idx + 1u));
+
+    if (*(volatile uint8_t *)ADDR_V6_BYPASS != 0u)
+        return 1;
 
     if (TranslateHandleChar(win, c))
         return 1;

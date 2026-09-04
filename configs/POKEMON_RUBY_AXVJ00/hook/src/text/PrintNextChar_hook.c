@@ -6,9 +6,12 @@
  *   2) resolve(tm, fn) → font_px：fn4 / tm2 → 强制 8px；场景表 / 默认 12
  *   3) 取字 → g128 → chs_emit：按 tm 落点
  *        tm2     写 win[0x20] 缓冲，列步进 +0x40（官方血条再 CpuSet→OBJ）
- *        tm0/tm1 v8_alloc + UTM，并 TILE_OFFSET += adv*2
+ *        tm0     官方线性 TILE_BASE+TILE_OFFSET + UTM（不同 BASE 区互不冲 VRAM）
+ *        tm1     v8_alloc + UTM，并 TILE_OFFSET += adv*2
  *        tm3     v8_alloc + UTM，不推 TILE_OFFSET（网格只推 cursorTileX）
- *   tm1 是分配器的主因（预渲染窗无自写 VRAM）；tm0/tm3 中文叠字同样领号避 atlas。
+ *   tm1 是分配器的主因（预渲染窗无自写 VRAM）；tm3 中文叠字领号避 atlas。
+ *   tm0 不走 v8_alloc：战斗四格(BASE≈0x90)与「怎么办」(BASE≈0x190) 同 tpl/同 cb，
+ *   若共用 0x100 起领号，后一次 Init 会盖掉前一次 VRAM。
  * ===================================================================================== */
 #include "text.h"
 #include "blend_glyph.h"
@@ -65,6 +68,16 @@ static void resolve_draw(TextPrinter *win, uint8_t *tm_out, uint8_t *fn_out,
         *font_px_out = v6_scene_font(rule, win_u8(win, WIN_CURSOR_X));
     else
         *font_px_out = 12u;
+}
+
+/* tm0：跟官方线性寻址；禁止与「怎么办」等同 cb 窗共用 v8_alloc(0x100+) */
+static uint16_t chs_claim_tile(TextPrinter *win, uint8_t tm, uint8_t font_px,
+                               uint8_t glyph_len)
+{
+    if (tm == 0u)
+        return (uint16_t)(win_u16(win, WIN_TILE_BASE)
+                          + win_u16(win, WIN_TILE_OFFSET));
+    return v8_alloc_tile(win, font_px, glyph_len);
 }
 
 /* ---- Stage2：字模 → 列对（8/16）；12px 由相位路径 extract_cols ---- */
@@ -174,7 +187,7 @@ static void chs_fill_bg(TextPrinter *win, uint16_t tile, unsigned x0, unsigned x
                            0, zero, x1 - x0, x0, colors);
 }
 
-/* 12px（及相位上的 8px 标点）：两段式 + v8 领号；返回 adv 列数 */
+/* 12px（及相位上的 8px 标点）：两段式 + 领号；返回 adv 列数 */
 static unsigned print_glyph_px(TextPrinter *win,
                                const uint8_t g128[CHS_CELL_BYTES],
                                unsigned ink)
@@ -185,7 +198,7 @@ static unsigned print_glyph_px(TextPrinter *win,
     uint8_t up[32], lo[32];
     unsigned px, phase, w0, w1, adv;
     uint16_t t0, t1;
-    uint8_t tx0;
+    uint8_t tx0, tm;
 
     v8_phase_before_glyph(win);
 
@@ -195,6 +208,7 @@ static unsigned print_glyph_px(TextPrinter *win,
     w1 = ink - w0;
     adv = (phase + ink) / 8u;
     tx0 = win_u8(win, WIN_CURSOR_TILE_X);
+    tm = win_u8(win, WIN_TEXTMODE) & 7u;
     if (adv < 1u)
         adv = 1u;
     if (!tpl)
@@ -206,13 +220,21 @@ static unsigned print_glyph_px(TextPrinter *win,
     fill_colors(win, colors);
 
     if (phase == 0u) {
-        t0 = v8_alloc_tile(win, 12u, 2u);
+        t0 = chs_claim_tile(win, tm, 12u, 2u);
         if (t0 == 0u)
             return adv;
     } else {
         t0 = v8_phase_last_tile();
     }
-    t1 = (w1 != 0u) ? v8_alloc_tile(win, 12u, 2u) : 0u;
+    /* tm0 线性：下一列 = t0+2；v8 则再 alloc 一对 */
+    if (w1 != 0u) {
+        if (tm == 0u)
+            t1 = (uint16_t)(t0 + 2u);
+        else
+            t1 = chs_claim_tile(win, tm, 12u, 2u);
+    } else {
+        t1 = 0u;
+    }
 
     extract_cols(g128, 0u, w0, up, lo);
     (void)blend_glyph_4bpp((uint32_t *)(void *)(tile_data + ((uint32_t)t0 << 5)),
@@ -274,7 +296,7 @@ static unsigned chs_emit(TextPrinter *win, uint8_t tm, unsigned font_px,
     for (col = 0; col < cols; col++) {
         uint16_t tile = 1u;
         if (tm != 2u) {
-            tile = v8_alloc_tile(win, (uint8_t)font_px, 2u);
+            tile = chs_claim_tile(win, tm, (uint8_t)font_px, 2u);
             if (tile == 0u)
                 return col;
         }

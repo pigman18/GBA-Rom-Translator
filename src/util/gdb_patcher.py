@@ -2428,12 +2428,6 @@ _TPL_LINE_RE = re.compile(
     r"模板@(0x[0-9A-Fa-f]+):\s*charBase=(\d+)\s+pal=\d+\s+C/D/E=\S+\s+"
     r"font=(\d+)\s+textMode=(\d+)")
 
-# 与 hook 侧 include/scene_cfg.h 的 kV8SigBgMask 必须保持一致
-_SCENE_BG_MASK = 0x1F8C
-# 避让带数组复用的键：相对号区间元组完全相同 ⇒ 共用同一 static 数组
-BandKey = tuple
-
-
 def _parse_band_ranges(text: str) -> list[tuple[int, int]]:
     """'[0x001-0x0D4] [0x0D6-0x0DC]' / '（全空）' → [(lo,hi)] 闭区间。"""
     if not text or ("全空" in text) or ("失败" in text) or ("不足" in text):
@@ -2442,33 +2436,29 @@ def _parse_band_ranges(text: str) -> list[tuple[int, int]]:
             for a, b in re.findall(r"\[(0x[0-9A-Fa-f]+)-(0x[0-9A-Fa-f]+)\]", text)]
 
 
-def _merge_bands(ranges: list[tuple[int, int]],
-                 gap: int = 3) -> list[tuple[int, int]]:
-    """闭区间合并：与上一区间缝隙 <= gap 即合并（保守：多避让几个孤立空 tile）。"""
-    out: list[list[int]] = []
-    for lo, hi in sorted(ranges):
+def _merge_bands_cb(ranges: list[tuple[int, int, int]],
+                    gap: int = 3) -> list[tuple[int, int, int]]:
+    """按 char_base 分组后合并闭区间。项为 (char_base, lo, hi)。"""
+    by_cb: dict[int, list[list[int]]] = {}
+    for cb, lo, hi in sorted(ranges):
+        out = by_cb.setdefault(cb, [])
         if out and lo - out[-1][1] <= gap:
             out[-1][1] = max(out[-1][1], hi)
         else:
             out.append([lo, hi])
-    return [(lo, hi) for lo, hi in out]
-
-
-def _bg_norm(bg: tuple[int, int, int, int]) -> int:
-    """(charBase, screenBase, 8bpp, 启用) → bgcnt 按 _SCENE_BG_MASK 归一。"""
-    cb, sb, bpp, _en = bg
-    return ((sb << 8) | (bpp << 7) | (cb << 2)) & _SCENE_BG_MASK
+    return [(cb, lo, hi) for cb, segs in sorted(by_cb.items())
+            for lo, hi in segs]
 
 
 def _parse_cbavoid_scenes(log_path: str, gap: int = 3) -> list[dict]:
-    """从 gdb 日志抽取 [CBAVOID] 段，按「DISPCNT + BG0~3CNT」签名去重。
+    """从 gdb 日志抽取 [CBAVOID] 段，先按硬件签名去重，再按 tpl 并成一条。
 
-    返回每项 dict：line / dispcnt / bgs[(cb,sb,bpp,en)×4] / tpl / char_base /
-    font / text_mode / cont[内容片段] / cb_raw{cb号: 原文} / bands[(lo,hi)] / raw_n
+    返回每项 dict：tpl / bands[(char_base,lo,hi)] / sources[原始签名摘要…]
+    DISPCNT/BGxCNT 只进注释，不进生成的 C 结构。
     """
     with open(log_path, encoding="utf-8", errors="replace") as f:
         lines = f.read().split("\n")
-    scenes: list[dict] = []
+    raw_scenes: list[dict] = []
     seen: set[tuple] = set()
     for i, line in enumerate(lines):
         if not _CBAVOID_HDR_RE.match(line):
@@ -2493,7 +2483,6 @@ def _parse_cbavoid_scenes(log_path: str, gap: int = 3) -> list[dict]:
             if cm:
                 cb_raw[int(cm.group(1))] = cm.group(2).strip()
 
-        # 该签名下实际打印的窗口模板（CBAVOID 之后紧随的 InitTextPrinter 记录）
         tpl = char_base = font = text_mode = None
         conts: list[str] = []
         for j in range(i, min(i + 45, len(lines))):
@@ -2505,52 +2494,54 @@ def _parse_cbavoid_scenes(log_path: str, gap: int = 3) -> list[dict]:
                 text_mode = int(tm_.group(4))
             if lines[j].startswith("  内容:") and len(conts) < 2:
                 conts.append(lines[j][7:].strip())
-        if char_base is None:                   # 日志末尾截断，无法折算坐标
+        if char_base is None or tpl is None:
             continue
 
-        # 折算：相对号 = cb[char_base] 原值，或 cb[char_base+1] 原值 + 0x200
-        rel: list[tuple[int, int]] = []
-        for k in (char_base, char_base + 1):
-            off = 0 if k == char_base else 512
-            for lo, hi in _parse_band_ranges(cb_raw.get(k, "")):
-                rel.append((lo + off, hi + off))
-        bands = _merge_bands(rel, gap)
+        # 每块 cb 保留自己的相对号（不再折进窗 charBase 的 0..1023）
+        bands_cb: list[tuple[int, int, int]] = []
+        for k, text in cb_raw.items():
+            if k > 3:                           # 跳过 OBJ 区调查行
+                continue
+            for lo, hi in _parse_band_ranges(text):
+                bands_cb.append((k, lo, hi))
+        bands = _merge_bands_cb(bands_cb, gap)
 
-        scenes.append(dict(line=i + 1, dispcnt=dispcnt, bgs=bgs, tpl=tpl,
-                           char_base=char_base, font=font, text_mode=text_mode,
-                           cont=conts, cb_raw=cb_raw, bands=bands, raw_n=len(rel)))
-    return scenes
+        raw_scenes.append(dict(
+            line=i + 1, dispcnt=dispcnt, bgs=bgs, tpl=tpl,
+            char_base=char_base, font=font, text_mode=text_mode,
+            cont=conts, cb_raw=cb_raw, bands=bands, raw_n=len(bands_cb)))
+
+    # 同 tpl 并集
+    by_tpl: dict[int, dict] = {}
+    for sc in raw_scenes:
+        tpl = sc["tpl"]
+        if tpl not in by_tpl:
+            by_tpl[tpl] = dict(
+                tpl=tpl, bands=list(sc["bands"]), sources=[sc],
+                raw_n=sc["raw_n"])
+        else:
+            ent = by_tpl[tpl]
+            ent["bands"] = _merge_bands_cb(ent["bands"] + sc["bands"], gap)
+            ent["sources"].append(sc)
+            ent["raw_n"] += sc["raw_n"]
+    return list(by_tpl.values())
 
 
-def _parse_existing_scene_names(path: Optional[str]) -> dict[tuple, dict]:
-    """从已有 scene_cfg.c 抽取 (tpl,dispcnt,bgcnt) → {scene,band,doc}。
-
-    让 export-scene 重采后仍保留人工起的语义名与手写注释。
-    """
+def _parse_existing_scene_names(path: Optional[str]) -> dict[int, dict]:
+    """从已有 scene_cfg.c 抽取 tpl → {scene, doc}（新格式仅按 tpl）。"""
     if not path or not os.path.exists(path):
         return {}
     with open(path, encoding="utf-8", errors="replace") as f:
         src = f.read()
-    out: dict[tuple, dict] = {}
+    out: dict[int, dict] = {}
     pat = re.compile(
         r"static\s+const\s+struct\s+V8AvoidScene\s+(\w+)\s*=\s*\{(.*?)\};", re.S)
     for m in pat.finditer(src):
         name, body = m.group(1), m.group(2)
-
-        def _num(field: str) -> Optional[int]:
-            mm = re.search(rf"\.{field}\s*=\s*(0x[0-9A-Fa-f]+|\d+)u?", body)
-            return int(mm.group(1), 0) if mm else None
-
-        tpl, dispcnt = _num("tpl"), _num("dispcnt")
-        bgm = re.search(r"\.bgcnt\s*=\s*\{([^}]*)\}", body)
-        if tpl is None or dispcnt is None or not bgm:
+        mm = re.search(r"\.tpl\s*=\s*(0x[0-9A-Fa-f]+|\d+)u?", body)
+        if not mm:
             continue
-        bgcnt = tuple(int(x, 0) & _SCENE_BG_MASK
-                      for x in re.findall(r"0x[0-9A-Fa-f]+|\d+", bgm.group(1)))
-        if len(bgcnt) != 4:
-            continue
-        bmm = re.search(r"\.bands\s*=\s*(\w+)", body)
-        # 往上抓紧邻的连续 // 注释行
+        tpl = int(mm.group(1), 0)
         doc: list[str] = []
         for ln in reversed(src[:m.start()].rstrip().split("\n")):
             s = ln.strip()
@@ -2558,31 +2549,19 @@ def _parse_existing_scene_names(path: Optional[str]) -> dict[tuple, dict]:
                 doc.insert(0, s)
             else:
                 break
-        out[(tpl, dispcnt, bgcnt)] = dict(
-            scene=name, band=bmm.group(1) if bmm else None, doc=doc)
+        out[tpl] = dict(scene=name, doc=doc)
     return out
-
-
-
 
 
 def _gen_avoid_c(scenes: list[dict], reuse: Optional[dict] = None,
                  gap: int = 3) -> str:
-    """生成 scene_cfg.c 的避让带片段。
-
-    每个场景一个独立命名实例（static const struct V8AvoidScene kXxxScene），
-    bands 直接内联在 .bands 字段（复合字面量），不引用任何共享 band 数组。
-    """
+    """生成 scene_cfg.c 避让带片段：每 tpl 一条，bands 内联，band_n 写死数字。"""
     reuse = reuse or {}
-    tpl_seq: dict[int, int] = {}
     used: set[str] = set()
     names: list[str] = []
 
-    def _fresh(sig: tuple) -> str:
-        tpl, _d, _b = sig
-        n = tpl_seq.get(tpl, 0) + 1
-        tpl_seq[tpl] = n
-        base = f"kTpl{(tpl & 0xFFF):03X}_{n}Scene"
+    def _fresh(tpl: int) -> str:
+        base = f"kTpl{(tpl & 0xFFF):03X}Scene"
         cand, k = base, 2
         while cand in used:
             cand = f"{base}_{k}"
@@ -2600,39 +2579,33 @@ def _gen_avoid_c(scenes: list[dict], reuse: Optional[dict] = None,
 
     out: list[str] = []
     for sc in scenes:
-        sig = (sc["tpl"], sc["dispcnt"],
-               tuple(_bg_norm(b) for b in sc["bgs"]))
-        old = reuse.get(sig)
-        name = old["scene"] if old else _fresh(sig)
+        tpl = sc["tpl"]
+        old = reuse.get(tpl)
+        name = old["scene"] if old else _fresh(tpl)
+        used.add(name)
         names.append(name)
         if old and old.get("doc"):
-            out.extend(old["doc"])                     # 保留人工注释
+            out.extend(old["doc"])
         else:
             out.append("// " + "-" * 74)
-            out.append(f"//   日志行号 {sc['line']} / tpl 0x{sc['tpl']:08X} "
-                       f"/ charBase {sc['char_base']} / "
-                       f"font{sc['font']} / textMode {sc['text_mode']}")
-            out.append(f"//   DISPCNT 0x{sc['dispcnt']:04X} | {_bg_desc(sc)}")
-            if sc["cont"]:
-                out.append("//   内容: " + " / ".join(sc["cont"])[:64])
-            for k in (sc["char_base"], sc["char_base"] + 1):
-                raw = sc["cb_raw"].get(k, "（全空）")
-                if raw and "全空" not in raw:
-                    out.append(f"//   原始 cb{k}: {raw[:96]}")
-            out.append(f"//   合并后 {len(sc['bands'])} 段"
+            out.append(f"//   tpl 0x{tpl:08X}（{len(sc['sources'])} 个硬件签名并集）")
+            for src in sc["sources"]:
+                out.append(f"//   · 行{src['line']} DISPCNT 0x{src['dispcnt']:04X} "
+                           f"winCb{src['char_base']} font{src['font']} "
+                           f"tm{src['text_mode']} | {_bg_desc(src)}")
+                if src["cont"]:
+                    out.append("//     内容: " + " / ".join(src["cont"])[:64])
+            out.append(f"//   bands {len(sc['bands'])} 段"
                        f"（原 {sc['raw_n']} 段，缝隙 <= {gap} 合并）")
             out.append("// " + "-" * 74)
         out.append(f"static const struct V8AvoidScene {name} = {{")
-        out.append(f"    .tpl       = 0x{sc['tpl']:08X}u,")
-        out.append(f"    .char_base = {sc['char_base']}u,")
-        out.append(f"    .dispcnt   = 0x{sc['dispcnt']:04X}u,")
-        bgc = ", ".join(f"0x{_bg_norm(b):04X}u" for b in sc["bgs"])
-        out.append(f"    .bgcnt     = {{ {bgc} }},")
-        out.append("    .bands     = (const struct V8AvoidBand[]) {")
-        for lo, hi in sc["bands"]:
-            out.append(f"        {{ .lo = 0x{lo:03X}u, .hi = 0x{hi:03X}u }},")
+        out.append(f"    .tpl    = 0x{tpl:08X}u,")
+        out.append("    .bands  = (const struct V8AvoidBand[]) {")
+        for cb, lo, hi in sc["bands"]:
+            out.append(f"        {{ .char_base = {cb}u, "
+                       f".lo = 0x{lo:03X}u, .hi = 0x{hi:03X}u }},")
         out.append("    },")
-        out.append(f"    .band_n    = {len(sc['bands'])}u,")
+        out.append(f"    .band_n = {len(sc['bands'])}u,")
         out.append("};")
         out.append("")
 
@@ -2669,12 +2642,10 @@ def run_export_scene(args: argparse.Namespace) -> int:
     else:
         with open(args.out, "w", encoding="utf-8", newline="\n") as f:
             f.write(code)
-        print(f"[export-scene] {len(scenes)} 个场景 → {args.out}")
+        print(f"[export-scene] {len(scenes)} 个 tpl → {args.out}")
 
-    reused = sum(1 for s in scenes
-                 if (s["tpl"], s["dispcnt"],
-                     tuple(_bg_norm(b) for b in s["bgs"])) in reuse)
-    print(f"[export-scene] 签名 {len(scenes)} 条 / "
+    reused = sum(1 for s in scenes if s["tpl"] in reuse)
+    print(f"[export-scene] tpl {len(scenes)} 条 / "
           f"复用旧名 {reused} 条（--reuse-names={args.reuse_names or '未指定'}）",
           file=sys.stderr)
     return 0
@@ -2742,7 +2713,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument(
         "--reuse-names",
         default=None,
-        help="export-scene：已有 scene_cfg.c 路径，按 tpl+DISPCNT+BGxCNT 复用其"
+        help="export-scene：已有 scene_cfg.c 路径，按 tpl 复用其"
              "场景名/手写注释，避免重采后退化成 kTplXXX_1Scene",
     )
     ap.add_argument(

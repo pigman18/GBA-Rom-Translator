@@ -27,7 +27,7 @@
  *     窗口切换自然从头累计，不存在残留。
  * ==========================================================================*/
 #include "tile_alloc.h"
-#include "scene_cfg.h"   /* kV8AvoidScenes / kV8AvoidSceneN / kV8SigBgMask：场景配置避让带 */
+#include "scene_cfg.h"   /* kV8AvoidScenes / kV8AvoidSceneN：场景配置避让带 */
 
 /* 占用位图：128 字节 = 1024 bit = tile 相对号 0~1023。
  * bit 布局：位图[0] bit0 = tile 0，位图[0] bit7 = tile 7，位图[1] bit0 = tile 8 … */
@@ -55,18 +55,6 @@ static void v8_bit_clear_all(volatile uint8_t *bm)
         bm[i] = 0u;
 }
 
-/* 读 GBA 寄存器（volatile 映射） */
-static uint16_t v8_reg_dispcnt(void)
-{
-    return *(volatile uint16_t *)0x04000000u;
-}
-
-/* 读 REG_BGxCNT（BG0 @0x04000008，每 2 字节一个）。 */
-static uint16_t v8_reg_bgcnt(unsigned idx)
-{
-    return *(volatile uint16_t *)(0x04000008u + (idx << 1));
-}
-
 /* 分配上界（charBase 相对号）：避免落入 OBJ 精灵 charBlock。
  * GBA 的 OBJ tile 数据固定占 VRAM charBlock 4/5（DISPCNT bit6 在 4/5 间选，与 BG
  * charBase 无关）。窗口相对 tile 号 t 落物理 charBlock = char_base + t/512；落 OBJ 当
@@ -83,45 +71,42 @@ static uint16_t v8_alloc_hi(uint8_t char_base)
     return (uint16_t)hi;
 }
 
-/* ============================================================================
- * 场景配置避让带查询：补 v8_alloc_begin「只扫文本 tilemap 活引用」漏掉的那部分
- * 官方占用（关闭按钮、血条状态图标、场景映射、其它 BG 层、扫描后才绘制的 UI）。
- * 键 = 硬件签名（REG_DISPCNT + REG_BG0~3CNT，按 kV8SigBgMask 归一），与 gdb
- * --cb-survey 的去重键一致。同 tpl 多签名（详情页 4 种硬件配置）靠签名区分。
- * 兜底：签名未命中时按窗口模板地址（tpl）匹配，保证已知场景至少被覆盖一条。
- * 已知数据缺陷：战斗 UI ⑪ 那条签名 DISPCNT=0x0000（采集瞬间显示未开），归一后
- * 恒为 0，实机活跃场景 DISPCNT 非 0 => 该条签名永不命中，只能靠 tpl 兜底。
- * ==========================================================================*/
-#define V8_SIG_DISPCNT_MASK 0x1F07u   /* mode[2:0] + BG 启用[11:8] + OBJ[12] */
-
+/* 按 tpl 查避让表。DISPCNT/BGxCNT 不入库；同 tpl 多页已在配置侧并成并集。 */
 static const struct V8AvoidScene *v8_lookup_avoid(uint8_t *tpl)
 {
-    uint16_t disp = v8_reg_dispcnt() & V8_SIG_DISPCNT_MASK;
-    uint16_t bg[4];
+    uint32_t self = (uint32_t)(uintptr_t)tpl;
     unsigned i;
-    for (i = 0; i < 4u; i++)
-        bg[i] = v8_reg_bgcnt(i) & kV8SigBgMask;
-    uint8_t cb = tpl[TPL_CHARBASE];
-
-    for (i = 0; i < kV8AvoidSceneN; i++) {
-        const struct V8AvoidScene *s = &kV8AvoidScenes[i];
-        if (s->char_base != cb)
-            continue;
-        if ((s->dispcnt & V8_SIG_DISPCNT_MASK) != disp)
-            continue;
-        if (s->bgcnt[0] != bg[0] || s->bgcnt[1] != bg[1] ||
-            s->bgcnt[2] != bg[2] || s->bgcnt[3] != bg[3])
-            continue;
-        return s;
-    }
-    /* 兜底：按窗口模板地址（同 tpl 多签名时取第一条） */
-    {
-        uint32_t self = (uint32_t)(uintptr_t)tpl;
-        for (i = 0; i < kV8AvoidSceneN; i++)
-            if (kV8AvoidScenes[i].tpl == self)
-                return &kV8AvoidScenes[i];
-    }
+    for (i = 0; i < kV8AvoidSceneN; i++)
+        if (kV8AvoidScenes[i].tpl == self)
+            return &kV8AvoidScenes[i];
     return (const struct V8AvoidScene *)0;
+}
+
+/* 把 band（相对 band.char_base）折成窗口相对号后标进位图。 */
+static void v8_mark_avoid_bands(volatile uint8_t *bm, uint8_t win_cb,
+                                const struct V8AvoidBand *bands, uint8_t band_n)
+{
+    unsigned b;
+    if (!bands || band_n == 0u)
+        return;
+    for (b = 0; b < band_n; b++) {
+        const struct V8AvoidBand *bd = &bands[b];
+        int32_t lo, hi, t;
+        int dcb;
+        if (bd->char_base > 3u || bd->lo > bd->hi)
+            continue;
+        dcb = (int)bd->char_base - (int)win_cb;
+        lo = (int32_t)bd->lo + (int32_t)dcb * 512;
+        hi = (int32_t)bd->hi + (int32_t)dcb * 512;
+        if (lo < 0)
+            lo = 0;
+        if (hi > 1023)
+            hi = 1023;
+        if (lo > hi)
+            continue;
+        for (t = lo; t <= hi; t++)
+            v8_bit_set(bm, (uint16_t)t);
+    }
 }
 
 /* ============================================================================
@@ -163,22 +148,11 @@ void v8_alloc_begin(TextPrinter *win)
 
     /* 合并场景配置避让带（kV8AvoidScenes）：补 tilemap 活引用扫不到的官方占用——
      * 关闭按钮 / 血条状态图标 / 场景映射 / 其它 BG 层 / 扫描后才绘制的 UI。
-     * 不合并则这些 tile 永远不在位图里被标黑，中文会被顺序分配器领到上面
-     * （如设置菜单关闭按钮被覆盖成橙色）。 */
+     * band.char_base 可与窗不同：按 (band_cb - win_cb)*512 折成窗口相对号。 */
     {
         const struct V8AvoidScene *av = v8_lookup_avoid(tpl);
-        if (av) {
-            uint8_t b;
-            for (b = 0; b < av->band_n; b++) {
-                uint16_t lo = av->bands[b].lo;
-                uint16_t hi = av->bands[b].hi;
-                uint16_t t;
-                if (lo > hi)
-                    continue;
-                for (t = lo; t <= hi && t < 1024u; t++)
-                    v8_bit_set(bm, t);
-            }
-        }
+        if (av)
+            v8_mark_avoid_bands(bm, tpl[TPL_CHARBASE], av->bands, av->band_n);
     }
 }
 

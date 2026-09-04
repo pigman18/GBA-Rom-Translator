@@ -1800,8 +1800,8 @@ def _on_lz_vram(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> No
 #   LoadSpritePalette / LoadCompressedObjectPalette → tag 登记调色板源
 #   CreateSprite 读 SpriteTemplate{tileTag@0, paletteTag@2, oam@4}
 #   （AXVJ 布局，已反汇编证实；美版布局不同勿混用）
-#   三件套齐 → 权威尺寸 + 未渐变 ROM 调色板 → 导出 PNG + 写 preset；
-#   缺任一环仅记日志不落盘。跨局按 preset 配置 md5 指纹去重，不一致覆盖重导。
+#   三件套齐 → 权威尺寸 + 未渐变 ROM 调色板 → 导出 PNG 到 work/（不写 tiles.presets）；
+#   缺任一环仅记日志不落盘。跨局按 yaml 已有 preset 的 md5 指纹跳过重导。
 
 # OAM attr0 bit14-15 形状 / attr1 bit14-15 尺寸档 → (宽, 高) 像素
 # （标准 GBA 表：方形 8/16/32/64；宽形 16x8..64x32；高形 8x16..32x64）
@@ -1829,12 +1829,13 @@ class PendingSheet:
 
 
 class TilesHarvester:
-    """tiles 实时采集器 v2（登记 + 绑定）。
+    """tiles 实时采集器 v2（登记 + 绑定 → 导 PNG）。
 
     Load* 埋点登记资产：sheets[tag]={ROM 数据}, pal_by_tag[tag]=ROM 源；
     CreateSprite 埋点读 SpriteTemplate 得 (tileTag, paletteTag, 权威 w/h/is8)
-    并落 bindings。三件套齐 → 导出 PNG + 写 preset；缺环仅记日志不落盘。
-    跨局按 preset 配置 md5 指纹比对，不一致覆盖重导，一致跳过。
+    并落 bindings。三件套齐 → 导出 PNG 到 work/{game}/tiles/；
+    **不**写回 yaml 的 tiles.presets（人工维护）。缺环仅记日志不落盘。
+    跨局按已有 preset 配置 md5 指纹比对，一致则跳过重导。
     """
 
     def __init__(
@@ -2055,7 +2056,6 @@ class TilesHarvester:
             if not self._export(sh, w, h, is8, count, palette):
                 self.stats["skipped"] += 1
                 return
-            self._upsert_preset(sh, cfg, md5hex)
             self.known_md5[addr_key] = md5hex
             self.exported_addrs.add(sh.data_addr)
             self.stats["paired"] += 1
@@ -2110,6 +2110,7 @@ class TilesHarvester:
     @staticmethod
     def _build_preset(sh: PendingSheet, bpp: int, count: int,
                       w: int, h: int) -> dict:
+        """仅用于指纹比对（对照 yaml 已有条目）；不写回配置。"""
         return {
             "id": f"rt_{sh.data_addr:08X}",
             "label": f"rt tag=0x{sh.tag:04X} {sh.name}",
@@ -2122,43 +2123,6 @@ class TilesHarvester:
             "raw_size": len(sh.raw),
             "source": "gdb_patcher",
         }
-
-    def _upsert_preset(self, sh: PendingSheet, cfg: dict, md5hex: str) -> None:
-        """yaml 写回 preset：同地址已有则原位覆盖（指纹不一致才走到这），否则追加。"""
-        import yaml
-
-        try:
-            data = yaml.safe_load(self.game_yaml.read_text(encoding="utf-8")) or {}
-        except OSError as e:
-            self.log(f"  [tiles] 读 yaml 失败: {e}")
-            return
-        tiles = data.get("tiles")
-        if not isinstance(tiles, dict):
-            tiles = {}
-            data["tiles"] = tiles
-        presets = tiles.get("presets")
-        if not isinstance(presets, list):
-            presets = []
-            tiles["presets"] = presets
-        addr_hex = str(cfg["address"])
-        entry = dict(cfg)
-        entry["md5"] = md5hex
-        idx = next((i for i, p in enumerate(presets)
-                    if str(p.get("address") or "").lower() == addr_hex.lower()), None)
-        if idx is None:
-            presets.append(entry)
-            action = "追加"
-        else:
-            presets[idx] = entry
-            action = "覆盖"
-        try:
-            from util.texts_patcher import save_yaml_config
-
-            save_yaml_config(self.game_yaml, data)
-            self.log(f"  [tiles] preset {action}: {cfg['id']} "
-                     f"({cfg['count']}×{cfg['sprite_size']}) md5={md5hex[:8]}")
-        except Exception as e:
-            self.log(f"  [tiles] 写 yaml 失败: {e}")
 
 
 def _tiles_out_dir(game_id: str) -> Path:
@@ -2340,7 +2304,7 @@ def run_log(args: argparse.Namespace) -> int:
             origin,
             ctx.log,
         )
-        tiles_note = f"tiles 采集开 → {game_yaml.name} / {_tiles_out_dir(args.game).name}/"
+        tiles_note = f"tiles 采集开 → PNG {_tiles_out_dir(args.game).name}/（不写 presets）"
 
     ctx.log(
         f"\n===== gdb_patcher log @ {time.strftime('%H:%M:%S')}"
@@ -2700,7 +2664,7 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
     ap.add_argument(
         "--no-tiles",
         action="store_true",
-        help="关闭 tiles 实时采集（默认开：sheet→OAM 配对→导 PNG+追加 tiles.presets）",
+        help="关闭 tiles 实时采集（默认开：sheet→OAM 配对→导 PNG 到 work/；不写 tiles.presets）",
     )
     ap.add_argument("--log", default=None,
                     help=r"日志文件路径；缺省 src\util\work\{gameId}\gdb_patcher_log.log（按游戏分目录）")

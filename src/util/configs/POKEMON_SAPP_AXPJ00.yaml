@@ -526,33 +526,43 @@ gdb:
 - name: LoadSpriteSheet
   address: '0x080021C4'
   description: 图块 sheet → OBJ VRAM（r0=&sheet{data,size,tag}）
+  default: false
 - name: LoadSpritePalette
   address: '0x08002410'
   description: 调色板 sheet → gPlttBuffer OBJ 区（r0=&sheet{data,size,tag}）
+  default: false
 - name: LoadCompressedObjectPic
   address: '0x0800A77C'
   description: LZ77→0x02000000 后 LoadSpriteSheet（r0=&压缩图）
+  default: false
 - name: LoadCompressedObjectPalette
   address: '0x0800A7D0'
   description: LZ77→0x02000000 后 LoadSpritePalette（r0=&压缩调色板）
+  default: false
 - name: CreateSprite
   address: '0x08000BCC'
   description: 创建精灵（r0=&SpriteTemplate，AXVJ 布局 tileTag@0/paletteTag@2/oam*@4；绑定 sheet↔调色板 + 权威尺寸）
+  default: false
 - name: LoadCompressedPalette
   address: '0x08070A4C'
   description: 压缩调色板：LZ→0x0202F0BC + 2×拷贝→gPlttBuffer*（r0=src, r1=offset, r2=size）
+  default: false
 - name: LoadPalette
   address: '0x08070A90'
   description: 调色板 2×CpuCopy16→gPlttBufferUnfaded/Faded（r0=src, r1=offset, r2=size）
+  default: false
 - name: LZDecompressWram
   address: '0x0800A764'
   description: LZ77 解压到 EWRAM（r0=src, r1=dest）
+  default: false
 - name: LZDecompressVram
   address: '0x0800A770'
   description: LZ77 解压到 VRAM（r0=src, r1=dest）
+  default: false
 - name: DrawMapNamePopup
   address: '0x0809F654'
   description: 地图名弹窗绘制入口（无 handler，仅通用日志）
+  default: false
 - name: InitWindowTileData
   address: '0x08002A50'
   description: 分区器入口（JP 与美版同址；r0=win/template 待运行时定身份, r1=startOffset）——字库预渲染+分区链输入

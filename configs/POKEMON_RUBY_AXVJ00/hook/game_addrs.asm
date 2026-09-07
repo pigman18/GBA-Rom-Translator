@@ -90,6 +90,9 @@ PhraseTableVMA                          equ 0x08820000  ; C: ADDR_PHRASE_TABLE
 FontChsNormal                          equ 0x09000000  ; C: ADDR_FONT_CHS_NORMAL
 ; 8px 小汉库（meowth 管线生成，与 Normal 同 128B/字 容器；队伍名等小字窗使用）
 FontChsSmall                           equ 0x09100000  ; C: ADDR_FONT_CHS_SMALL
+; Middle 8x12 中字库（寒蝉点阵体 7px，PIL size=8 栅格；1 tile 列/字 = 2 tile/字，
+; 零相位态。与 Normal/Small 同 128B/字容器；宝可导航等 8px 场景使用）
+FontChsMiddle                          equ 0x09400000  ; C: ADDR_FONT_CHS_MIDDLE
 ; FontFunc[1] 二级分发表 / font1/4 配对表（文档参考）
 FontSubTable                           equ 0x081BB3BC  ; C: ADDR_FONT_SUBTABLE
 FontType1Map                           equ 0x081B34A8  ; C: ADDR_FONT_TYPE1_MAP

@@ -19,11 +19,17 @@
 #include "tile_alloc.h"
 
 /* ---- 场景字号表（scene_cfg）---- */
-const struct V6SceneRule *v6_scene_lookup(uint32_t tpl)
+/* 命中优先级：tpl+win 精确 > tpl 通配（win=0）。win 地址只在同模板多窗口
+ * 需要圈定时填（如宝可导航 0x0202E658）。 */
+const struct V6SceneRule *v6_scene_lookup(uint32_t tpl, uint32_t win_addr)
 {
     unsigned i;
     for (i = 0; i < kV6SceneN; i++)
-        if (kV6Scenes[i].tpl == tpl)
+        if (kV6Scenes[i].tpl == tpl && kV6Scenes[i].win != 0u
+            && kV6Scenes[i].win == win_addr)
+            return &kV6Scenes[i];
+    for (i = 0; i < kV6SceneN; i++)
+        if (kV6Scenes[i].tpl == tpl && kV6Scenes[i].win == 0u)
             return &kV6Scenes[i];
     return 0;
 }
@@ -42,13 +48,16 @@ uint8_t v6_scene_font(const struct V6SceneRule *r, uint8_t cx)
     return v6_scene_zone(r, cx)->font_px;
 }
 
-/* ---- resolve：tm + fn → font_px ---- */
+/* ---- resolve：tm + fn → font_px + 字形源 ----
+ * lib_out: 0=按 fontNum 选库（GetGlyph 原逻辑），2=Middle 字库 */
 static void resolve_draw(TextPrinter *win, uint8_t *tm_out, uint8_t *fn_out,
-                         uint8_t *font_px_out)
+                         uint8_t *font_px_out, uint8_t *lib_out)
 {
     uint8_t tm = win_u8(win, WIN_TEXTMODE) & 7u;
     uint8_t fn = win_u8(win, WIN_FONTNUM_REAL);
     const struct V6SceneRule *rule;
+
+    *lib_out = 0u;
 
     if (fn > 6u)
         fn = 3u;
@@ -63,11 +72,20 @@ static void resolve_draw(TextPrinter *win, uint8_t *tm_out, uint8_t *fn_out,
         *font_px_out = 8u;
         return;
     }
-    rule = v6_scene_lookup((uint32_t)(uintptr_t)win_template(win));
-    if (rule)
-        *font_px_out = v6_scene_font(rule, win_u8(win, WIN_CURSOR_X));
-    else
+    rule = v6_scene_lookup((uint32_t)(uintptr_t)win_template(win),
+                           (uint32_t)(uintptr_t)win);
+    if (rule) {
+        uint8_t fpx = v6_scene_font(rule, win_u8(win, WIN_CURSOR_X));
+        if (fpx == V6_FONT_PX_MIDDLE) {
+            /* Middle：几何走 8px 现有路径（1 列/字、相位恒 0），源走 Middle 库 */
+            *font_px_out = 8u;
+            *lib_out = 2u;
+        } else {
+            *font_px_out = fpx;
+        }
+    } else {
         *font_px_out = 12u;
+    }
 }
 
 /* tm0：跟官方线性寻址；禁止与「怎么办」等同 cb 窗共用 v8_alloc(0x100+) */
@@ -218,6 +236,8 @@ static unsigned print_glyph_px(TextPrinter *win,
     fill_colors(win, colors);
 
     if (phase == 0u) {
+        /* 字形 = 竖直对（t0=上半 8 行、t0+1=下半 8 行），8px/12px 均占 2 tile。
+         * 此处不得省成 1：t0+1 未占位会被后续领号回收踩踏。 */
         t0 = chs_claim_tile(win, tm, 12u, 2u);
         if (t0 == 0u)
             return adv;
@@ -325,17 +345,17 @@ static void jp_glyph_to_g128(uint8_t font_num, uint16_t glyph,
 
 void chs_print(TextPrinter *win, uint32_t code, uint8_t fontSize)
 {
-    uint8_t tm, fn, font_px;
+    uint8_t tm, fn, font_px, lib;
     uint8_t g128[CHS_CELL_BYTES];
     uint8_t w = 0;
     uint8_t saved_fn;
 
     (void)fontSize;
-    resolve_draw(win, &tm, &fn, &font_px);
+    resolve_draw(win, &tm, &fn, &font_px, &lib);
 
     saved_fn = win_u8(win, WIN_FONTNUM_REAL);
     win_set_u8(win, WIN_FONTNUM_REAL, fn);
-    if (!GetGlyph(win, code, g128, &w)) {
+    if (!GetGlyph(win, code, g128, &w, lib)) {
         win_set_u8(win, WIN_FONTNUM_REAL, saved_fn);
         return;
     }
@@ -345,7 +365,7 @@ void chs_print(TextPrinter *win, uint32_t code, uint8_t fontSize)
 
 int DrawHalfWidth(TextPrinter *win, uint32_t cur_char)
 {
-    uint8_t tm, fn, font_px;
+    uint8_t tm, fn, font_px, lib;
     uint8_t g128[CHS_CELL_BYTES];
     unsigned i;
 
@@ -353,9 +373,10 @@ int DrawHalfWidth(TextPrinter *win, uint32_t cur_char)
         || cur_char >= SYM_GLYPH_BASE + SYM_GLYPH_COUNT)
         return 0;
 
-    resolve_draw(win, &tm, &fn, &font_px);
+    resolve_draw(win, &tm, &fn, &font_px, &lib);
     (void)fn;
     (void)font_px;
+    (void)lib;
 
     {
         const uint8_t *sym =
@@ -374,7 +395,7 @@ int DrawHalfWidth(TextPrinter *win, uint32_t cur_char)
 
 int DrawGlyph(TextPrinter *win, uint32_t cur_char)
 {
-    uint8_t tm, fn, font_px;
+    uint8_t tm, fn, font_px, lib;
     uint8_t g128[CHS_CELL_BYTES];
 
     if (cur_char >= 0xF7u)
@@ -382,7 +403,8 @@ int DrawGlyph(TextPrinter *win, uint32_t cur_char)
     if (DrawHalfWidth(win, cur_char))
         return 1;
 
-    resolve_draw(win, &tm, &fn, &font_px);
+    resolve_draw(win, &tm, &fn, &font_px, &lib);
+    (void)lib;
     jp_glyph_to_g128(fn, (uint16_t)cur_char, g128);
     /* 半角 JP：墨宽 8；落点仍按 resolve 的 font_px/tm */
     (void)chs_emit(win, tm, font_px, g128, CHS_GLYPH_ADVANCE_JP_PX);

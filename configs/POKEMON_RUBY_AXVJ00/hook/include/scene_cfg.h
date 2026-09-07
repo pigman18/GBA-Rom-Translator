@@ -17,15 +17,23 @@
 #include <stdint.h>
 #include "game.h"
 
-/* 一个列分区：curX < cx_hi 命中本区；末条 0xFF 兜底。只保留字号，无 off/row_tab。 */
+/* 一个列分区：curX < cx_hi 命中本区；末条 0xFF 兜底。只保留字号，无 off/row_tab。
+ * curX 取 WIN_CURSOR_X（win+0x1A 起始X，整个字符串恒定）⇒ 分区是「按串」而非
+ * 「按字符」粒度。 */
 struct V6Zone {
     uint8_t  cx_hi;    /* curX < cx_hi 命中本区 */
-    uint8_t  font_px;  /* 16 = 标签固定 / 12 = 候选动态 / 8 = 小字 */
+    uint8_t  font_px;  /* 16 / 12 / 8 = 常规字号；V6_FONT_PX_MIDDLE = Middle 8x12 */
 };
+
+/* Middle 字库哨兵：8px 宽×12px 高墨迹（1 tile 列/字 = 2 tile/字，零相位态）。
+ * resolve 层翻译：几何走 8px 现有路径，字形源走 ADDR_FONT_CHS_MIDDLE。 */
+#define V6_FONT_PX_MIDDLE   13u
 
 /* 一窗一条的字号配置（指定初始化器；用不到的字段别写）。 */
 struct V6SceneRule {
-    uint32_t         tpl;          /* win[0x00] 模板地址 = 唯一键 */
+    uint32_t         tpl;          /* win[0x00] 模板地址 = 主键 */
+    uint32_t         win;          /* 0 = 任意窗口；非 0 = 仅该 win 地址命中
+                                   *（同模板多窗口时精确圈定，如宝可导航 0x0202E658） */
     const struct V6Zone *zones;
     uint8_t          zone_n;
 };
@@ -35,7 +43,8 @@ extern const struct V6SceneRule kV6Scenes[];
 extern const unsigned kV6SceneN;
 
 /* ---- 查询访问器（实现见 PrintNextChar_hook.c；跨文件共享）------------- */
-const struct V6SceneRule *v6_scene_lookup(uint32_t tpl);
+/* 命中优先级：tpl+win 精确匹配 > tpl 通配（win=0） > 未命中 */
+const struct V6SceneRule *v6_scene_lookup(uint32_t tpl, uint32_t win_addr);
 const struct V6Zone      *v6_scene_zone(const struct V6SceneRule *r, uint8_t cx);
 uint8_t  v6_scene_font(const struct V6SceneRule *r, uint8_t cx);
 

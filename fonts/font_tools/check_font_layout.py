@@ -22,7 +22,8 @@ import sys, argparse
 
 def nibble_of(tile32: bytes, x: int, y: int) -> int:
     bi = y * 4 + x // 2
-    return (tile32[bi] >> 4) & 0x0F if (x & 1) == 0 else tile32[bi] & 0x0F
+    # GBA 4bpp: even x = low nibble, odd x = high nibble
+    return tile32[bi] & 0x0F if (x & 1) == 0 else (tile32[bi] >> 4) & 0x0F
 
 def analyze_glyph(idx: int, data128: bytes, verbose: bool) -> dict:
     tl = data128[0x00:0x20]
@@ -129,7 +130,7 @@ def main():
         print(f", {bad} with problems ===")
         print("Likely causes:")
         print("  • TL/BL/TR/BR order wrong → regenerate with correct quadrant order")
-        print("  • Source was 1bpp not 4bpp → repack as 4bpp (2 pixels/byte, high nibble=left)")
+        print("  • Source was 1bpp not 4bpp → repack as 4bpp (2 pixels/byte, low nibble=left)")
         print("  • Not a 12-on-16 font → redo BDF→tile with 2 rows top+bot padding")
         print("  • Index mismatch → check pack_glyph_index() vs your TBL")
         sys.exit(1)

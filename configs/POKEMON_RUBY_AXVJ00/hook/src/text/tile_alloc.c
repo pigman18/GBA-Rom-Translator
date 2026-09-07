@@ -356,17 +356,25 @@ uint16_t v8_alloc_tile(TextPrinter *win, uint8_t font_px, uint8_t glyph_len)
         for (i = 0; i < glyph_len; i++)
             if (!v8_tile_usable(bm, vram, (uint16_t)(t + i))) { ok = 0; break; }
         if (ok) {
+            /* 领号即标位图：会话内位图只在 begin 重建，不标的话本串已写
+             * 的 tile 在「回卷重扫」时位图看不到（VRAM 非空但 ours→可回收）
+             * → 后字 blend 叠进前字 tile = 实机粉框「道/路」重叠团。
+             * 会话结束下次 begin 会全量重建，此处标占不跨会话泄漏。 */
+            for (i = 0; i < glyph_len; i++)
+                v8_bit_set(bm, (uint16_t)(t + i));
             *(volatile uint16_t *)ADDR_V8_CURSOR = (uint16_t)(t + glyph_len);
             v8_ours_add(t, glyph_len);
             return t;
         }
     }
-    /* 第二遍：回卷到 lo 重扫 */
+    /* 第二遍：回卷到 lo 重扫（位图已含本会话领号，不会回收自己刚写的字） */
     for (t = lo; (unsigned)t + glyph_len <= (unsigned)hi; t++) {
         int ok = 1;
         for (i = 0; i < glyph_len; i++)
             if (!v8_tile_usable(bm, vram, (uint16_t)(t + i))) { ok = 0; break; }
         if (ok) {
+            for (i = 0; i < glyph_len; i++)
+                v8_bit_set(bm, (uint16_t)(t + i));
             *(volatile uint16_t *)ADDR_V8_CURSOR = (uint16_t)(t + glyph_len);
             v8_ours_add(t, glyph_len);
             return t;

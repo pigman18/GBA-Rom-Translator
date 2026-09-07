@@ -23,6 +23,7 @@
 #define ADDR_DRAW_INITIAL_DOWN_ARROW_BODY  0x08003DACu
 #define ADDR_FD_RESOLVER                   0x080046D4u
 #define ADDR_FD_SUBPRINT                   0x08002DB4u
+#define ADDR_FONT_CHS_MIDDLE               0x09400000u
 #define ADDR_FONT_CHS_NORMAL               0x09000000u
 #define ADDR_FONT_CHS_SMALL                0x09100000u
 #define ADDR_FONT_CHS_SYM                  0x091E0000u

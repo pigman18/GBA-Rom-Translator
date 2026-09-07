@@ -34,7 +34,7 @@ Layout looks correct. Safe to load at ADDR_FONT_CHS_NORMAL.
 === Result: 58/64 glyphs OK, 6 with problems ===
 Likely causes:
   • TL/BL/TR/BR order wrong → regenerate with correct quadrant order
-  • Source was 1bpp not 4bpp → repack as 4bpp (2 pixels/byte, high nibble=left)
+  • Source was 1bpp not 4bpp → repack as 4bpp (2 pixels/byte, low nibble=left)
   • Not a 12-on-16 font → redo BDF→tile with 2 rows top+bot padding
   • Index mismatch → check pack_glyph_index() vs your TBL
 ```

@@ -79,7 +79,7 @@ def load_charmap_index(charmap_path: Path) -> dict[str, int]:
 
 
 def decompress_slot(glyph128: bytes) -> list[int]:
-    """128B TL/BL/TR/BR → 16x16 pixels (0-15). Left = high nibble."""
+    """128B TL/BL/TR/BR → 16x16 pixels (0-15). Left = low nibble (GBA 4bpp)."""
     if len(glyph128) != BYTES_PER_GLYPH:
         raise ValueError(f"glyph must be {BYTES_PER_GLYPH} bytes")
     pixels = [0] * (SLOT_W * SLOT_H)
@@ -92,25 +92,25 @@ def decompress_slot(glyph128: bytes) -> list[int]:
                 for tx in range(4):
                     byte = glyph128[off + ty * 4 + tx]
                     px = tile_col * 8 + tx * 2
-                    pixels[py * SLOT_W + px] = (byte >> 4) & 0x0F
-                    pixels[py * SLOT_W + px + 1] = byte & 0x0F
+                    pixels[py * SLOT_W + px] = byte & 0x0F
+                    pixels[py * SLOT_W + px + 1] = (byte >> 4) & 0x0F
     return pixels
 
 
 def get_px(tile: bytearray | bytes, x: int, y: int) -> int:
     bi = y * 4 + x // 2
     if x & 1:
-        return tile[bi] & 0x0F
-    return tile[bi] >> 4
+        return tile[bi] >> 4
+    return tile[bi] & 0x0F
 
 
 def put_px(tile: bytearray, x: int, y: int, ink: int) -> None:
     bi = y * 4 + x // 2
     ink &= 0x0F
     if x & 1:
-        tile[bi] = (tile[bi] & 0xF0) | ink
-    else:
         tile[bi] = (tile[bi] & 0x0F) | (ink << 4)
+    else:
+        tile[bi] = (tile[bi] & 0xF0) | ink
 
 
 def map_current_c(raw: int, c: int, d: int, e: int) -> int:

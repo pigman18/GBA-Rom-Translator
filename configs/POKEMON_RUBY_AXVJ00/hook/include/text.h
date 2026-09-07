@@ -32,8 +32,12 @@ struct TextGlyph {
     uint8_t height;
 };
 
-/* ---- 字形取字（text_translater.c 提供，PrintNextChar 消费）---- */
-int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth);
+/* ---- 字形取字（text_translater.c 提供，PrintNextChar 消费）----
+ * font_lib: 0=按 win fontNum 选库（4=Small 其余 Normal），2=Middle 8x12 库 */
+#define CHS_FONT_LIB_DEFAULT   0u
+#define CHS_FONT_LIB_MIDDLE    2u
+int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth,
+             uint8_t font_lib);
 
 /* ---- 引擎渲染件（PrintNextChar_hook.c 提供，text_translate.c 消费）---- */
 

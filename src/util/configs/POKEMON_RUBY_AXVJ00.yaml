@@ -520,6 +520,21 @@ gdb:
   default: false
   cfg:
     winreg: r0
+- name: ChsPrint
+  address: '0x088007B4'
+  description: 中文绘制主入口 chs_print(r0=win,r1=code,r2=fontSize)。地址随每次重编变化，必须按
+    configs/POKEMON_RUBY_AXVJ00/hook/out/game.map 同步（2026-09-07 晚 = 0x088007B4）。配 UpdateTilemap 判读每字符的 tile 对与落格
+  default: false
+- name: PncHook
+  address: '0x0880097C'
+  description: PrintNextChar_Hook 入口（r0=win），读 win 的 text[idx] 记录字符码；识别没走
+    chs_print 的字符。地址随每次重编变化，按 game.map 同步（2026-09-07 晚 = 0x0880097C）
+  default: false
+- name: V8Alloc
+  address: '0x088011E4'
+  description: v8_alloc_tile(r0=win,r1=font_px,r2=glyph_len) 入口。地址随每次重编变化，必须按
+    hook/out/game.map 同步（2026-09-07 晚 = 0x088011E4）。记录领号请求与请求前游标
+  default: false
 - name: MapNamePopupX
   address: '0x0809F6D0'
   description: 地名弹窗 MenuPrint 调用点（r0=buf, r1=注入的 x 留白px, r2=y）；配 InitTextPrinter 看 win+0x1A curX

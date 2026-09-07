@@ -1729,8 +1729,9 @@ class TranslationEngine:
                     for tx in range(4):
                         byte = glyph_data[off + ty * 4 + tx]
                         px = tile_col * 8 + tx * 2
-                        pixels[py * 16 + px] = (byte >> 4) & 0x0F
-                        pixels[py * 16 + px + 1] = byte & 0x0F
+                        # GBA 4bpp: low nibble = left pixel
+                        pixels[py * 16 + px] = byte & 0x0F
+                        pixels[py * 16 + px + 1] = (byte >> 4) & 0x0F
         return pixels
 
     @staticmethod
@@ -1745,8 +1746,9 @@ class TranslationEngine:
                     py = tile_row * 8 + ty
                     for tx in range(4):
                         px = tile_col * 8 + tx * 2
-                        byte = ((pixels[py * 16 + px] & 0x0F) << 4) | (pixels[py * 16 + px + 1] & 0x0F)
-                        glyph[off + ty * 4 + tx] = byte
+                        left = pixels[py * 16 + px] & 0x0F
+                        right = pixels[py * 16 + px + 1] & 0x0F
+                        glyph[off + ty * 4 + tx] = (right << 4) | left
         return bytes(glyph)
 
     def _ensure_default_fonts(
@@ -1865,6 +1867,13 @@ class TranslationEngine:
             sizes = [s.get("slot_size", s.get("glyph_count", 7168) * s.get("bytes_per_glyph", 128)) for s in slots]
             bpg = int(slots[0].get("bytes_per_glyph", 128)) if slots else 128
 
+            # Middle 窄字形库（8x12 cell）不走主 BDF：源是 fonts/default/Middle.bdf
+            # （寒蝉点阵 7px 经 ttf_to_bdf.py 转换），需 --narrow-8x12 独立构建；
+            # 主 BDF 的 12px 墨迹对窄字形是错误几何。fallback 一并禁用。
+            main_pairs = [(l, s) for l, s in zip(labels, sizes) if l != "Middle"]
+            main_labels = [l for l, _ in main_pairs]
+            main_sizes = [s for _, s in main_pairs]
+
             _scripts_dir = Path(__file__).resolve().parents[3] / "scripts"
             args = [
                 sys.executable,
@@ -1872,8 +1881,8 @@ class TranslationEngine:
                 "--bdf", str(bdf_path),
                 "--charmap", str(game_work / "charmap.txt"),
                 "--output-dir", str(fonts_dir),
-                "--slot-labels", *labels,
-                "--slot-sizes", *(str(s) for s in sizes),
+                "--slot-labels", *main_labels,
+                "--slot-sizes", *(str(s) for s in main_sizes),
                 "--prefix", prefix,
                 "--bytes-per-glyph", str(bpg),
             ]
@@ -1897,6 +1906,48 @@ class TranslationEngine:
             r = subprocess.run(args, capture_output=True, text=True, timeout=120)
             if r.returncode != 0:
                 raise RuntimeError(f"Font generation failed:\n{r.stderr}\n{r.stdout}")
+
+            # Middle 窄字形库独立构建（紧跟主构建，先于 unshadow 副本与 punct 补丁）
+            if "Middle" in labels:
+                _middle_bdf = root_fonts / "default" / "Middle.bdf"
+                _middle_size = next(
+                    (s for l, s in zip(labels, sizes) if l == "Middle"), None
+                )
+                if _middle_bdf.is_file() and _middle_size:
+                    _args_mid = [
+                        sys.executable,
+                        str(_scripts_dir / "build_chinese_font.py"),
+                        "--bdf", str(_middle_bdf),
+                        "--charmap", str(game_work / "charmap.txt"),
+                        "--output-dir", str(fonts_dir),
+                        "--slot-labels", "Middle",
+                        "--slot-sizes", str(_middle_size),
+                        "--prefix", prefix,
+                        "--bytes-per-glyph", str(bpg),
+                        "--narrow-8x12",
+                    ]
+                    _args_mid.append(
+                        "--no-shadow" if fp_cfg.get("shadow") is False else "--shadow"
+                    )
+                    _r_mid = subprocess.run(
+                        _args_mid, capture_output=True, text=True, timeout=120
+                    )
+                    if _r_mid.returncode != 0:
+                        raise RuntimeError(
+                            f"Middle font generation failed:\n"
+                            f"{_r_mid.stderr}\n{_r_mid.stdout}"
+                        )
+                    self._log(
+                        "info",
+                        f"Middle font (8x12 narrow) generated from {_middle_bdf.name}",
+                    )
+                else:
+                    self._log(
+                        "warning",
+                        f"Middle slot configured but {_middle_bdf} missing — "
+                        f"Middle bin not built",
+                    )
+
             self._fonts_from_bdf = True
             self._log("info", f"Font generated from {bdf_path.name} -> {fonts_dir}")
 
@@ -1932,6 +1983,8 @@ class TranslationEngine:
                     for _bin in sorted(fonts_dir.glob("*.bin")):
                         if "_unshadow" in _bin.name or "Sym" in _bin.name:
                             continue
+                        if "Middle" in _bin.name:
+                            continue  # 窄字形库：12px 标点基线逻辑不适用
                         _args_patch = [
                             sys.executable,
                             str(_scripts_dir / "patch_font_punct.py"),

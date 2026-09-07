@@ -19,6 +19,12 @@
       "bytes_per_glyph": 128
     },
     {
+      "label": "Middle",
+      "addr": 155189248,
+      "glyph_count": 7168,
+      "bytes_per_glyph": 128
+    },
+    {
       "label": "Sym",
       "addr": 152961024,
       "glyph_count": 9,

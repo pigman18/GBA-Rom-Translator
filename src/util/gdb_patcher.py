@@ -1508,6 +1508,62 @@ def _on_chs_fontfunc(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) 
     ctx.log("  槽: " + " | ".join(slots))
 
 
+@handler("ChsPrint")
+def _on_chs_print(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """中文绘制主入口 chs_print(r0=win, r1=code, r2=fontSize)（地址随 game.bin 重建变化，
+    以 out/game.map 为准）。resolve_draw 之后的场景决策在这里还看不到，但每字符的
+    win 现场与 v8 分配器游标/last_tile 在此可见——与 UpdateTilemap 的 u/l 对联合判读。"""
+    win = regs.get("r0", 0)
+    code = regs.get("r1", 0) & 0xFFFFFFFF
+    fs = regs.get("r2", 0) & 0xFF
+    wb = _read_win(gdb, win)
+    if len(wb) < 0x1E:
+        return
+    cur = _read_mem(gdb, 0x0203FF42, 8)   # 游标FF42/相位FF44/行标识FF46/last_tile FF48
+    if not ctx._hit((win, code, wb[0x1B], wb[0x1D])):
+        return
+    last = u16(cur, 6) if len(cur) >= 8 else -1
+    curs = u16(cur, 0) if len(cur) >= 2 else -1
+    ph = u16(cur, 2) if len(cur) >= 4 else -1
+    ctx.log(
+        f"\n[ChsPrint] win=0x{win:08X} tpl=0x{u32(wb, 0):08X} code=0x{code:04X} fontSize={fs}"
+        f" tm={wb[0x0A]} font={wb[0x0B]} TB=0x{u16(wb, 0x16):04X} OFF=0x{u16(wb, 0x18):04X}"
+        f" curX={wb[0x1A]} curTX={wb[0x1B]} curY={wb[0x1C]} curTY={wb[0x1D]}"
+    )
+    ctx.log(f"  v8: cursor=0x{curs:04X} 相位=0x{ph:04X} last_tile=0x{last:04X}")
+
+
+@handler("V8Alloc")
+def _on_v8_alloc(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """v8_alloc_tile(r0=win, r1=font_px, r2=glyph_len) 入口（地址随 game.bin 重建变化）。
+    记录每次领号请求与请求前游标；返回值看不到，用下游 last_tile/UpdateTilemap 对账。"""
+    win = regs.get("r0", 0)
+    px = regs.get("r1", 0) & 0xFF
+    gl = regs.get("r2", 0) & 0xFF
+    cur = _read_mem(gdb, 0x0203FF42, 2)
+    curs = u16(cur, 0) if len(cur) >= 2 else -1
+    if not ctx._hit((win, px, gl, curs)):
+        return
+    ctx.log(f"[V8Alloc] win=0x{win:08X} font_px={px} glyph_len={gl} 请求前cursor=0x{curs:04X}")
+
+
+@handler("PncHook")
+def _on_pnc_hook(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """PrintNextChar_Hook 入口（r0=win）：读 win 的 text[idx] 记录本字符码。
+    用于识别「没走 chs_print 的字符」到底是谁（JP 路径 / SYM 路径 / 控制码）。"""
+    win = regs.get("r0", 0)
+    wb = _read_win(gdb, win)
+    if len(wb) < 0x16:
+        return
+    tptr = u32(wb, 0x10)
+    idx = u16(wb, 0x14)
+    ch = _read_mem(gdb, tptr + idx, 1) if tptr else b""
+    c = ch[0] if ch else -1
+    if not ctx._hit((win, c, wb[0x1B])):
+        return
+    ctx.log(f"[PncHook] win=0x{win:08X} char=0x{c:02X} idx={idx} curTX={wb[0x1B]} curTY={wb[0x1D]}")
+
+
 @handler("SlotDrawChs")
 def _on_slot_draw_chs(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
     """slot 命中中文流绘制（slot_draw_chinese）：r0=win, r1=流, r2=next_index。
@@ -1592,17 +1648,25 @@ def _on_update_tilemap(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]
     tdata = _read_mem(gdb, tpl + 0x0C, 4) if tpl else b""
     tdata_base = u32(tdata, 0) if len(tdata) == 4 else 0
     ctx.log(
-        f"\n[UTM] win=0x{win:08X} u=0x{up:04X} l=0x{lo:04X}"
+        f"\n[UTM] win=0x{win:08X} tpl=0x{tpl:08X} u=0x{up:04X} l=0x{lo:04X}"
         f" 格=({cx}+{tx},{cy}+{ty})->#{cell} pal=0x{wb[0x0F]:X} 调用方={who} LR=0x{lr:08X}"
     )
     ctx.log(
         f"  tilemap@0x{tbase:08X} entry@0x{entry_addr:08X} 写前现值={curv.hex(' ')}"
         f" tileData@0x{tdata_base:08X} 像素落点=0x{tdata_base + up * 32:08X}"
     )
-    ctx.log(
-        f"  tilemap@0x{tbase:08X} entry@0x{entry_addr:08X} 写前现值={curv.hex(' ')}"
-        f" tileData@0x{tdata_base:08X} 像素落点=0x{tdata_base + up * 32:08X}"
-    )
+    # tile 对内容回读（print_glyph_px 顺序=claim→blend→UpdateTilemap，
+    # 此处读到的是 blend 之后的现场：可直接渲染验证形状/叠加残留）
+    if tdata_base:
+        pair = _read_mem(gdb, tdata_base + up * 32, 64)
+        if len(pair) == 64:
+            ctx.log(f"  VRAM对内容 u@+0: {pair[:32].hex(' ')}")
+            ctx.log(f"             l@+32: {pair[32:].hex(' ')}")
+    # 粉框/重绘排查：记录每窗领号轨迹（claim 的 tile 对）
+    prev = getattr(ctx, "_utm_track", None)
+    if prev is None:
+        ctx._utm_track = {}
+    ctx._utm_track[win] = up
 
 
 @handler("RenderTextHandleBold")

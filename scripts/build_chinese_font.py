@@ -9,7 +9,8 @@ Hardware container (fixed):
   - Ink ~12x12 inside the 16-tall slot (2px pad top + bottom)
   - CHS_GLYPH_ADVANCE_PX = 12, CHS_CHAR_HEIGHT_PX = 12, CHS_LINE_FEED_PX = 14
 
-Nibble order matches Meowth engine / Font_Patch bins: left pixel = high nibble.
+Nibble order = GBA 4bpp / blend_glyph / CrystalTile2:
+  left pixel = low nibble (GBATEK). Do NOT use high=left.
 """
 
 from __future__ import annotations
@@ -26,6 +27,11 @@ INK_H = 12
 PAD_TOP = 2  # (16-12)/2 — top+bottom pad
 BYTES_PER_GLYPH = 128
 DEFAULT_GLYPH_COUNT = 7168
+
+# Middle 窄字形库（2026-09-07）：8 宽 ×12 高墨迹 → slot 左列（1 tile 列 = 2 tile/字）。
+# 源 = fonts/default/Middle.bdf（寒蝉点阵体 7px 经 scripts/ttf_to_bdf.py 转换）。
+NARROW_INK_W = 8
+NARROW_INK_H = 12
 
 _DEFAULT_LEADS = {
     1, 2, 3, 4, 5, 7, 8, 9, 10, 11, 12, 13, 14, 15, 16, 17, 18, 19, 20, 21, 22, 23, 24, 25, 26, 28, 29, 30
@@ -178,8 +184,71 @@ def ink12_to_slot16(ink: bytearray, *, shadow: bool) -> bytearray:
     return slot
 
 
+def bdf_to_ink_narrow(
+    bitmap_rows: list[bytearray],
+    bbx_w: int,
+    bbx_h: int,
+    bbx_x: int,
+    bbx_y: int,
+    font_ascent: int = 0,
+) -> bytearray:
+    """Rasterize BDF into 8x12 narrow ink (1=ink)，bbox 归一化语义同 bdf_to_ink12。"""
+    src_w = max(bbx_w, 1)
+    src_h = len(bitmap_rows) if bitmap_rows else bbx_h
+    raw = bytearray(src_w * src_h)
+    for y, row in enumerate(bitmap_rows):
+        if y >= src_h:
+            break
+        for x in range(src_w):
+            bi, bit = divmod(x, 8)
+            if bi < len(row) and (row[bi] & (0x80 >> bit)):
+                raw[y * src_w + x] = 1
+
+    min_x, min_y, max_x, max_y = src_w, src_h, -1, -1
+    for y in range(src_h):
+        for x in range(src_w):
+            if raw[y * src_w + x]:
+                min_x = min(min_x, x)
+                min_y = min(min_y, y)
+                max_x = max(max_x, x)
+                max_y = max(max_y, y)
+    out = bytearray(NARROW_INK_W * NARROW_INK_H)
+    if max_x < 0:
+        return out
+    for y in range(min_y, min(min_y + NARROW_INK_H, max_y + 1)):
+        for x in range(min_x, min(min_x + NARROW_INK_W, max_x + 1)):
+            if raw[y * src_w + x]:
+                nx, ny = x - min_x, y - min_y
+                if 0 <= nx < NARROW_INK_W and 0 <= ny < NARROW_INK_H:
+                    out[ny * NARROW_INK_W + nx] = 1
+    return out
+
+
+def ink_narrow_to_slot16(ink: bytearray, *, shadow: bool = False) -> bytearray:
+    """Place 8x12 ink into 16x16 slot LEFT column (pad_top=2), right column empty.
+
+    Hook 端 fontSize==8 路径取 TL(g128[0x00])+BL(g128[0x20]) = 左列上下两 tile，
+    恰好对应本布局（右列全零 → TR/BR 空 tile，永远不被引用）。"""
+    slot = bytearray(SLOT_W * SLOT_H)
+    for y in range(NARROW_INK_H):
+        for x in range(NARROW_INK_W):
+            if not ink[y * NARROW_INK_W + x]:
+                continue
+            sx, sy = x, y + PAD_TOP
+            if not (0 <= sx < SLOT_W and 0 <= sy < SLOT_H):
+                continue
+            slot[sy * SLOT_W + sx] = 15
+            if shadow:
+                for dx, dy in ((1, 0), (0, 1), (1, 1)):
+                    tx, ty = sx + dx, sy + dy
+                    if 0 <= tx < SLOT_W and 0 <= ty < SLOT_H:
+                        if slot[ty * SLOT_W + tx] == 0:
+                            slot[ty * SLOT_W + tx] = 14
+    return slot
+
+
 def pack_slot16_4bpp(pixels: bytearray) -> bytes:
-    """16x16 pixels → 128B TL,BL,TR,BR. Left pixel = high nibble."""
+    """16x16 pixels → 128B TL,BL,TR,BR. Left pixel = low nibble (GBA 4bpp)."""
     if len(pixels) != SLOT_W * SLOT_H:
         raise ValueError("slot must be 16x16")
     glyph = bytearray(BYTES_PER_GLYPH)
@@ -193,7 +262,7 @@ def pack_slot16_4bpp(pixels: bytearray) -> bytes:
                     px = tile_col * 8 + tx * 2
                     left = pixels[py * SLOT_W + px] & 0x0F
                     right = pixels[py * SLOT_W + px + 1] & 0x0F
-                    glyph[off + ty * 4 + tx] = (left << 4) | right
+                    glyph[off + ty * 4 + tx] = (right << 4) | left
     if len(glyph) != BYTES_PER_GLYPH:
         raise AssertionError(f"pack produced {len(glyph)}, need {BYTES_PER_GLYPH}")
     return bytes(glyph)
@@ -229,6 +298,7 @@ def build_font_bin(
     shadow: bool = True,
     bdf_fallbacks: list[tuple[dict, int]] | None = None,
     ttf_fallbacks: list[str] | None = None,
+    narrow: bool = False,
 ) -> bytearray:
     if bytes_per_glyph != BYTES_PER_GLYPH:
         raise ValueError(
@@ -240,8 +310,15 @@ def build_font_bin(
         encoding = ord(char)
         if encoding in bdf_glyphs:
             bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y = bdf_glyphs[encoding]
-            ink = bdf_to_ink12(bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y, font_ascent)
+            if narrow:
+                ink = bdf_to_ink_narrow(bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y)
+            else:
+                ink = bdf_to_ink12(bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y, font_ascent)
         else:
+            if narrow:
+                # 窄字形库不做 fallback：fallback 字体全是 12px 几何，混入即错位。
+                # 缺字保持空槽（寒蝉 GB2312 覆盖 charmap 全集，实测 0 缺字）。
+                continue
             # 缺字自动补画:先 TTF(宋体,风格与主字库一致),再备用 BDF
             ink = None
             for ttf in ttf_fallbacks or []:
@@ -258,7 +335,10 @@ def build_font_bin(
                         break
             if ink is None:
                 ink = bytearray(INK_W * INK_H)
-        slot = ink12_to_slot16(ink, shadow=shadow)
+        if narrow:
+            slot = ink_narrow_to_slot16(ink, shadow=shadow)
+        else:
+            slot = ink12_to_slot16(ink, shadow=shadow)
         packed = pack_slot16_4bpp(slot)
         off = idx * bytes_per_glyph
         buf[off : off + bytes_per_glyph] = packed
@@ -298,6 +378,8 @@ def main() -> None:
     ap.add_argument("--prefix", type=str, default="PokeRSFontChs")
     ap.add_argument("--dilate", action="store_true")
     ap.add_argument("--shadow", action=argparse.BooleanOptionalAction, default=True)
+    ap.add_argument("--narrow-8x12", action="store_true",
+                    help="窄字形库模式（Middle）：8x12 墨迹 → slot 左列，不做 fallback")
     ap.add_argument("--phrase-map", type=Path, default=None)
     args = ap.parse_args()
 
@@ -347,7 +429,7 @@ def main() -> None:
     print(f"  Found {len(charmap)} Chinese character mappings")
 
     for i, label in enumerate(args.slot_labels):
-        print(f"Building {label} font...")
+        print(f"Building {label} font...{' (narrow 8x12)' if args.narrow_8x12 else ''}")
         buf = build_font_bin(
             bdf_glyphs,
             charmap,
@@ -357,6 +439,7 @@ def main() -> None:
             shadow=args.shadow,
             bdf_fallbacks=bdf_fallbacks,
             ttf_fallbacks=ttf_fallbacks,
+            narrow=args.narrow_8x12,
         )
         if args.slot_sizes and i < len(args.slot_sizes):
             buf = buf[: args.slot_sizes[i]]

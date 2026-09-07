@@ -23,7 +23,8 @@
 /* =====================================================================
  * §glyph — 字形源统一解析（自 text_render.c 迁入）
  * ===================================================================== */
-int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth)
+int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth,
+             uint8_t font_lib)
 {
     uint8_t fontNum = win_u8(win, WIN_FONTNUM_REAL);
     if (fontNum > 6u)
@@ -43,12 +44,16 @@ int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth
 
     /* 中文字形：直接从自定义中文点阵字库解压（v5 decompress_chs_glyph 语义）。
      * ⚠ 不能用 GetGlyphTilePointers_Origin（那是官方日文字形，gidx 是中文
-     *   索引，查官方表会返回 null → 全空）。fontNum==4 → 8px 小字库；
-     *   其余 → 16px 主字库。字模容器 128B：TL@0 / BL@0x20 / TR@0x40 / BR@0x60。 */
+     *   索引，查官方表会返回 null → 全空）。
+     *   font_lib==CHS_FONT_LIB_MIDDLE → Middle 8x12 库（寒蝉点阵，几何同 8px）；
+     *   否则 fontNum==4 → 8px 小字库，其余 → 16px 主字库。
+     *   字模容器 128B：TL@0 / BL@0x20 / TR@0x40 / BR@0x60。 */
     {
         const uint8_t *base =
-            (fontNum == 4u) ? (const uint8_t *)ADDR_FONT_CHS_SMALL
-                            : (const uint8_t *)ADDR_FONT_CHS_NORMAL;
+            (font_lib == CHS_FONT_LIB_MIDDLE)
+                ? (const uint8_t *)ADDR_FONT_CHS_MIDDLE
+                : (fontNum == 4u) ? (const uint8_t *)ADDR_FONT_CHS_SMALL
+                                  : (const uint8_t *)ADDR_FONT_CHS_NORMAL;
         const uint8_t *g =
             base + ((uint32_t)((uint16_t)code & 0x7FFFu) << 7);
         if ((uint16_t)code & 0x8000u)

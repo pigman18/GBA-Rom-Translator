@@ -110,12 +110,12 @@ def _bin_to_grid(glyph_bytes: bytearray, glyph_index: int) -> list[list[int]]:
                 for tx in range(4):
                     byte_idx = tile_off + ty * 4 + tx
                     byte = glyph_bytes[byte_idx]
-                    # left = high nibble (Font_Patch / Meowth engine)
+                    # GBA 4bpp: low nibble = left pixel
                     px = tile_col * 8 + tx * 2
                     py = tile_row * 8 + ty
-                    if (byte >> 4) & 0x0F:
-                        grid[py][px] = 1
                     if byte & 0x0F:
+                        grid[py][px] = 1
+                    if (byte >> 4) & 0x0F:
                         grid[py][px + 1] = 1
     return grid
 

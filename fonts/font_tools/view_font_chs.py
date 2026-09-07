@@ -5,7 +5,7 @@ view_font_chs.py
 Read a Gen3 Chinese font .bin laid out as:
     N glyphs × 128 bytes/glyph
     128B = TL(32) + BL(32) + TR(32) + BR(32)
-    Each 32B = one 8x8 4bpp tile (left pixel = high nibble)
+    Each 32B = one 8x8 4bpp tile (left pixel = low nibble, GBA)
 For each glyph, reassemble the full 16x16 4bpp image and:
     - Print a 16x16 ASCII preview (nibble→char) to terminal
     - Save a grayscale PNG so you can eye-check the shape
@@ -24,8 +24,8 @@ def nibble_of(tile32: bytes, x: int, y: int) -> int:
     """tile32 = 32 bytes of one 8x8 4bpp tile. x,y in 0..7. Returns 0..15."""
     bi = y * 4 + x // 2
     if x & 1:
-        return tile32[bi] & 0x0F
-    return (tile32[bi] >> 4) & 0x0F
+        return (tile32[bi] >> 4) & 0x0F
+    return tile32[bi] & 0x0F
 
 def glyph_to_image(data128: bytes) -> Image.Image:
     """Take 128 bytes (TL,BL,TR,BR) and return a 16x16 grayscale PIL image."""

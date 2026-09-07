@@ -111,6 +111,23 @@ FdSubprint                            equ 0x08002DB4  ; C: ADDR_FD_SUBPRINT
 ;   ChineseTileState slots[8] @ 0x0203FF90 (64B)
 ChsPitchCtrl                           equ 0x0203FF80  ; C: ADDR_CHS_PITCH_CTRL
 ChsPitchSlots                          equ 0x0203FF90  ; C: ADDR_CHS_PITCH_SLOTS
+; v8 动态避让 ours 段表（2026-09-07 取代静态避让带 kV8AvoidScenes）：
+;   0x0203FF80~0x0203FFCF（80B，FFD0/D1 为调色板覆盖变量不可越）。
+;   [0]u16 magic=0xA5C3（冷启动 EWRAM 残留防御）；[1]u16 保留；
+;   seg[19]×{u16 start, u16 len} = 4+76B。记录我们写过的 glyph tile 连续段：
+;   非空 tile 仅属 ours 可回收重写（官方数据/atlas 永不在表内 → 永不回收）。
+;   ChsPitchCtrl/Slots 自 v5 起零引用（扫描实证 2026-09-07），本表安全复用该区。
+V8OursSegs                             equ 0x0203FF80  ; C: ADDR_V8_OURS_SEGS
+; v6~v8 分配器/渲染 EWRAM 状态（2026-09-07 从 game.h 手工宏收编入本文件：
+;   此前它们只存在于 game.h GEN_ADDR 块内，重生成即丢失——本次踩坑实证）。
+V6TileHw                               equ 0x0203FEB0  ; C: ADDR_V6_TILE_HW
+V6Bypass                               equ 0x0203FEB8  ; C: ADDR_V6_BYPASS
+V7AllocState                           equ 0x0203FEC0  ; C: ADDR_V7_ALLOC_STATE
+V8Cursor                               equ 0x0203FF42  ; C: ADDR_V8_CURSOR
+V8Phase                                equ 0x0203FF44  ; C: ADDR_V8_PHASE
+V8PhaseRow                             equ 0x0203FF46  ; C: ADDR_V8_PHASE_ROW
+V8LastTile                             equ 0x0203FF48  ; C: ADDR_V8_LAST_TILE
+V8NlMark                               equ 0x0203FF4A  ; C: ADDR_V8_NL_MARK
 ; 遗留单槽（hook 未用，供 docs/config）；2026-08-23 起复用为首字存 EWRAM 变量：
 ;   mode1 动态 tile 分配游标（text_jp2chs AllocGlyphTiles）——引擎静态变量会落
 ;   BSS，而 game.bin 无运行时加载器（写 ROM 被忽略/读为垃圾），必须放 EWRAM。

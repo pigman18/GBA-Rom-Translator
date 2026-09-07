@@ -1,85 +1,44 @@
 # 项目长期记忆（GBA-Rom-Translator / AXVJ00 汉化）
 
-## 用户偏好（最高优先级，铁律）
-- **听命令**：用户指出的路径/方法就是路径本身。先复述计划确认再动手。
-- **修 BUG 不擅自回退旧版本**：在当前方案上定位修掉；确要回退先说明等确认。
-- **🔴 铁律：任何代码改动前，「预计效果」必须能翻译成一张实机截图的预期样子**。看不到这个预期不写代码。改动完**看到截图符合预期**才算交付，看不到就是没做完（2026-09-03）。
-- **🔴 铁律：执行流程固定四步，禁止跳过**——①静态分析（反汇编/查表）②动态结合（gdb_patcher 采集/字段追踪）③实操验证（写代码+实机截图，**只有截图符合预期才算**）④总结结论（这时才能写进 MEMORY）。禁止用未经验证的静态结论当真理推进下一步。
-- **运行时故障先怀疑注入机制**（relocate 改指针/hook 写坏字节），用配置开关二分定位，别纠结文本内容。
+## 用户偏好（铁律）
+- 听命令：用户指的路径/方法就是路径本身；先复述计划确认再动手。
+- 修 BUG 在当前方案上定位修掉，不擅自回退；确要回退先说明等确认。
+- 🔴 代码改动前「预计效果」必须能翻译成实机截图预期；改动完截图符合预期才算交付。
+- 🔴 四步法禁止跳过：①静态分析 ②gdb 动态结合 ③实机截图验证 ④结论才可写 MEMORY。未验证结论必须标注，不得当真理推进。
+- 运行时故障先怀疑注入机制（relocate/hook 写坏字节），配置开关二分定位。
 
-## v8 架构（2026-09-04 定稿，当前方案）
-- **tile 号 = 唯一顺序分配器 `v8_alloc_tile(win,font_px,glyph_len)`**（`src/text/tile_alloc.c`）：运行时扫 tilemap 活引用得避让带，顺序放入、跳过占用、领连续 glyph_len 空闲。屏幕位置继续交官方光标（UpdateTilemap）。**一字一个 tile 来源，16/12/8 统一走同一条路径，无静态表/off 分区/行带表分裂**。
-- **字号 = `getFontSize(win)` 钩子**：font4/tm2→8px；设置菜单(模板 0x081BB874) curX<8→16 否则12；其余12。
-- **12px 相位 = 按行隔离单变量**（`ADDR_V8_PHASE` + 行标识 `ADDR_V8_PHASE_ROW=tpl^curY^tileY`），非全局 8 槽表。**tile 号分配 与 相位 px 正交**：前者顺序分配器，后者行内像素游标。
-- **渲染分层（src/text/）**：text_translater.c=翻译层；PrintNextChar_hook.c=渲染层（解压→栅格化→落址三段）；blend_glyph.c=像素原语（1bpp/2bpp 纯函数零状态）；tile_alloc.c=分配器；InitTextPrinter_hook.c=会话边界（v8_alloc_begin 快照位图+复位游标/相位）。scene_cfg.c=纯字号配置数据。
-- **根治来回切换残留 BUG 的根本** = 所有跨窗口状态（游标/相位/last_tile/行标识）在 InitTextPrinter 边界复位，不依赖任何「行指纹 key 续接」启发式。
-- **RAM（EWRAM）**：位图 0x0203FEC0(128B→FF40) / 游标 0x0203FF42 / 相位 0x0203FF44 / 行标识 0x0203FF46 / last_tile 0x0203FF48 / **NL_MARK 0x0203FF4A**（上次绘字 tileY<<8|tileX）。⚠ **0x0203FFD2 起为游戏数据区严禁占用**（背包/队伍死机根因）。
-- **翻译链路统一**：非 `FA..FF` 一律 `TranslateHandleChar` → 否则 `DrawGlyph`；slot 表以日文 PCS 为 bucket 查 f900；**不要用 F9 判断决定翻译**。
-- **GetGlyph 只走中文字库**：ADDR_FONT_CHS_NORMAL/SMALL。**禁止**把 `code∈[0x36,0x3E]` 当 SYM——F9 打包索引也会落此带（「白」=0x0036 → 曾画成「；」）。PCS 标点由 `DrawHalfWidth` 直接读 `ADDR_FONT_CHS_SYM`。
-- **tm2/fn4 血条名**：tpl `0x081BB40C`，dest=`win[0x20]`，每列 `+=0x40`，强制 8px/`FontChsSmall`；落在现有 `chs_place_col` 分支，不开平行方法。
+## v8 架构（当前方案：动态避让，2026-09-07 定稿）
+- **静态表已全废弃（用户拍板「要动态获取，不要补丁」）**：kV8AvoidScenes（14签名/37段）与 kV8LinearScenes（线性落址，实测同场景多窗口并发叠印→设置菜单错乱回归）均已删除，scene_cfg 只剩字号配置 kV6Scenes。
+- tile 号=顺序分配器 v8_alloc_tile，**动态三层探测**（src/text/tile_alloc.c）：
+  ①活引用层：v8_alloc_begin 清零重建位图=win tilemap + DISPCNT 全启用 BG 中同 charBase 的 screenblock（BGxCNT.size 位定 1024/2048/4096 表项；affine/位图 BG 跳过）——多窗口并发互斥、防泄漏靠清零重建。
+  ②VRAM 非空层：alloc 逐候选 tile 实时校验 32B 全空——atlas 区（0x208~0x2D1 场景差异自动适配）、begin 后才绘制的官方 UI（关闭按钮/状态图标）自动避开，取代全部静态带。
+  ③ours 段表：EWRAM 0x0203FF80（80B=magic 0xA5C3+19 段×4B），非空 tile 仅属 ours 可回收重写；冷启动 EWRAM 残留防御=magic 一次校验。lo=0x100，hi=(4-cb)*512 clamp 1024 不变。
+- **坑：ADDR_V6/V7/V8_* 宏曾只手工写在 game.h GEN_ADDR 块内，重生成即丢**（2026-09-07 编译失败实证）。已全部收编进 game_addrs.asm（`; C:` 标记）作唯一权威来源。
+- 字号钩子 getFontSize：font4/tm2→8px；设置菜单 curX<8→16 否则 12；其余 12。
+- 12px：相位 0/4 行隔离（ADDR_V8_PHASE_ROW=tpl^curY^tileY）；2 字占 3 tile 列、相邻字共享 tile 是数学必然；清相位必须写在「下一字绘制前」v8_phase_before_glyph（PrintNextChar_Origin 是尾调用，其后清理代码跑不到）；行键须含 CURSOR_TILE_Y。
+- 分层：text_translater=翻译 / PrintNextChar_hook=渲染 / blend_glyph=像素原语 / tile_alloc=分配 / InitTextPrinter_hook=会话边界（复位游标/相位/last_tile，治残留 BUG 的根本）/ scene_cfg=字号配置。
+- EWRAM：位图 0x0203FEC0(→FF40)/游标FF42/相位FF44/行标识FF46/last_tile FF48/NL_MARK FF4A/ours 段表 FF80(→FFCF)。⚠ 0x0203FFD2 起游戏数据区严禁占用（背包/队伍死机根因）。
+- 翻译链路：非 FA..FF 一律 TranslateHandleChar；slot 表以日文 PCS 查 f900；GetGlyph 只走中文字库；禁止把 code∈[0x36,0x3E] 当 SYM。tm2/fn4 血条名 tpl 0x081BB40C 强制 8px/FontChsSmall。
 
-## 🔴 经常犯：12px 奇数位换行（「壤」切半 / 句首冒号鬼影）
-- **症状**：行末奇数个汉字后 `FE` 换行 → 上行尾半截 + 下行首「：」状碎片（图鉴说明「土壤」经典）。
-- **机制**：12px → phase 只在 0/4；奇数个字收尾 phase=4，半列挂在 last_tile。
-- **致命陷阱**：`PrintNextChar_Origin` 是**尾调用进 ROM**（`bx` 不回到 hook）。在 `if (c==FE) { Origin(); 清相位; }` 里写的清理**永远跑不到**——以为修了其实没修。
-- **定案（对齐 FONT_12PX_DRAW.md）**：在**下一字绘制前** `v8_phase_before_glyph`：TY 变或 TX 回落 → 清相位/last_tile；tm0/1 **恒** `TILE_OFFSET+=2`。行键须含 `CURSOR_TILE_Y`（FE 有时先推 tileY）。
-- **作者标注（2026-09-04）**：Auto（Cursor Agent Router）/ Composer。
+## 2026-09-07 实测定论（勿再怀疑）
+- **官方 IWTD 落址公式（反汇编+实机）**：IWTD(template r0, tileBase r1, glyphIdx r2) **逐字调用**，tm1 分支 dest = tileData + (tileBase<<5) + (glyphIdx<<6) ⇒ **tile = tileBase + 2×glyphIdx，官方无分配器无避让**。IWTD 返回 void（0x08002AEA 处 r0 恒为 thumb 返回地址 0x08002AAB）⇒ IWTD-Ret 断点作废，旧「分区链/预算取返回值」理解作废。
+- **cb 回收实证**：对话框场景 cb2 非零仅 tile2；背包场景 cb2 [0x001-0x1FF] 满但 tilemap 对字库区非零引用≈0（引用皆 #201/203/204/207 窗框底色，在 [0x200,0x210)）。⇒ 接管全部文本后 cb2 [0x001,0x200) 512 tile 整块可回收（判据=非零引用，空 entry tile0 不算）。
+- **OBJ 余量（OAM 实测）**：战斗场景空闲≈600+ tile；对话框 128 精灵全隐藏（OBJ VRAM 全空）；战斗 UI 场景 0x0200 OBJ 禁用。⚠ OBJ位图@0x03002450 地址错（读到指针），判据以 OAM 为准。
+- **MenuDrawStdWindowFrame(bg,x,y,width) 签名实证**（底部菜单 y=28 width=7/11/15）⇒ 窗口预算可靠来源。日版 win 结构 0x40 内无 width/height 字段；战斗窗 0x021E0100 布局未知（[0] 非模板指针）。
+- 实测模板频次：战斗 UI 0x081BB514 打点 1020 次（高频硬骨头）；对话框 0x081BB46C tm3(220)、0x081BB5BC(204)；新模板 0x081BB7E4/0x081BB79C（cb0 pal2）。战斗 UI 场景 BG1 cb3 sb27 (0x0600D800)。
+- 静态定论（同日早些）：官方字宽上限 8、无原生 12px，但原生亚 tile 拆分（startPixel 任意/mode0+64B/mode2+32B/UpdateTilemap(win,2)）⇒ 8+4 拆分没错，错在 tile 号来源。网格落址需 128~256 连续 tile 非银弹，暂缓。pokeRS 零分配器先例在 tools/Pokemon_GBA_Font_Patch/pokeRS。
+- 判读全文：docs/调研_20260907_三路线实测判读.md；检索背景：docs/调研_20260907_三路线全网检索.md。
+- 下一步（待决策）：主线落②位置决定（InitTextPrinter 边界复位游标 + tile=winBase+2*idx，先对话框低风险验证）；战斗 UI 单独采集（win 0x021E0100 布局 + 战斗内 MenuFrame 命中）；③OBJ 留兜底。
+- 未验证清单：BG stride=32 实际显示宽（UISURVEY 已读 size 位，数据在日志）；win width/height 偏移；商店场景；12px 推进与新落址耦合。
 
-## v8 已知边界（2026-09-04 实机实证，下一轮任务）
-1. **队伍页 HP 条上方 Pokemon 状态图标被中文覆盖（稳定撞血条）** —— 根因=队伍窗 charBase=1 占用段 [0x0EE-0x11A] 罩住 lo=0x100，中文压在状态图标上。已接 kV8AvoidScenes 避让（kPartyScene），**待实机验证**。
-2. **设置界面关闭按钮为橙色**（关闭按钮 tile 被中文覆盖、调色板串色）—— 根因=该 tile 不在 tilemap 活引用里、未被避让带覆盖。已接消费方（kOptionAvoidScene 的 [0x001,0x208]），**待实机验证**。
-3. 设置菜单偶发缺角（相位共享+动态领号在「字符短+边界 tile 紧邻」下溢出，治本=glyph_len 加安全余量）。
-- **根因方向（用户 2026-09-04 判断「缺避让区配置」）**：当前避让带**只来自 tilemap 活引用扫描 + lo=0x100 + OBJ charBlock 上界截断**，漏掉「关闭按钮/血条/状态图标」等不在文本 tilemap 扫描范围的 UI 元素（OBJ 精灵 / 其它 BG 层 / 扫描后才绘制）。
-  ✅ **避让带数据已于 2026-09-04 补齐并接入消费方**（`scene_cfg.c:kV8AvoidScenes` → `tile_alloc.c:v8_alloc_begin`/`v8_lookup_avoid`，14 签名全录，见「tile 分配器坐标系」节）。硬件验证待用户实机确认。
-  - 已对上的根因：队伍窗 charBase=1，占用段 [0x0EE-0x11A] 正好罩住 `lo=0x100` ⇒ 中文压在状态图标上（与 BUG ① 完全吻合）。
+## tile 坐标系（实证）
+- tile 号=相对 charBase 偏移 0~1023（10bit 跨 2 个 charBlock）；OBJ 恒 cb4/5（VRAM 0x06010000+）；hi=(4-cb)*512 已修正。
+- 模板：对话框 0x081BB5BC/46C/784/484/874 cb2；战斗招式 0x081BB3F4 cb0；队伍窗 0x081BB43C cb1；战斗UI 0x081BB514 cb3；地图名 0x081BB49C cb0；血条 0x081BB40C cb0。模板 24B：charBase@1 screenBase@2 fontNum@8 textMode@9 tileData@0x0C tilemap@0x10。
 
-## tile 分配器坐标系（实证，仍有效）
-- tile 号 = 相对当前 BG charBase 的偏移，合法范围 **0~1023**（tilemap 10bit + 4 charBlock），**非 0~511**。
-- atlas = 官方字库区 = [BASE, BASE+512)，不可标满 [BASE,512)。
-- ✅ **OBJ 起始 charBlock 恒为 4**（OBJ tile 固定占 VRAM 0x06010000 起，即 charBlock 4/5）。GBA 的 DISPCNT 没有 OBJ charBlock 字段（bits[4]=Display Frame Select、bits[5]=HBlank Interval Free）。`v8_alloc_hi()` 已改正确公式 `hi=(4-char_base)*512 clamp 1024`（2026-09-04 修复）：char_base=0/1/2→1024；**char_base=3→512（正确拦住相对 512+ = cb4 = OBJ 区）**。旧 `v8_obj_charblock()`（误读 DISPCNT bits[5:4]）已删除。
-- ✅ **避让带已全量落盘并已接消费方**（2026-09-04 下午）：`kV8AvoidScenes`（14 签名/7 模板/37 段，从 gdb `[CBAVOID]` 录入，每条带注释）。`tile_alloc.c` 已 `#include "scene_cfg.h"`，`v8_alloc_begin()` 在扫完 tilemap 后调 `v8_lookup_avoid()`：按硬件签名（DISPCNT+BGxCNT，掩码 0x1F8C 归一）查表，命中即把 bands 标进位图；签名未命中按 tpl 兜底。消费策略=**全量避让带（含 atlas 段）**，中文整体挪到 atlas 之上（设置菜单 0x209 起）；14 场景 bands 上限均 ≤0x3FF，仍在各自 cb 相对 0~1023 内，不跨 OBJ 区。待用户实机验证。
-- 战斗窗(charBase=0)动态区高段相对号 513+ = 物理 charBlock1 = OBJ 精灵区 ⇒ 花屏；charBase=2 主力窗安全。
-- gdb 模板分布（AXVJ00）：主力对话框 0x081BB5BC/46C/784/484/874 charBase=2 base=0x0001；战斗招式 0x081BB3F4 charBase=0；队伍窗 0x081BB43C charBase=1 font4；**战斗 UI 0x081BB514 charBase=3；地图名弹窗 0x081BB49C charBase=0；战斗血条 0x081BB40C charBase=0 font4/tm2**。
-- gdb_patcher `--cb-survey` 采集端扫 **cb0~cb5 全 6 块**（`for cb in range(6)`，标签 cb4(OBJ)/cb5(OBJ)），cb4 数据一直有，不是"没开放"。
-
-## 历史教训（诊断思路仍有效；v4/v5/v6 实现细节已删）
-- 8px 小字库(font=4)字形有误（v4 曾令设置菜单一律 font=0）。
-- 「只有某个字被盖」⇒ 怀疑 tile 踩踏非步进；「是否同一文本块」看 InitTextPrinter 的 cur_x。
-- 游标类状态（相位 px）任何分支必须保留归零路径，否则无界累加越界写 VRAM 花屏。
-- blend_glyph（src/text/blend_glyph.c）仍是当前唯一像素原语：spillTile 显式传参（官方 mode0 右邻+64B / mode2 +32B，不硬编码）；官方 Width3 展开 4 像素怪癖在 1bpp 路径照抄保逐位等价；对拍 tests/test_blend_glyph.py。
-
-## 日版函数地址定位（实证）
-- pokeruby_jp.sym 的 UNVERIFIED 符号偏移不一（带 literal pool），会张冠李戴。最硬验证=扫全 ROM 的 BL 调用点（0 处可能只是函数指针 thunk 调用）。
-- gBattleAnims_Moves=0x081D997C；DoMoveAnim 0x08071D98 / LaunchBattleAnimation 0x08071DCC。
-- gdb 采集前先 grep -c 验埋点计数，别录完才发现 0 命中。
-
-## hook 关键坑
-- **可写 static 必须显式落 RAM**：game.ld 无 .bss/.data 规则 ⇒ 文件级可写 static 被静默塞进 ROM（恒 0 零报错）。查法 `grep -nE "^\.bss|^\.data" out/game.map`；修法 EWRAM 显式放置。
-- gdb_patcher：HANDLERS 同名后注册者覆盖（增强埋点要包在所有注册之后）；同一地址只能一个埋点（别名转发）。
-- 排查顺序：①打的是不是旧包(check_rom_hook.py) ②可写变量是否在 RAM ③才是逻辑。
-
-## relocate / F980
-- relocate 改指针高危（无对齐无区域过滤滑窗，巧合字节也改⇒黑屏），已改 opt-in 默认 False；改后必跑 scripts/diag_relocate_collisions.py。
-- F980 短语引用(5B 不改指针)基本够用；🔴 护栏待补：phrase_stream_lookup 不判 code 上界、build_rom_data 无数量上限检查。
-
-## 🔴 reader 语义铁律 + FC 颜色码（2026-09-04 实证，tools 侧）
-- **reader（msg_reader / ignored_reader）= 读取原始解析出的串 → 修改 → 产出新串，地址必须随之偏移**（返回 `ReaderHit(fo=新地址)`）。只改串不改地址 ⇒ in-place `replace` 会把前缀控制码一起覆盖 ⇒ 颜色/高亮全丢（设置菜单左列由橙变灰即此坑，63 条 delta=3）。
-- reader 配置形态统一：`reader: {type: ignored_reader, value: [...]}`（**不是**模块属性 `mod.get(...)`，`extract_scan` 只认**单个** reader）。ignored_reader 剥完无正文返回 None=整条过滤；未命中前缀返回原样。指针回退：`ptrs_map.get(new_a) or ptrs_map.get(a)`（指针挂在含前缀的串头）。
-- **FC 颜色码不是 InitTextPrinter 阶段转成 pal+CDE 的**：它是文本流里的控制码，打印循环逐字符执行（`c>=0xFA` → Origin）时才改当前颜色；InitTextPrinter 日志里的 `色C/D/E pal` 只是模板初值。已实证：`fc 05 09`=橙（菜单左列标签）、`fc 05 0f`=灰白（值）、`fc 05 08`=红（选中时官方**原位**把 0f 改写为 08）。
-- 排查同类「掉色/掉高亮」：先比对 `translate.build.json` 的 `address` 处 **ROM 原盘字节 vs original_hex** 是否对齐（错位即 reader/地址问题），别先怀疑 hook 的 `fill_colors`。
-
-## 打包约定
-- 🔴 每次改完 hook 源码走完整流水线：hook build.bat → 根 build.bat → check_rom_hook.py。**编译通过≠交付**。
-- 🔴 打包一律执行仓库根 build.bat（唯一权威模块清单，勿手抄 meowth full；手抄清单漏「图鉴分类名」出过事故）。验 hook 用复制命令+--seed-only，--modules 照抄。
-- 打包用 PowerShell 原生跑（中文参数）；但 `*>&1 | Out-File` 会静默吞输出且**不真正重编**（log 0 行、bin 时间戳不更新）。稳妥：**bash 直跑** gcc/meowth，PYTHONPATH 用 C:\ 路径。判定真编了：`stat -c %y out/game.bin src/*.c` 对比时间戳。
-- check_rom_hook.py 的 MODES 表是 v3 遗留，"GRID"读数实为 use_linear，别当真。
-- 🔒 **P0**：根 build.bat 硬编码 --api-key 已被 git 跟踪 ⇒ 视为泄露，需轮换+改环境变量+清历史。
-
-## 重构等价性验证（可复用）
-改前存 out/game.bin 快照；判据：①bin 大小相同 ②nm -S 符号块在快照中 in 搜索（纯数据块必须全命中）③地址常量逐条核对。别比 elf vs bin 反汇编行数。
-
-## 识图
-直接 Read PNG 失败，走仓库根 `node vision.js bug/<目录>/10.PNG "..."`（.env 配 VISION_API_KEY/VAISION_MODEL）。
-
-## 相关文档
-docs/START_HERE.md（判断树）/ docs/V8_顺序tile分配器_设计.md（v8 权威设计）/ FONT_12PX_DRAW.md / HOOK_RELOCATE_PLAN.md
+## 历史教训（思路仍有效）
+- 「只有某字被盖」⇒ tile 踩踏；游标状态必须保留归零路径，否则无界累加花屏。
+- 可写 static 必须显式落 EWRAM（game.ld 无 .bss/.data 规则）；排查顺序：是否旧包→是否 RAM→逻辑。
+- relocate 改指针高危默认 False；改后跑 diag_relocate_collisions.py。F980 短语引用够用。
+- reader=读串改串地址随偏移；FC 颜色码打印循环逐字符执行（fc 05 09橙/0f灰白/08红）。
+- 打包：一律仓库根 build.bat（勿手抄模块清单）；hook 改完走 hook build→根 build→check_rom_hook.py；编译通过≠交付。🔒P0：build.bat 硬编码 api-key 已入 git，需轮换。
+- 识图：node vision.js bug/xxx.PNG（Read 直读 PNG 失败）。

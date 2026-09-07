@@ -221,6 +221,7 @@ class Ctx:
         dedup: bool,
         vram_survey: bool = False,
         cb_survey: bool = False,
+        ui_survey: bool = False,
     ):
         self.gdb = gdb
         self.logpath = logpath
@@ -230,8 +231,10 @@ class Ctx:
         self.dedup = dedup
         self.vram_survey = vram_survey
         self.cb_survey = cb_survey
+        self.ui_survey = ui_survey
         self._vram_sig: object = None
         self._cb_sig: object = None
+        self._ui_sig: object = None
         self._last: object = None
         self._skipped = 0
 
@@ -927,6 +930,10 @@ def _on_init_text(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> 
         # cb 区占用采集（避让带）：屏蔽文本打印后，扫 VRAM 非零 tile = 官方占用。
         # 内部按场景签名（DISPCNT+BGxCNT）去重，同页只采一次。
         _survey_cb_avoid(gdb, ctx)
+    if ctx.ui_survey:
+        # UI/窗口勘验（三路线采集）：atlas 引用计数 / OBJ 位图 / OAM 实测。
+        _survey_ui(gdb, ctx)
+        _dump_win_ext(gdb, win, ctx)
     if not ctx._hit((sp, data[:64])):
         return
     end = sp + len(data) - 1
@@ -1296,6 +1303,157 @@ def _survey_cb_avoid(gdb: GdbClient, ctx: Ctx) -> None:
         ctx.log(f"  {CB_SURVEY_LABELS[cb]} (0x{base:08X}): {_fmt_cb_ranges(ranges)}")
 
 
+# ---------------------------------------------------------------------------
+# UI/窗口勘验（--ui-survey）：三路线落地采集 ----------------------------------
+# 对应 docs/调研_20260907_三路线全网检索.md 的三个待验证问题：
+#   ① 窗口区预算：由 InitWindowTileData / InitWindowTileDataRet 成对日志给出
+#      （断点侧，非本勘验；区间 = [startOffset, 返回值)）。
+#   ② atlas 回收可行性：各启用 BG 的 tilemap 对字库区 [0,0x210) 的引用计数。
+#      判读：官方文本停印（--bypass-text）前后各采一次，引用计数差 = 官方活引用；
+#      若停印后引用≈0，atlas 即可回收（cb 整块 512 tile 连续空间）。
+#   ③ OBJ 文字层可行性：OBJ tile 位图（0x03002450【推定，pokeruby.sym 口径，
+#      未实机验证】）+ OAM 实测（活动精灵数 / tile 基址分布）。
+# 触发：挂在 InitTextPrinter / UpdateTilemap handler，场景签名变化时采一次。
+
+OBJ_BITMAP_ADDR = 0x03002450     # sSpriteTileAllocBitmap（0x80B = 1024 bit）
+OAM_ADDR = 0x07000000
+
+_BG_SIZE_NAMES = ("32x32", "64x32", "32x64", "64x64")
+
+
+def _survey_ui(gdb: GdbClient, ctx: Ctx) -> None:
+    """场景签名（DISPCNT+BGxCNT×4）变化时勘一次：BG 层 / atlas 引用 / OBJ 余量。"""
+    try:
+        dispcnt_b = bytes(gdb.read_mem(0x04000000, 2))
+        bgcnt_b = bytes(gdb.read_mem(0x04000008, 8))
+    except GdbError:
+        return
+    if len(dispcnt_b) < 2 or len(bgcnt_b) < 8:
+        return
+    dispcnt = u16(dispcnt_b, 0)
+    bgcnt = [u16(bgcnt_b, i * 2) for i in range(4)]
+    sig = (dispcnt, tuple(bgcnt))
+    if sig == ctx._ui_sig:
+        return
+    ctx._ui_sig = sig
+    mode = dispcnt & 7
+    ctx.log(f"\n[UISURVEY] 场景签名 mode={mode} DISPCNT=0x{dispcnt:04X}"
+            f" OBJ1D映射={(dispcnt >> 6) & 1} OBJ启用={(dispcnt >> 12) & 1}")
+    seen_cb: set[int] = set()
+    for layer in range(4):
+        cnt = bgcnt[layer]
+        cb = (cnt >> 2) & 3
+        sb = (cnt >> 8) & 0x1F
+        sz = (cnt >> 14) & 3
+        en = (dispcnt >> (8 + layer)) & 1
+        ctx.log(f"  BG{layer}: CNT=0x{cnt:04X} charBase={cb} screenBase={sb}"
+                f" size={_BG_SIZE_NAMES[sz]} 8bpp={(cnt >> 7) & 1} 启用={en}")
+        if not en or (mode >= 3 and layer >= 2):
+            continue
+        # tilemap 引用分析（读首个 screen block 0x800 = 32x32 区域）
+        tilemap_base = 0x06000000 + sb * 0x800
+        data = _read_chunks(gdb, tilemap_base, 0x800, step=0x100)
+        if len(data) < 0x800:
+            ctx.log(f"    tilemap@0x{tilemap_base:08X} 读取失败")
+            continue
+        zero = 0
+        hist = [0, 0, 0, 0]
+        atlas_set: Counter = Counter()
+        for k in range(0, 0x800, 2):
+            idx = (data[k] | (data[k + 1] << 8)) & 0x3FF
+            if idx == 0:
+                zero += 1
+                continue  # 空 entry 的 tile0 不算 atlas 引用（2026-09-07 采集勘误）
+            hist[idx >> 8] += 1
+            if idx < 0x210:
+                atlas_set[idx] += 1
+        tops = ", ".join(f"#{i:03X}x{n}" for i, n in atlas_set.most_common(5))
+        ctx.log(f"    tilemap@0x{tilemap_base:08X}: 全零项={zero}/1024"
+                f" 桶[0,1,2,3]xx={hist}")
+        ctx.log(f"    atlas区[0,0x210) 非零引用={sum(atlas_set.values())} 次 /"
+                f" {len(atlas_set)} 个不同 tile  最热: {tops or '无'}")
+        # 该 charBlock 的字库 atlas 实际范围（首个非零 tile 区间）
+        if cb not in seen_cb:
+            seen_cb.add(cb)
+            char_base_addr = 0x06000000 + cb * 0x4000
+            try:
+                cdata = _read_chunks(gdb, char_base_addr, 0x4000, step=0x100)
+                cranges = _cb_ranges(cdata)
+                note = ""
+                if cranges and cranges[0][0] == 0:
+                    note = f"（atlas 疑似 ≈ [0x000,0x{cranges[0][1]:03X})）"
+                ctx.log(f"    cb{cb} (0x{char_base_addr:08X}) 非零 tile 区间:"
+                        f" {_fmt_cb_ranges(cranges)} {note}")
+            except GdbError as e:
+                ctx.log(f"    cb{cb} (0x{char_base_addr:08X}) 读取失败 {e}")
+    # OBJ tile 分配位图（置位语义未知，两头都报 + 原始字节供人工判读）
+    bm = _read_chunks(gdb, OBJ_BITMAP_ADDR, 0x80, step=0x40)
+    if len(bm) == 0x80:
+        used = sum(bin(b).count("1") for b in bm)
+        runs: list[tuple[int, int]] = []
+        s = None
+        for i in range(1024):
+            bit = (bm[i >> 3] >> (i & 7)) & 1
+            if not bit:
+                if s is None:
+                    s = i
+            elif s is not None:
+                runs.append((s, i))
+                s = None
+        if s is not None:
+            runs.append((s, 1024))
+        runs.sort(key=lambda r: r[1] - r[0], reverse=True)
+        top = " ".join(f"[0x{a:03X},0x{b-1:03X}]({b-a})" for a, b in runs[:6])
+        ctx.log(f"  OBJ位图@0x{OBJ_BITMAP_ADDR:08X}【地址待验证】: 置位={used}/1024"
+                f" → 若置位=占用，最大空闲段: {top}")
+        ctx.log(f"    位图头16B: {bm[:16].hex(' ')}")
+    # OAM 实测：活动精灵数 + tile 基址分布（不依赖位图符号正确性）
+    oam = _read_chunks(gdb, OAM_ADDR, 0x400, step=0x100)
+    if len(oam) == 0x400:
+        active = []
+        for i in range(128):
+            a0 = u16(oam, i * 8)
+            a1 = u16(oam, i * 8 + 2)
+            a2 = u16(oam, i * 8 + 4)
+            if (a0 & 0x0300) == 0x0200:   # bit9=1 且非仿射 → 隐藏
+                continue
+            wh = OAM_SIZE_TABLE.get(((a0 >> 14) & 3, (a1 >> 14) & 3))
+            active.append((a2 & 0x3FF, wh, (a0 >> 13) & 1))
+        if active:
+            tiles = [t for t, _, _ in active]
+            n8 = sum(1 for _, _, b8 in active if b8)
+            ctx.log(f"  OAM 实测: 活动精灵 {len(active)}/128"
+                    f" tile基址范围 [0x{min(tiles):03X},0x{max(tiles):03X}]"
+                    f" 8bpp×{n8}")
+            ctx.log(f"    明细(tile,宽x高,8bpp): {active[:10]}")
+            # 按 OAM 逐精灵估算 tile 占用上界（4bpp w*h/64，8bpp×2），给出空闲判据
+            span = [t + (w * h * (2 if b8 else 1)) // 64 for t, (w, h), b8 in active]
+            hi = max(span) if span else 0
+            ctx.log(f"    OAM估算占用上界 ≈ tile [0x000,0x{hi:03X})"
+                    f" → 空闲 ≈ {1024 - hi} tile（OBJ 文字层判据）")
+        else:
+            ctx.log("  OAM 实测: 无活动精灵 → OBJ VRAM 全空（1024 tile）")
+
+
+# win 结构 0x40B 扩展 dump：找 width/height 真实偏移（日版布局与 pokeemerald
+# 不同、模板 0x14-0x17 恒 0）。每 win 指针只打前几个不同现场，防刷屏。
+_WINEXT_STATE: dict[str, Any] = {"n": 0, "keys": set()}
+
+
+def _dump_win_ext(gdb: GdbClient, win: int, ctx: Ctx) -> None:
+    if _WINEXT_STATE["n"] >= 200:
+        return
+    wb = _read_mem(gdb, win, 0x40)
+    if len(wb) < 0x20:
+        return
+    key = (win, bytes(wb[:0x20]))
+    if key in _WINEXT_STATE["keys"]:
+        return
+    _WINEXT_STATE["keys"].add(key)
+    _WINEXT_STATE["n"] += 1
+    ctx.log(f"  [win0x40] 0x{win:08X}: {wb.hex(' ')}")
+
+
 # hook 侧屏蔽文本打印开关（ADDR_V6_BYPASS，见 configs/.../hook/include/game.h）。
 # 非 0 → PrintNextChar_Hook 直接 return 1，连官方串都不打印。
 ADDR_TEXT_BYPASS = 0x0203FEB8
@@ -1385,6 +1543,8 @@ def _on_slot_draw_chs(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any])
 def _on_update_tilemap(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
     if ctx.vram_survey:
         _maybe_vram_survey(gdb, ctx)
+    if ctx.ui_survey:
+        _survey_ui(gdb, ctx)
     """BG 表项写入总入口。JP：r0=win, r1=upperTile, r2=lowerTile；
     US：r0=win, r1=tilesWidth（pokeruby UpdateTilemap(win, tilesWidth)）。
     记录目标格/写入前现值——定位乱码格来源。"""
@@ -1482,20 +1642,33 @@ def _on_render_bold(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -
         ctx.log("  ※ LR 在 UpdateNick 域 → 血条昵称 Render")
 
 
+# IWTD 入口→出口配对状态（窗口区预算 = [startOffset, 返回值)）
+_IWTD_STATE: dict[str, Any] = {"r0": 0, "start": None}
+
+
 @handler("InitWindowTileData")
 def _on_iwtd(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
-    """分区器入口（JP 0x08002A50，与美版同址；fontNum 跳表 7 项实证）。
-    r0=win 或 template（运行时定身份），r1=startOffset。
-    记录分区链输入 + r0 两种解释的内存现场。"""
+    """分区器入口（JP 0x08002A50）。
+    ✅ 2026-09-07 反汇编 + 实机采集定论（推翻旧「分区链」理解）：
+    - 签名 = IWTD(template r0, startOffset r1, glyphIdx r2)；**逐 glyph/tile 调用**
+      （实机观测 r2 连续递增 0x51..0x5F），不是整窗初始化。
+    - 返回 void（见 InitWindowTileDataRet 注释）。
+    - tm1 分支落址公式：dest = template->tileData[0x0C] + (startOffset<<5)
+      + (glyphIdx<<6) ⇒ **tile 号 = tileBase + 2×glyphIdx，官方无分配器、
+      位置/索引决定** —— pokeRS 式落址在日版存在的直接证据。
+    - r0=win 时 win[0..3]=模板指针；但战斗窗 0x021E0100 结构不同（[0] 非模板），
+      「[按win解释]」输出对该类 win 是垃圾，仅作线索。"""
     r0 = regs.get("r0", 0)
     off = regs.get("r1", 0) & 0xFFFF
+    _IWTD_STATE["r0"] = r0
+    _IWTD_STATE["start"] = off
     r2 = regs.get("r2", 0) & 0xFFFFFFFF
     r3 = regs.get("r3", 0) & 0xFF
     if not ctx._hit(("iwtd", r0, off)):
         return
     ctx.log(
-        f"\n[IWTD] r0=0x{r0:08X} startOffset(r1)=0x{off:04X}"
-        f" r2=0x{r2:08X} r3=0x{r3:02X}"
+        f"\n[IWTD] r0=0x{r0:08X} tileBase(r1)=0x{off:04X}"
+        f" glyphIdx(r2)=0x{r2:08X} r3=0x{r3:02X}"
     )
     b = _read_mem(gdb, r0, 0x14)
     if not b:
@@ -1524,13 +1697,56 @@ def _on_iwtd(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
 
 @handler("InitWindowTileDataRet")
 def _on_iwtd_ret(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
-    """分区器出口（JP 0x08002AEA pop{r4-r6} 前）：r0=返回值=下一空闲 offset，
-    r4=入口 r0。与入口成对即可还原场景分区链。"""
+    """⚠ 已作废（2026-09-07 实机采集 + 反汇编定论）：IWTD 返回 void——
+    各分支 bl loader 后直接 b 0x08002AE8 → pop{r4-r6}; pop{r0}; bx r0，
+    r0 从未被赋「下一空闲 offset」。0x08002AEA 处 r0 恒为 thumb 返回地址
+    0x08002AAB，本断点读不到任何预算信息。窗口预算改由
+    MenuDrawStdWindowFrame(bg,x,y,width) 参数 + tilemap 实测取得。
+    保留 handler 仅为兼容旧 yaml 配置。"""
     ret = regs.get("r0", 0) & 0xFFFFFFFF
     r4 = regs.get("r4", 0)
     if not ctx._hit(("iwtret", r4, ret)):
         return
-    ctx.log(f"\n[IWTD-Ret] r0(下一空闲)=0x{ret:08X} r4=0x{r4:08X}")
+    ctx.log(f"\n[IWTD-Ret]（断点已作废，r0 非返回值）r0=0x{ret:08X} r4=0x{r4:08X}")
+
+
+@handler("TextLoadWindowTemplate")
+def _on_text_load_tpl(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """窗口模板重建入口（JP 0x080029E0 = InitWindowTileData 唯一调用方，
+    BL 调用点静态验证 2026-09-07）。r0=template。
+    场景窗口「账本重建」信号：每命中一次 = 一批窗口 tile 区重新分配。"""
+    r0 = regs.get("r0", 0)
+    if not ctx._hit(("tlwt", r0)):
+        return
+    ctx.log(f"\n[LoadTpl] template=0x{r0:08X} LR=0x{(regs.get('r14', 0) & ~1):08X}")
+    tplt = _read_mem(gdb, r0, 0x18)
+    if len(tplt) >= 0x14:
+        ctx.log(
+            f"  模板: bg={tplt[0]} charBase={tplt[1]} screenBase={tplt[2]}"
+            f" pal={tplt[4]} font={tplt[8]} textMode={tplt[9]} spacing={tplt[10]}"
+            f" tileData=0x{u32(tplt, 0x0C):08X} tilemap=0x{u32(tplt, 0x10):08X}"
+        )
+
+
+@handler("MenuDrawStdWindowFrame")
+def _on_menu_frame(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """菜单窗框绘制入口（JP 0x0806F224，push{lr} 头 + 2 调用点，静态验证
+    2026-09-07）。美版签名 (bg, x, y, width, height) —— 若日版同签名，
+    r3=width 候选、栈上 r4=height 候选，可佐证窗宽来源。"""
+    r0, r1, r2 = (regs.get(k, 0) & 0xFF for k in ("r0", "r1", "r2"))
+    r3 = regs.get("r3", 0) & 0xFF
+    ctx.log(f"\n[MenuFrame] bg?={r0} x?={r1} y?={r2} width?={r3}"
+            f" LR=0x{(regs.get('r14', 0) & ~1):08X}")
+
+
+@handler("MenuLoadStdFrameGraphics")
+def _on_menu_load_frame(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """菜单窗框装载入口（JP 0x0806F16C 推定：与 DrawStdWindowFrame 同批调用、
+    紧邻其前，未实证）。记录 r0-r3 供窗框 tile 区定位。"""
+    r0 = regs.get("r0", 0)
+    r1 = regs.get("r1", 0) & 0xFFFFFFFF
+    ctx.log(f"\n[MenuLoadFrame] r0=0x{r0:08X} r1=0x{r1:08X}"
+            f" LR=0x{(regs.get('r14', 0) & ~1):08X}")
 
 
 @handler("GetGlyphTilePointers")
@@ -2289,7 +2505,8 @@ def run_log(args: argparse.Namespace) -> int:
 
     ctx = Ctx(gdb, logpath, single, double, origin, dedup=not args.no_dedup,
               vram_survey=bool(getattr(args, "vram_survey", False)),
-              cb_survey=bool(getattr(args, "cb_survey", False)))
+              cb_survey=bool(getattr(args, "cb_survey", False)),
+              ui_survey=bool(getattr(args, "ui_survey", False)))
 
     global _TILES_HARVESTER
     _TILES_HARVESTER = None
@@ -2657,6 +2874,12 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         "--cb-survey", action="store_true",
         help="cb 区占用采集（避让带）：配合屏蔽文本打印开关（ADDR_V6_BYPASS=1），"
         "在 InitTextPrinter 命中时扫 VRAM 6 个 charblock 非零 tile，输出官方避让带区间")
+    ap.add_argument(
+        "--ui-survey", action="store_true",
+        help="UI/窗口勘验（三路线采集）：场景签名变化时报 BG 层 size/atlas 引用计数/"
+        "cb 字库区范围/OBJ tile 位图/OAM 实测；InitTextPrinter 命中时附 win 结构 0x40B dump"
+        "（找 width/height）。建议配 --functions InitTextPrinter,InitWindowTileData,"
+        "InitWindowTileDataRet 使用")
     ap.add_argument(
         "--bypass-text", action="store_true",
         help="连接后写 ADDR_V6_BYPASS(0x0203FEB8)=1 屏蔽所有文本打印，"

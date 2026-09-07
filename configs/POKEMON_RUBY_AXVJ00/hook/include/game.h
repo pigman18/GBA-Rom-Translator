@@ -33,14 +33,6 @@
 #define ADDR_FONT_SUBTABLE                 0x081BB3BCu
 #define ADDR_FONT_TYPE1_MAP                0x081B34A8u
 #define ADDR_GAME_BIN                      0x08800000u
-#define ADDR_V6_TILE_HW                    0x0203FEB0u  /* v6 全局 tile 高水位游标 */
-#define ADDR_V6_BYPASS                     0x0203FEB8u  /* v6 裸透传开关：非 0 → PrintNextChar 直接 return 1（连官方串都不打印） */
-#define ADDR_V7_ALLOC_STATE                0x0203FEC0u  /* v7/v8 动态分配器状态：占用位图快照 128B（FEC0~FF40 空闲带） */
-#define ADDR_V8_CURSOR                     0x0203FF42u  /* v8 分配游标（相对 charBase，会话边界复位） */
-#define ADDR_V8_PHASE                      0x0203FF44u  /* v8 12px 行内相位 px（phase=px&7） */
-#define ADDR_V8_PHASE_ROW                  0x0203FF46u  /* v8 相位所属行标识（失配即归零） */
-#define ADDR_V8_LAST_TILE                  0x0203FF48u  /* v8 上一列已领 tile 号（phase!=0 复用） */
-#define ADDR_V8_NL_MARK                    0x0203FF4Au  /* 上次绘字 (tileY<<8)|tileX；行首/TX 回落检测 */
 #define ADDR_GET_CURSOR_TILEMAP_PTR        0x08003708u
 #define ADDR_GET_GLYPH_TILE_PTRS           0x08003730u
 #define ADDR_GLYPH_ALLOC_NEXT              0x0203FFF8u
@@ -61,6 +53,15 @@
 #define ADDR_TILE_PTR_TM3                  0x080034E0u
 #define ADDR_TPL_DEX_LIST                  0x081BB784u
 #define ADDR_UPDATE_TILEMAP                0x080036DCu
+#define ADDR_V6_BYPASS                     0x0203FEB8u
+#define ADDR_V6_TILE_HW                    0x0203FEB0u
+#define ADDR_V7_ALLOC_STATE                0x0203FEC0u
+#define ADDR_V8_CURSOR                     0x0203FF42u
+#define ADDR_V8_LAST_TILE                  0x0203FF48u
+#define ADDR_V8_NL_MARK                    0x0203FF4Au
+#define ADDR_V8_OURS_SEGS                  0x0203FF80u
+#define ADDR_V8_PHASE                      0x0203FF44u
+#define ADDR_V8_PHASE_ROW                  0x0203FF46u
 // <<<GEN_ADDR_END>>>
 /*
  * 短语表（PhraseTable）—— 固定长度字段突破字符数限制的方案。

@@ -581,7 +581,19 @@ gdb:
   default: false
 - name: InitWindowTileDataRet
   address: '0x08002AEA'
-  description: 分区器出口 pop{r4-r6} 处（r0=返回值=下一空闲 offset，r4=入口 r0）——与入口成对还原分区链
+  description: 分区器出口 pop{r4-r6} 处（r0=返回值=下一空闲 offset，r4=入口 r0）——与入口成对还原分区链；配 --ui-survey 时自动输出窗口区预算 [startOffset,返回值)
+  default: false
+- name: TextLoadWindowTemplate
+  address: '0x080029E0'
+  description: 窗口模板重建入口（r0=template；= InitWindowTileData(0x08002A50) 的唯一调用方，BL 调用点静态验证 2026-09-07）——场景窗口账本重建信号
+  default: false
+- name: MenuDrawStdWindowFrame
+  address: '0x0806F224'
+  description: 菜单窗框绘制入口（push{lr} 头 + 2 调用点，BL 静态验证 2026-09-07）；若日版同美版签名 (bg,x,y,width,height)，r3=width 候选
+  default: false
+- name: MenuLoadStdFrameGraphics
+  address: '0x0806F16C'
+  description: 菜单窗框装载入口（推定：与 DrawStdWindowFrame 同批调用、紧邻其前；BL 静态验证仅为调用关系，函数身份未实证）
   default: false
 - name: UpdateNickAlt2
   address: '0x08042408'

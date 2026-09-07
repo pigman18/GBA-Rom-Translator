@@ -1,37 +1,37 @@
 /* ============================================================================
- * tile_alloc.c — v8 顺序 tile 分配器（运行时读 tilemap → 避让带 → 顺序绕开）
+ * tile_alloc.c — v8 动态 tile 分配器（活引用 + VRAM 非空 + ours 段表，零静态表）
  *
- * 取代 v6 静态行带表 + v7 动态行基址表，回到用户最初认知的「顺序放入 + 避让带」。
- * 一个字的 tile 号只有一个来源：本顺序分配器。16px / 12px / 8px 统一走同一条路径，
- * 不再有「静态表命中走 A、未命中走 B」的分裂。
+ * 2026-09-07 定稿：废弃 kV8AvoidScenes 静态避让带（14 签名/37 段手工表）与
+ * 线性落址表（kV8LinearScenes，实测同场景多窗口并发叠印 → 回归 BUG），
+ * 全部改为运行时动态获取，任何场景自动适配：
  *
- * 三步法（用户定义）：
- *   ① 屏蔽输出 —— 已在 PrintNextChar_Hook + ADDR_V6_BYPASS 开关完成；
- *   ② 读避让带 —— 本文件：扫 tilemap 活引用，收集官方已占 tile 号；
- *   ③ 顺序绕开 —— 本文件：确定性遍历空闲带，跳过占用，领连续 glyph_len 个 tile。
+ *   ① 活引用层（权威，防砸屏上正在显示的字）：
+ *      v8_alloc_begin 清零重建位图——扫 win 自身 tilemap + DISPCNT 所有启用 BG
+ *      中同 charBase 的 screenblock（BGxCNT.size 位定扫描范围，affine/位图 BG 跳过）。
+ *      清零重建（非增量）防「旧条目消失后位图泄漏」。
+ *   ② VRAM 非空层（补活引用扫不到的官方占用）：
+ *      alloc 时对候选 tile 实时校验 32B 全空。覆盖：atlas 字库区（各场景上界
+ *      0x208~0x2D1 差异自动适配）、begin 之后才绘制的官方 UI（关闭按钮/状态
+ *      图标/窗框）、LZ 解压到硬编码地址的图形——静态带想手工解决但解决不完
+ *      的全部场景，动态版一律自动避开。
+ *   ③ ours 段表（回收我们自己写过的残留 glyph）：
+ *      非空 tile 仅当记录在 ours 段表（EWRAM 0x0203FF80，19 段 + magic 防冷
+ *      启动残留）才允许重写；官方数据/atlas 永不在表内 → 永不回收。
  *
- * 三条铁律（缺一不可）：
- *   ① 确定性：固定起点遍历跳过占用，同输入 → 同输出（防 v4 随机取址/重绘漂移坑）。
- *   ② 权威性：避让带来自 tilemap 活引用，不靠猜（漏一个就砸官方字）。
- *   ③ 隔离性：charBase 物理分块天然隔离 OBJ 精灵区，上界用 REG_DISPCNT 截断。
- *
- * 关键输入（AXVJ 实证）：
- *   tilemap 指针 = tpl[TPL_TILEMAP]=+0x10；charBase = tpl[TPL_CHARBASE]=+0x01
- *   （charBlock 号 0~3）；tilemap 表项 tile 号 = entry&0x3FF（低 10 bit，
- *   高 4 bit 是 palette）；OBJ 起始 charBlock = (REG_DISPCNT>>4)&3。
- *
- * 状态最小化 + 生命周期（用户反复强调「别来回切换出 BUG」）：
- *   - 占用位图（128B）、分配游标（2B）、12px 相位（px 2B + last_tile 2B）三者
- *     都在 v8_alloc_begin（InitTextPrinter 会话边界）重建/复位。
- *   - 相位不再是全局 8 槽 + 行指纹 key 的跨窗口状态表，而是会话内单调增量，
- *     窗口切换自然从头累计，不存在残留。
+ * 确定性不变：固定起点顺序遍历，同输入 → 同输出。
+ * OBJ 隔离不变：hi = (4-char_base)*512 clamp 1024。
  * ==========================================================================*/
 #include "tile_alloc.h"
-#include "scene_cfg.h"   /* kV8AvoidScenes / kV8AvoidSceneN：场景配置避让带 */
 
-/* 占用位图：128 字节 = 1024 bit = tile 相对号 0~1023。
- * bit 布局：位图[0] bit0 = tile 0，位图[0] bit7 = tile 7，位图[1] bit0 = tile 8 … */
+/* 占用位图：128 字节 = 1024 bit = tile 相对号 0~1023。 */
 #define V8_BITMAP_WORDS  128u   /* 1024 bit / 8 */
+
+/* ours 段表容量：80B = magic(2B) + pad(2B) + 19 段 × 4B */
+#define V8_OURS_SEG_N    19u
+#define V8_OURS_MAGIC    0xA5C3u
+
+#define REG_V8_DISPCNT     (*(volatile uint16_t *)0x04000000u)
+#define REG_V8_BGxCNT(bg)  (*(volatile uint16_t *)(0x04000008u + (bg) * 2u))
 
 static volatile uint8_t *v8_bitmap(void)
 {
@@ -55,14 +55,83 @@ static void v8_bit_clear_all(volatile uint8_t *bm)
         bm[i] = 0u;
 }
 
-/* 分配上界（charBase 相对号）：避免落入 OBJ 精灵 charBlock。
- * GBA 的 OBJ tile 数据固定占 VRAM charBlock 4/5（DISPCNT bit6 在 4/5 间选，与 BG
- * charBase 无关）。窗口相对 tile 号 t 落物理 charBlock = char_base + t/512；落 OBJ 当
- * 且仅当该物理块 >= 4。故上界 hi = (4 - char_base)*512，clamp 到 1024：
- *   char_base=0/1/2 -> hi=1024（BG 占满 charBlock 0~3，本就不碰 OBJ 区）；
- *   char_base=3     -> hi=512  （相对 512+ 已落在物理 charBlock 4 = OBJ 区，必须拦）。
- * 旧实现误读 DISPCNT bits[5:4] 当 OBJ charBlock，char_base=3 时算得 obj_cb=0、
- *   obj_cb>char_base 恒假 -> hi 退化 1024，把 OBJ 区整段放行（战斗 UI 踩精灵根因）。 */
+/* ---- ours 段表（EWRAM 0x0203FF80）--------------------------------------
+ * raw[0]=magic；seg[i] = {raw[2+i*2]=start, raw[3+i*2]=len}。
+ * GBA 冷启动 EWRAM 内容不保证零（game.bin 无 .bss 加载器），magic 一次校验：
+ * 非 magic → 整表清零并落 magic（垃圾恰好等于 magic 且段又合法的概率可忽略；
+ * 即便误判，后果只是某个 tile 被多一次回收机会，不是直接砸字）。 */
+static volatile uint16_t *v8_ours_raw(void)
+{
+    return (volatile uint16_t *)ADDR_V8_OURS_SEGS;
+}
+
+static void v8_ours_init_once(void)
+{
+    volatile uint16_t *raw = v8_ours_raw();
+    unsigned i;
+    if (raw[0] == V8_OURS_MAGIC)
+        return;
+    raw[0] = V8_OURS_MAGIC;
+    for (i = 1; i < 2u + V8_OURS_SEG_N * 2u; i++)
+        raw[i] = 0u;
+}
+
+static uint16_t v8_seg_start(unsigned i)
+{
+    return v8_ours_raw()[2u + i * 2u];
+}
+
+static uint16_t v8_seg_len(unsigned i)
+{
+    return v8_ours_raw()[3u + i * 2u];
+}
+
+static void v8_seg_set(unsigned i, uint16_t start, uint16_t len)
+{
+    v8_ours_raw()[2u + i * 2u] = start;
+    v8_ours_raw()[3u + i * 2u] = len;
+}
+
+static int v8_in_ours(uint16_t t)
+{
+    unsigned i;
+    for (i = 0; i < V8_OURS_SEG_N; i++) {
+        uint16_t st = v8_seg_start(i);
+        uint16_t ln = v8_seg_len(i);
+        if (ln != 0u && (uint16_t)(t - st) < ln)
+            return 1;
+    }
+    return 0;
+}
+
+static void v8_ours_add(uint16_t t, uint16_t len)
+{
+    unsigned i;
+    /* 并入相邻段 / 重复段去重 */
+    for (i = 0; i < V8_OURS_SEG_N; i++) {
+        uint16_t st = v8_seg_start(i);
+        uint16_t ln = v8_seg_len(i);
+        if (ln == 0u)
+            continue;
+        if ((uint16_t)(st + ln) == t) {                 /* 后接 */
+            v8_seg_set(i, st, (uint16_t)(ln + len));
+            return;
+        }
+        if ((uint16_t)(t + len) == st) {                /* 前接 */
+            v8_seg_set(i, t, (uint16_t)(ln + len));
+            return;
+        }
+        if ((uint16_t)(t - st) < ln)                    /* 已包含 */
+            return;
+    }
+    /* 无相邻：淘汰最旧（seg[0]），整体前移，新段入尾 */
+    for (i = 0; i + 1u < V8_OURS_SEG_N; i++)
+        v8_seg_set(i, v8_seg_start(i + 1u), v8_seg_len(i + 1u));
+    v8_seg_set(V8_OURS_SEG_N - 1u, t, len);
+}
+
+/* 分配上界（charBase 相对号）：避免落入 OBJ 精灵 charBlock（cb4/5 物理隔离）。
+ * char_base=0/1/2 -> 1024；char_base=3 -> 512（相对 512+ = 物理 cb4 = OBJ 区）。 */
 static uint16_t v8_alloc_hi(uint8_t char_base)
 {
     unsigned hi = (char_base < 4u) ? (unsigned)(4u - char_base) * 512u : 0u;
@@ -71,57 +140,32 @@ static uint16_t v8_alloc_hi(uint8_t char_base)
     return (uint16_t)hi;
 }
 
-/* 按 tpl 查避让表。DISPCNT/BGxCNT 不入库；同 tpl 多页已在配置侧并成并集。 */
-static const struct V8AvoidScene *v8_lookup_avoid(uint8_t *tpl)
+/* 单 tile 可用性：位图未标（无活引用）且（VRAM 全空 或 属 ours 可回收）。 */
+static int v8_tile_usable(volatile uint8_t *bm, const void *vram, uint16_t t)
 {
-    uint32_t self = (uint32_t)(uintptr_t)tpl;
-    unsigned i;
-    for (i = 0; i < kV8AvoidSceneN; i++)
-        if (kV8AvoidScenes[i].tpl == self)
-            return &kV8AvoidScenes[i];
-    return (const struct V8AvoidScene *)0;
-}
-
-/* 把 band（相对 band.char_base）折成窗口相对号后标进位图。 */
-static void v8_mark_avoid_bands(volatile uint8_t *bm, uint8_t win_cb,
-                                const struct V8AvoidBand *bands, uint8_t band_n)
-{
-    unsigned b;
-    if (!bands || band_n == 0u)
-        return;
-    for (b = 0; b < band_n; b++) {
-        const struct V8AvoidBand *bd = &bands[b];
-        int32_t lo, hi, t;
-        int dcb;
-        if (bd->char_base > 3u || bd->lo > bd->hi)
-            continue;
-        dcb = (int)bd->char_base - (int)win_cb;
-        lo = (int32_t)bd->lo + (int32_t)dcb * 512;
-        hi = (int32_t)bd->hi + (int32_t)dcb * 512;
-        if (lo < 0)
-            lo = 0;
-        if (hi > 1023)
-            hi = 1023;
-        if (lo > hi)
-            continue;
-        for (t = lo; t <= hi; t++)
-            v8_bit_set(bm, (uint16_t)t);
-    }
+    const volatile uint32_t *p;
+    if (v8_bit_get(bm, t))
+        return 0;
+    p = (const volatile uint32_t *)((const volatile uint8_t *)vram
+                                    + (unsigned)t * 32u);
+    if (p[0] | p[1] | p[2] | p[3] | p[4] | p[5] | p[6] | p[7])
+        return v8_in_ours(t);
+    return 1;
 }
 
 /* ============================================================================
- * v8_alloc_begin：打印会话开始时快照占用位图 + 复位游标与相位。
- * 扫当前窗口 tilemap（BG screenBase 32×32 = 1024 表项）的活引用，每个非零
- * 表项的低 10 bit = 官方已占 tile 相对号，标位。
- * 之后本轮所有中文查这张快照——不看自己刚写入的表项 ⇒ 防自画污染。
- * 游标与相位同步复位（三者同生命周期）。
+ * v8_alloc_begin：打印会话边界——复位游标/相位 + 权威重建活引用位图。
+ * ① win 自身 tilemap（防御 tilemap 不在 screenblock 的缓冲直绘变体）；
+ * ② DISPCNT 启用的每个 text BG：BGxCNT.charBase == 本窗 charBase 时，
+ *    按其 size 位扫整个 screenblock（32×32/64×32/32×64/64×64 表项）。
+ *    affine（mode1/2 的 BG2、mode2 的 BG3）与位图模式 BG 的表项语义不同，跳过。
  * ==========================================================================*/
 void v8_alloc_begin(TextPrinter *win)
 {
     uint8_t *tpl = win_template(win);
-    uint16_t *tilemap;
     volatile uint8_t *bm = v8_bitmap();
-    unsigned i;
+    uint8_t cb;
+    unsigned bg, i;
 
     *(volatile uint16_t *)ADDR_V8_CURSOR = 0u;
     *(volatile uint16_t *)ADDR_V8_PHASE = 0u;
@@ -131,42 +175,64 @@ void v8_alloc_begin(TextPrinter *win)
 
     if (!tpl)
         return;
-    tilemap = (uint16_t *)(uintptr_t)win_u32(tpl, TPL_TILEMAP);
-    if (!tilemap)
-        return;
-
+    cb = tpl[TPL_CHARBASE];
+    v8_ours_init_once();
     v8_bit_clear_all(bm);
 
-    /* 扫整个 tilemap（32×32 = 1024 表项）。tilemap 表项存 charBase 相对号，
-     * 高 4 bit 是 palette（官方 UpdateTilemap 写 palette=win[0x0F]<<12），
-     * 故 & 0x3FF 取低 10 bit 的 tile 号。 */
-    for (i = 0; i < 1024u; i++) {
-        uint16_t t = tilemap[i] & 0x3FFu;
-        if (t != 0u)
-            v8_bit_set(bm, t);
+    /* ① win 自身 tilemap */
+    {
+        const uint16_t *tilemap = (const uint16_t *)(uintptr_t)win_u32(tpl, TPL_TILEMAP);
+        if (tilemap) {
+            for (i = 0; i < 1024u; i++) {
+                uint16_t t = tilemap[i] & 0x3FFu;
+                if (t != 0u)
+                    v8_bit_set(bm, t);
+            }
+        }
     }
 
-    /* 合并场景配置避让带（kV8AvoidScenes）：补 tilemap 活引用扫不到的官方占用——
-     * 关闭按钮 / 血条状态图标 / 场景映射 / 其它 BG 层 / 扫描后才绘制的 UI。
-     * band.char_base 可与窗不同：按 (band_cb - win_cb)*512 折成窗口相对号。 */
+    /* ② 全 BG 同 charBase 的 screenblock 活引用 */
     {
-        const struct V8AvoidScene *av = v8_lookup_avoid(tpl);
-        if (av)
-            v8_mark_avoid_bands(bm, tpl[TPL_CHARBASE], av->bands, av->band_n);
+        uint16_t dis = REG_V8_DISPCNT;
+        uint8_t mode = (uint8_t)(dis & 7u);
+        for (bg = 0; bg < 4u; bg++) {
+            uint16_t cnt;
+            const uint16_t *sb;
+            unsigned size, n;
+
+            if (!(dis & (uint16_t)(0x100u << bg)))
+                continue;
+            /* mode≠0 时 BG2/BG3 可能是 affine 或位图层：表项不是 10bit tile 号 */
+            if (bg >= 2u && mode != 0u)
+                continue;
+            cnt = REG_V8_BGxCNT(bg);
+            if (((cnt >> 2) & 3u) != cb)
+                continue;
+            sb = (const uint16_t *)(uintptr_t)
+                 (0x06000000u + (unsigned)((cnt >> 8) & 0x1Fu) * 0x800u);
+            size = (unsigned)(cnt >> 14) & 3u;
+            n = (size == 0u) ? 1024u : (size == 3u) ? 4096u : 2048u;
+            for (i = 0; i < n; i++) {
+                uint16_t t = sb[i] & 0x3FFu;
+                if (t != 0u)
+                    v8_bit_set(bm, t);
+            }
+        }
     }
 }
 
 /* ============================================================================
  * v8_alloc_tile：领连续 glyph_len 个 tile。
- * 确定性：从游标起遍历 [lo, hi)，跳过占用位图，取首个连续 glyph_len 空闲。
- * 无空闲 → 回卷到 lo 重扫一次，再没有 → 返回 0（调用方放弃，宁缺不砸 UI）。
- * 分配后推进游标到 t + glyph_len（字间紧排，无额外 GAP——用户 2026-09-04 定稿）。
+ * 确定性顺序遍历 [lo, hi)，逐候选过 v8_tile_usable（位图 + VRAM 非空 + ours）；
+ * 无空闲回卷重扫，再无 → 返回 0（调用方放弃，宁缺不砸 UI）。
+ * 分配后推进游标并记入 ours 段表（相邻自动合并）。
  * ==========================================================================*/
 uint16_t v8_alloc_tile(TextPrinter *win, uint8_t font_px, uint8_t glyph_len)
 {
     uint8_t *tpl = win_template(win);
     uint8_t char_base;
     volatile uint8_t *bm = v8_bitmap();
+    const void *vram;
     uint16_t hi, lo, t;
     uint16_t start;
     unsigned i;
@@ -176,8 +242,11 @@ uint16_t v8_alloc_tile(TextPrinter *win, uint8_t font_px, uint8_t glyph_len)
     if (!tpl || glyph_len == 0u)
         return 0u;
     char_base = tpl[TPL_CHARBASE];
+    vram = (const void *)(uintptr_t)win_u32(tpl, TPL_TILE_DATA);
+    if (!vram)
+        return 0u;
     hi = v8_alloc_hi(char_base);
-    lo = 0x100u;                  /* 空闲带起点：避开官方 atlas [0,0x100) */
+    lo = 0x100u;                  /* 起点避开官方 atlas 主体；越界部分由 VRAM 校验兜底 */
     if (lo >= hi || (unsigned)(hi - lo) < glyph_len)
         return 0u;
 
@@ -189,9 +258,10 @@ uint16_t v8_alloc_tile(TextPrinter *win, uint8_t font_px, uint8_t glyph_len)
     for (t = start; (unsigned)t + glyph_len <= (unsigned)hi; t++) {
         int ok = 1;
         for (i = 0; i < glyph_len; i++)
-            if (v8_bit_get(bm, (uint16_t)(t + i))) { ok = 0; break; }
+            if (!v8_tile_usable(bm, vram, (uint16_t)(t + i))) { ok = 0; break; }
         if (ok) {
             *(volatile uint16_t *)ADDR_V8_CURSOR = (uint16_t)(t + glyph_len);
+            v8_ours_add(t, glyph_len);
             return t;
         }
     }
@@ -199,9 +269,10 @@ uint16_t v8_alloc_tile(TextPrinter *win, uint8_t font_px, uint8_t glyph_len)
     for (t = lo; (unsigned)t + glyph_len <= (unsigned)hi; t++) {
         int ok = 1;
         for (i = 0; i < glyph_len; i++)
-            if (v8_bit_get(bm, (uint16_t)(t + i))) { ok = 0; break; }
+            if (!v8_tile_usable(bm, vram, (uint16_t)(t + i))) { ok = 0; break; }
         if (ok) {
             *(volatile uint16_t *)ADDR_V8_CURSOR = (uint16_t)(t + glyph_len);
+            v8_ours_add(t, glyph_len);
             return t;
         }
     }
@@ -248,7 +319,7 @@ void v8_phase_before_glyph(TextPrinter *win)
             *(volatile uint16_t *)ADDR_V8_PHASE = 0u;
             *(volatile uint16_t *)ADDR_V8_LAST_TILE = 0u;
             *(volatile uint16_t *)ADDR_V8_PHASE_ROW = 0xFFFFu;
-            /* Linear：换行 TILE_OFFSET+=2（文档铁律，奇数位行末必做） */
+            /* tm0/1 恒 TILE_OFFSET+=2（文档铁律，奇数位行末必做） */
             if (tm == 0u || tm == 1u)
                 win_set_u16(win, WIN_TILE_OFFSET,
                             (uint16_t)(win_u16(win, WIN_TILE_OFFSET) + 2u));

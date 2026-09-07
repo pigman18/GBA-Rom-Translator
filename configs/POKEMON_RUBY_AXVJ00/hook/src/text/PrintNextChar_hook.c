@@ -200,8 +200,6 @@ static unsigned print_glyph_px(TextPrinter *win,
     uint16_t t0, t1;
     uint8_t tx0, tm;
 
-    v8_phase_before_glyph(win);
-
     px = v8_phase_get(win);
     phase = px & 7u;
     w0 = (8u - phase < ink) ? (8u - phase) : ink;
@@ -260,7 +258,6 @@ static unsigned print_glyph_px(TextPrinter *win,
 
     v8_phase_advance((uint16_t)ink);
     v8_phase_set_last_tile((w1 != 0u) ? t1 : t0);
-    v8_phase_after_glyph(win);
     return adv;
 }
 

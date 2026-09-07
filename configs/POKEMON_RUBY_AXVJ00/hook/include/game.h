@@ -58,7 +58,6 @@
 #define ADDR_V7_ALLOC_STATE                0x0203FEC0u
 #define ADDR_V8_CURSOR                     0x0203FF42u
 #define ADDR_V8_LAST_TILE                  0x0203FF48u
-#define ADDR_V8_NL_MARK                    0x0203FF4Au
 #define ADDR_V8_OURS_SEGS                  0x0203FF80u
 #define ADDR_V8_PHASE                      0x0203FF44u
 #define ADDR_V8_PHASE_ROW                  0x0203FF46u

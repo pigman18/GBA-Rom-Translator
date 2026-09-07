@@ -17,9 +17,9 @@
 - **🔴 性能优化踩坑实录（2026-09-07）**：begin 节流（同帧同签名+VCOUNT 跳过重建）**实测证伪**——继续菜单一帧内关旧窗开新窗，签名/VCOUNT 全不变 → 位图过期，新窗 tile 引用不在位图且图形未写（官方先写 tilemap 后画图，非空层拦不住）→ 中文压新窗疯狂撞（用户截图）。**已删除，恢复每会话全量重建，无任何跳过路径**。教训：活引用重建是权威层，任何「跳过」都在赌官方时序。保留的安全优化：②扫描 u32 化（VRAM 32-bit 总线一次取 2 表项）；③alloc 负缓存（非空非 ours → bit_set，会话内每 tile 最多一次 32B 读，方向保守只多避让）。性能优化只能往「降单次成本」做，不能往「跳过重建」做。
 - **坑：ADDR_V6/V7/V8_* 宏曾只手工写在 game.h GEN_ADDR 块内，重生成即丢**（2026-09-07 编译失败实证）。已全部收编进 game_addrs.asm（`; C:` 标记）作唯一权威来源。
 - 字号钩子 getFontSize：font4/tm2→8px；设置菜单 curX<8→16 否则 12；其余 12。
-- 12px：相位 0/4 行隔离（ADDR_V8_PHASE_ROW=tpl^curY^tileY）；2 字占 3 tile 列、相邻字共享 tile 是数学必然；清相位必须写在「下一字绘制前」v8_phase_before_glyph（PrintNextChar_Origin 是尾调用，其后清理代码跑不到）；行键须含 CURSOR_TILE_Y。
+- 12px：相位 0/4 行隔离（ADDR_V8_PHASE_ROW=tpl^curY^tileY）；2 字占 3 tile 列、相邻字共享 tile 是数学必然。**换行复位=FE 确定性拦截（2026-09-07 定稿）**：PrintNextChar_Hook 对 FA..FF 普通调用 PrintNextChar_Origin（entry.s 实证其以 push{r4,lr} 重放序言、官方尾声弹回 hook，尾调用非硬件强制），返回后比对 (tileY,tileX) 快照，官方换行 → v8_phase_newline_reset（清相位/last_tile/行标识 + tm0/1 TILE_OFFSET+=2）。NL_MARK 跨字启发式已删除（EWRAM FF4A 释放）；保留 3 字 PHASE/PHASE_ROW/LAST_TILE，各司其职零启发式；相位像素游标本身不可约（官方 0x1A=窗左缘常量，无像素光标可推导）。行键须含 CURSOR_TILE_Y。
 - 分层：text_translater=翻译 / PrintNextChar_hook=渲染 / blend_glyph=像素原语 / tile_alloc=分配 / InitTextPrinter_hook=会话边界（复位游标/相位/last_tile，治残留 BUG 的根本）/ scene_cfg=字号配置。
-- EWRAM：位图 0x0203FEC0(→FF40)/游标FF42/相位FF44/行标识FF46/last_tile FF48/NL_MARK FF4A/ours 段表 FF80(→FFCF)。⚠ 0x0203FFD2 起游戏数据区严禁占用（背包/队伍死机根因）。
+- EWRAM：位图 0x0203FEC0(→FF40)/游标FF42/相位FF44/行标识FF46/last_tile FF48/ours 段表 FF80(→FFCF)；FF4A~FF7F 已释放零占用。⚠ 0x0203FFD2 起游戏数据区严禁占用（背包/队伍死机根因）。
 - 翻译链路：非 FA..FF 一律 TranslateHandleChar；slot 表以日文 PCS 查 f900；GetGlyph 只走中文字库；禁止把 code∈[0x36,0x3E] 当 SYM。tm2/fn4 血条名 tpl 0x081BB40C 强制 8px/FontChsSmall。
 
 ## 2026-09-07 实测定论（勿再怀疑）

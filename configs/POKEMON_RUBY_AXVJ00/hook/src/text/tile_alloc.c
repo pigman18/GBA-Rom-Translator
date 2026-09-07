@@ -17,6 +17,9 @@
  *   ③ ours 段表（回收我们自己写过的残留 glyph）：
  *      非空 tile 仅当记录在 ours 段表（EWRAM 0x0203FF80，19 段 + magic 防冷
  *      启动残留）才允许重写；官方数据/atlas 永不在表内 → 永不回收。
+ *   ④ screenblock 内存保留（begin 时整段标占，2026-09-07 增）：
+ *      tilemap 区本身（尤其其零槽位）绝不能被当作空闲 tile 数据——活引用层
+ *      只标非零表项、非空层把全零槽位当空闲，两者都漏。
  *
  * 确定性不变：固定起点顺序遍历，同输入 → 同输出。
  * OBJ 隔离不变：hi = (4-char_base)*512 clamp 1024。
@@ -205,8 +208,33 @@ static void v8_scan_entries(const uint16_t *sb, unsigned n, volatile uint8_t *bm
  * ② DISPCNT 启用的每个 text BG：BGxCNT.charBase == 本窗 charBase 时，
  *    按其 size 位扫整个 screenblock（32×32/64×32/32×64/64×64 表项）。
  *    affine（mode1/2 的 BG2、mode2 的 BG3）与位图模式 BG 的表项语义不同，跳过。
+ * ③ screenblock 内存保留：各启用 BG 的 tilemap 内存区（含零槽位）整段标占。
+ *    活引用层只标非零表项、VRAM 非空层把全零 tilemap 槽位当空闲——两者都会
+ *    漏掉「tilemap 的零槽位被当作空闲 tile 数据」这一类踩踏（2026-09-07
+ *    UISURVEY 实算：cb2 相对 448~511 = BG3 sb23 零槽、cb3 相对 448~511 =
+ *    BG1 sb27 零槽）。affine BG 表项虽非 10bit，内存同样是 tilemap，照样保留；
+ *    位图模式（mode≥3 的 BG2/BG3）无 screenblock，跳过。跨 charBase 的
+ *    screenblock 也在保留范围（折算回本窗相对号，够不到的区间自动裁掉）。
  * 每会话全量重建，无任何跳过路径（节流已实证证伪，见上文教训）。
  * ==========================================================================*/
+/* 绝对地址区间 [start,end) 折算为本窗 charBase 相对 tile 段并整段标占；
+ * 超出本窗可分配地址范围 [cb_base, cb_base + hi*32) 的部分自动裁掉。 */
+static void v8_reserve_mem(volatile uint8_t *bm, uintptr_t start, uintptr_t end,
+                           uintptr_t cb_base, uint16_t hi)
+{
+    uintptr_t hi_addr = cb_base + (unsigned)hi * 32u;
+    uintptr_t s = (start > cb_base) ? start : cb_base;
+    uintptr_t e = (end < hi_addr) ? end : hi_addr;
+    uint16_t t0, t1;
+
+    if (s >= e)
+        return;
+    t0 = (uint16_t)((s - cb_base) / 32u);
+    t1 = (uint16_t)((e - cb_base + 31u) / 32u);
+    for (; t0 < t1; t0++)
+        v8_bit_set(bm, t0);
+}
+
 void v8_alloc_begin(TextPrinter *win)
 {
     uint8_t *tpl = win_template(win);
@@ -233,10 +261,13 @@ void v8_alloc_begin(TextPrinter *win)
             v8_scan_entries(tilemap, 1024u, bm);
     }
 
-    /* ② 全 BG 同 charBase 的 screenblock 活引用 */
+    /* ② 全 BG 同 charBase 的 screenblock 活引用 + ③ screenblock 内存保留 */
     {
         uint16_t dis = REG_V8_DISPCNT;
         uint8_t mode = (uint8_t)(dis & 7u);
+        uintptr_t cb_base = 0x06000000u + (uintptr_t)cb * 0x4000u;
+        uint16_t hi = v8_alloc_hi(cb);
+
         for (bg = 0; bg < 4u; bg++) {
             uint16_t cnt;
             const uint16_t *sb;
@@ -255,6 +286,33 @@ void v8_alloc_begin(TextPrinter *win)
             size = (unsigned)(cnt >> 14) & 3u;
             n = (size == 0u) ? 1024u : (size == 3u) ? 4096u : 2048u;
             v8_scan_entries(sb, n, bm);
+        }
+
+        /* ③ 各启用 BG 的 tilemap 内存区整段保留（含零槽位、含跨 charBase） */
+        for (bg = 0; bg < 4u; bg++) {
+            uint16_t cnt;
+            uintptr_t sb_addr, sb_end;
+            unsigned sz;
+
+            if (!(dis & (uint16_t)(0x100u << bg)))
+                continue;
+            /* 位图模式 BG2/BG3 是帧缓冲，无 screenblock 可言 */
+            if (bg >= 2u && mode >= 3u)
+                continue;
+            cnt = REG_V8_BGxCNT((uint8_t)bg);
+            sb_addr = 0x06000000u + (uintptr_t)((cnt >> 8) & 0x1Fu) * 0x800u;
+            sz = ((unsigned)cnt >> 14) & 3u;
+            sb_end = sb_addr
+                   + ((sz == 0u) ? 0x800u : (sz == 3u) ? 0x2000u : 0x1000u);
+            v8_reserve_mem(bm, sb_addr, sb_end, cb_base, hi);
+        }
+
+        /* win 自身 tilemap 内存同样保留（BG 未启用时上面的循环覆盖不到它；
+         * 模板 [0x10] 与 screenBase 同址、0x800 对齐，按标准 2KB 保留） */
+        {
+            uintptr_t tm_addr = (uintptr_t)win_u32(tpl, TPL_TILEMAP);
+            if (tm_addr)
+                v8_reserve_mem(bm, tm_addr, tm_addr + 0x800u, cb_base, hi);
         }
     }
 }

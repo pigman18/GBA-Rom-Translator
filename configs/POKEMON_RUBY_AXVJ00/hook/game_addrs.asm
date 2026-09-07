@@ -128,6 +128,9 @@ V8Phase                                equ 0x0203FF44  ; C: ADDR_V8_PHASE
 V8PhaseRow                             equ 0x0203FF46  ; C: ADDR_V8_PHASE_ROW
 V8LastTile                             equ 0x0203FF48  ; C: ADDR_V8_LAST_TILE
 V8NlMark                               equ 0x0203FF4A  ; C: ADDR_V8_NL_MARK
+; ⚠ V8Throttle @ 0x0203FF4C（begin 节流缓存）已于 2026-09-07 实测证伪删除：
+;   同帧内官方关旧窗开新窗时签名/VCOUNT 判定失灵 → 位图过期 → 疯狂撞。
+;   0x0203FF4C~0x0203FF7F 恢复零占用（字面量池扫描实证无引用）。
 ; 遗留单槽（hook 未用，供 docs/config）；2026-08-23 起复用为首字存 EWRAM 变量：
 ;   mode1 动态 tile 分配游标（text_jp2chs AllocGlyphTiles）——引擎静态变量会落
 ;   BSS，而 game.bin 无运行时加载器（写 ROM 被忽略/读为垃圾），必须放 EWRAM。

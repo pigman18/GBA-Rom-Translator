@@ -13,6 +13,8 @@
   ①活引用层：v8_alloc_begin 清零重建位图=win tilemap + DISPCNT 全启用 BG 中同 charBase 的 screenblock（BGxCNT.size 位定 1024/2048/4096 表项；affine/位图 BG 跳过）——多窗口并发互斥、防泄漏靠清零重建。
   ②VRAM 非空层：alloc 逐候选 tile 实时校验 32B 全空——atlas 区（0x208~0x2D1 场景差异自动适配）、begin 后才绘制的官方 UI（关闭按钮/状态图标）自动避开，取代全部静态带。
   ③ours 段表：EWRAM 0x0203FF80（80B=magic 0xA5C3+19 段×4B），非空 tile 仅属 ours 可回收重写；冷启动 EWRAM 残留防御=magic 一次校验。lo=0x100，hi=(4-cb)*512 clamp 1024 不变。
+- **✅ 动态避让实机验收通过（2026-09-07 用户确认 OK）**。
+- **🔴 性能优化踩坑实录（2026-09-07）**：begin 节流（同帧同签名+VCOUNT 跳过重建）**实测证伪**——继续菜单一帧内关旧窗开新窗，签名/VCOUNT 全不变 → 位图过期，新窗 tile 引用不在位图且图形未写（官方先写 tilemap 后画图，非空层拦不住）→ 中文压新窗疯狂撞（用户截图）。**已删除，恢复每会话全量重建，无任何跳过路径**。教训：活引用重建是权威层，任何「跳过」都在赌官方时序。保留的安全优化：②扫描 u32 化（VRAM 32-bit 总线一次取 2 表项）；③alloc 负缓存（非空非 ours → bit_set，会话内每 tile 最多一次 32B 读，方向保守只多避让）。性能优化只能往「降单次成本」做，不能往「跳过重建」做。
 - **坑：ADDR_V6/V7/V8_* 宏曾只手工写在 game.h GEN_ADDR 块内，重生成即丢**（2026-09-07 编译失败实证）。已全部收编进 game_addrs.asm（`; C:` 标记）作唯一权威来源。
 - 字号钩子 getFontSize：font4/tm2→8px；设置菜单 curX<8→16 否则 12；其余 12。
 - 12px：相位 0/4 行隔离（ADDR_V8_PHASE_ROW=tpl^curY^tileY）；2 字占 3 tile 列、相邻字共享 tile 是数学必然；清相位必须写在「下一字绘制前」v8_phase_before_glyph（PrintNextChar_Origin 是尾调用，其后清理代码跑不到）；行键须含 CURSOR_TILE_Y。

@@ -140,7 +140,11 @@ static uint16_t v8_alloc_hi(uint8_t char_base)
     return (uint16_t)hi;
 }
 
-/* 单 tile 可用性：位图未标（无活引用）且（VRAM 全空 或 属 ours 可回收）。 */
+/* 单 tile 可用性：位图未标（无活引用）且（VRAM 全空 或 属 ours 可回收）。
+ * 负缓存：判定「非空且非 ours」后立即标进位图——同一 tile 在本会话内
+ * 最多做一次 32B VRAM 读，回卷重扫时全走位图（2026-09-07 性能优化）。
+ * 方向保守：标了占用只会让我们不写它，官方清空后我们暂不回收该 tile，
+ * 宁可浪费不可错写。 */
 static int v8_tile_usable(volatile uint8_t *bm, const void *vram, uint16_t t)
 {
     const volatile uint32_t *p;
@@ -148,9 +152,51 @@ static int v8_tile_usable(volatile uint8_t *bm, const void *vram, uint16_t t)
         return 0;
     p = (const volatile uint32_t *)((const volatile uint8_t *)vram
                                     + (unsigned)t * 32u);
-    if (p[0] | p[1] | p[2] | p[3] | p[4] | p[5] | p[6] | p[7])
-        return v8_in_ours(t);
+    if (p[0] | p[1] | p[2] | p[3] | p[4] | p[5] | p[6] | p[7]) {
+        if (!v8_in_ours(t)) {
+            v8_bit_set(bm, t);
+            return 0;
+        }
+        return 1;
+    }
     return 1;
+}
+
+/* ⚠ begin 节流（同帧同签名跳过重建）已于 2026-09-07 实测证伪删除：
+ * 继续菜单一帧内关旧窗开新窗，DISPCNT/BGxCNT 不变、VCOUNT 未回绕 →
+ * 位图过期，新窗 tile 引用不在位图且图形未写入（先 tilemap 后图形，
+ * 非空层拦不住）→ 中文压上新窗 = 疯狂撞（用户实机截图）。
+ * 教训：活引用重建是权威层，任何「跳过」都是在赌官方时序，不赌。 */
+
+/* 表项扫描（活引用收集）：优先 u32 读（VRAM 32-bit 总线，一次取 2 表项，
+ * 成本减半）；n 为表项数。地址非 4 对齐时退回 u16 逐项。 */
+static void v8_scan_entries(const uint16_t *sb, unsigned n, volatile uint8_t *bm)
+{
+    unsigned i;
+
+    if ((((uintptr_t)sb) & 3u) == 0u) {
+        const volatile uint32_t *p = (const volatile uint32_t *)(const void *)sb;
+        for (i = 0; i + 1u < n; i += 2u) {
+            uint32_t w = p[i >> 1];
+            uint16_t t0 = (uint16_t)(w & 0x3FFu);
+            uint16_t t1 = (uint16_t)((w >> 16) & 0x3FFu);
+            if (t0 != 0u)
+                v8_bit_set(bm, t0);
+            if (t1 != 0u)
+                v8_bit_set(bm, t1);
+        }
+        if (i < n) {              /* n 为奇数时的收尾（实际 n 恒偶） */
+            uint16_t t = sb[i] & 0x3FFu;
+            if (t != 0u)
+                v8_bit_set(bm, t);
+        }
+    } else {
+        for (i = 0; i < n; i++) {
+            uint16_t t = sb[i] & 0x3FFu;
+            if (t != 0u)
+                v8_bit_set(bm, t);
+        }
+    }
 }
 
 /* ============================================================================
@@ -159,13 +205,14 @@ static int v8_tile_usable(volatile uint8_t *bm, const void *vram, uint16_t t)
  * ② DISPCNT 启用的每个 text BG：BGxCNT.charBase == 本窗 charBase 时，
  *    按其 size 位扫整个 screenblock（32×32/64×32/32×64/64×64 表项）。
  *    affine（mode1/2 的 BG2、mode2 的 BG3）与位图模式 BG 的表项语义不同，跳过。
+ * 每会话全量重建，无任何跳过路径（节流已实证证伪，见上文教训）。
  * ==========================================================================*/
 void v8_alloc_begin(TextPrinter *win)
 {
     uint8_t *tpl = win_template(win);
     volatile uint8_t *bm = v8_bitmap();
     uint8_t cb;
-    unsigned bg, i;
+    unsigned bg;
 
     *(volatile uint16_t *)ADDR_V8_CURSOR = 0u;
     *(volatile uint16_t *)ADDR_V8_PHASE = 0u;
@@ -177,18 +224,14 @@ void v8_alloc_begin(TextPrinter *win)
         return;
     cb = tpl[TPL_CHARBASE];
     v8_ours_init_once();
+
     v8_bit_clear_all(bm);
 
     /* ① win 自身 tilemap */
     {
         const uint16_t *tilemap = (const uint16_t *)(uintptr_t)win_u32(tpl, TPL_TILEMAP);
-        if (tilemap) {
-            for (i = 0; i < 1024u; i++) {
-                uint16_t t = tilemap[i] & 0x3FFu;
-                if (t != 0u)
-                    v8_bit_set(bm, t);
-            }
-        }
+        if (tilemap)
+            v8_scan_entries(tilemap, 1024u, bm);
     }
 
     /* ② 全 BG 同 charBase 的 screenblock 活引用 */
@@ -205,18 +248,14 @@ void v8_alloc_begin(TextPrinter *win)
             /* mode≠0 时 BG2/BG3 可能是 affine 或位图层：表项不是 10bit tile 号 */
             if (bg >= 2u && mode != 0u)
                 continue;
-            cnt = REG_V8_BGxCNT(bg);
+            cnt = REG_V8_BGxCNT((uint8_t)bg);
             if (((cnt >> 2) & 3u) != cb)
                 continue;
             sb = (const uint16_t *)(uintptr_t)
                  (0x06000000u + (unsigned)((cnt >> 8) & 0x1Fu) * 0x800u);
             size = (unsigned)(cnt >> 14) & 3u;
             n = (size == 0u) ? 1024u : (size == 3u) ? 4096u : 2048u;
-            for (i = 0; i < n; i++) {
-                uint16_t t = sb[i] & 0x3FFu;
-                if (t != 0u)
-                    v8_bit_set(bm, t);
-            }
+            v8_scan_entries(sb, n, bm);
         }
     }
 }

@@ -33,18 +33,30 @@ struct TextGlyph {
 };
 
 /* ---- 字形取字（text_translater.c 提供，PrintNextChar 消费）----
- * font_lib: 0=按 win fontNum 选库（4=Small 其余 Normal），2=Middle 8x12 库 */
+ * font_lib: 1=1bpp 大库 11×11（默认，pokeE 位流运行时转换），
+ *           3=1bpp 小库 9×9（tm2 血条名 + fn4 强制小字体），
+ *           0=按 fontNum 选 4bpp 旧库（兼容保留，当前无路由），
+ *           2=Middle / 4=旧 Small 4bpp（均已退役，2 按 3 处理） */
 #define CHS_FONT_LIB_DEFAULT   0u
 #define CHS_FONT_LIB_MIDDLE    2u
+#define CHS_FONT_LIB_1BPP_BIG  1u
+#define CHS_FONT_LIB_1BPP_SMALL 3u
 int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth,
              uint8_t font_lib);
 
+/* pokeE 式 1bpp 位流 → 128B 4bpp 字形单元（src/text/chinese_glyph.c）。
+ * 位流每行 width 位 MSB-first 连续排布共 rows 行，置于 line_off 行起；
+ * 墨迹=15、右下阴影(+1,+1 重叠去除)=14、空=0。纯函数零状态。 */
+void chs_cell_from_1bpp(const uint8_t *bits, uint32_t width, uint32_t rows,
+                        uint32_t line_off, uint8_t cell[CHS_CELL_BYTES]);
+
 /* ---- 引擎渲染件（PrintNextChar_hook.c 提供，text_translate.c 消费）---- */
 
-/* v6 统一渲染入口：GetGlyph 解压 → 按 fontSize 栅格化 → 按 textMode 落址。
- * fontSize=调用方请求字号（翻译层按 tm 传 CHS_PRINT_TMx_FONT_PX；
- * 0=无请求回落 12）。裁定优先级：fn4 强制 8px Small > 场景表 >
- * 请求值（8px→Middle 8x12 库，12/16→主字体）。 */
+/* v6 统一渲染入口：GetGlyph 解压 → 按 textMode/two档 落址。
+ * fontSize=调用方请求步进（翻译层按 tm 传 CHS_PRINT_TMx_FONT_PX；0=无请求回落 12）。
+ * 两档制 2.0（2026-09-08「旧 8px→9px、旧 12/16px→11px」）：
+ * 默认 1bpp 大库 11×11（步进 12）；tm2 血条名 / fontNum==4 / 请求 8px
+ * → 1bpp 小库 9×9（步进 10）。旧 4bpp 字库渲染路径全部退役。 */
 void chs_print(TextPrinter *win, uint32_t code, uint8_t fontSize);
 
 /* PCS 单字节（半角）统一渲染入口。

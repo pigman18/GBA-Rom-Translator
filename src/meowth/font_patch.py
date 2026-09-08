@@ -684,6 +684,21 @@ def _generate_fonts_s(cfg: dict[str, Any], work_font_dir: Path, output_path: Pat
                 lines.append(f"; shadow=false → {bin_path.name}")
         lines.append("")
 
+    # extra_bins：不走 BDF 构建的外挂裸 bin（如 1bpp 位流库，命名须带
+    # _unshadow 以跳过标点补丁的 128B/字假设）。
+    for slot in cfg.get("extra_bins", []) or []:
+        label = slot.get("label", "Extra")
+        addr = slot.get("addr")
+        size = slot.get("slot_size",
+                        slot.get("glyph_count", 7168) * slot.get("bytes_per_glyph", 16))
+        bin_path = work_font_dir / f"{prefix}{label}_unshadow(0x{size:X}).bin"
+        if addr is not None:
+            lines.append(f".org 0x{int(addr):08X}")
+        if bin_path.exists():
+            lines.append(f".incbin \"{bin_path.resolve()}\"")
+            lines.append(f"; extra_bins 1bpp → {bin_path.name}")
+        lines.append("")
+
     graphic_dir = output_path.parent
     # phrase (0x08810000 / 0x08820000)
     name = "phrase_data.asm"

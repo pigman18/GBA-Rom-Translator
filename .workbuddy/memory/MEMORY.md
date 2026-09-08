@@ -63,3 +63,5 @@
 - relocate 改指针高危默认 False；reader=读串改串地址随偏移；FC 颜色码逐字符执行。
 - 打包一律根 build.bat；hook 改完→hook build→根 build→check_rom_hook.py；编译通过≠交付。🔒P0：build.bat 硬编码 api-key 已入 git 待轮换。批量 Edit 后必须 grep 验证落盘。
 - 识图：node vision.js bug/xxx.PNG（Read 直读 PNG 失败）。
+- 🔴 双源树并存：configs/POKEMON_RUBY_AXVJ00/hook（**权威**）与 work/POKEMON_RUBY_AXVJ00/build（旧副本）。2026-09-08 用户拍板 config 为准；SMALL 旋钮 config=4 是用户故意调的（work=3 旧值）。check_rom_hook 拿 work 产物比对会误报 False。改任何源码前先确认在 config 树上操作。
+- 🔴 构建清单类错误（undefined reference = build.bat 漏新文件）：单点修复，补清单即交付，禁止顺带扩散到 check/ROM 对比流程。

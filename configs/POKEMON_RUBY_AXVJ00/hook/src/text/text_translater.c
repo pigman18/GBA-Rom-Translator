@@ -16,15 +16,22 @@
 #include "text.h"
 #include "blend_glyph.h" /* 仅 GetGlyph 的 copy_tile32 / CopyGlyph* 取字原语 */
 
-/* F9 汉字默认字号：按 textMode 分档，chs_print 的 fontSize 实参来源。
- * 优先级（chs_print/resolve_draw 内裁定）：fontNum==4 强制 8px Small >
- * 场景表命中 > 此处请求值。请求值 8px → Middle 8x12 库；12/16 → 主字体（现状）。
- * tm2（血条等 win[0x20] 缓冲路径）resolve 时强制 fn4 → 实际仍 8px Small，
- * TM2 宏仅表达档位默认，改前先确认 fn4 重映射是否保留。 */
+/* F9 汉字默认步进：按 textMode 分档，chs_print 的 fontSize 实参来源。
+ * 两档制 2.0（2026-09-08「旧 8px→9px、旧 12/16px→11px」）：
+ * tm0/1/3 → 大字体 1bpp 11×11（步进 12）；tm2 血条 → 小字体 1bpp 9×9
+ * （步进 10；resolve_draw tm2 分支强制，本宏仅表达档位默认）；
+ * fontNum==4 / 请求 8px → 同样落 9×9。 */
 #define CHS_PRINT_TM0_FONT_PX   12u
-#define CHS_PRINT_TM1_FONT_PX   8u
-#define CHS_PRINT_TM2_FONT_PX   8u
+#define CHS_PRINT_TM1_FONT_PX   12u
+#define CHS_PRINT_TM2_FONT_PX   10u
 #define CHS_PRINT_TM3_FONT_PX   12u
+
+/* 1bpp 字库单元内垂直行偏移（0=单元顶行）。pokeE 原版=大1/小2；
+ * 2026-09-08 实机验收用户反馈整体偏高 ~1px → 下移 1 行。要再调改这里。
+ * SMALL 作用于 9×9 库全部使用点（tm2 血条名 + fn4 窗口——两档制 2.0 后
+ * 血条名也走 1bpp 小库，旧 Small 4bpp 已退役）。 */
+#define CHS_1BPP_ROW_OFF_BIG    2u
+#define CHS_1BPP_ROW_OFF_SMALL  5u
 
 /* 按当前窗口 textMode 取默认字号（tm 仅 0~3 有效，其余回落 12） */
 static uint8_t chs_print_px(TextPrinter *win)
@@ -39,7 +46,7 @@ static uint8_t chs_print_px(TextPrinter *win)
 }
 
 /* =====================================================================
- * §glyph — 字形源统一解析（自 text_render.c 迁入）
+ * §G  GetGlyph — 字形取数（翻译层消费，渲染层经 chs_print 间接调用）
  * ===================================================================== */
 int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth,
              uint8_t font_lib)
@@ -60,18 +67,40 @@ int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth
      * （例：白天的「白」=0x0036），图鉴说明会把「白」画成「；」。
      * PCS 标点由 DrawHalfWidth 直接读 ADDR_FONT_CHS_SYM，不经本函数。 */
 
-    /* 中文字形：直接从自定义中文点阵字库解压（v5 decompress_chs_glyph 语义）。
-     * ⚠ 不能用 GetGlyphTilePointers_Origin（那是官方日文字形，gidx 是中文
-     *   索引，查官方表会返回 null → 全空）。
-     *   font_lib==CHS_FONT_LIB_MIDDLE → Middle 8x12 库（寒蝉点阵，几何同 8px）；
-     *   否则 fontNum==4 → 8px 小字库，其余 → 16px 主字库。
+    /* 中文字形三源（地基更换 2026-09-08）：
+     *   lib==1 → 1bpp 大库 11×11 位流（pokeE 格式，16B/字）；
+     *   lib==3/2 → 1bpp 小库 9×9 位流（11B/字）；
+     *   lib==4 → 旧 Small 4bpp 8px（tm2 血条 8px 物理槽专用）；
+     *   lib==0 → 按 fontNum 选 4bpp 旧库（fn4→Small 其余 Normal，兼容保留）。
+     * 1bpp 位流运行时转换（阴影右下生成），单元布局与 4bpp 库一致。
+     * 行偏移（单元内垂直落位）：pokeE 原版=大1/小2；2026-09-08 实机验收用户
+     * 反馈整体偏高 ~1px → 大2/小3（CHS_1BPP_ROW_OFF_* 可再微调）。 */
+    if (font_lib == CHS_FONT_LIB_1BPP_BIG) {
+        chs_cell_from_1bpp(
+            (const uint8_t *)ADDR_FONT_1BPP_BIG
+                + ((uint32_t)((uint16_t)code & 0x1FFFu)) * 16u,
+            11u, 11u, CHS_1BPP_ROW_OFF_BIG, out128);
+        *outWidth = 8u;
+        return 1;
+    }
+    if (font_lib == CHS_FONT_LIB_1BPP_SMALL || font_lib == CHS_FONT_LIB_MIDDLE) {
+        chs_cell_from_1bpp(
+            (const uint8_t *)ADDR_FONT_1BPP_SMALL
+                + ((uint32_t)((uint16_t)code & 0x1FFFu)) * 11u,
+            9u, 9u, CHS_1BPP_ROW_OFF_SMALL, out128);
+        *outWidth = 8u;
+        return 1;
+    }
+
+    /* 4bpp 兼容路径（lib0；两档制 2.0 后无路由，仅保留编译）。
+     * 旧 Small 4bpp（lib4）已退役。中文字形：直接从自定义中文点阵字库解压
+     * （v5 decompress_chs_glyph 语义）。⚠ 不能用 GetGlyphTilePointers_Origin
+     * （那是官方日文字形，gidx 是中文索引，查官方表会返回 null → 全空）。
      *   字模容器 128B：TL@0 / BL@0x20 / TR@0x40 / BR@0x60。 */
     {
         const uint8_t *base =
-            (font_lib == CHS_FONT_LIB_MIDDLE)
-                ? (const uint8_t *)ADDR_FONT_CHS_MIDDLE
-                : (fontNum == 4u) ? (const uint8_t *)ADDR_FONT_CHS_SMALL
-                                  : (const uint8_t *)ADDR_FONT_CHS_NORMAL;
+            (fontNum == 4u) ? (const uint8_t *)ADDR_FONT_CHS_SMALL
+                            : (const uint8_t *)ADDR_FONT_CHS_NORMAL;
         const uint8_t *g =
             base + ((uint32_t)((uint16_t)code & 0x7FFFu) << 7);
         if ((uint16_t)code & 0x8000u)

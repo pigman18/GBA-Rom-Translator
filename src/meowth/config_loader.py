@@ -614,6 +614,8 @@ def load_game_config(game_id: str) -> dict[str, Any]:
         fp.update(patch_cfg)
     if font_cfg.get("font_slots"):
         fp["font_slots"] = font_cfg["font_slots"]
+    if font_cfg.get("extra_bins"):
+        fp["extra_bins"] = font_cfg["extra_bins"]
     if "shadow" in font_cfg:
         fp["shadow"] = font_cfg["shadow"]
     if "embed_primary" in font_cfg:

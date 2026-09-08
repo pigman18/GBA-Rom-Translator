@@ -48,61 +48,65 @@ uint8_t v6_scene_font(const struct V6SceneRule *r, uint8_t cx)
     return v6_scene_zone(r, cx)->font_px;
 }
 
-/* ---- resolve：tm + fn + 请求字号 → font_px + 字形源 ----
- * lib_out: 0=按 fontNum 选库（GetGlyph 原逻辑），2=Middle 字库
- * 优先级：fn4 强制 8px Small > 场景表 > req_px（8→Middle，12/16→主字体）。
- * req_px=0 表示无请求（DrawHalfWidth/DrawGlyph 等非中文主路径），回落 12。 */
+/* ---- resolve：tm + fn + 请求步进 → 步进/墨宽/字形源 ----
+ * 两档制 2.0（2026-09-08 用户拍板「旧 8px→9px、旧 12/16px→11px」）：
+ *   tm2（血条缓冲直绘）        → 1bpp 小库 9×9，步进 10、墨宽 9；
+ *   fn4 / 请求 8px             → 1bpp 小库 9×9，步进 10、墨宽 9；
+ *   其余                       → 1bpp 大库 11×11，步进 12、墨宽 11。
+ * 旧 Small 4bpp（lib4）退役，字库层只剩 pokeE 双库。 */
 static void resolve_draw(TextPrinter *win, uint8_t req_px, uint8_t *tm_out,
-                         uint8_t *fn_out, uint8_t *font_px_out, uint8_t *lib_out)
+                         uint8_t *fn_out, uint8_t *adv_out, uint8_t *ink_out,
+                         uint8_t *lib_out)
 {
     uint8_t tm = win_u8(win, WIN_TEXTMODE) & 7u;
     uint8_t fn = win_u8(win, WIN_FONTNUM_REAL);
-    const struct V6SceneRule *rule;
-
-    *lib_out = 0u;
 
     if (fn > 6u)
         fn = 3u;
-    /* 血条 tm2 与官方模板一致：按 font4 取阴影小字 */
-    if (tm == 2u)
-        fn = 4u;
-
     *tm_out = tm;
-    *fn_out = fn;
 
-    if (fn == 4u || tm == 2u) {
-        *font_px_out = 8u;
+    *fn_out = (tm == 2u) ? 4u : fn;
+    if (tm == 2u || fn == 4u || req_px == 8u) {
+        *adv_out = 10u;
+        *ink_out = 9u;
+        *lib_out = CHS_FONT_LIB_1BPP_SMALL;
         return;
     }
-    rule = v6_scene_lookup((uint32_t)(uintptr_t)win_template(win),
-                           (uint32_t)(uintptr_t)win);
-    if (rule) {
-        uint8_t fpx = v6_scene_font(rule, win_u8(win, WIN_CURSOR_X));
-        if (fpx == V6_FONT_PX_MIDDLE) {
-            /* Middle：几何走 8px 现有路径（1 列/字、相位恒 0），源走 Middle 库 */
-            *font_px_out = 8u;
-            *lib_out = 2u;
-        } else {
-            *font_px_out = fpx;
-        }
-        return;
-    }
-    if (req_px == 8u) {
-        /* 请求 8px → Middle 8x12 库（几何同 8px 路径） */
-        *font_px_out = 8u;
-        *lib_out = 2u;
-        return;
-    }
-    *font_px_out = (req_px == 16u) ? 16u : 12u;
+    *adv_out = 12u;
+    *ink_out = 11u;
+    *lib_out = CHS_FONT_LIB_1BPP_BIG;
 }
 
-/* tm0：跟官方线性寻址；禁止与「怎么办」等同 cb 窗共用 v8_alloc(0x100+) */
+/* tm3 官方网格（0x080034E0 反汇编钉死）：
+ * tile = TILE_BASE + left(0x1A) + 2 + cursorTileX(0x1B)
+ *        + (cursorY(0x1C) + cursorTileY(0x1D)) * 30。
+ * 数据直接写在 tilemap 引用的格子上（窗口自有 stride-30 网格区）。
+ * 下行 tile = +30（下一 tilemap 行）。 */
+static uint16_t chs_tm3_grid_tile(TextPrinter *win)
+{
+    return (uint16_t)(win_u16(win, WIN_TILE_BASE)
+                      + win_u8(win, WIN_CURSOR_X)
+                      + 2u + win_u8(win, WIN_CURSOR_TILE_X)
+                      + (uint16_t)((win_u8(win, WIN_CURSOR_Y)
+                                    + win_u8(win, WIN_CURSOR_TILE_Y)) * 30u));
+}
+
+/* 本 tm 的「下半 tile」偏移：tm3 网格 = +30（下一行），其余竖直对 = +1 */
+static uint16_t chs_lower_delta(uint8_t tm)
+{
+    return (tm == 3u) ? 30u : 1u;
+}
+
+/* tm0：跟官方线性寻址；tm3：官方网格（窗口自有区）；其余（tm1 共享图集）
+ * 走 v8 动态分配（AXVJ tm1 无窗口私有区，反汇编定论 2026-09-08） */
 static uint16_t chs_claim_tile(TextPrinter *win, uint8_t tm, uint8_t font_px,
                                uint8_t glyph_len)
 {
     if (tm == 0u)
         return (uint16_t)(win_u16(win, WIN_TILE_BASE)
                           + win_u16(win, WIN_TILE_OFFSET));
+    if (tm == 3u)
+        return chs_tm3_grid_tile(win);
     return v8_alloc_tile(win, font_px, glyph_len);
 }
 
@@ -187,12 +191,14 @@ static void chs_place_col(TextPrinter *win, uint8_t tm, uint16_t tile,
 
 #if CHS_ADVANCE_12
 
-static void chs_fill_bg(TextPrinter *win, uint16_t tile, unsigned x0, unsigned x1)
+static void chs_fill_bg(TextPrinter *win, uint8_t tm, uint16_t tile,
+                        unsigned x0, unsigned x1)
 {
     uint8_t *tpl = win_template(win);
     uint8_t *tile_data;
     uint8_t colors[16];
     uint8_t zero[32];
+    uint16_t dlow = chs_lower_delta(tm);
     unsigned i;
 
     if (x1 <= x0 || x0 > 7u)
@@ -209,28 +215,30 @@ static void chs_fill_bg(TextPrinter *win, uint16_t tile, unsigned x0, unsigned x
         zero[i] = 0u;
     (void)blend_glyph_4bpp((uint32_t *)(void *)(tile_data + ((uint32_t)tile << 5)),
                            0, zero, x1 - x0, x0, colors);
-    (void)blend_glyph_4bpp((uint32_t *)(void *)(tile_data + ((uint32_t)(tile + 1u) << 5)),
+    (void)blend_glyph_4bpp((uint32_t *)(void *)(tile_data + ((uint32_t)(tile + dlow) << 5)),
                            0, zero, x1 - x0, x0, colors);
 }
 
-/* 12px（及相位上的 8px 标点）：两段式 + 领号；返回 adv 列数 */
+/* 12px/11px 两段式 + 相位共享；ink=墨宽、advance=步进（11×11 库：11/12）。
+ * 返回游标推进列数 adv = (phase + advance) >> 3 */
 static unsigned print_glyph_px(TextPrinter *win,
                                const uint8_t g128[CHS_CELL_BYTES],
-                               unsigned ink)
+                               unsigned ink, unsigned advance)
 {
     uint8_t *tpl = win_template(win);
     uint8_t *tile_data;
     uint8_t colors[16];
     uint8_t up[32], lo[32];
     unsigned px, phase, w0, w1, adv;
-    uint16_t t0, t1;
+    uint16_t t0, t1, dlow;
     uint8_t tx0, tm;
 
     px = v8_phase_get(win);
     phase = px & 7u;
     w0 = (8u - phase < ink) ? (8u - phase) : ink;
     w1 = ink - w0;
-    adv = (phase + ink) / 8u;
+    adv = (phase + advance) >> 3;
+    dlow = chs_lower_delta(win_u8(win, WIN_TEXTMODE) & 7u);
     tx0 = win_u8(win, WIN_CURSOR_TILE_X);
     tm = win_u8(win, WIN_TEXTMODE) & 7u;
     if (adv < 1u)
@@ -252,10 +260,12 @@ static unsigned print_glyph_px(TextPrinter *win,
     } else {
         t0 = v8_phase_last_tile();
     }
-    /* tm0 线性：下一列 = t0+2；v8 则再 alloc 一对 */
+    /* tm0 线性：下一列 = t0+2；tm3 网格：下一列 = t0+1；v8 则再 alloc 一对 */
     if (w1 != 0u) {
         if (tm == 0u)
             t1 = (uint16_t)(t0 + 2u);
+        else if (tm == 3u)
+            t1 = (uint16_t)(t0 + 1u);
         else
             t1 = chs_claim_tile(win, tm, 12u, 2u);
     } else {
@@ -265,48 +275,110 @@ static unsigned print_glyph_px(TextPrinter *win,
     extract_cols(g128, 0u, w0, up, lo);
     (void)blend_glyph_4bpp((uint32_t *)(void *)(tile_data + ((uint32_t)t0 << 5)),
                            0, up, w0, phase, colors);
-    (void)blend_glyph_4bpp((uint32_t *)(void *)(tile_data + ((uint32_t)(t0 + 1u) << 5)),
+    (void)blend_glyph_4bpp((uint32_t *)(void *)(tile_data + ((uint32_t)(t0 + dlow) << 5)),
                            0, lo, w0, phase, colors);
 
     if (w1 != 0u) {
         extract_cols(g128, w0, w1, up, lo);
         (void)blend_glyph_4bpp((uint32_t *)(void *)(tile_data + ((uint32_t)t1 << 5)),
                                0, up, w1, 0u, colors);
-        (void)blend_glyph_4bpp((uint32_t *)(void *)(tile_data + ((uint32_t)(t1 + 1u) << 5)),
+        (void)blend_glyph_4bpp((uint32_t *)(void *)(tile_data + ((uint32_t)(t1 + dlow) << 5)),
                                0, lo, w1, 0u, colors);
-        chs_fill_bg(win, t1, w1, 8u);
+        chs_fill_bg(win, tm, t1, w1, 8u);
     }
 
-    UpdateTilemap_PreserveCursorX(win, t0, (uint16_t)(t0 + 1u));
+    UpdateTilemap_PreserveCursorX(win, t0, (uint16_t)(t0 + dlow));
     if (w1 != 0u) {
         win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(tx0 + 1u));
-        UpdateTilemap_PreserveCursorX(win, t1, (uint16_t)(t1 + 1u));
+        UpdateTilemap_PreserveCursorX(win, t1, (uint16_t)(t1 + dlow));
     }
     win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(tx0 + adv));
 
-    v8_phase_advance((uint16_t)ink);
+    v8_phase_advance((uint16_t)advance);
     v8_phase_set_last_tile((w1 != 0u) ? t1 : t0);
     return adv;
 }
 
 #endif /* CHS_ADVANCE_12 */
 
-/* ---- 唯一落点：按 tm 写目标；返回推进列数（供 TILE_OFFSET）---- */
-static unsigned chs_emit(TextPrinter *win, uint8_t tm, unsigned font_px,
+/* tm2 血条：win[0x20] 线性缓冲直绘（无分配器/无 tilemap，列槽=0x40=上/下半
+ * 两 tile）。9×9 字体（步进 10、墨 9）相位两段式：本列 phase..phase+w0，
+ * 尾列 0..w1 并把 w1..8 清底；每字推进 adv 列（dst += adv*0x40）。
+ * 相位用全局 v8_phase（InitTextPrinter 会话边界复位，血条名是独立会话）。 */
+static unsigned tm2_print_px(TextPrinter *win,
+                             const uint8_t g128[CHS_CELL_BYTES],
+                             unsigned ink, unsigned advance)
+{
+    uint8_t colors[16];
+    uint8_t up[32], lo[32], zero[32];
+    uint32_t dst, dnext;
+    unsigned px, phase, w0, w1, adv, i;
+
+    dst = win_u32(win, WIN_TILE_DATA);
+    if (dst == 0u)
+        return 1u;
+
+    px = v8_phase_get(win);
+    phase = px & 7u;
+    w0 = (8u - phase < ink) ? (8u - phase) : ink;
+    w1 = ink - w0;
+    adv = (phase + advance) >> 3;
+    if (adv < 1u)
+        adv = 1u;
+
+    fill_colors(win, colors);
+    for (i = 0; i < 32u; i++)
+        zero[i] = 0u;
+
+    extract_cols(g128, 0u, w0, up, lo);
+    (void)blend_glyph_4bpp((uint32_t *)(void *)dst, 0, up, w0, phase, colors);
+    (void)blend_glyph_4bpp((uint32_t *)(void *)(dst + 0x20u), 0, lo, w0, phase,
+                           colors);
+
+    dnext = dst + 0x40u;
+    if (w1 != 0u) {
+        extract_cols(g128, w0, w1, up, lo);
+        (void)blend_glyph_4bpp((uint32_t *)(void *)dnext, 0, up, w1, 0u, colors);
+        (void)blend_glyph_4bpp((uint32_t *)(void *)(dnext + 0x20u), 0, lo, w1,
+                               0u, colors);
+        if (w1 < 8u) {
+            (void)blend_glyph_4bpp((uint32_t *)(void *)dnext, 0, zero,
+                                   8u - w1, w1, colors);
+            (void)blend_glyph_4bpp((uint32_t *)(void *)(dnext + 0x20u), 0,
+                                   zero, 8u - w1, w1, colors);
+        }
+    } else if (phase + w0 < 8u) {
+        /* 墨未跨列且本列未写满（8px 标点等）：右侧清底防残留 */
+        (void)blend_glyph_4bpp((uint32_t *)(void *)dst, 0, zero,
+                               8u - (phase + w0), phase + w0, colors);
+        (void)blend_glyph_4bpp((uint32_t *)(void *)(dst + 0x20u), 0, zero,
+                               8u - (phase + w0), phase + w0, colors);
+    }
+
+    win_set_u32(win, WIN_TILE_DATA, dst + (uint32_t)adv * 0x40u);
+    v8_phase_advance((uint16_t)advance);
+    return adv;
+}
+
+/* ---- 唯一落点：按 tm 写目标；返回推进列数（供 TILE_OFFSET）----
+ * advance=本字步进像素（12/10），ink=墨宽（11/9），二者分离（11×11 库
+ * 墨 11 步进 12、9×9 库墨 9 步进 10，pokeE 语义）。
+ * 旧 8px/16px 光栅路径退役（2026-09-08 两档制 2.0）。 */
+static unsigned chs_emit(TextPrinter *win, uint8_t tm, unsigned advance,
                          const uint8_t g128[CHS_CELL_BYTES], unsigned ink)
 {
     uint8_t buf[4][32];
     unsigned cols, col, adv = 1u;
 
-    if (tm == 2u)
-        font_px = 8u;
     if (ink == 0u)
-        ink = font_px;
+        ink = advance;
+
+    if (tm == 2u)
+        return tm2_print_px(win, g128, ink, advance);
 
 #if CHS_ADVANCE_12
-    /* tm2 无相位；12px 汉字与 8px 标点/半角走两段式（含奇数位换行清理） */
-    if (tm != 2u && ink != 16u && (ink == 12u || ink == 8u)) {
-        adv = print_glyph_px(win, g128, ink);
+    if (advance != 16u) {
+        adv = print_glyph_px(win, g128, ink, advance);
         if (tm == 0u || tm == 1u)
             win_set_u16(win, WIN_TILE_OFFSET,
                         (uint16_t)(win_u16(win, WIN_TILE_OFFSET) + adv * 2u));
@@ -314,18 +386,19 @@ static unsigned chs_emit(TextPrinter *win, uint8_t tm, unsigned font_px,
     }
 #endif
 
-    cols = chs_rasterize(g128, (tm == 2u || font_px == 8u) ? 8u : font_px, buf);
+    cols = chs_rasterize(g128, (uint8_t)advance, buf);
     if (cols == 0u)
         return 0u;
 
     for (col = 0; col < cols; col++) {
         uint16_t tile = 1u;
         if (tm != 2u) {
-            tile = chs_claim_tile(win, tm, (uint8_t)font_px, 2u);
+            tile = chs_claim_tile(win, tm, (uint8_t)advance, 2u);
             if (tile == 0u)
                 return col;
         }
-        chs_place_col(win, tm, tile, 1u, buf[col * 2u], buf[col * 2u + 1u]);
+        chs_place_col(win, tm, tile, chs_lower_delta(tm),
+                      buf[col * 2u], buf[col * 2u + 1u]);
         if (tm == 0u || tm == 1u)
             win_set_u16(win, WIN_TILE_OFFSET,
                         (uint16_t)(win_u16(win, WIN_TILE_OFFSET) + 2u));
@@ -353,13 +426,13 @@ static void jp_glyph_to_g128(uint8_t font_num, uint16_t glyph,
 
 void chs_print(TextPrinter *win, uint32_t code, uint8_t fontSize)
 {
-    uint8_t tm, fn, font_px, lib;
+    uint8_t tm, fn, adv, ink, lib;
     uint8_t g128[CHS_CELL_BYTES];
     uint8_t w = 0;
     uint8_t saved_fn;
 
-    /* fontSize=请求字号（翻译层按 tm 传 CHS_PRINT_TMx_FONT_PX） */
-    resolve_draw(win, fontSize, &tm, &fn, &font_px, &lib);
+    /* fontSize=请求步进（翻译层按 tm 传 CHS_PRINT_TMx_FONT_PX） */
+    resolve_draw(win, fontSize, &tm, &fn, &adv, &ink, &lib);
 
     saved_fn = win_u8(win, WIN_FONTNUM_REAL);
     win_set_u8(win, WIN_FONTNUM_REAL, fn);
@@ -368,12 +441,12 @@ void chs_print(TextPrinter *win, uint32_t code, uint8_t fontSize)
         return;
     }
     win_set_u8(win, WIN_FONTNUM_REAL, saved_fn);
-    (void)chs_emit(win, tm, font_px, g128, font_px);
+    (void)chs_emit(win, tm, adv, g128, ink);
 }
 
 int DrawHalfWidth(TextPrinter *win, uint32_t cur_char)
 {
-    uint8_t tm, fn, font_px, lib;
+    uint8_t tm, fn, adv, ink, lib;
     uint8_t g128[CHS_CELL_BYTES];
     unsigned i;
 
@@ -381,9 +454,10 @@ int DrawHalfWidth(TextPrinter *win, uint32_t cur_char)
         || cur_char >= SYM_GLYPH_BASE + SYM_GLYPH_COUNT)
         return 0;
 
-    resolve_draw(win, 0u, &tm, &fn, &font_px, &lib);
+    resolve_draw(win, 0u, &tm, &fn, &adv, &ink, &lib);
     (void)fn;
-    (void)font_px;
+    (void)adv;
+    (void)ink;
     (void)lib;
 
     {
@@ -403,7 +477,7 @@ int DrawHalfWidth(TextPrinter *win, uint32_t cur_char)
 
 int DrawGlyph(TextPrinter *win, uint32_t cur_char)
 {
-    uint8_t tm, fn, font_px, lib;
+    uint8_t tm, fn, adv, ink, lib;
     uint8_t g128[CHS_CELL_BYTES];
 
     if (cur_char >= 0xF7u)
@@ -411,11 +485,13 @@ int DrawGlyph(TextPrinter *win, uint32_t cur_char)
     if (DrawHalfWidth(win, cur_char))
         return 1;
 
-    resolve_draw(win, 0u, &tm, &fn, &font_px, &lib);
+    resolve_draw(win, 0u, &tm, &fn, &adv, &ink, &lib);
+    (void)adv;
+    (void)ink;
     (void)lib;
     jp_glyph_to_g128(fn, (uint16_t)cur_char, g128);
-    /* 半角 JP：墨宽 8；落点仍按 resolve 的 font_px/tm */
-    (void)chs_emit(win, tm, font_px, g128, CHS_GLYPH_ADVANCE_JP_PX);
+    /* 半角 JP：墨宽 8、步进 8（相位恒 0） */
+    (void)chs_emit(win, tm, 8u, g128, CHS_GLYPH_ADVANCE_JP_PX);
     return 1;
 }
 

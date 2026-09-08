@@ -19,15 +19,7 @@
  * ==========================================================================*/
 
 // 设置菜单（模板 0x081BB874）：左标签列 16px、右候选列 12px（用户拍板 2026-09-04）
-static const struct V6SceneRule kOptionScene = {
-    .tpl    = 0x081BB874u,
-    .win    = 0u,
-    .zones  = (const struct V6Zone[]) {
-        { .cx_hi = 8u,    .font_px = 16u },   // 标签列（key）：16px 整格
-        { .cx_hi = 0xFFu, .font_px = 12u },   // 候选列（value）：12px 相位共享
-    },
-    .zone_n = 2u,
-};
+// 【2026-09-08 退役】两档制取代全部场景规则，原表见 git 历史本文件。
 
 //// 宝可导航窗（win 0x0202E658，模板 0x081BB49C）：起始列==4（描述/标签）16px，
 //// 其余起始列 Middle 8x12（用户拍板 2026-09-07）。
@@ -64,11 +56,10 @@ static const struct V6SceneRule kOptionScene = {
 //    .zone_n = 1u,
 //};
 
+/* 两档制（2026-09-08 换地基）：场景字号表整体退役。
+ * 默认 = 1bpp 大库 11×11（步进 12）；fontNum==4 / 请求 8px = 1bpp 小库 9×9
+ * （步进 10）；tm2 血条 = 旧 Small 4bpp 8px。无场景特例（resolve_draw 裁定）。 */
 const struct V6SceneRule kV6Scenes[] = {
-    kOptionScene,
-//    kPokeNavScene,
-//    kMapInfoScene,
-//    kTrainerInfoScene,
 };
 
 const unsigned kV6SceneN = (unsigned)(sizeof(kV6Scenes) / sizeof(kV6Scenes[0]));

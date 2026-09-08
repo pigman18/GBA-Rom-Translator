@@ -5,6 +5,20 @@
   "chinese_leads": [[1, 5], [7, 26], [28, 30]],
   "shadow": false,
   "embed_primary": false,
+  "extra_bins": [
+    {
+      "label": "Big1Bpp",
+      "addr": 156237824,
+      "glyph_count": 7168,
+      "bytes_per_glyph": 16
+    },
+    {
+      "label": "Small1Bpp",
+      "addr": 157286400,
+      "glyph_count": 7168,
+      "bytes_per_glyph": 11
+    }
+  ],
   "font_slots": [
     {
       "label": "Normal",

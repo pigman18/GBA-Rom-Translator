@@ -48,10 +48,12 @@ uint8_t v6_scene_font(const struct V6SceneRule *r, uint8_t cx)
     return v6_scene_zone(r, cx)->font_px;
 }
 
-/* ---- resolve：tm + fn → font_px + 字形源 ----
- * lib_out: 0=按 fontNum 选库（GetGlyph 原逻辑），2=Middle 字库 */
-static void resolve_draw(TextPrinter *win, uint8_t *tm_out, uint8_t *fn_out,
-                         uint8_t *font_px_out, uint8_t *lib_out)
+/* ---- resolve：tm + fn + 请求字号 → font_px + 字形源 ----
+ * lib_out: 0=按 fontNum 选库（GetGlyph 原逻辑），2=Middle 字库
+ * 优先级：fn4 强制 8px Small > 场景表 > req_px（8→Middle，12/16→主字体）。
+ * req_px=0 表示无请求（DrawHalfWidth/DrawGlyph 等非中文主路径），回落 12。 */
+static void resolve_draw(TextPrinter *win, uint8_t req_px, uint8_t *tm_out,
+                         uint8_t *fn_out, uint8_t *font_px_out, uint8_t *lib_out)
 {
     uint8_t tm = win_u8(win, WIN_TEXTMODE) & 7u;
     uint8_t fn = win_u8(win, WIN_FONTNUM_REAL);
@@ -83,9 +85,15 @@ static void resolve_draw(TextPrinter *win, uint8_t *tm_out, uint8_t *fn_out,
         } else {
             *font_px_out = fpx;
         }
-    } else {
-        *font_px_out = 12u;
+        return;
     }
+    if (req_px == 8u) {
+        /* 请求 8px → Middle 8x12 库（几何同 8px 路径） */
+        *font_px_out = 8u;
+        *lib_out = 2u;
+        return;
+    }
+    *font_px_out = (req_px == 16u) ? 16u : 12u;
 }
 
 /* tm0：跟官方线性寻址；禁止与「怎么办」等同 cb 窗共用 v8_alloc(0x100+) */
@@ -350,8 +358,8 @@ void chs_print(TextPrinter *win, uint32_t code, uint8_t fontSize)
     uint8_t w = 0;
     uint8_t saved_fn;
 
-    (void)fontSize;
-    resolve_draw(win, &tm, &fn, &font_px, &lib);
+    /* fontSize=请求字号（翻译层按 tm 传 CHS_PRINT_TMx_FONT_PX） */
+    resolve_draw(win, fontSize, &tm, &fn, &font_px, &lib);
 
     saved_fn = win_u8(win, WIN_FONTNUM_REAL);
     win_set_u8(win, WIN_FONTNUM_REAL, fn);
@@ -373,7 +381,7 @@ int DrawHalfWidth(TextPrinter *win, uint32_t cur_char)
         || cur_char >= SYM_GLYPH_BASE + SYM_GLYPH_COUNT)
         return 0;
 
-    resolve_draw(win, &tm, &fn, &font_px, &lib);
+    resolve_draw(win, 0u, &tm, &fn, &font_px, &lib);
     (void)fn;
     (void)font_px;
     (void)lib;
@@ -403,7 +411,7 @@ int DrawGlyph(TextPrinter *win, uint32_t cur_char)
     if (DrawHalfWidth(win, cur_char))
         return 1;
 
-    resolve_draw(win, &tm, &fn, &font_px, &lib);
+    resolve_draw(win, 0u, &tm, &fn, &font_px, &lib);
     (void)lib;
     jp_glyph_to_g128(fn, (uint16_t)cur_char, g128);
     /* 半角 JP：墨宽 8；落点仍按 resolve 的 font_px/tm */

@@ -6,7 +6,17 @@
 - 🔴 四步法：①静态分析 ②gdb 动态 ③实机截图 ④结论才入 MEMORY；未验证结论标注【推论/未验证】。
 - 运行时故障先怀疑注入机制；验证优先静态分析，不主动开模拟器/gdb。
 
-## v8 架构（动态避让，2026-09-07 实机验收通过）
+## v9 分配器（方案 A 首版，2026-09-08 实现【未实机验证】）
+- 用户否掉止血类方案，拍板重构两指标：①尽量无上限 ②尽量不撞 UI。调研文档 docs/调研_20260908_tile分配器重构方案.md（方案A 独占块+按需载入主推 / B OBJ 精灵层 / C atlas 搬迁）。
+- tile_alloc.c v9 已实现（安全子集，未做 BGxCNT/模板重定向）：
+  ①cb0 两级区间：优先独占带 [0x2D2,0x400)（官方 tm1 字库固定止于 0x2D1，其上=物理 cb1 块上部，无官方固定产出=可声明所有权），耗尽回落 [0x100,0x2D2)；其他 cb 单区间 [0x100,hi) 原行为。
+  ②ours-GC：begin 末尾把「本 cb 段表 ∧ 不在活引用位图」的历史 glyph 段 32B 清零释放+段目清空。治「负缓存只避让不回收→非空 tile 随会话单调累积→空间越用越少」机制性根源。
+  ③段表 v9：段带 cb 标签（len_raw bit10~14），修跨 cb 相对号错回收；magic 0xA5C4。
+- 三层探测降级 tripwire（发现声明失效自动绕开），渲染路径/场景表零改动（保持「屏蔽」提交 ea7507b 后状态：kPokeNav/kMapInfo/kTrainerInfo 规则已注释停用，仅 kOptionScene）。
+- 交付 roms/outputs/POKEMON_RUBY_AXVJ00_translated_new.gba（旧名被 mGBA 锁定），check_rom_hook=True，game.bin 9384B。
+- 遗留：cb2/cb3 天花板需「场景→空闲块分级表」+ 模板重定向（需 gdb 逐场景实测）；半角同块化仅重定向路线才需要。
+
+## v8 架构（动态避让，2026-09-07 实机验收通过；v9 在其上叠加）
 - 静态表全废弃（用户拍板「要动态不要补丁」）：kV8AvoidScenes/kV8LinearScenes 已删，scene_cfg 只剩字号。
 - tile 号=顺序分配器 v8_alloc_tile（src/text/tile_alloc.c）三层探测：
   ①活引用（权威）：begin 清零重建位图 = win tilemap + DISPCNT 启用 BG 中**同 charBase** 的 screenblock（size 位定表项数，affine/位图跳过）。任何「跳过重建」已实测证伪（继续菜单同帧关旧开新窗→疯狂撞）；性能只能降单次成本。

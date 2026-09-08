@@ -16,9 +16,27 @@
 #include "text.h"
 #include "blend_glyph.h" /* 仅 GetGlyph 的 copy_tile32 / CopyGlyph* 取字原语 */
 
-/* F9 汉字默认字号：font4 小字 8px 由 chs_print 内部兜底，这里传 12（主字体，
- * 12px 相位两态 0/4，CHS_ADVANCE_12=1）。未来 16+12 混排时调用方按需传 12/16。 */
-#define CHS_PRINT_FONT_PX   12u
+/* F9 汉字默认字号：按 textMode 分档，chs_print 的 fontSize 实参来源。
+ * 优先级（chs_print/resolve_draw 内裁定）：fontNum==4 强制 8px Small >
+ * 场景表命中 > 此处请求值。请求值 8px → Middle 8x12 库；12/16 → 主字体（现状）。
+ * tm2（血条等 win[0x20] 缓冲路径）resolve 时强制 fn4 → 实际仍 8px Small，
+ * TM2 宏仅表达档位默认，改前先确认 fn4 重映射是否保留。 */
+#define CHS_PRINT_TM0_FONT_PX   12u
+#define CHS_PRINT_TM1_FONT_PX   8u
+#define CHS_PRINT_TM2_FONT_PX   8u
+#define CHS_PRINT_TM3_FONT_PX   12u
+
+/* 按当前窗口 textMode 取默认字号（tm 仅 0~3 有效，其余回落 12） */
+static uint8_t chs_print_px(TextPrinter *win)
+{
+    switch (win_u8(win, WIN_TEXTMODE) & 7u) {
+    case 0u:  return CHS_PRINT_TM0_FONT_PX;
+    case 1u:  return CHS_PRINT_TM1_FONT_PX;
+    case 2u:  return CHS_PRINT_TM2_FONT_PX;
+    case 3u:  return CHS_PRINT_TM3_FONT_PX;
+    default:  return 12u;
+    }
+}
 
 /* =====================================================================
  * §glyph — 字形源统一解析（自 text_render.c 迁入）
@@ -180,7 +198,7 @@ static int inline_phrase_no_controls(TextPrinter *win, uint16_t index, uint16_t 
                 return 0;
             gidx = pack_glyph_index(lead, trail);
             if (gidx < CHS_FONT_GLYPH_MAX)
-                chs_print(win, gidx, CHS_PRINT_FONT_PX);
+                chs_print(win, gidx, chs_print_px(win));
             i += 4;
         } else if (stream[i] == 0xFD) {
             fd_expand_print(win, stream[i + 1]);
@@ -247,7 +265,7 @@ static int slot_draw_chinese(TextPrinter *win, const uint8_t *chinese,
             if (lead_trail_ok(lead, trail)) {
                 gidx = pack_glyph_index(lead, trail);
                 if (gidx < CHS_FONT_GLYPH_MAX)
-                    chs_print(win, gidx, CHS_PRINT_FONT_PX);
+                    chs_print(win, gidx, chs_print_px(win));
             }
             ci += 4;
         } else if (chinese[ci] == 0xFD) {
@@ -470,7 +488,7 @@ int TranslateHandleChar(TextPrinter *win, uint32_t c)
         win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(idx2 + 3));
         gidx = pack_glyph_index(lead, trail);
         if (gidx < CHS_FONT_GLYPH_MAX)
-            chs_print(win, gidx, CHS_PRINT_FONT_PX);
+            chs_print(win, gidx, chs_print_px(win));
         return 1;
     }
 

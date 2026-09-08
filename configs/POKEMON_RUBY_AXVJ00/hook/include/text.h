@@ -42,7 +42,9 @@ int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth
 /* ---- 引擎渲染件（PrintNextChar_hook.c 提供，text_translate.c 消费）---- */
 
 /* v6 统一渲染入口：GetGlyph 解压 → 按 fontSize 栅格化 → 按 textMode 落址。
- * fontNum==4 → 自动 8px（fontSize 忽略）；其余 fontSize=12/16（默认 16）。 */
+ * fontSize=调用方请求字号（翻译层按 tm 传 CHS_PRINT_TMx_FONT_PX；
+ * 0=无请求回落 12）。裁定优先级：fn4 强制 8px Small > 场景表 >
+ * 请求值（8px→Middle 8x12 库，12/16→主字体）。 */
 void chs_print(TextPrinter *win, uint32_t code, uint8_t fontSize);
 
 /* PCS 单字节（半角）统一渲染入口。

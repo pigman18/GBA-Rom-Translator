@@ -135,8 +135,8 @@ V8Phase                                equ 0x0203FF44  ; C: ADDR_V8_PHASE
 V8PhaseRow                             equ 0x0203FF46  ; C: ADDR_V8_PHASE_ROW
 V8LastTile                             equ 0x0203FF48  ; C: ADDR_V8_LAST_TILE
 ; ⚠ V8NlMark @ 0x0203FF4A 已于 2026-09-07 删除：NL_MARK 跨字换行启发式由
-;   v8_phase_newline_reset（FE 控制码拦截、Origin 普通调用返回后确定性复位）
-;   取代。0x0203FF4A~4B 恢复零占用。
+;   行标识（V8PhaseRow）失配自动归零取代；其复位入口 v8_phase_newline_reset
+;   亦已于 2026-09-08 随 FE 拦截路径一并删除（零调用者）。0x0203FF4A~4B 零占用。
 ; ⚠ V8Throttle @ 0x0203FF4C（begin 节流缓存）已于 2026-09-07 实测证伪删除：
 ;   同帧内官方关旧窗开新窗时签名/VCOUNT 判定失灵 → 位图过期 → 疯狂撞。
 ;   0x0203FF4C~0x0203FF7F 恢复零占用（字面量池扫描实证无引用）。

@@ -15,38 +15,7 @@
  * ===================================================================================== */
 #include "text.h"
 #include "blend_glyph.h"
-#include "scene_cfg.h"
 #include "tile_alloc.h"
-
-/* ---- 场景字号表（scene_cfg）---- */
-/* 命中优先级：tpl+win 精确 > tpl 通配（win=0）。win 地址只在同模板多窗口
- * 需要圈定时填（如宝可导航 0x0202E658）。 */
-const struct V6SceneRule *v6_scene_lookup(uint32_t tpl, uint32_t win_addr)
-{
-    unsigned i;
-    for (i = 0; i < kV6SceneN; i++)
-        if (kV6Scenes[i].tpl == tpl && kV6Scenes[i].win != 0u
-            && kV6Scenes[i].win == win_addr)
-            return &kV6Scenes[i];
-    for (i = 0; i < kV6SceneN; i++)
-        if (kV6Scenes[i].tpl == tpl && kV6Scenes[i].win == 0u)
-            return &kV6Scenes[i];
-    return 0;
-}
-
-const struct V6Zone *v6_scene_zone(const struct V6SceneRule *r, uint8_t cx)
-{
-    unsigned i;
-    for (i = 0; i < r->zone_n; i++)
-        if (cx < r->zones[i].cx_hi)
-            return &r->zones[i];
-    return &r->zones[r->zone_n - 1u];
-}
-
-uint8_t v6_scene_font(const struct V6SceneRule *r, uint8_t cx)
-{
-    return v6_scene_zone(r, cx)->font_px;
-}
 
 /* ---- resolve：tm + fn + 请求步进 → 步进/墨宽/字形源 ----
  * 两档制 2.0（2026-09-08 用户拍板「旧 8px→9px、旧 12/16px→11px」）：
@@ -110,31 +79,6 @@ static uint16_t chs_claim_tile(TextPrinter *win, uint8_t tm, uint8_t font_px,
     return v8_alloc_tile(win, font_px, glyph_len);
 }
 
-/* ---- Stage2：字模 → 列对（8/16）；12px 由相位路径 extract_cols ---- */
-static unsigned chs_rasterize(const uint8_t g128[CHS_CELL_BYTES],
-                              unsigned fontSize, uint8_t out[4][32])
-{
-    unsigned i;
-
-    if (fontSize == 8u) {
-        for (i = 0; i < 32u; i++) {
-            out[0][i] = g128[0x00 + i];
-            out[1][i] = g128[0x20 + i];
-        }
-        return 1u;
-    }
-    if (fontSize == 16u) {
-        for (i = 0; i < 32u; i++) {
-            out[0][i] = g128[0x00 + i];
-            out[1][i] = g128[0x20 + i];
-            out[2][i] = g128[0x40 + i];
-            out[3][i] = g128[0x60 + i];
-        }
-        return 2u;
-    }
-    return 0u;
-}
-
 static void fill_colors(TextPrinter *win, uint8_t colors[16])
 {
     uint8_t fg_ov = *(volatile uint8_t *)ADDR_OPT_FG_COLOR;
@@ -148,48 +92,6 @@ static void fill_colors(TextPrinter *win, uint8_t colors[16])
     colors[14] = color_e;
     colors[15] = color_c;
 }
-
-/* 单列写入：tm2→缓冲；其余→ tile_data[tile] + UTM */
-static void chs_place_col(TextPrinter *win, uint8_t tm, uint16_t tile,
-                          uint16_t lower_delta,
-                          const uint8_t *src_u, const uint8_t *src_l)
-{
-    uint8_t colors[16];
-
-    fill_colors(win, colors);
-
-    if (tm == 2u) {
-        uint32_t dst = win_u32(win, WIN_TILE_DATA);
-        if (dst == 0u)
-            return;
-        blend_glyph_4bpp((uint32_t *)(void *)dst, 0, src_u, 8u, 0u, colors);
-        blend_glyph_4bpp((uint32_t *)(void *)(dst + 0x20u), 0, src_l, 8u, 0u,
-                         colors);
-        win_set_u32(win, WIN_TILE_DATA, dst + 0x40u);
-        return;
-    }
-
-    {
-        uint8_t *tpl = win_template(win);
-        uint8_t *tile_data;
-        uint16_t lower = (uint16_t)(tile + lower_delta);
-
-        if (!tpl)
-            return;
-        tile_data = (uint8_t *)(uintptr_t)win_u32(tpl, TPL_TILE_DATA);
-        if (!tile_data || tile == 0u)
-            return;
-        blend_glyph_4bpp((uint32_t *)(void *)(tile_data + ((uint32_t)tile << 5)),
-                         0, src_u, 8u, 0u, colors);
-        blend_glyph_4bpp((uint32_t *)(void *)(tile_data + ((uint32_t)lower << 5)),
-                         0, src_l, 8u, 0u, colors);
-        UpdateTilemap_PreserveCursorX(win, tile, lower);
-        win_set_u8(win, WIN_CURSOR_TILE_X,
-                   (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
-    }
-}
-
-#if CHS_ADVANCE_12
 
 static void chs_fill_bg(TextPrinter *win, uint8_t tm, uint16_t tile,
                         unsigned x0, unsigned x1)
@@ -299,8 +201,6 @@ static unsigned print_glyph_px(TextPrinter *win,
     return adv;
 }
 
-#endif /* CHS_ADVANCE_12 */
-
 /* tm2 血条：win[0x20] 线性缓冲直绘（无分配器/无 tilemap，列槽=0x40=上/下半
  * 两 tile）。9×9 字体（步进 10、墨 9）相位两段式：本列 phase..phase+w0，
  * 尾列 0..w1 并把 w1..8 清底；每字推进 adv 列（dst += adv*0x40）。
@@ -363,12 +263,12 @@ static unsigned tm2_print_px(TextPrinter *win,
 /* ---- 唯一落点：按 tm 写目标；返回推进列数（供 TILE_OFFSET）----
  * advance=本字步进像素（12/10），ink=墨宽（11/9），二者分离（11×11 库
  * 墨 11 步进 12、9×9 库墨 9 步进 10，pokeE 语义）。
- * 旧 8px/16px 光栅路径退役（2026-09-08 两档制 2.0）。 */
+ * 旧 8px/16px 光栅路径已删（2026-09-08 两档制 2.0；advance 恒为
+ * 12/10/8，全走相位两段式 print_glyph_px）。 */
 static unsigned chs_emit(TextPrinter *win, uint8_t tm, unsigned advance,
                          const uint8_t g128[CHS_CELL_BYTES], unsigned ink)
 {
-    uint8_t buf[4][32];
-    unsigned cols, col, adv = 1u;
+    unsigned adv;
 
     if (ink == 0u)
         ink = advance;
@@ -376,34 +276,11 @@ static unsigned chs_emit(TextPrinter *win, uint8_t tm, unsigned advance,
     if (tm == 2u)
         return tm2_print_px(win, g128, ink, advance);
 
-#if CHS_ADVANCE_12
-    if (advance != 16u) {
-        adv = print_glyph_px(win, g128, ink, advance);
-        if (tm == 0u || tm == 1u)
-            win_set_u16(win, WIN_TILE_OFFSET,
-                        (uint16_t)(win_u16(win, WIN_TILE_OFFSET) + adv * 2u));
-        return adv;
-    }
-#endif
-
-    cols = chs_rasterize(g128, (uint8_t)advance, buf);
-    if (cols == 0u)
-        return 0u;
-
-    for (col = 0; col < cols; col++) {
-        uint16_t tile = 1u;
-        if (tm != 2u) {
-            tile = chs_claim_tile(win, tm, (uint8_t)advance, 2u);
-            if (tile == 0u)
-                return col;
-        }
-        chs_place_col(win, tm, tile, chs_lower_delta(tm),
-                      buf[col * 2u], buf[col * 2u + 1u]);
-        if (tm == 0u || tm == 1u)
-            win_set_u16(win, WIN_TILE_OFFSET,
-                        (uint16_t)(win_u16(win, WIN_TILE_OFFSET) + 2u));
-    }
-    return cols;
+    adv = print_glyph_px(win, g128, ink, advance);
+    if (tm == 0u || tm == 1u)
+        win_set_u16(win, WIN_TILE_OFFSET,
+                    (uint16_t)(win_u16(win, WIN_TILE_OFFSET) + adv * 2u));
+    return adv;
 }
 
 static void jp_glyph_to_g128(uint8_t font_num, uint16_t glyph,

@@ -131,41 +131,6 @@ static const struct GlyphShiftAmount {
 /* RMW 骨架（官方等价）。expand_row：把第 r 行字形展开为 nibble 序（低 nibble
  * = 最左像素，nibbles [0,width) 有效，其余为 0）。 */
 
-/* 1bpp：rows[r] bit7 = 最左像素（官方 unshadowed 字模序），bit=0 → colors[0]。
- * 上游怪癖（照抄保逐位等价）：官方 ShiftGlyphTile_UnshadowedFont_Width3 实际
- * 展开 4 个像素（pret 源码自带 "XXX: why 4?" 注释）——顺序文本下该多余 nibble
- * 会被下一字形的跨度重写即时覆盖，死代码；固定 8px 宽度下永不触发。 */
-static uint32_t blend_row_1bpp(const uint8_t *rows, uint32_t r,
-                               uint32_t width, const uint8_t *colors)
-{
-    uint8_t bits = rows[r];
-    uint32_t val = 0;
-    uint32_t p;
-    uint32_t n = (width == 3u) ? 4u : width;
-
-    for (p = 0; p < n; p++)
-        val |= (uint32_t)colors[(bits >> (7u - p)) & 1u] << (p * 4u);
-
-    return val;
-}
-
-/* 2bpp：GBA 序——rows[2r] 起每字节低 2 位 = 最左像素 */
-static uint32_t blend_row_2bpp(const uint8_t *rows, uint32_t r,
-                               uint32_t width, const uint8_t *colors)
-{
-    const uint8_t *row = &rows[r * 2u];
-    uint32_t val = 0;
-    uint32_t p;
-
-    for (p = 0; p < width; p++) {
-        uint32_t px = (row[p >> 2] >> ((p & 3u) * 2u)) & 3u;
-
-        val |= (uint32_t)colors[px] << (p * 4u);
-    }
-
-    return val;
-}
-
 /* 4bpp：GBA 4bpp tile 序——rows[4r..4r+3] 为第 r 行的 u32（低 nibble =
  * 最左像素），colors[16] 值→色号 LUT 直通（中文字库索引 0/14/15）。 */
 static uint32_t blend_row_4bpp(const uint8_t *rows, uint32_t r,
@@ -229,38 +194,6 @@ static uint32_t blend_core(uint32_t *destTile, uint32_t *spillTile,
     }
 
     return (startPixel + width) / 8u;
-}
-
-uint32_t blend_glyph_1bpp(uint32_t *destTile, uint32_t *spillTile,
-                          const uint8_t *rows,
-                          uint32_t width, uint32_t startPixel,
-                          const uint8_t colors[2])
-{
-    if (width == 0u)
-        return startPixel / 8u; /* 官方 Width0：无操作 */
-    if (width > 8u)
-        width = 8u;
-    if (startPixel > 7u)
-        startPixel = 7u;
-
-    return blend_core(destTile, spillTile, rows, width, startPixel,
-                      blend_row_1bpp, colors);
-}
-
-uint32_t blend_glyph_2bpp(uint32_t *destTile, uint32_t *spillTile,
-                          const uint8_t *rows,
-                          uint32_t width, uint32_t startPixel,
-                          const uint8_t colors[4])
-{
-    if (width == 0u)
-        return startPixel / 8u;
-    if (width > 8u)
-        width = 8u;
-    if (startPixel > 7u)
-        startPixel = 7u;
-
-    return blend_core(destTile, spillTile, rows, width, startPixel,
-                      blend_row_2bpp, colors);
 }
 
 uint32_t blend_glyph_4bpp(uint32_t *destTile, uint32_t *spillTile,

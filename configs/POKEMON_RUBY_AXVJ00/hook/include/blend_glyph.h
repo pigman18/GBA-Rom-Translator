@@ -34,16 +34,6 @@
 
 #include <stdint.h>
 
-uint32_t blend_glyph_1bpp(uint32_t *destTile, uint32_t *spillTile,
-                          const uint8_t *rows,
-                          uint32_t width, uint32_t startPixel,
-                          const uint8_t colors[2] /* {bg, fg} */);
-
-uint32_t blend_glyph_2bpp(uint32_t *destTile, uint32_t *spillTile,
-                          const uint8_t *rows /* 16B */,
-                          uint32_t width, uint32_t startPixel,
-                          const uint8_t colors[4] /* 值→色号 LUT */);
-
 uint32_t blend_glyph_4bpp(uint32_t *destTile, uint32_t *spillTile,
                           const uint8_t *rows /* 32B，GBA 4bpp tile */,
                           uint32_t width, uint32_t startPixel,

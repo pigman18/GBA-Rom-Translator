@@ -14,7 +14,6 @@
  * 来源：原 src/text.c §2/§12/§13/§16 原样迁出。协议常量 CHS_ESCAPE 等见 game.h。
  * ===================================================================================== */
 #include "text.h"
-#include "blend_glyph.h" /* 仅 GetGlyph 的 copy_tile32 / CopyGlyph* 取字原语 */
 
 /* F9 汉字默认步进：按 textMode 分档，chs_print 的 fontSize 实参来源。
  * 两档制 2.0（2026-09-08「旧 8px→9px、旧 12/16px→11px」）：
@@ -67,14 +66,14 @@ int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth
      * （例：白天的「白」=0x0036），图鉴说明会把「白」画成「；」。
      * PCS 标点由 DrawHalfWidth 直接读 ADDR_FONT_CHS_SYM，不经本函数。 */
 
-    /* 中文字形三源（地基更换 2026-09-08）：
+    /* 中文字形两源（两档制 2.0，2026-09-08）：
      *   lib==1 → 1bpp 大库 11×11 位流（pokeE 格式，16B/字）；
-     *   lib==3/2 → 1bpp 小库 9×9 位流（11B/字）；
-     *   lib==4 → 旧 Small 4bpp 8px（tm2 血条 8px 物理槽专用）；
-     *   lib==0 → 按 fontNum 选 4bpp 旧库（fn4→Small 其余 Normal，兼容保留）。
-     * 1bpp 位流运行时转换（阴影右下生成），单元布局与 4bpp 库一致。
+     *   lib==3/2 → 1bpp 小库 9×9 位流（11B/字）。
+     * 1bpp 位流运行时转换（阴影右下生成），单元布局与旧 4bpp 库一致。
+     * 旧 4bpp 兼容路径（lib0/lib4）已删：resolve_draw 两档制后只输出
+     * BIG/SMALL，此分支不可达（返回 0 = 调用方放弃绘制，宁缺不砸）。
      * 行偏移（单元内垂直落位）：pokeE 原版=大1/小2；2026-09-08 实机验收用户
-     * 反馈整体偏高 ~1px → 大2/小3（CHS_1BPP_ROW_OFF_* 可再微调）。 */
+     * 反馈整体偏高 ~1px → 大2/小4（CHS_1BPP_ROW_OFF_* 可再微调）。 */
     if (font_lib == CHS_FONT_LIB_1BPP_BIG) {
         chs_cell_from_1bpp(
             (const uint8_t *)ADDR_FONT_1BPP_BIG
@@ -91,28 +90,8 @@ int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth
         *outWidth = 8u;
         return 1;
     }
-
-    /* 4bpp 兼容路径（lib0；两档制 2.0 后无路由，仅保留编译）。
-     * 旧 Small 4bpp（lib4）已退役。中文字形：直接从自定义中文点阵字库解压
-     * （v5 decompress_chs_glyph 语义）。⚠ 不能用 GetGlyphTilePointers_Origin
-     * （那是官方日文字形，gidx 是中文索引，查官方表会返回 null → 全空）。
-     *   字模容器 128B：TL@0 / BL@0x20 / TR@0x40 / BR@0x60。 */
-    {
-        const uint8_t *base =
-            (fontNum == 4u) ? (const uint8_t *)ADDR_FONT_CHS_SMALL
-                            : (const uint8_t *)ADDR_FONT_CHS_NORMAL;
-        const uint8_t *g =
-            base + ((uint32_t)((uint16_t)code & 0x7FFFu) << 7);
-        if ((uint16_t)code & 0x8000u)
-            g += 64u;
-
-        copy_tile32(out128 + 0x00, g + 0u);   /* TL */
-        copy_tile32(out128 + 0x20, g + 32u);  /* BL */
-        copy_tile32(out128 + 0x40, g + 64u);  /* TR */
-        copy_tile32(out128 + 0x60, g + 96u);  /* BR */
-        *outWidth = 8u;
-        return 1;
-    }
+    (void)fontNum; /* 旧 4bpp lib0 路径按 fontNum 选库，已删 */
+    return 0;
 }
 
 /* =====================================================================
@@ -258,19 +237,8 @@ static void redirect_phrase_stream(TextPrinter *win, uint16_t code)
 }
 
 /* =====================================================================
- * §T3 SlotTable 查找族（原 text.c §13；'SLT2' 分桶 / legacy 平铺）
+ * §T3 SlotTable 查找族（原 text.c §13；'SLT2' 分桶）
  * ===================================================================== */
-static uint32_t fnv1a_hash(const uint8_t *data, unsigned len)
-{
-    uint32_t h = 0x811c9dc5u;
-    unsigned i;
-    for (i = 0; i < len; i++) {
-        h ^= data[i];
-        h *= 0x01000193u;
-    }
-    return h;
-}
-
 static uint32_t slot_rd_le32(const uint8_t *p)
 {
     return (uint32_t)p[0] | ((uint32_t)p[1] << 8)
@@ -389,80 +357,12 @@ static int slot_lookup_v2(TextPrinter *win, uint32_t cur_char,
     return 0;
 }
 
-static int slot_lookup_legacy(TextPrinter *win, uint32_t cur_char,
-                              const uint8_t *text, uint16_t index)
-{
-    const uint8_t *table = (const uint8_t *)ADDR_SLOT_TABLE;
-    unsigned i = 0;
-    uint8_t stream_buf[256];
-    uint8_t stream_len = 0;
-    unsigned k;
-
-    /* cnt 必须 int：uint8_t 对 sizeof 比较恒真会被编译器删边界 → 回绕死循环 */
-    {
-        int pos = (int)index - 1;
-        int cnt = 0;
-        while (cnt < (int)sizeof(stream_buf)) {
-            uint8_t b = (cnt == 0) ? (uint8_t)cur_char : text[pos + cnt];
-            if (b == 0xFF)
-                break;
-            stream_buf[cnt] = b;
-            cnt++;
-        }
-        if (cnt > 255)
-            cnt = 255;
-        stream_len = (uint8_t)cnt;
-    }
-
-    if (stream_len == 0)
-        return 0;
-
-    {
-        uint16_t best_len = 0;
-        const uint8_t *best_cn = 0;
-        uint16_t best_next = 0;
-
-        while (table[i] != 0 || table[i + 1] != 0 || table[i + 2] != 0 || table[i + 3] != 0) {
-            uint32_t entry_key;
-            uint16_t entry_len;
-            entry_key = (uint32_t)table[i] | ((uint32_t)table[i + 1] << 8)
-                      | ((uint32_t)table[i + 2] << 16) | ((uint32_t)table[i + 3] << 24);
-            i += 4;
-            entry_len = (uint16_t)table[i] | ((uint16_t)table[i + 1] << 8);
-            i += 2;
-
-            if (entry_len > 0 && entry_len <= stream_len) {
-                uint32_t h = fnv1a_hash(stream_buf, entry_len);
-                if (h == entry_key) {
-                    unsigned match = 1;
-                    for (k = 0; k < entry_len; k++) {
-                        if (table[i + k] != stream_buf[k]) {
-                            match = 0;
-                            break;
-                        }
-                    }
-                    if (match && entry_len >= best_len) {
-                        best_len = entry_len;
-                        best_cn = &table[i + entry_len];
-                        best_next = (uint16_t)(index - 1 + entry_len);
-                    }
-                }
-            }
-            i += entry_len;
-            while (table[i] != 0xFF)
-                i++;
-            i++;
-        }
-        if (best_len > 0)
-            return slot_draw_chinese(win, best_cn, best_next);
-    }
-    return 0;
-}
-
 /* 通用 slot 查找：对指定流 text 的 index 位置做 slot 匹配并绘制。
  *   index 语义同官方（pos=index-1 为 cur_char 前驱游标）。
  *   slot_draw_chinese / inline_phrase_no_controls 的替换流内日文字符复用此
- *   入口递归翻译（用户拍板：slot 支持日文字符直接查对应 f900）。 */
+ *   入口递归翻译（用户拍板：slot 支持日文字符直接查对应 f900）。
+ * 旧 legacy 平铺表回退已删（2026-09-08）：slot 表恒由打包端生成为 SLT2，
+ * magic 不匹配 = 数据损坏，直接放弃（宁缺不砸）。 */
 static int slot_lookup_stream(TextPrinter *win, uint32_t cur_char,
                               const uint8_t *text, uint16_t index)
 {
@@ -470,9 +370,9 @@ static int slot_lookup_stream(TextPrinter *win, uint32_t cur_char,
 
     if (cur_char >= 0x100u)
         return 0;
-    if (slot_rd_le32(table) == SLOT_TABLE_MAGIC_V2)
-        return slot_lookup_v2(win, cur_char, table, text, index);
-    return slot_lookup_legacy(win, cur_char, text, index);
+    if (slot_rd_le32(table) != SLOT_TABLE_MAGIC_V2)
+        return 0;
+    return slot_lookup_v2(win, cur_char, table, text, index);
 }
 
 static int slot_lookup_and_draw(TextPrinter *win, uint32_t cur_char)

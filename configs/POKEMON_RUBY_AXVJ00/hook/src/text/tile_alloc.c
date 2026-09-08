@@ -419,20 +419,3 @@ void v8_phase_set_last_tile(uint16_t tile)
 {
     *(volatile uint16_t *)ADDR_V8_LAST_TILE = tile;
 }
-
-/* 官方控制码（FE/FB 等）换行后的确定性复位。由 PrintNextChar_Hook 在
- * PrintNextChar_Origin（普通调用）返回后、检测到 tileY 变/同行 TX 回落时
- * 调用——此时官方已推完光标。2026-09-07 取代 NL_MARK 跨字启发式
- * （旧法因尾调用限制只能在下一字绘制前猜测，为本类历史 BUG 根源）。 */
-void v8_phase_newline_reset(TextPrinter *win)
-{
-    uint8_t tm = win_u8(win, WIN_TEXTMODE) & 7u;
-
-    *(volatile uint16_t *)ADDR_V8_PHASE = 0u;
-    *(volatile uint16_t *)ADDR_V8_LAST_TILE = 0u;
-    *(volatile uint16_t *)ADDR_V8_PHASE_ROW = 0xFFFFu;
-    /* tm0/1 恒 TILE_OFFSET+=2（文档铁律，奇数位行末半列补偿） */
-    if (tm == 0u || tm == 1u)
-        win_set_u16(win, WIN_TILE_OFFSET,
-                    (uint16_t)(win_u16(win, WIN_TILE_OFFSET) + 2u));
-}

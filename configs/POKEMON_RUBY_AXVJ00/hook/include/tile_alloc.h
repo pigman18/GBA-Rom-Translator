@@ -34,16 +34,8 @@ uint16_t v8_alloc_tile(TextPrinter *win, uint8_t font_px, uint8_t glyph_len);
  *   换行 / 换窗口（行标识变化）→ 相位归零（新行从头画，杜绝跨窗口残留）。
  * 不再用全局 8 槽 + 行指纹 key 的复杂状态表。 */
 
-/* 取当前行内相位 px（内部先按 win 校验行标识，失配即归零）。phase = px & 7。
- * 换行复位由 v8_phase_newline_reset 在控制码分支确定性完成（2026-09-07）。 */
+/* 取当前行内相位 px（内部先按 win 校验行标识，失配即归零）。phase = px & 7。 */
 uint16_t v8_phase_get(TextPrinter *win);
-
-/* 官方控制码（FE/FB）换行后的确定性复位：清相位/last_tile/行标识 +
- * tm0/1 的 TILE_OFFSET+=2（奇数位行末半列补偿，「壤」切半类 BUG 的根源治理）。
- * 由 PrintNextChar_Hook 在 PrintNextChar_Origin（普通调用）返回后、
- * 检测到 tileY 变/同行 TX 回落时调用。取代已删除的 before/after_glyph
- * NL_MARK 跨字启发式。 */
-void v8_phase_newline_reset(TextPrinter *win);
 
 /* 推进相位 px += adv（adv = 本字步进像素）。 */
 void v8_phase_advance(uint16_t adv);

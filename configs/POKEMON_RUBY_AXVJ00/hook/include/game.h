@@ -186,18 +186,11 @@ struct ChsPhase {
  * 8px 小字 FontChsSmall(0x09100000) 仍由 fontId==4 路径分流。
  *
  * 2026-08-31 追加：12px 主字体（docs/12PX_落地方案.md）。
- *   CHS_ADVANCE_12 = 1 → 12px 两段式（相位两态 0/4，推进列 1,2,1,2）
- *   CHS_ADVANCE_12 = 0 → 16px 整格（回退到已验证路径，零状态）
- * 12px 需自存相位（行指纹 key 失配即归零），见 struct ChsPhase。
+ * 12px 两段式相位路径已为唯一实现（2026-09-08 两档制 2.0：旧 16px 整格
+ * 回退路径 CHS_ADVANCE_12=0 分支连同 chs_rasterize/chs_place_col 一并删除）。
+ * 12px 需自存相位（行标识失配即归零）。
  */
-#ifndef CHS_ADVANCE_12
-#define CHS_ADVANCE_12       1
-#endif
-#if CHS_ADVANCE_12
 #define CHS_GLYPH_ADVANCE_PX 12
-#else
-#define CHS_GLYPH_ADVANCE_PX 16
-#endif
 #define CHS_INK_WIDTH_PX     12   /* 字库墨迹实宽（advance-ink = 字间距） */
 #define CHS_CHAR_HEIGHT_PX   16
 #define CHS_LINE_FEED_PX     16

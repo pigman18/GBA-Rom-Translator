@@ -2575,6 +2575,24 @@ class TranslationEngine:
         except Exception as e:  # pragma: no cover
             self._log("warning", f"[翻译通路] 载入 translate.build.json 失败: {e}")
 
+        # --- 字形审计：译文 ⊆ 字库（打包期暴露缺字，不阻断） ---
+        try:
+            from ..glyph_audit import audit_translation_glyphs
+
+            _ga = audit_translation_glyphs(
+                all_entries,
+                self.charmap,
+                game_work or Path(self.config.work_dir) / self.config.game,
+                self._log,
+                game=self.config.game,
+            )
+            self.callbacks.on_progress(
+                "build", 0, 1,
+                "glyph audit: " + ("clean" if _ga.get("clean") else "missing!"),
+            )
+        except Exception as e:  # pragma: no cover
+            self._log("warning", f"[字形审计] 失败(不影响打包): {e}")
+
         rom, stats = writer.inject_texts(
             rom, all_entries, on_progress=_inject_progress
         )

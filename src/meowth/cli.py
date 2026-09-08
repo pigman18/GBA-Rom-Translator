@@ -1,6 +1,7 @@
 """Meowth CLI - GBA Pokemon translation tool."""
 
 import json
+import sys
 from pathlib import Path
 
 import click
@@ -182,6 +183,65 @@ def check_texts(texts_json, rom_path, threshold, modules, top):
             click.echo(f"  {m}: {n}/{all_mod.get(m, 0)}")
     else:
         click.echo("\n未发现拒绝条目。")
+
+
+@main.command("audit-glyphs")
+@click.argument("texts_json", required=False, type=click.Path(exists=True))
+@click.option("--game", default=None,
+              help="游戏 ID（默认从 texts.json 的 game_id 读取）")
+@click.option("--work-dir", default="work", type=click.Path(file_okay=False),
+              help="工作目录（含 <game>/charmap.txt 与 graphic/fonts/*.bin）")
+def audit_glyphs(texts_json, game, work_dir):
+    """审计译文 ⊆ 字库：报告 charmap 缺码 / 字体 bin 空槽（仅报告，不写 ROM）。
+
+    TEXTS_JSON 缺省时用 work/<game>/translate.build.json（管线最终译文源）。
+    """
+    from .glyph_audit import audit_texts_file
+
+    # game_id 探测需要先知道 texts 路径；缺省路径含 game_id → 先探 game
+    if game is None and texts_json is None:
+        candidates = sorted(Path(work_dir).glob("*/translate.build.json"),
+                            key=lambda p: p.stat().st_mtime)
+        if not candidates:
+            raise click.ClickException(
+                f"{work_dir} 下无 */translate.build.json，请指定 TEXTS_JSON 或 --game"
+            )
+        if len(candidates) > 1:
+            names = ", ".join(p.parent.name for p in candidates)
+            raise click.ClickException(f"多个游戏可用，请用 --game 指定: {names}")
+        gid = candidates[0].parent.name
+    else:
+        src0 = Path(texts_json) if texts_json else None
+        data0 = json.loads(src0.read_text(encoding="utf-8")) if src0 else {}
+        gid = game or data0.get("game_id") or data0.get("game")
+
+    src = Path(texts_json) if texts_json else Path(work_dir) / gid / "translate.build.json"
+    if not src.is_file():
+        raise click.ClickException(f"译文文件不存在: {src}")
+    work_game = Path(work_dir) / gid
+    if not work_game.is_dir():
+        raise click.ClickException(f"工作目录不存在: {work_game}")
+
+    report = audit_texts_file(src, work_game, gid)
+    click.echo(f"texts.json : {src}")
+    click.echo(f"game/work  : {gid} / {work_game}")
+    click.echo(f"审计 bin   : {', '.join(report['bins_audited']) or '无'}")
+    click.echo(
+        f"译文字符   : 不同 {report['chars_total']} 个"
+        f"（双字节 {report['zh_chars']}）"
+    )
+    if report["clean"]:
+        click.secho("全部通过：所有双字节字符在各库均有非空字形。", fg="green")
+    else:
+        click.secho("发现缺字：", fg="red")
+        if report["charmap_missing"]:
+            click.echo(f"  charmap 缺码 {len(report['charmap_missing'])}: "
+                       + "".join(report["charmap_missing"][:60]))
+        for lbl, chars in report["missing"].items():
+            if chars:
+                click.echo(f"  {lbl} 空槽 {len(chars)}: " + "".join(chars[:60]))
+        click.echo(f"详见 {report['report_path']}")
+        sys.exit(1)
 
 
 @main.command()

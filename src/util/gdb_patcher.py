@@ -235,6 +235,7 @@ class Ctx:
         self._vram_sig: object = None
         self._cb_sig: object = None
         self._ui_sig: object = None
+        self._cb3tail_sig: object = None
         self._last: object = None
         self._skipped = 0
 
@@ -398,10 +399,31 @@ def _win_fields_us(wb: bytes) -> str:
     return (
         f"state={u16(wb, 0x16)} textMode={wb[0x00]} fontNum={wb[0x01]} lang={wb[0x02]}"
         f" 色fg/bg/sh={wb[0x03]}/{wb[0x04]}/{wb[0x05]} pal={wb[0x06]}"
+        f" w×h={wb[0x09]}×{wb[0x0A]}"
         f" startOff=0x{u16(wb, 0x1A):04X} tileOff=0x{u16(wb, 0x1C):04X}"
         f" curX={wb[0x10]} curY={wb[0x11]} left={wb[0x12]} top={u16(wb, 0x14)}"
         f" index={u16(wb, 0x1E)}"
+        f" tileData=0x{u32(wb, 0x24):08X} tilemap=0x{u32(wb, 0x28):08X}"
     )
+
+
+def _us_cursor_tile_num(wb: bytes, x_off: int, y_off: int) -> tuple[int, str]:
+    """按 pokeruby GetCursorTileNum 公式推算 tile 号（对照实机）。
+    textMode==2：BASE+OFF + 行*width + 列（文本画布）。
+    其它：BASE+OFF + 2*xOff + yOff（仅字形 TL/TR 相对当前游标）。"""
+    if len(wb) < 0x1E:
+        return -1, "win短"
+    tm = wb[0x00]
+    base = u16(wb, 0x1A)
+    off = u16(wb, 0x1C)
+    width = wb[0x09]
+    if tm == 2:
+        row = ((u16(wb, 0x14) + wb[0x11]) >> 3) + y_off
+        col = ((wb[0x12] + wb[0x10]) >> 3) + x_off
+        idx = base + off + row * width + col
+        return idx, f"tm2画布 row={row} col={col} w={width}"
+    idx = base + off + 2 * x_off + y_off
+    return idx, f"tm{tm}线性相对 xOff={x_off} yOff={y_off}"
 
 
 def _win_dump_str(gdb: GdbClient, win: int, layout: str) -> str:
@@ -918,6 +940,31 @@ def _on_get_glyph_tile(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]
     ctx.log(f"[GetGlyphTilePointers] fontNum={font_num} glyph=0x{glyph:04X} ({kind})")
 
 
+def _jp_canvas_budget(tb: int, tplt: bytes) -> str:
+    """日版窗口若按美版 30×20 划界，需要的 tile 区间 + 落点 charblock。
+
+    预算 span = 2 + 30×20 = 602 tile（4bpp 32B/tile = 19264B ≈ 1.18 charblock，
+    故常跨 charblock 边界）。判读：start..start+602 是否与官方图集 [1,513)、
+    tm3 的 602 区间、或其它窗口重叠 —— 这是 tm1 能否安全切 30×20 画布的唯一依据。
+    """
+    if len(tplt) < 0x14:
+        return ""
+    td = u32(tplt, 0x0C)
+    span = 2 + 30 * 20
+    end = (tb + span) & 0xFFFF
+    if not (0x06000000 <= td < 0x06018000):
+        return f"  预算: 30×20 span={span} tile，tileData=0x{td:08X}(非VRAM) start={tb} end={end}"
+    cb_start = (td - 0x06000000) // 0x4000
+    hi = td + end * 32
+    cb_end = (hi - 1 - 0x06000000) // 0x4000 if hi > 0x06000000 else cb_start
+    cross = " ⚠跨charblock" if cb_end != cb_start else ""
+    return (
+        f"  预算: 30×20划界 → tile[{tb},{end}) span={span}"
+        f" 绝对VRAM=0x{td + tb * 32:08X}..0x{td + end * 32:08X}"
+        f" charblock=cb{cb_start}→cb{cb_end}{cross}"
+    )
+
+
 @handler("InitTextPrinter")
 def _on_init_text(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
     win = regs.get("r0", 0)
@@ -937,7 +984,7 @@ def _on_init_text(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> 
     if not ctx._hit((sp, data[:64])):
         return
     end = sp + len(data) - 1
-    ctx.log(f"\n[InitTextPrinter] win=0x{win:08X} 文本=0x{sp:08X}~0x{end:08X} ({region_of(sp)}) LR=0x{lr:08X}")
+    ctx.log(f"\n[W0-ITP] win=0x{win:08X} 文本=0x{sp:08X}~0x{end:08X} ({region_of(sp)}) LR=0x{lr:08X}")
     if cfg.get("layout") == "us":
         wb = _read_win_us(gdb, win)
         if len(wb) >= 0x2C:
@@ -966,16 +1013,11 @@ def _on_init_text(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> 
                 f" font={tplt[8]} textMode={tplt[9]} spacing={tplt[10]}"
                 f" tileData=0x{u32(tplt, 0x0C):08X} tilemap=0x{u32(tplt, 0x10):08X}"
             )
-        # 模板全量：本次打印真正会生效的 textMode/fontNum/颜色/tileData/tilemap
-        tpl = u32(wb, 0x00)
-        tplt = _read_mem(gdb, tpl, 0x14) if tpl else b""
-        if len(tplt) == 0x14:
-            ctx.log(
-                f"  模板@0x{tpl:08X}: charBase={tplt[1]} pal={tplt[4]}"
-                f" C/D/E={tplt[5]}/{tplt[6]}/{tplt[7]}"
-                f" font={tplt[8]} textMode={tplt[9]} spacing={tplt[10]}"
-                f" tileData=0x{u32(tplt, 0x0C):08X} tilemap=0x{u32(tplt, 0x10):08X}"
-            )
+            if ctx.cb_survey:
+                _survey_cb3_tail(gdb, ctx, tplt[9])
+            bj = _jp_canvas_budget(tb, tplt)
+            if bj:
+                ctx.log(bj)
     ctx.log(f"  原始字节: {data[:64].hex(' ')}")
     ctx.log(f"  内容: {ctx.text_of(data)!r}")
     if b"\xff" not in data:
@@ -1264,6 +1306,45 @@ def _fmt_cb_ranges(ranges: list[tuple[int, int]]) -> str:
     return " ".join(f"[0x{s:03X}-0x{e-1:03X}]" for s, e in ranges)
 
 
+def _cb3_tail_ranges(data: bytes) -> list[tuple[int, int]]:
+    """cb3 前 91 tile（602 画布尾巴）→ 非零 tile 连续区间。"""
+    ranges: list[tuple[int, int]] = []
+    n = min(len(data) // 32, 91)
+    s = None
+    for t in range(n):
+        tile = data[t * 32:(t + 1) * 32]
+        if any(tile):
+            if s is None:
+                s = t
+        elif s is not None:
+            ranges.append((s, t))
+            s = None
+    if s is not None:
+        ranges.append((s, n))
+    return ranges
+
+
+def _survey_cb3_tail(gdb: GdbClient, ctx: Ctx, tm: int) -> None:
+    """602 画布尾巴专项采样：cb3[0x000-0x05A]（91 tile = 0x0B60B）占用。
+
+    路线 A 判定关键 —— tm1 菜单活跃时这块是否空闲。若空闲，tm1 可直接与
+    tm3 共用 cb2[1,603) 画布；若被 UI 图标占用，则退路线 B（缩画布）。
+    textMode 或占用区间变化才打一行（避免 430 次 ITP 刷屏）。"""
+    try:
+        data = _read_chunks(gdb, 0x0600C000, 91 * 32, step=0x100)
+    except GdbError:
+        return
+    if len(data) < 91 * 32:
+        return
+    ranges = _cb3_tail_ranges(data)
+    sig = (tm, tuple(ranges))
+    if sig == ctx._cb3tail_sig:
+        return
+    ctx._cb3tail_sig = sig
+    ctx.log(f"[W0-CB3TAIL] tm={tm} cb3[0x000-0x05A]占用="
+            f"{_fmt_cb_ranges(ranges) if ranges else '全空'}")
+
+
 def _survey_cb_avoid(gdb: GdbClient, ctx: Ctx) -> None:
     """采集当前场景 cb 区占用（避让带）。场景签名变化时采集一次。"""
     try:
@@ -1533,18 +1614,366 @@ def _on_chs_print(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> 
     ctx.log(f"  v8: cursor=0x{curs:04X} 相位=0x{ph:04X} last_tile=0x{last:04X}")
 
 
+# ---- v8 回收链路诊断（2026-09-09 领航员清 tile）--------------------------
+# 目的：回答「领航员翻页到底走 InitTextPrinter 还是 Text_ClearWindow」，
+# 以及「v8_release 被调用时账本里有没有该 win 的段」。地址见下方各 handler
+# 与 yaml（随 game.bin 重建变化，必须按 hook/out/game.map 同步）。
+
+
+def _read_mem_chunked(gdb: GdbClient, addr: int, n: int, chunk: int = 0x40) -> bytes:
+    """分块读内存（mGBA 0.10.5 stub 单包上限约 0x40，超限 E06）。"""
+    out = bytearray()
+    for off in range(0, n, chunk):
+        b = _read_mem(gdb, addr + off, min(chunk, n - off))
+        if not b:
+            break
+        out += b
+    return bytes(out)
+
+
+def _wl_slots(gdb: GdbClient) -> tuple:
+    """读 per-win 账本 @0x0203F800（magic + 4 槽 × 18u16）。
+    返回 (magic, [(win, [(start,len)...])...])；读失败 magic=None。"""
+    raw = _read_mem_chunked(gdb, 0x0203F800, 148)
+    if len(raw) < 4:
+        return None, []
+    magic = u16(raw, 0)
+    slots = []
+    for i in range(4):
+        b = 4 + i * 36
+        win = u16(raw, b) | (u16(raw, b + 2) << 16)
+        segs = []
+        for s in range(8):
+            st = u16(raw, b + 4 + s * 4)
+            ln = u16(raw, b + 6 + s * 4)
+            if ln:
+                segs.append((st, ln))
+        slots.append((win, segs))
+    return magic, slots
+
+
+def _wl_slot_of(gdb: GdbClient, win: int) -> tuple:
+    """返回 (槽索引, [(start,len)...])；未找到 → (-1, [])。"""
+    magic, slots = _wl_slots(gdb)
+    if magic is None:
+        return -1, []
+    for i, (w, segs) in enumerate(slots):
+        if w == win:
+            return i, segs
+    return -1, []
+
+
+def _ours_segs(gdb: GdbClient) -> tuple:
+    """读 ours 段表 @0x0203FF80（magic + 19 段 × {start,len}）。返回 (magic, [(start,len)...])。"""
+    raw = _read_mem_chunked(gdb, 0x0203FF80, 80)
+    if len(raw) < 2:
+        return None, []
+    magic = u16(raw, 0)
+    segs = []
+    for i in range(19):
+        st = u16(raw, 4 + i * 4)
+        ln = u16(raw, 6 + i * 4)
+        if ln:
+            segs.append((st, ln))
+    return magic, segs
+
+
+def _bitmap_used(gdb: GdbClient) -> int:
+    """位图 @0x0203FEC0 128B 的 set bit 数（-1=读失败）。"""
+    raw = _read_mem_chunked(gdb, 0x0203FEC0, 128)
+    if len(raw) < 128:
+        return -1
+    return sum(bin(b).count("1") for b in raw)
+
+
+def _vram_nonempty_runs(gdb: GdbClient, vram: int, t0: int, count: int,
+                        bridge: int = 2) -> list:
+    """扫 VRAM tile 区 [vram+t0*32, vram+(t0+count)*32) 的实际占用。
+
+    返回 [(start, len), ...] 非空连续段；中间 <=bridge 个空 tile 视为同段（避免
+    把字形内部空隙切断）。用于回答「官方 LZ 到底写了多少 tile」——预算 602 只是
+    上界，实际占用必须实测。
+    """
+    raw = _read_mem_chunked(gdb, vram + t0 * 32, count * 32)
+    if len(raw) < 32:
+        return []
+    n = len(raw) // 32
+    idxs = [i for i in range(n) if any(raw[i * 32:(i + 1) * 32])]
+    if not idxs:
+        return []
+    runs = []
+    s = p = idxs[0]
+    for i in idxs[1:]:
+        if i - p - 1 <= bridge:
+            p = i
+        else:
+            runs.append((t0 + s, p - s + 1))
+            s = p = i
+    runs.append((t0 + s, p - s + 1))
+    return runs
+
+
+def _fmt_runs(runs: list, limit: int = 12) -> str:
+    if not runs:
+        return "（全空）"
+    shown = [f"[{st}..{st + ln - 1}]({ln})" for st, ln in runs[:limit]]
+    tail = f" …共{len(runs)}段" if len(runs) > limit else ""
+    return " ".join(shown) + tail
+
+
+def _cb_of(tile_data: int) -> int:
+    """VRAM tileData → charblock 序号（BG 区 0x06000000 起，每 cb 16KB）。"""
+    if tile_data < 0x06000000:
+        return -1
+    return (tile_data - 0x06000000) // 0x4000
+
+
+@handler("JpTm1Alloc")
+def _on_jp_tm1_alloc(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """JP @0x080029DA：tm1 开窗分配返回点——【日版 tm1 UI 分配的诞生地】。
+
+    ★ 为什么是 0x080029DA 而不是别的：该点是 0x08002950(TextLoadWindowTemplate)
+    的唯一出口（pop {r1}; bx r1），此时
+        r0 = 图集容量（返回值）   r3 = win（全程未被破坏）
+    一次命中即可同时拿到「谁开窗 + 起点 + 容量」，等价于美版 InitWindowTileData
+    返回的「新游标」。
+
+    反汇编实证（源 ROM，2026-09-09）：
+      8002950 push {lr}
+      8002952 adds r3,r0,#0        r3 = win
+      800295a ldr  r1,=0x0300032E
+      800295e strh r0,[r1,#0]      ★ *0x0300032E = 0        图集装载游标归零
+      8002964 str  r1,[r0,#0]      ★ *0x03000328 = win
+      8002968 strh r2,[r0,#0]      ★ *0x0300032C = tileOffset(base)
+      800296a strh r2,[r3,#22]     ★ win[0x16] = tileOffset  (= TILE_BASE)
+      800296c ldrb r0,[r1,#9]      textMode
+      8002970 beq  0x800299c       ★ textMode==1 → 图集容量分派
+      800299c ldr  r0,[r3,#0] / ldrb r0,[r0,#8]   fontNum
+      80029a0 cmp  r0,#5 / bhi 0x80029d8 (return 0)
+      80029a8 跳表 0x080029B4[fontNum]：
+               [0]=0x080029CC→r0=0x200(512)  [1]=0x080029D2→r0=0x100(256)
+               [2]=0x080029D2→256            [3]=0x080029CC→512
+               [4]=0x080029D2→256            [5]=0x080029D2→256
+      80029da pop  {r1} / bx r1    ← 本点
+
+    调用方 @0x0806F000（用户日志 LR=0x0806F00A 实证）：
+      806f000 ldr  r0,=0x0202E6E8 ; ldr r0,[r0]     win
+      806f004 ldr  r1,=0x0202E6EE ; ldrh r1,[r1]    tileOffset
+      806f006 bl   0x8002950
+      806f00a strh r0,=0x0202E6F0                   ★ 容量写入全局
+      806f01c bl   0x80029e0                        图集步进装载
+
+    ⇒ tm1 的「UI 分配」= 预留 [tileOffset, tileOffset+容量) 给假名图集。
+      fontNum=3（日志实测全是它）→ 容量 512 → 预留 [1, 513)。
+      而 v8_alloc_tile 的 lo=0x100(256) ⇒ **重叠区 [256,513) = 257 tile**，
+      这正是「撞 UI」的候选根因（待 JpTm1AtlasLoad 的 VRAM 实测确证）。
+    """
+    cap = regs.get("r0", 0) & 0xFFFF
+    win = regs.get("r3", 0)
+    lr = regs.get("r14", 0) & ~1
+    # EWRAM 全局账本（调用方 @0x0806F000 实证）
+    e_win = _read_mem(gdb, 0x0202E6E8, 4)
+    e_off = _read_mem(gdb, 0x0202E6EE, 2)
+    e_cap = _read_mem(gdb, 0x0202E6F0, 2)
+    g_win = u32(e_win, 0) if len(e_win) >= 4 else 0
+    g_off = u16(e_off, 0) if len(e_off) >= 2 else 0
+    g_cap = u16(e_cap, 0) if len(e_cap) >= 2 else 0
+    # IWRAM 分配器状态块
+    i_st = _read_mem(gdb, 0x03000328, 8)
+    i_win = u32(i_st, 0) if len(i_st) >= 4 else 0
+    i_base = u16(i_st, 4) if len(i_st) >= 6 else 0
+    i_cur = u16(i_st, 6) if len(i_st) >= 8 else 0
+
+    tpl = cb = fn = tm = -1
+    tile_data = 0
+    off = 0
+    if win:
+        wb = _read_win(gdb, win)
+        if len(wb) >= 4:
+            tpl = u32(wb, 0)
+            off = u16(wb, 0x16)
+        if tpl:
+            tb = _read_mem(gdb, tpl, 0x18)
+            if len(tb) >= 0x14:
+                cb = tb[1]
+                fn = tb[8]
+                tm = tb[9]
+                tile_data = u32(tb, 0x0C)
+    if not ctx._hit(("tm1alloc", win, cap, tpl)):
+        return
+    ctx.log(f"\n[JpTm1Alloc] win=0x{win:08X} 容量={cap}(0x{cap:04X}) "
+            f"LR=0x{lr:08X}  ← tm1 开窗分配")
+    if tpl:
+        ctx.log(f"  模板@0x{tpl:08X}: charBase={cb} font={fn} textMode={tm} "
+                f"tileData=0x{tile_data:08X}")
+    ctx.log(f"  win[0x16](TILE_BASE)=0x{off:04X}  ⇒ 图集预留区间 = "
+            f"tile[{off}..{off + cap})(span={cap})  绝对VRAM="
+            f"0x{tile_data + off * 32:08X}..0x{tile_data + (off + cap) * 32:08X}")
+    ctx.log(f"  EWRAM账本: 0x0202E6E8=win 0x{g_win:08X}  "
+            f"0x0202E6EE=tileOffset {g_off}(0x{g_off:04X})  "
+            f"0x0202E6F0=容量 {g_cap}(0x{g_cap:04X})")
+    ctx.log(f"  IWRAM状态: 0x03000328=win 0x{i_win:08X}  "
+            f"0x0300032C=base 0x{i_base:04X}  0x0300032E=游标 0x{i_cur:04X}"
+            f"（开窗时应已归零）")
+    # v8 视角：两者是否重叠
+    if 0 <= cb < 4:
+        hi = min((4 - cb) * 512, 1024)
+        lo = 0x100
+        ov_lo, ov_hi = max(lo, off), min(hi, off + cap)
+        if ov_hi > ov_lo:
+            ctx.log(f"  ⚠ v8 领号区 [0x{lo:03X},0x{hi:03X}) 与图集预留 "
+                    f"[{off},{off + cap}) **重叠 [{ov_lo},{ov_hi}) = "
+                    f"{ov_hi - ov_lo} tile** ← 撞 UI 候选根因")
+        else:
+            ctx.log(f"  v8 领号区 [0x{lo:03X},0x{hi:03X}) 与图集预留无重叠")
+
+
+@handler("JpTm1AtlasLoad")
+def _on_jp_tm1_atlas_load(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """JP @0x080029E0：tm1 假名图集步进装载（每帧装 16 字符，游标 +16）。
+
+    反汇编实证：
+      80029f8 ldrh r4,[r0]        r4 = *0x0300032E（游标）
+      8002a14 bl   0x8002a50      装载核心(win, ?, idx = r4 & 0xFF)
+      8002a18 adds r4,#1
+      8002a20 cmp  r4,r0          r0 = 容量上限
+      8002a22 blt  0x8002a08
+      8002a28 adds r1,#16 / strh r1,[r0]   ★ 游标 += 16
+
+    装载核心 0x08002A50 的 VRAM 公式（fontNum 分派）：
+      fontNum 1/2 → tileData + (base + idx)*32      （1 tile/字符）
+      fontNum 3   → tileData + base*32 + idx*64     （2 tile/字符）
+
+    ★ 用【原版日版 ROM】采集时本点活着，VRAM 是纯官方内容 —— 正是
+      「屏蔽中文打印后的 cb 内容」的等价物。用汉化 ROM 采集则本点已被
+      hook 停掉（MultistepInitWindowTileData → return 1），命中 0 属正常。
+    """
+    win = regs.get("r0", 0)
+    st = _read_mem(gdb, 0x03000328, 8)
+    i_win = u32(st, 0) if len(st) >= 4 else 0
+    i_base = u16(st, 4) if len(st) >= 6 else 0
+    i_cur = u16(st, 6) if len(st) >= 8 else 0
+    cap = _read_mem(gdb, 0x0202E6F0, 2)
+    g_cap = u16(cap, 0) if len(cap) >= 2 else 0
+    if not i_win:
+        return
+    wb = _read_win(gdb, i_win)
+    if len(wb) < 4:
+        return
+    tpl = u32(wb, 0)
+    tb = _read_mem(gdb, tpl, 0x18) if tpl else b""
+    if len(tb) < 0x14:
+        return
+    cb = tb[1]
+    fn = tb[8]
+    tile_data = u32(tb, 0x0C)
+    # 游标按 16 步进去重，避免每帧刷屏
+    if not ctx._hit(("tm1atlas", i_win, i_cur >> 4)):
+        return
+    ctx.log(f"\n[JpTm1AtlasLoad] win=0x{i_win:08X} 模板@0x{tpl:08X} "
+            f"charBase={cb} font={fn} tileData=0x{tile_data:08X}")
+    ctx.log(f"  图集装载进度: 游标=0x{i_cur:04X}({i_cur}) / 容量={g_cap}(0x{g_cap:04X}) "
+            f"base=0x{i_base:04X}  "
+            f"→ 已装 {i_cur} 字符 ≈ {i_cur * (2 if fn == 3 else 1)} tile")
+    ctx.log(f"  占用区间 = tile[{i_base}..{i_base + i_cur * (2 if fn == 3 else 1)})")
+    # 实测 VRAM：官方图集落地情况（等价于屏蔽中文打印后的 cb 内容）
+    n = min(g_cap or 512, 1024 - i_base)
+    runs = _vram_nonempty_runs(gdb, tile_data, i_base, n)
+    tot = sum(l for _, l in runs)
+    ctx.log(f"  实测 VRAM tile[{i_base}..{i_base + n})：{tot}/{n} 非空")
+    ctx.log(f"     {_fmt_runs(runs, limit=16)}")
+    # 整 cb 分布（找官方 UI / 窗框 / 残留）
+    cb_idx = _cb_of(tile_data)
+    for extra in (0, 1):
+        base_cb = 0x06000000 + (cb_idx + extra) * 0x4000
+        cruns = _vram_nonempty_runs(gdb, base_cb, 0, 512)
+        ctot = sum(l for _, l in cruns)
+        tag = "本cb" if extra == 0 else "下一cb(跨块)"
+        ctx.log(f"  cb{cb_idx + extra}({tag}) 0x{base_cb:08X}：{ctot}/512 非空")
+        ctx.log(f"     {_fmt_runs(cruns, limit=16)}")
+
+
+@handler("V8AllocBegin")
+def _on_v8_alloc_begin(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """v8_alloc_begin(r0=win) 入口 = InitTextPrinter 会话边界（重建位图前）。
+    诊断领航员翻页是否走「重新开窗」：dump 上一会话位图占用 + ours 段 + 账本段。
+    若翻页命中本点而非 TextClearWindow，且位图占用随翻页单调增长 → 旧 tile 未回收。"""
+    win = regs.get("r0", 0)
+    wb = _read_win(gdb, win)
+    if len(wb) < 0x1E:
+        return
+    tb = u16(wb, 0x16)
+    tm = wb[0x0A]
+    tptr = u32(wb, 0x10)
+    idx = u16(wb, 0x14)
+    cur = _read_mem(gdb, 0x0203FF42, 2)
+    curs = u16(cur, 0) if len(cur) >= 2 else -1
+    used = _bitmap_used(gdb)
+    _, osegs = _ours_segs(gdb)
+    slot, segs = _wl_slot_of(gdb, win)
+    if not ctx._hit((win, tb, tptr, idx)):
+        return
+    ctx.log(f"\n[V8AllocBegin] win=0x{win:08X} TILE_BASE=0x{tb:04X} textMode={tm} "
+            f"文本=0x{tptr:08X} idx={idx} cursor=0x{curs:04X} 位图占用={used} "
+            f"ours段数={len(osegs)}")
+    if slot >= 0:
+        ctx.log(f"  账本槽{slot} 段={[(hex(s), l) for s, l in segs]}")
+    else:
+        ctx.log(f"  账本无该win槽（首次开窗或已被 release 清空）")
+
+
+@handler("V8Release")
+def _on_v8_release(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """v8_release(r0=win) 入口 = Text_ClearWindow hook 触发回收。
+    诊断 v8_release 被调用时账本里有没有该 win 的段（决定是否真释放）。"""
+    win = regs.get("r0", 0)
+    if not win:
+        return
+    wb = _read_win(gdb, win)
+    tb = u16(wb, 0x16) if len(wb) >= 0x18 else 0
+    tm = wb[0x0A] if len(wb) >= 0x0B else -1
+    used = _bitmap_used(gdb)
+    slot, segs = _wl_slot_of(gdb, win)
+    if not ctx._hit((win, tb)):
+        return
+    if slot < 0:
+        ctx.log(f"\n[V8Release] win=0x{win:08X} TILE_BASE=0x{tb:04X} textMode={tm} "
+                f"★账本无槽（无 tile 可释放） 位图占用={used}")
+        return
+    ctx.log(f"\n[V8Release] win=0x{win:08X} TILE_BASE=0x{tb:04X} textMode={tm} "
+            f"账本槽{slot} 位图占用={used}")
+    for s, (st, ln) in enumerate(segs):
+        ctx.log(f"  释放段[{s}] start={st}(0x{st:04X}) len={ln}")
+
+
+@handler("TextClearWindow")
+def _on_text_clear_window(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """Text_ClearWindow @0x08003BA8（现被 hook 桩覆盖，断在桩首条 push，r0=win）。
+    诊断领航员翻页是否走清窗路径；若是，随后应命中 V8Release（同一 win）。"""
+    win = regs.get("r0", 0)
+    wb = _read_win(gdb, win)
+    if len(wb) < 0x1E:
+        return
+    tb = u16(wb, 0x16)
+    tm = wb[0x0A]
+    if not ctx._hit((win, tb)):
+        return
+    ctx.log(f"\n[TextClearWindow] win=0x{win:08X} TILE_BASE=0x{tb:04X} textMode={tm}")
+
+
 @handler("V8Alloc")
 def _on_v8_alloc(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
     """v8_alloc_tile(r0=win, r1=font_px, r2=glyph_len) 入口（地址随 game.bin 重建变化）。
-    记录每次领号请求与请求前游标；返回值看不到，用下游 last_tile/UpdateTilemap 对账。"""
+    记录每次领号请求与请求前游标 + ours 段数；返回值看不到，用下游 last_tile/UpdateTilemap 对账。"""
     win = regs.get("r0", 0)
     px = regs.get("r1", 0) & 0xFF
     gl = regs.get("r2", 0) & 0xFF
     cur = _read_mem(gdb, 0x0203FF42, 2)
     curs = u16(cur, 0) if len(cur) >= 2 else -1
-    if not ctx._hit((win, px, gl, curs)):
+    _, osegs = _ours_segs(gdb)
+    if not ctx._hit((win, px, gl, curs, len(osegs))):
         return
-    ctx.log(f"[V8Alloc] win=0x{win:08X} font_px={px} glyph_len={gl} 请求前cursor=0x{curs:04X}")
+    ctx.log(f"[V8Alloc] win=0x{win:08X} font_px={px} glyph_len={gl} 请求前cursor=0x{curs:04X} ours段数={len(osegs)}")
 
 
 @handler("PncHook")
@@ -1712,105 +2141,297 @@ _IWTD_STATE: dict[str, Any] = {"r0": 0, "start": None}
 
 @handler("InitWindowTileData")
 def _on_iwtd(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
-    """分区器入口（JP 0x08002A50）。
-    ✅ 2026-09-07 反汇编 + 实机采集定论（推翻旧「分区链」理解）：
-    - 签名 = IWTD(template r0, startOffset r1, glyphIdx r2)；**逐 glyph/tile 调用**
-      （实机观测 r2 连续递增 0x51..0x5F），不是整窗初始化。
-    - 返回 void（见 InitWindowTileDataRet 注释）。
-    - tm1 分支落址公式：dest = template->tileData[0x0C] + (startOffset<<5)
-      + (glyphIdx<<6) ⇒ **tile 号 = tileBase + 2×glyphIdx，官方无分配器、
-      位置/索引决定** —— pokeRS 式落址在日版存在的直接证据。
-    - r0=win 时 win[0..3]=模板指针；但战斗窗 0x021E0100 结构不同（[0] 非模板），
-      「[按win解释]」输出对该类 win 是垃圾，仅作线索。"""
+    """分区器入口。
+    US（cfg.layout=us）：pokeruby InitWindowTileData(win, startOffset)→下一空闲 offset；
+      mode2 预留 width×height 画布，mode1 装 256 字形 atlas。
+    JP：逐 glyph 装图集；W0 只在 glyph==0 打详志（避免 256 倍刷屏）。"""
     r0 = regs.get("r0", 0)
     off = regs.get("r1", 0) & 0xFFFF
     _IWTD_STATE["r0"] = r0
     _IWTD_STATE["start"] = off
     r2 = regs.get("r2", 0) & 0xFFFFFFFF
-    r3 = regs.get("r3", 0) & 0xFF
-    if not ctx._hit(("iwtd", r0, off)):
+    if cfg.get("layout") == "us":
+        if not ctx._hit(("iwtd_us", r0, off)):
+            return
+        wb = _read_win_us(gdb, r0)
+        ctx.log(
+            f"\n[W0-IWTD-US] win=0x{r0:08X} startOffset=0x{off:04X}"
+            f" LR=0x{(regs.get('r14', 0) & ~1):08X}"
+        )
+        ctx.log(f"  {_win_fields_us(wb)}")
+        if len(wb) >= 0x0B:
+            tm, w, h = wb[0x00], wb[0x09], wb[0x0A]
+            if tm == 2:
+                end = (off + 2 + w * h) & 0xFFFF
+                ctx.log(
+                    f"  ※ [W0-SPAN?] tm2 预期 start+2+w×h="
+                    f"0x{off:04X}..0x{end:04X}（{w}×{h}；以 IWTD-Ret 为准）"
+                )
+            elif tm == 1:
+                ctx.log("  ※ tm1 预期装 atlas（FixedWidth 256×2 tile 量级）")
+            elif tm == 0:
+                ctx.log("  ※ tm0 变宽线性（UNKNOWN0）")
+        return
+    glyph = r2 & 0xFF
+    if glyph != 0:
+        return
+    if not ctx._hit(("iwtd_jp0", r0, off)):
         return
     ctx.log(
-        f"\n[IWTD] r0=0x{r0:08X} tileBase(r1)=0x{off:04X}"
-        f" glyphIdx(r2)=0x{r2:08X} r3=0x{r3:02X}"
+        f"\n[W0-IWTD-JP] r0=0x{r0:08X} start=0x{off:04X} glyph=0"
+        f" LR=0x{(regs.get('r14', 0) & ~1):08X}"
     )
     b = _read_mem(gdb, r0, 0x14)
     if not b:
         ctx.log("  （r0 内存读取失败）")
         return
-    ctx.log(
-        f"  [r0+8/9/A/B] font?=0x{b[8]:02X} textMode?=0x{b[9]:02X}"
-        f" +A=0x{b[0x0A]:02X} +B=0x{b[0x0B]:02X}"
-    )
-    ctx.log(f"  [r0+0xC..F] = 0x{u32(b, 0x0C):08X}（tileData 候选）")
     tpl_ptr = u32(b, 0x00)
+    tplt = b
+    label = "template"
     if 0x02000000 <= tpl_ptr < 0x03008000 or 0x08000000 <= tpl_ptr < 0x08800000:
-        tplt = _read_mem(gdb, tpl_ptr, 0x14)
-        if len(tplt) == 0x14:
-            ctx.log(
-                f"  [按win解释] 模板@0x{tpl_ptr:08X}: charBase={tplt[1]} font={tplt[8]}"
-                f" textMode={tplt[9]} spacing={tplt[10]}"
-                f" tileData=0x{u32(tplt, 0x0C):08X} tilemap=0x{u32(tplt, 0x10):08X}"
-            )
-    if len(b) >= 0x14:
+        nested = _read_mem(gdb, tpl_ptr, 0x14)
+        if len(nested) == 0x14 and 0x06000000 <= u32(nested, 0x0C) <= 0x06018000:
+            tplt = nested
+            label = f"win→tpl@0x{tpl_ptr:08X}"
+    if len(tplt) >= 0x14:
+        cb, font, tm = tplt[1], tplt[8], tplt[9]
+        td, tmap = u32(tplt, 0x0C), u32(tplt, 0x10)
         ctx.log(
-            f"  [按template解释 r0] charBase={b[1]} font={b[8]} textMode={b[9]}"
-            f" spacing={b[10]} tileData=0x{u32(b, 0x0C):08X} tilemap=0x{u32(b, 0x10):08X}"
+            f"  [{label}] charBase={cb} font={font} textMode={tm}"
+            f" tileData=0x{td:08X} tilemap=0x{tmap:08X}"
+        )
+        ctx.log(
+            "  ※ JP 图集路径；模板无 w×h。"
+            "私有预算候选：MenuFrame / tilemap 底色 / 美版同场景对照。"
         )
 
 
 @handler("InitWindowTileDataRet")
 def _on_iwtd_ret(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
-    """⚠ 已作废（2026-09-07 实机采集 + 反汇编定论）：IWTD 返回 void——
-    各分支 bl loader 后直接 b 0x08002AE8 → pop{r4-r6}; pop{r0}; bx r0，
-    r0 从未被赋「下一空闲 offset」。0x08002AEA 处 r0 恒为 thumb 返回地址
-    0x08002AAB，本断点读不到任何预算信息。窗口预算改由
-    MenuDrawStdWindowFrame(bg,x,y,width) 参数 + tilemap 实测取得。
-    保留 handler 仅为兼容旧 yaml 配置。"""
+    """US：pokeruby IWTD 出口（mov r0,r4 后）r0=下一空闲 tile offset，可算预算。
+    JP：同名断点已作废（返回 void），见旧注释。"""
     ret = regs.get("r0", 0) & 0xFFFFFFFF
     r4 = regs.get("r4", 0)
+    start = _IWTD_STATE.get("start")
+    if cfg.get("layout") == "us":
+        next_off = ret & 0xFFFF
+        if not ctx._hit(("iwtret_us", _IWTD_STATE.get("r0"), next_off)):
+            return
+        span = (next_off - (start or 0)) & 0xFFFF if start is not None else 0
+        ctx.log(
+            f"\n[W0-SPAN] next=0x{next_off:04X}"
+            f" start=0x{(start or 0):04X} span={span} tiles"
+            f" win=0x{_IWTD_STATE.get('r0', 0):08X}"
+        )
+        if span >= 2:
+            ctx.log(f"  ※ 内容网格 ≈ {span - 2} tile（tm2 可与 w×h 对拍）")
+        return
     if not ctx._hit(("iwtret", r4, ret)):
         return
-    ctx.log(f"\n[IWTD-Ret]（断点已作废，r0 非返回值）r0=0x{ret:08X} r4=0x{r4:08X}")
+    ctx.log(f"\n[IWTD-Ret]（JP 断点已作废，r0 非返回值）r0=0x{ret:08X} r4=0x{r4:08X}")
+
+
+@handler("GetCursorTileNum")
+def _on_get_cursor_tile(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """美版 GetCursorTileNum(win, xOffset, yOffset)——对照 tm2 画布 vs tm1 线性。"""
+    win = regs.get("r0", 0)
+    x_off = regs.get("r1", 0) & 0xFF
+    y_off = regs.get("r2", 0) & 0xFF
+    wb = _read_win_us(gdb, win) if cfg.get("layout") == "us" else _read_win(gdb, win)
+    if cfg.get("layout") != "us":
+        ctx.log(f"\n[GCTN]（非 us 布局未实现公式）win=0x{win:08X} x={x_off} y={y_off}")
+        return
+    pred, how = _us_cursor_tile_num(wb, x_off, y_off)
+    key = (win, x_off, y_off, u16(wb, 0x1A) if len(wb) >= 0x1C else 0,
+           u16(wb, 0x1C) if len(wb) >= 0x1E else 0, wb[0x10] if len(wb) > 0x10 else 0,
+           wb[0x11] if len(wb) > 0x11 else 0)
+    if not ctx._hit(key):
+        return
+    ctx.log(
+        f"\n[W0-GCTN] win=0x{win:08X} xOff={x_off} yOff={y_off}"
+        f" → 预测 tile=0x{pred:04X} ({how})"
+    )
+    ctx.log(f"  {_win_fields_us(wb)}")
+
+
+@handler("DrawGlyphTiles")
+def _on_draw_glyph_tiles(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """美版 DrawGlyphTiles(win, glyph, glyphWidth)——变宽路径写 VRAM 入口（pokeRS 挂点）。"""
+    win = regs.get("r0", 0)
+    glyph = regs.get("r1", 0) & 0xFFFF
+    width = regs.get("r2", 0) & 0xFF
+    if not ctx._hit(("dgt", win, glyph, width)):
+        return
+    wb = _read_win_us(gdb, win) if cfg.get("layout") == "us" else b""
+    ctx.log(
+        f"\n[DGT] win=0x{win:08X} glyph=0x{glyph:04X} glyphWidth={width}"
+        f" LR=0x{(regs.get('r14', 0) & ~1):08X}"
+    )
+    if wb:
+        pred0, how0 = _us_cursor_tile_num(wb, 0, 0)
+        pred1, _ = _us_cursor_tile_num(wb, 0, 1)
+        ctx.log(f"  {_win_fields_us(wb)}")
+        ctx.log(f"  本字 TL/BL 预测 0x{pred0:04X}/0x{pred1:04X} ({how0})")
+
+
+@handler("PrintGlyph_TextMode0")
+@handler("PrintGlyph_TextMode1")
+@handler("PrintGlyph_TextMode2")
+@handler("DrawGlyph_TextMode0")
+@handler("DrawGlyph_TextMode2")
+def _on_us_print_glyph(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """美版 Print/DrawGlyph_TextMode*：看谁在画、当时 textMode。"""
+    win = regs.get("r0", 0)
+    glyph = regs.get("r1", 0) & 0xFFFF
+    pc = (regs.get("r15", 0) & ~1) & 0xFFFFFFFF
+    if not ctx._hit(("uspg", pc, win, glyph)):
+        return
+    wb = _read_win_us(gdb, win) if cfg.get("layout") == "us" else b""
+    ctx.log(f"\n[UsGlyph] PC=0x{pc:08X} win=0x{win:08X} glyph=0x{glyph:04X}")
+    if wb:
+        ctx.log(f"  {_win_fields_us(wb)}")
+
+
+def _fmt_jp_template(tplt: bytes, tpl: int) -> str:
+    if len(tplt) < 0x14:
+        return f"（模板 0x{tpl:08X} 读取失败 len={len(tplt)}）"
+    return (
+        f"tpl=0x{tpl:08X} bg={tplt[0]} charBase={tplt[1]} screenBase={tplt[2]}"
+        f" pal={tplt[4]} font={tplt[8]} textMode={tplt[9]} spacing={tplt[10]}"
+        f" tileData=0x{u32(tplt, 0x0C):08X} tilemap=0x{u32(tplt, 0x10):08X}"
+        f" （0x14B，无 w×h）"
+    )
 
 
 @handler("TextLoadWindowTemplate")
 def _on_text_load_tpl(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
-    """窗口模板重建入口（JP 0x080029E0 = InitWindowTileData 唯一调用方，
-    BL 调用点静态验证 2026-09-07）。r0=template。
-    场景窗口「账本重建」信号：每命中一次 = 一批窗口 tile 区重新分配。"""
+    """US：Text_LoadWindowTemplate(r0=template) @0x08002A34。
+    JP：本点已改钉 MultistepInit 置位 @0x08002950 —— r0=window（+0=tpl 指针），
+    r1=tileOffset/mode。旧址 0x080029E0 是图集步进消费方，r0 不是模板。"""
     r0 = regs.get("r0", 0)
-    if not ctx._hit(("tlwt", r0)):
-        return
-    ctx.log(f"\n[LoadTpl] template=0x{r0:08X} LR=0x{(regs.get('r14', 0) & ~1):08X}")
-    tplt = _read_mem(gdb, r0, 0x18)
-    if len(tplt) >= 0x14:
+    r1 = regs.get("r1", 0) & 0xFFFF
+    lr = regs.get("r14", 0) & ~1
+    if cfg.get("layout") == "us":
+        if not ctx._hit(("tlwt", r0)):
+            return
+        ctx.log(f"\n[W0-TPL] template=0x{r0:08X} LR=0x{lr:08X}")
+        tplt = _read_mem(gdb, r0, 0x20)
+        if len(tplt) < 0x18:
+            return
+        w, h = tplt[13], tplt[14]
+        td, tm = u32(tplt, 0x10), u32(tplt, 0x14)
         ctx.log(
-            f"  模板: bg={tplt[0]} charBase={tplt[1]} screenBase={tplt[2]}"
+            f"  US: bg={tplt[0]} charBase={tplt[1]} screenBase={tplt[2]}"
             f" pal={tplt[4]} font={tplt[8]} textMode={tplt[9]} spacing={tplt[10]}"
-            f" tileData=0x{u32(tplt, 0x0C):08X} tilemap=0x{u32(tplt, 0x10):08X}"
+            f" left={tplt[11]} top={tplt[12]} w×h={w}×{h}"
+            f" tileData=0x{td:08X} tilemap=0x{tm:08X}"
         )
+        if tplt[9] == 2 and w and h:
+            ctx.log(f"  ※ tm2 预算公式 2+w×h = {2 + w * h}")
+        return
+
+    # JP：r0=window
+    if not ctx._hit(("tlwt_jp", r0, r1)):
+        return
+    wb = _read_win(gdb, r0)
+    tpl = u32(wb, 0x00) if len(wb) >= 4 else 0
+    ctx.log(
+        f"\n[W0-TPL] win=0x{r0:08X} tileOff/mode=0x{r1:04X}"
+        f" LR=0x{lr:08X}"
+    )
+    if len(wb) >= 0x1E:
+        ctx.log(f"  win: {_win_fields(wb)}")
+    if tpl:
+        tplt = _read_mem(gdb, tpl, 0x14)
+        ctx.log(f"  {_fmt_jp_template(tplt, tpl)}")
+    else:
+        ctx.log("  （win+0 无有效模板指针）")
+    # 对照全局：0x03000328 将被写成 tpl（本函数体随后 STR）
+    g = _read_mem(gdb, 0x03000328, 4)
+    if len(g) == 4:
+        ctx.log(f"  gTplSlot@0x03000328 当前=0x{u32(g, 0):08X}（本调用后应≈tpl）")
+
+
+@handler("MultistepInitWindowTileData")
+def _on_multistep_iwtd(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """JP 图集分帧装载入口 @0x080029E0（旧误标 TextLoadWindowTemplate）。
+    入口 r0 无意义；从 gTplSlot 0x03000328 取当前模板。"""
+    lr = regs.get("r14", 0) & ~1
+    g = _read_mem(gdb, 0x03000328, 4)
+    tpl = u32(g, 0) if len(g) == 4 else 0
+    if not ctx._hit(("miwtd", tpl, lr)):
+        return
+    ctx.log(f"\n[W0-MULTI] gTpl=0x{tpl:08X} LR=0x{lr:08X}")
+    if tpl:
+        tplt = _read_mem(gdb, tpl, 0x14)
+        ctx.log(f"  {_fmt_jp_template(tplt, tpl)}")
+        if len(tplt) >= 0x14 and tplt[9] == 3:
+            ctx.log("  ※ tm3：官方另有 +0x25A(602) 登记路径（见 JpMode3TileBudget）")
+    else:
+        ctx.log("  （gTplSlot 空）")
+
+
+@handler("JpMode3TileBudget")
+def _on_jp_mode3_budget(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """JP @0x08002C0A：tm3 路径 ADDS r0, r0, r4 之前。
+    此前 LDR r1,=0x25A; ADD r0,r1,#0 → r0=0x25A；r4=tileBase。
+    结果 end=base+602，与美版对话画布量级同构。"""
+    addend = regs.get("r0", 0) & 0xFFFF
+    base = regs.get("r4", 0) & 0xFFFF
+    lr = regs.get("r14", 0) & ~1
+    if addend != 0x25A:
+        # 容错：若断点略偏，仍读字面量
+        lit = _read_mem(gdb, 0x08002C18, 4)
+        if len(lit) == 4:
+            addend = u32(lit, 0) & 0xFFFF
+    if not ctx._hit(("jp_m3", base, addend)):
+        return
+    end = (base + addend) & 0xFFFF
+    ctx.log(
+        f"\n[W0-SPAN-JP] tm3 base=0x{base:04X} +0x{addend:04X}"
+        f" → end=0x{end:04X}（span={addend}） LR=0x{lr:08X}"
+    )
+    ctx.log("  ※ 对话网格类官方预算；菜单 tm1 不走此路径")
 
 
 @handler("MenuDrawStdWindowFrame")
 def _on_menu_frame(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
-    """菜单窗框绘制入口（JP 0x0806F224，push{lr} 头 + 2 调用点，静态验证
-    2026-09-07）。美版签名 (bg, x, y, width, height) —— 若日版同签名，
-    r3=width 候选、栈上 r4=height 候选，可佐证窗宽来源。"""
-    r0, r1, r2 = (regs.get(k, 0) & 0xFF for k in ("r0", "r1", "r2"))
-    r3 = regs.get("r3", 0) & 0xFF
-    ctx.log(f"\n[MenuFrame] bg?={r0} x?={r1} y?={r2} width?={r3}"
-            f" LR=0x{(regs.get('r14', 0) & ~1):08X}")
+    """Menu_DrawStdWindowFrame(left, top, right, bottom)——四寄存器参数，无第5参。
+    pokeruby menu.c 与日美 ROM 调用点一致；旧 handler 误读 [sp] 当 height。"""
+    left = regs.get("r0", 0) & 0xFF
+    top = regs.get("r1", 0) & 0xFF
+    right = regs.get("r2", 0) & 0xFF
+    bottom = regs.get("r3", 0) & 0xFF
+    lr = regs.get("r14", 0) & ~1
+    if right < left or bottom < top:
+        w = h = -1
+    else:
+        w = right - left + 1
+        h = bottom - top + 1
+    key = (left, top, right, bottom)
+    if not ctx._hit(("mframe",) + key):
+        return
+    ctx.log(
+        f"\n[W0-FRAME] left={left} top={top} right={right} bottom={bottom}"
+        f" → w×h={w}×{h} tiles  LR=0x{lr:08X}"
+    )
+    ctx.log(
+        "  ※ 框几何（tile 格）；文本私有画布可能更小。"
+        "日版无模板 w×h 时，此为几何主候选。"
+    )
 
 
 @handler("MenuLoadStdFrameGraphics")
 def _on_menu_load_frame(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
-    """菜单窗框装载入口（JP 0x0806F16C 推定：与 DrawStdWindowFrame 同批调用、
-    紧邻其前，未实证）。记录 r0-r3 供窗框 tile 区定位。"""
+    """菜单窗框装载入口。"""
     r0 = regs.get("r0", 0)
     r1 = regs.get("r1", 0) & 0xFFFFFFFF
-    ctx.log(f"\n[MenuLoadFrame] r0=0x{r0:08X} r1=0x{r1:08X}"
-            f" LR=0x{(regs.get('r14', 0) & ~1):08X}")
+    if not ctx._hit(("mlf", r0, r1)):
+        return
+    ctx.log(
+        f"\n[W0-FRAMEGFX] r0=0x{r0:08X} r1=0x{r1:08X}"
+        f" LR=0x{(regs.get('r14', 0) & ~1):08X}"
+    )
 
 
 @handler("GetGlyphTilePointers")
@@ -2450,12 +3071,93 @@ def resolve_hooks(points: list[GdbPoint], functions: Optional[str]) -> list[Hook
 
 
 def generic_log(ctx: Ctx, hook: Hook, regs: dict) -> None:
-    """通用日志行：所有监听点共用；无增强 handler 时是唯一输出。"""
+    """通用日志行。有增强 handler 时只打短头（避免每命中重复整段 description）。"""
     lr = regs.get("r14", 0) & ~1
     r0123 = " ".join(f"{k}=0x{regs.get(k, 0) & 0xFFFFFFFF:08X}" for k in ("r0", "r1", "r2", "r3"))
-    desc = f" — {hook.point.description}" if hook.point.description else ""
     pc = (regs.get("r15", 0) & ~1) & 0xFFFFFFFF
+    if hook.fn is not None:
+        ctx.log(f"\n[{hook.name}] PC=0x{pc:08X} LR=0x{lr:08X} {r0123}")
+        return
+    desc = f" — {hook.point.description}" if hook.point.description else ""
     ctx.log(f"\n[{hook.name}]{desc}\n  PC=0x{pc:08X} LR=0x{lr:08X} {r0123}")
+
+
+_US_CANVAS_FUNCS = (
+    "TextLoadWindowTemplate,InitWindowTileData,InitWindowTileDataRet,"
+    "InitTextPrinter,PrintNextChar,PrintGlyph_TextMode0,PrintGlyph_TextMode1,"
+    "PrintGlyph_TextMode2,DrawGlyphTiles,GetCursorTileNum,UpdateTilemap,"
+    "DrawGlyph_TextMode0,DrawGlyph_TextMode2,MenuDrawStdWindowFrame"
+)
+
+# W0 预算勘测（docs/开发_20260908_日美文本划界移植可行性.md §6.2）
+# 美版：模板 w×h + IWTD 返回 span + 窗框几何 + GCTN 抽检
+_W0_US_FUNCS = (
+    "TextLoadWindowTemplate,InitWindowTileData,InitWindowTileDataRet,"
+    "InitVariableWidthFontTileData,InitMenuWindow,InitTextPrinter,"
+    "MenuDrawStdWindowFrame,GetCursorTileNum,Text_ClearWindow"
+)
+# 日版：模板账本 + IWTD 图集（仅 glyph0 详志）+ 窗框几何 + InitTextPrinter
+# 勿挂 InitWindowTileDataRet（JP 返回 void，已作废）
+_W0_JP_FUNCS = (
+    "TextLoadWindowTemplate,MultistepInitWindowTileData,JpMode3TileBudget,"
+    "InitWindowTileData,InitTextPrinter,"
+    "MenuDrawStdWindowFrame,MenuLoadStdFrameGraphics,TextClearWindow,"
+    "UpdateTilemap"
+)
+# tm1 → 30×20 划界预算勘测（去 UpdateTilemap 噪音；InitTextPrinter 打 [W0-BUDGET]）
+_W0_TM1_FUNCS = (
+    "InitTextPrinter,InitWindowTileData,JpMode3TileBudget,"
+    "TextLoadWindowTemplate,MultistepInitWindowTileData,"
+    "MenuDrawStdWindowFrame,MenuLoadStdFrameGraphics"
+)
+# v8 回收链路诊断（2026-09-09 领航员清 tile）：
+# 会话边界 + 领号 + 回收 + 清窗，四路对照判断翻页走哪条路、旧 tile 是否被释放。
+_V8_RECLAIM_FUNCS = (
+    "InitTextPrinter,V8AllocBegin,V8Alloc,V8Release,TextClearWindow"
+)
+# 日版 UI 分配接管勘测（2026-09-09）：
+# tm3 官方分配入口 + 解压后实测占用 + 预算登记 + 开窗/打印对照。
+# 目的：确认「tm3 UI 从 tileOffset 起、预算 602」是否属实，实际占用多少，
+#       以及官方 UI 与我们 v8 领号区（lo=0x100）如何重叠。
+_JP_UI_ALLOC_FUNCS = (
+    "JpTm1Alloc,JpTm1AtlasLoad,"
+    "TextLoadWindowTemplate,InitTextPrinter,V8AllocBegin,"
+    "MenuLoadStdFrameGraphics,MenuDrawStdWindowFrame"
+)
+
+
+def _warn_wrong_game_for_canvas_survey(game: str, functions: Optional[str],
+                                        origin_path: str) -> list[str]:
+    """防呆：美版画布采集却挂日版 yaml / 错 ROM 会打出垃圾字段。"""
+    warns: list[str] = []
+    funcs = {s.strip() for s in (functions or "").split(",") if s.strip()}
+    us_markers = {"GetCursorTileNum", "DrawGlyphTiles", "PrintGlyph_TextMode2",
+                  "InitVariableWidthFontTileData"}
+    if funcs & us_markers and game != "POKEMON_RUBY_AXVE":
+        warns.append(
+            f"当前 --game={game}，但 --functions 含美版画布点 "
+            f"({', '.join(sorted(funcs & us_markers))})。"
+            "应对美版 1.0 使用: --game POKEMON_RUBY_AXVE "
+            "（日版地址/布局不同，日志会像乱码）。"
+        )
+    if game == "POKEMON_RUBY_AXVE":
+        op = Path(origin_path)
+        if op.is_file():
+            try:
+                code = op.read_bytes()[0xAC:0xB0]
+            except OSError:
+                code = b""
+            if code and code != b"AXVE":
+                warns.append(
+                    f"--origin 游戏码={code!r}，期望 AXVE（美版 Ruby 1.0）。"
+                    "1.1/1.2 地址会漂。"
+                )
+        else:
+            warns.append(
+                "未找到 --origin 文件；请传 "
+                'roms/origin/Pokemon Ruby Version(US).gba（1.0）。'
+            )
+    return warns
 
 
 def _arm(ctx: Ctx, hook: Hook) -> bool:
@@ -2519,6 +3221,66 @@ def _pick_charmap(args: argparse.Namespace, points: list[GdbPoint]) -> str:
 
 
 def run_log(args: argparse.Namespace) -> int:
+    # --preset us-canvas：一键美版画布对照（防挂错日版 yaml）
+    if getattr(args, "preset", None) == "us-canvas":
+        args.game = "POKEMON_RUBY_AXVE"
+        if not args.functions:
+            args.functions = _US_CANVAS_FUNCS
+        args.no_tiles = True
+        default_us = REPO_ROOT / "roms" / "origin" / "Pokemon Ruby Version(US).gba"
+        if args.origin == str(DEFAULT_ORIGIN) and default_us.is_file():
+            args.origin = str(default_us)
+
+    # --preset w0-us / w0-jp：划界预算勘测（模板·IWTD·窗框·绑基址）
+    if getattr(args, "preset", None) == "w0-us":
+        args.game = "POKEMON_RUBY_AXVE"
+        if not args.functions:
+            args.functions = _W0_US_FUNCS
+        args.no_tiles = True
+        args.ui_survey = True
+        default_us = REPO_ROOT / "roms" / "origin" / "Pokemon Ruby Version(US).gba"
+        if args.origin == str(DEFAULT_ORIGIN) and default_us.is_file():
+            args.origin = str(default_us)
+    if getattr(args, "preset", None) == "w0-jp":
+        args.game = "POKEMON_RUBY_AXVJ00"
+        if not args.functions:
+            args.functions = _W0_JP_FUNCS
+        args.no_tiles = True
+        args.ui_survey = True
+        default_jp = REPO_ROOT / "roms" / "origin" / "POKEMON_RUBY_AXVJ00.gba"
+        if args.origin == str(DEFAULT_ORIGIN) and default_jp.is_file():
+            args.origin = str(default_jp)
+    if getattr(args, "preset", None) == "w0-tm1":
+        args.game = "POKEMON_RUBY_AXVJ00"
+        if not args.functions:
+            args.functions = _W0_TM1_FUNCS
+        args.no_tiles = True
+        args.cb_survey = True
+        default_jp = REPO_ROOT / "roms" / "origin" / "POKEMON_RUBY_AXVJ00.gba"
+        if args.origin == str(DEFAULT_ORIGIN) and default_jp.is_file():
+            args.origin = str(default_jp)
+    # --preset v8-reclaim：v8 回收链路诊断（领航员清 tile）
+    if getattr(args, "preset", None) == "v8-reclaim":
+        args.game = "POKEMON_RUBY_AXVJ00"
+        if not args.functions:
+            args.functions = _V8_RECLAIM_FUNCS
+        args.no_tiles = True
+        default_jp = REPO_ROOT / "roms" / "origin" / "POKEMON_RUBY_AXVJ00.gba"
+        if args.origin == str(DEFAULT_ORIGIN) and default_jp.is_file():
+            args.origin = str(default_jp)
+    # --preset jp-ui-alloc：日版 tm1 UI 分配勘测（主战场：textMode==1）
+    if getattr(args, "preset", None) == "jp-ui-alloc":
+        args.game = "POKEMON_RUBY_AXVJ00"
+        if not args.functions:
+            args.functions = _JP_UI_ALLOC_FUNCS
+        args.no_tiles = True
+        default_jp = REPO_ROOT / "roms" / "origin" / "POKEMON_RUBY_AXVJ00.gba"
+        if args.origin == str(DEFAULT_ORIGIN) and default_jp.is_file():
+            args.origin = str(default_jp)
+
+    for w in _warn_wrong_game_for_canvas_survey(args.game, args.functions, args.origin):
+        print(f"警告: {w}", file=sys.stderr)
+
     # 日志按游戏分目录：src/util/work/{gameId}/gdb_patcher_log.log
     logpath = args.log or str(REPO_ROOT / "src" / "util" / "work" / args.game / "gdb_patcher_log.log")
     Path(logpath).parent.mkdir(parents=True, exist_ok=True)
@@ -2566,6 +3328,19 @@ def run_log(args: argparse.Namespace) -> int:
     else:
         print("无法连接 mGBA GDB stub（先 mGBA 开 ROM + Start GDB stub + Pause）", file=sys.stderr)
         return 2
+
+    # 运行时再核一次：读 ROM 头游戏码（stub 映射的 0x08000000）
+    if args.game == "POKEMON_RUBY_AXVE":
+        try:
+            live = bytes(gdb.read_mem(0x080000AC, 4))
+            if live != b"AXVE":
+                print(
+                    f"警告: mGBA 当前 ROM 游戏码={live!r}，期望 AXVE。"
+                    "请换成美版 Ruby 1.0 再采。",
+                    file=sys.stderr,
+                )
+        except GdbError:
+            pass
 
     ctx = Ctx(gdb, logpath, single, double, origin, dedup=not args.no_dedup,
               vram_survey=bool(getattr(args, "vram_survey", False)),
@@ -2948,6 +3723,19 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
         "--bypass-text", action="store_true",
         help="连接后写 ADDR_V6_BYPASS(0x0203FEB8)=1 屏蔽所有文本打印，"
         "让 --cb-survey 采到纯官方避让带")
+    ap.add_argument(
+        "--preset",
+        default=None,
+        choices=["us-canvas", "w0-us", "w0-jp", "w0-tm1", "v8-reclaim",
+                 "jp-ui-alloc"],
+        help="us-canvas：美版画布对照；"
+             "w0-us / w0-jp：划界预算勘测（模板·IWTD·窗框·ITP，开 ui-survey，关 tiles）；"
+             "w0-tm1：tm1→30×20 划界预算（ITP 打 [W0-BUDGET]，开 cb-survey，关 tiles）；"
+             "v8-reclaim：v8 回收链路诊断（InitTextPrinter/V8AllocBegin/V8Alloc/V8Release/TextClearWindow，关 tiles）；"
+             "jp-ui-alloc：日版 tm1 UI 分配勘测（JpTm1Alloc@0x080029DA 拿图集预留区间 "
+             "[tileOffset,+容量)，JpTm1AtlasLoad@0x080029E0 实测官方图集落地与 cb 分布；"
+             "建议用原版日版 ROM，关 tiles）",
+    )
     ap.add_argument(
         "--no-tiles",
         action="store_true",

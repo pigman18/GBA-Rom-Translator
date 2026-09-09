@@ -510,7 +510,7 @@ gdb:
     winreg: r0
 - name: TextClearWindow
   address: '0x08003BA8'
-  description: 清屏入口（r0=win）
+  description: 'W0：清窗入口（r0=win）——对照清引用时机；预设名 TextClearWindow'
   default: false
   cfg:
     winreg: r0
@@ -521,19 +521,32 @@ gdb:
   cfg:
     winreg: r0
 - name: ChsPrint
-  address: '0x088007B4'
+  address: '0x0880060c'
   description: 中文绘制主入口 chs_print(r0=win,r1=code,r2=fontSize)。地址随每次重编变化，必须按
-    configs/POKEMON_RUBY_AXVJ00/hook/out/game.map 同步（2026-09-07 晚 = 0x088007B4）。配 UpdateTilemap 判读每字符的 tile 对与落格
+    configs/POKEMON_RUBY_AXVJ00/hook/out/game.map 同步（2026-09-09 = 0x0880060c）。配 UpdateTilemap 判读每字符的 tile 对与落格
   default: false
 - name: PncHook
-  address: '0x0880097C'
+  address: '0x088007c0'
   description: PrintNextChar_Hook 入口（r0=win），读 win 的 text[idx] 记录字符码；识别没走
-    chs_print 的字符。地址随每次重编变化，按 game.map 同步（2026-09-07 晚 = 0x0880097C）
+    chs_print 的字符。地址随每次重编变化，按 game.map 同步（2026-09-09 = 0x088007c0）
   default: false
 - name: V8Alloc
-  address: '0x088011E4'
+  address: '0x08801304'
   description: v8_alloc_tile(r0=win,r1=font_px,r2=glyph_len) 入口。地址随每次重编变化，必须按
-    hook/out/game.map 同步（2026-09-07 晚 = 0x088011E4）。记录领号请求与请求前游标
+    hook/out/game.map 同步（2026-09-09 修 thumb 跳板后 = 0x08801304）。记录领号请求与请求前游标 +
+    ours 段数
+  default: false
+- name: V8AllocBegin
+  address: '0x08800fc0'
+  description: v8_alloc_begin(r0=win) 入口 = InitTextPrinter 会话边界（重建位图前）。dump 上一会话
+    位图占用 + ours 段 + per-win 账本段；判读领航员翻页是否走重新开窗、旧 tile 是否随翻页回收。
+    地址随 game.bin 重建变化（2026-09-09 = 0x08800f9c）
+  default: false
+- name: V8Release
+  address: '0x08801488'
+  description: v8_release(r0=win) 入口 = Text_ClearWindow hook 触发回收。dump 账本槽与段，判读
+    被调用时账本有没有该 win 的段（决定是否真释放）。地址随 game.bin 重建变化（2026-09-09
+    修 thumb 跳板后 = 0x08801488）
   default: false
 - name: MapNamePopupX
   address: '0x0809F6D0'
@@ -592,23 +605,51 @@ gdb:
   default: false
 - name: InitWindowTileData
   address: '0x08002A50'
-  description: 分区器入口（JP 与美版同址；r0=win/template 待运行时定身份, r1=startOffset）——字库预渲染+分区链输入
+  description: 'W0：JP 图集装载入口（r0=template, r1=startOffset, r2=glyph）。handler 仅 glyph==0 打 [W0-IWTD-JP]'
   default: false
 - name: InitWindowTileDataRet
   address: '0x08002AEA'
-  description: 分区器出口 pop{r4-r6} 处（r0=返回值=下一空闲 offset，r4=入口 r0）——与入口成对还原分区链；配 --ui-survey 时自动输出窗口区预算 [startOffset,返回值)
+  description: 'JP 作废（返回 void）；勿用于 W0 span。美版用 AXVE yaml 的同名点'
   default: false
 - name: TextLoadWindowTemplate
+  address: '0x08002950'
+  description: 'W0：[W0-TPL] MultistepInit 置位（r0=window，+0→tpl；r1=tileOff）。勿再用 0x080029E0（那是图集步进）'
+  default: false
+- name: MultistepInitWindowTileData
   address: '0x080029E0'
-  description: 窗口模板重建入口（r0=template；= InitWindowTileData(0x08002A50) 的唯一调用方，BL 调用点静态验证 2026-09-07）——场景窗口账本重建信号
+  description: 'W0：[W0-MULTI] 图集分帧装载；从 gTplSlot@0x03000328 读模板（入口 r0 无意义）'
+  default: false
+- name: JpTm1Alloc
+  address: '0x080029DA'
+  description: '★【2026-09-09 主战场】tm1 开窗分配返回点 = 0x08002950(TextLoadWindowTemplate)
+    的唯一出口（pop {r1}; bx r1）。此时 r0=图集容量（返回值）、r3=win（全程未破坏），
+    一次命中同时拿到「谁开窗 + 起点 + 容量」。
+    反汇编：800295e *0x0300032E=0(游标归零) / 8002968 *0x0300032C=tileOffset /
+    800296a win[0x16]=tileOffset / 8002970 textMode==1→跳表0x080029B4[fontNum]→
+    容量 font0/3=512、font1/2/4/5=256。调用方 @0x0806F000 把容量写入 0x0202E6F0。
+    ⇒ tm1 的 UI 分配 = 预留 [tileOffset, tileOffset+容量) 给假名图集。
+    fontNum=3（日志实测全为此）→ 预留 [1,513)，而 v8 lo=0x100 ⇒ 重叠 [256,513)=257 tile'
+  default: false
+- name: JpTm1AtlasLoad
+  address: '0x080029E0'
+  description: '★【2026-09-09 主战场】tm1 假名图集步进装载（每帧装 16 字符，游标 *0x0300032E += 16，
+    到容量上限停）。装载核心 0x08002A50：font1/2 → tileData+(base+idx)*32；
+    font3 → tileData+base*32+idx*64（2 tile/字符）。
+    用【原版日版 ROM】采集时本点活着，VRAM 是纯官方内容 = 「屏蔽中文打印后的 cb 内容」
+    的等价物；用汉化 ROM 采集则本函数已被 hook 停掉（return 1），命中 0 属正常。
+    会分包读 VRAM 做非空分布扫描，触发时略卡'
+  default: false
+- name: JpMode3TileBudget
+  address: '0x08002C0A'
+  description: 'W0：[W0-SPAN-JP] tm3 官方 base+0x25A(602)；断在 ADDS 前（r0=0x25A,r4=base）'
   default: false
 - name: MenuDrawStdWindowFrame
   address: '0x0806F224'
-  description: 菜单窗框绘制入口（push{lr} 头 + 2 调用点，BL 静态验证 2026-09-07）；若日版同美版签名 (bg,x,y,width,height)，r3=width 候选
+  description: 'W0：[W0-FRAME] Menu_DrawStdWindowFrame(left,top,right,bottom)→w×h；无第5参'
   default: false
 - name: MenuLoadStdFrameGraphics
   address: '0x0806F16C'
-  description: 菜单窗框装载入口（推定：与 DrawStdWindowFrame 同批调用、紧邻其前；BL 静态验证仅为调用关系，函数身份未实证）
+  description: 'W0：窗框图形装载 [W0-FRAMEGFX]'
   default: false
 - name: UpdateNickAlt2
   address: '0x08042408'

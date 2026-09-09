@@ -1,53 +1,156 @@
 # =============================================================================
 # 美版 Ruby (US 1.0, AXVE) — 原生参照系采集配置
-# 目的：与日版 AXVJ 同屏对比 textMode/fontNum 的真实用法
-#       （队伍页 / 详情页 / 战斗血条 / 开始菜单），为 text_jp2chs 全面接管定案。
-# ROM：roms/origin/Pokemon Ruby Version(US).gba（1.0，与 tools/Pokemon_GBA_Font_Patch/
-#      symbols/pokeruby/pokeruby.sym 地址表一致；1.1 地址会漂移勿用）
-# 日志：src/util/work/POKEMON_RUBY_AXVE/gdb_patcher_log.log（按游戏分目录）
-# 注意：美版不做日文 PCS 解码（原始字节）；struct Window 为 pokeruby 0x30 布局，
-#       各点已带 layout:us，handler 自动切换字段偏移。
+# 目的：对照日版 AXVJ「tm1 图集」vs 美版「tm2 文本画布」，评估引擎能否移植。
+# ROM：roms/origin/Pokemon Ruby Version(US).gba（必须 1.0 / AXVE；
+#      pokeruby.sym 与 1.0 对齐。仓库另有 1.1/1.2，地址会漂，勿混用）
+# 日志：src/util/work/POKEMON_RUBY_AXVE/gdb_patcher_log.log
+# 注意：美版不做日文 PCS 解码；struct Window 为 pokeruby 0x30，各点 cfg.layout: us。
+#
+# --- 推荐采集（移植可行性）-------------------------------------------------
+# ⚠ 必须 --game POKEMON_RUBY_AXVE（或 --preset us-canvas / w0-us）。
+#    若漏写 game、默认落到 AXVJ00，会用日版地址打美版 ROM → 字段全是垃圾。
+# 一键：
+#   src\util\gdb_axve_canvas.bat     （画布对照，偏绘制）
+#   src\util\gdb_w0_us.bat           （W0 预算勘测：模板 w×h + IWTD span + 窗框）
+# 或：
+#   set PYTHONPATH=src
+#   C:\Python314\python.exe -m util.gdb_patcher log --preset w0-us
+# 日志：src/util/work/POKEMON_RUBY_AXVE/gdb_patcher_log.log
+# 场景：对话一屏 → 开始菜单 → 设置 → 队伍 → 起名；看 [W0-TPL]/[W0-SPAN]/[W0-FRAME]
 # =============================================================================
 gdb:
+  - name: TextLoadWindowTemplate
+    address: '0x08002A34'
+    description: 'Text_LoadWindowTemplate(r0=template)——场景窗账本重建；看 font/textMode/w×h'
+    default: false
+    cfg:
+      layout: us
+
+  - name: InitWindowTileData
+    address: '0x08002A50'
+    description: 'InitWindowTileData(win, startOffset)——tm2 划 width×height 画布 / tm1 装 atlas'
+    default: false
+    cfg:
+      layout: us
+
+  - name: InitWindowTileDataRet
+    address: '0x08002AD0'
+    description: 'IWTD 出口（mov r0,r4 后）：r0=下一空闲 offset，与入口 start 成对得预算 span'
+    default: false
+    cfg:
+      layout: us
+
+  - name: InitVariableWidthFontTileData
+    address: '0x08002AD8'
+    description: 'tm2 画布装载（startOffset+2+w×h）；命中即证明走变宽画布而非 atlas'
+    default: false
+    cfg:
+      layout: us
+
+  - name: MultistepInitWindowTileData
+    address: '0x08002BFC'
+    description: '分帧装窗 tile（菜单初始化链）'
+    default: false
+    cfg:
+      layout: us
+
   - name: InitTextPrinter
     address: '0x08002DC0'
     description: 'Text_InitWindow（r0=win, r1=text, r2=startOffset, r3=left, [sp]=top）'
     default: false
     cfg:
       layout: us
+
   - name: PrintNextChar
     address: '0x08002FE0'
-    description: '字符处理器入口（r0=win）；index 未推进，text[index] 即将处理——FA..FF 控制码唯一观测点'
+    description: '字符处理器入口（r0=win）；对照 textMode 与即将处理字节'
     default: false
     cfg:
       layout: us
+
   - name: Text_PrintWindow8002F44
     address: '0x08002F44'
-    description: '同步打印循环（r0=win）：一次打完整串的入口'
-    default: false
-  - name: Text_UpdateWindow
-    address: '0x080035AC'
-    description: '帧驱动状态机 tick（r0=win）：state@+0x16 观测'
+    description: '同步打印循环（r0=win）'
     default: false
     cfg:
       layout: us
+
+  - name: Text_UpdateWindow
+    address: '0x080035AC'
+    description: '帧驱动状态机 tick（r0=win）'
+    default: false
+    cfg:
+      layout: us
+
   - name: Text_UpdateWindowInBattle
     address: '0x0800374C'
     description: '战斗帧驱动（r0=win）'
     default: false
     cfg:
       layout: us
+
+  - name: PrintGlyph_TextMode0
+    address: '0x080037F0'
+    description: 'PrintGlyph tm0：走 DrawGlyphTiles（变宽写 VRAM）'
+    default: false
+    cfg:
+      layout: us
+
+  - name: PrintGlyph_TextMode1
+    address: '0x08003844'
+    description: 'PrintGlyph tm1：只 WriteGlyphTilemap（atlas，对照日版主力）'
+    default: false
+    cfg:
+      layout: us
+
+  - name: PrintGlyph_TextMode2
+    address: '0x080038F8'
+    description: 'PrintGlyph tm2：走 DrawGlyphTiles（菜单/对话主力画布）'
+    default: false
+    cfg:
+      layout: us
+
+  - name: DrawGlyph_TextMode0
+    address: '0x08003818'
+    description: 'DrawGlyph tm0（GetGlyphWidth + DrawGlyphTiles + UpdateTilemap）'
+    default: false
+    cfg:
+      layout: us
+
+  - name: DrawGlyph_TextMode2
+    address: '0x0800392C'
+    description: 'DrawGlyph tm2'
+    default: false
+    cfg:
+      layout: us
+
+  - name: DrawGlyphTiles
+    address: '0x08006874'
+    description: 'DrawGlyphTiles(win,glyph,width)——pokeRS 汉化挂点；看落点是否 GetCursorTileNum 画布'
+    default: false
+    cfg:
+      layout: us
+
+  - name: GetCursorTileNum
+    address: '0x080069D8'
+    description: 'GetCursorTileNum(win,xOff,yOff)——tm2=行×width+列；其它=BASE+OFF+2x+y'
+    default: false
+    cfg:
+      layout: us
+
   - name: UpdateTilemap
     address: '0x08006954'
-    description: '表项写入（r0=win, r1=tilesWidth）——美版签名与日版不同'
+    description: 'UpdateTilemap(win, tilesWidth)——美版签名与日版不同'
     default: false
     cfg:
       layout: us
       winreg: r0
+
   - name: GetGlyphTilePointers
     address: '0x08003A1C'
     description: '字库取址（r0=fontNum, r1=language, r2=glyph, r3=&upper）'
     default: false
+
   - name: Text_ClearWindow
     address: '0x08004318'
     description: '清屏（r0=win）'
@@ -55,19 +158,31 @@ gdb:
     cfg:
       layout: us
       winreg: r0
+
   - name: RenderTextHandleBold
     address: '0x08004E3C'
-    description: 'Text_InitWindow8004E3C（r0=winTemplate, r1=tileData/dest, r2=text）——详情页/血条缓冲渲染链'
+    description: 'Text_InitWindow8004E3C（详情/血条缓冲链）'
     default: false
-  - name: InitWindowTileData
-    address: '0x08002A50'
-    description: '等宽预加载（r0=win, r1=startOffset）——mode1 的 256-tile 静态块来源'
+    cfg:
+      layout: us
+
+  - name: MenuLoadStdFrameGraphics
+    address: '0x08071E18'
+    description: 'Menu_LoadStdFrameGraphics——菜单窗框图形装载'
     default: false
-  - name: DrawGlyph_TextMode0
-    address: '0x08003818'
-    description: 'mode0 变宽绘制（r0=win, r1=glyph）'
+    cfg:
+      layout: us
+
+  - name: MenuDrawStdWindowFrame
+    address: '0x08071F08'
+    description: 'Menu_DrawStdWindowFrame(left,top,right,bottom)→w×h；无第5参'
     default: false
-  - name: DrawGlyph_TextMode2
-    address: '0x0800392C'
-    description: 'mode2 连续变宽绘制（r0=win, r1=glyph）'
+    cfg:
+      layout: us
+
+  - name: InitMenuWindow
+    address: '0x08071C4C'
+    description: 'InitMenuWindow(template)——内部链 IWTD 划文本区'
     default: false
+    cfg:
+      layout: us

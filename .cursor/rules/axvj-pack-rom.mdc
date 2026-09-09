@@ -1,20 +1,57 @@
 ---
-description: AXVJ 用户授权打包时必须代打 ROM，勿推回 GUI
+description: 打包唯一入口 = configs/<GAME>/hook/build.bat；禁止手动 armips / 手改 work/build
 alwaysApply: true
 ---
 
-# AXVJ：授权即打包
+# AXVJ：打包唯一入口（2026-09-09 用户拍板）
 
-标准命令与默认模块清单见 [`docs/PACK_ROM.md`](../../docs/PACK_ROM.md)。
+**「以后禁止乱七八糟的打包途径，打包统一以目录的 build.bat 为准。」**
+
+唯一入口：`configs\POKEMON_RUBY_AXVJ00\hook\build.bat`
+（一条命令 = ① 编译 `out/game.bin` + `out/game_syms.asm` → ② `meowth build` 出 ROM）
+只编译不出 ROM：`build.bat --no-pack`
+
+## 目录真相（踩坑实证）
+
+| 路径 | 性质 | 能否手改 |
+|---|---|---|
+| `configs\<GAME>\hook\` | **唯一持久源树**（armips 从这里 copytree） | ✅ 只改这里 |
+| `work\<GAME>\build\` | meowth 每次 `rmtree` + `copytree` **重建的临时目录** | ❌ 改了必丢 |
+
+`src/meowth/font_patch.py: apply_font_patch()` 里 `shutil.rmtree(build_dir)` +
+`shutil.copytree(src_dir, build_dir)`。`src_dir = get_game_patch_dir()` →
+`configs\<GAME>\hook`。**手动往 work/build 里塞文件/改 game_addrs.asm，下一轮打包全被冲掉。**
+2026-09-09 我正是只改了 `work\...\build\game_addrs.asm` → 源树没符号 → armips
+`Undefined label "textloadwindowtemplate"` → 根 `build.bat` 整条流水线挂掉。
 
 ## 必须
 
-- 用户说打 rom / 打包 / build / 出 ROM，或粘贴 `PACK_ROM.md` 命令 → **当场代跑流水线**（默认 `--seed-only`）。
-- 默认跳过：`姓名输入`、`默认名字`、`赛事娱乐`、`高风险混杂`、`未归类`（`modules.json` `default: false`）。
-- **默认包含 `物种名`**（已在 `PACK_ROM.md` 的 `--modules` 中）。
+- 改 hook 源码 → 改 `configs\<GAME>\hook\src\`。
+- 新增 ROM 侧符号 → 加进 `configs\<GAME>\hook\game_addrs.asm`（armips `.org`/`equ` 唯一来源）；
+  C 侧 `ADDR_*` 由 `; C:` 标记经 `scripts/gen_game_h_from_addrs.py` 生成。
+- 新 hook 桩函数 → 同步 `configs\<GAME>\hook\build.bat` 的 `game_syms` 符号列表，
+  否则 armips 拿不到 `out/game_syms.asm` 里的跳转地址。
+- 打包跑 `build.bat`；需要换模块/重翻译时才用 `meowth full`（根 build.bat 就是它，
+  会调 LLM，别当日常打包用）。
+
+## 执行方式（必需，别再自己拼命令）
+
+直接调 `build.bat` 就行，**不要在 bash 里手抄 gcc/armips 命令复刻编译流程**
+（2026-09-09 我这么干过一次，正是本规则明令禁止的行为）。
+
+Git Bash / 沙箱 shell 里 `arm-none-eabi-gcc` 可能不在 PATH —— 补一行后照跑同一个 bat：
+
+```
+export PATH="/c/Program Files (x86)/Arm GNU Toolchain arm-none-eabi/14.2 rel1/bin:$PATH"
+cd /c/code/GBA-Rom-Translator/configs/POKEMON_RUBY_AXVJ00/hook && ./build.bat
+```
+
+报「`arm-none-eabi-gcc` 不是内部或外部命令」时的正确处理 = **补 PATH 再跑 build.bat**，
+不是换一条自己拼的命令。
 
 ## 禁止
 
-- 已授权仍推「请自己跑 start_gui.bat」。
-- 把 API key 写入仓库或文档（只用当轮参数 / 环境变量）。
-- 手改成品 ROM 字节冒充打包。
+- 手动跑 `armips.exe main.asm`、手动 `copy game.bin → work\...\build\out\`、手动 objcopy 出 ROM。
+- 手改 `work\<GAME>\build\` 下任何文件（含 `game_addrs.asm`、`out\game_syms.asm`）。
+- 手改成片 ROM 字节冒充打包。
+- 已授权仍推「请自己跑 start_gui.bat / 根 build.bat」。

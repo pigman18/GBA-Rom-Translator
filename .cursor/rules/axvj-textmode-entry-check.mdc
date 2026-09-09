@@ -1,0 +1,69 @@
+---
+description: 动 textMode / tile 分配 / UI 接管前，必须先读 PrintNextChar_hook.c 文件头 + 跑 textMode 分布统计 + 查记忆是否已有结论
+alwaysApply: true
+---
+
+# AXVJ：textMode 开工前检查（2026-09-09 事故固化）
+
+## 事故
+
+用户：「tm1才是需要分配的重灾区啊，其他tm压根不用分配」
+「记忆文件里应该也一大堆提到tm1才需要分配的，你没读记忆文件吗」
+
+证据链（**全部在动手前就已存在，我看见了没接上**）：
+
+1. `PrintNextChar_hook.c` 文件头 line 12 — 代码注释，最强约束：
+   ```
+   *   tm1 是分配器的主因（预渲染窗无自写 VRAM）；tm3 中文叠字领号避 atlas。
+   ```
+   line 69-70：
+   ```
+   /* tm0：跟官方线性寻址；tm3：官方网格（窗口自有区）；其余（tm1 共享图集）
+    * 走 v8 动态分配（AXVJ tm1 无窗口私有区，反汇编定论 2026-09-08） */
+   ```
+2. `.workbuddy/memory/2026-09-09.md` line 18：
+   `LoadFixedWidthFont@0x08002AF4` 256 字形×2 tile 返 512 ⇒ **tm1 图集占 CB2 `[1,513)`**
+3. 同文件 line 91/93/105：tm1 双图集、落址机制 `FontFuncTable[1]@0x0800360C`、
+   原版预渲染 512-tile 图集到 cb2[1,513)（hook 版不读 → 僵尸数据）
+
+我却因为 MEMORY 里一句「日版有 0/1/2/3 四个值」+ 反汇编看见 tm3 有独立 `bl` 分配函数，
+就一头扎进 tm3，埋了两个**命中 0 次**的死点，还写了文档固化错误结论。
+更糟的是：我反推一整轮得出的「tm1 预留 [1,513)」，**记忆 line 18 早就写着**——
+等于把已有结论当新发现重推一遍，并给记忆制造了第二份副本。
+
+## 硬规则（三步，缺一不可）
+
+动**任何**涉及 textMode / tile 分配 / VRAM 接管 / UI 分配的工作前，先做完：
+
+**① 读代码注释**（比记忆更权威，因为改代码时会同步改）：
+```
+sed -n '1,20p' configs/POKEMON_RUBY_AXVJ00/hook/src/text/PrintNextChar_hook.c
+```
+重点看「按 tm 落点」那几行 —— 它直接写明哪个 tm 走分配器、哪个走官方私有区。
+
+**② 跑分布统计**，用数据定主战场，不许靠"枚举里有几个值"或"反汇编里哪个分支最显眼"：
+```
+grep -oE "textMode=[0-9]" <最新日志> | sort | uniq -c
+grep -oE "fontNum=[0-9]"  <最新日志> | sort | uniq -c
+```
+命中最多的那个才是主战场。**命中 0 的分支不许投入。**
+
+**③ 查记忆是否已有结论**（防"重新发现"+ 防记忆分裂）：
+```
+grep -rn "tm1\|tm3" .workbuddy/memory/MEMORY.md .workbuddy/memory/<今日>.md
+```
+命中就**引用原条目**（补细节、标日期），**不许另起一段重复写**；
+两份结论冲突时，以**带实测数据 / 带代码注释**的那份为准。
+
+## 判读铁律
+
+**「有独立分配函数」≠「需要分配」，因果是反的：**
+- tm3 有静态分配函数 `0x08002BD0`，正因它是**网格一次算好**（`tile = BASE+2+col+30*row`），不需要动态找空位；
+- tm1 **没有**分配函数才是灾难 —— 每次打印都要 `v8_alloc_tile` 现找空位；
+- tm0 线性 / tm2 血条缓冲，同样各有官方私有区，不需要分配器。
+
+## 相关
+
+- `.cursor/rules/axvj-gdb-killed-conclusions.mdc` — gdb 已证伪勿重推
+- `.cursor/rules/axvj-no-avoidance-band.mdc` — 禁止测避让带
+- `.cursor/rules/axvj-no-fake-window-port.mdc` — 禁止抬水位假划界

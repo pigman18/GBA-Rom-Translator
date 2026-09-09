@@ -65,6 +65,13 @@
 #define ADDR_V8_PHASE                      0x0203FF44u
 #define ADDR_V8_PHASE_ROW                  0x0203FF46u
 // <<<GEN_ADDR_END>>>
+/* --- 手工追加（非生成区）：v9 队列分配器状态块 0x0203FF4A..0x0203FF55 --- */
+#define ADDR_V8Q_MAGIC                     0x0203FF4Au
+#define ADDR_V8Q_WIN                       0x0203FF4Cu
+#define ADDR_V8Q_HEAD                      0x0203FF50u
+#define ADDR_V8Q_CURSOR                    0x0203FF52u
+#define ADDR_V8Q_END                       0x0203FF54u
+#define ADDR_V8Q_TPL                       0x0203FF58u
 /*
  * 短语表（PhraseTable）—— 固定长度字段突破字符数限制的方案。
  * 日版 Gen3 的招式/特性/物种等字段有 stride 限制（6-8 字节），

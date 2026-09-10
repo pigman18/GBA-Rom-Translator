@@ -777,10 +777,16 @@ def apply_font_patch(
     fonts_build_dir.mkdir(parents=True, exist_ok=True)
     prefix = font_patch_cfg.get("font_bin_prefix", "PokeRSFontChs")
     embed_primary = _embed_primary_bins(font_patch_cfg)
+    # 槽位声明了 "bdf" ⇒ BDF 是唯一取源；不得用 hook/work tuned 库回灌
+    # （会把刚按 fonts/default/*.bdf 重建的 *_unshadow 盖回旧库）。
+    bdf_driven = any(
+        s.get("bdf") for s in (font_patch_cfg.get("font_slots") or [])
+    )
     if (
         font_patch_cfg.get("shadow") is False
         and fonts_src.exists()
         and not embed_primary
+        and not bdf_driven
     ):
         restore_tuned_font_bins_from_reference(fonts_src, game_id=game_id, prefix=prefix)
     if fonts_src.exists():

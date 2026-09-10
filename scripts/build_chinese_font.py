@@ -164,14 +164,43 @@ def bdf_to_ink12(
     return out
 
 
-def ink12_to_slot16(ink: bytearray, *, shadow: bool) -> bytearray:
-    """Place 12x12 ink into 16x16 slot with top/bottom pad. Values 0/14/15."""
+def ink_fixed_from_cell(
+    bitmap_rows: list[bytearray],
+    x0: int,
+    y0: int,
+    ink_w: int,
+    ink_h: int,
+) -> bytearray:
+    """**固定几何**提取：不做 bbox 归一化，直接从 BDF cell 的 (x0,y0) 取 ink_w×ink_h。
+
+    与 bdf_to_ink12 的差别（2026-09-10 用户拍板新增）：后者裁紧墨迹 bbox 再锚到
+    (0,0)，会把「左空 1 列 / 上空 1 行」的字（大库 247、小库 380 个）整体平移，也
+    吃掉渲染端 ROW_OFF 的落位差（小库会整体上移 3px）。本函数原样搬运，配合
+    --pad-top 可让「BDF 重建 → bin」与源字形逐像素一致。
+    """
+    out = bytearray(ink_w * ink_h)
+    for ny in range(ink_h):
+        y = y0 + ny
+        if y >= len(bitmap_rows):
+            continue
+        row = bitmap_rows[y]
+        for nx in range(ink_w):
+            bi, bit = divmod(x0 + nx, 8)
+            if bi < len(row) and (row[bi] & (0x80 >> bit)):
+                out[ny * ink_w + nx] = 1
+    return out
+
+
+def ink_to_slot16(
+    ink: bytearray, ink_w: int, ink_h: int, pad_top: int, *, shadow: bool
+) -> bytearray:
+    """Place ink_w×ink_h ink into 16x16 slot at (0, pad_top). Values 0/14/15."""
     slot = bytearray(SLOT_W * SLOT_H)
-    for y in range(INK_H):
-        for x in range(INK_W):
-            if not ink[y * INK_W + x]:
+    for y in range(ink_h):
+        for x in range(ink_w):
+            if not ink[y * ink_w + x]:
                 continue
-            sx, sy = x, y + PAD_TOP
+            sx, sy = x, y + pad_top
             if not (0 <= sx < SLOT_W and 0 <= sy < SLOT_H):
                 continue
             slot[sy * SLOT_W + sx] = 15
@@ -182,6 +211,11 @@ def ink12_to_slot16(ink: bytearray, *, shadow: bool) -> bytearray:
                         if slot[ty * SLOT_W + tx] == 0:
                             slot[ty * SLOT_W + tx] = 14
     return slot
+
+
+def ink12_to_slot16(ink: bytearray, *, shadow: bool) -> bytearray:
+    """12x12 ink → 16x16 slot（历史入口，patch_font_punct.py 依赖签名）。"""
+    return ink_to_slot16(ink, INK_W, INK_H, PAD_TOP, shadow=shadow)
 
 
 def bdf_to_ink_narrow(
@@ -299,6 +333,8 @@ def build_font_bin(
     bdf_fallbacks: list[tuple[dict, int]] | None = None,
     ttf_fallbacks: list[str] | None = None,
     narrow: bool = False,
+    ink_fixed: tuple[int, int, int, int] | None = None,
+    pad_top: int | None = None,
 ) -> bytearray:
     if bytes_per_glyph != BYTES_PER_GLYPH:
         raise ValueError(
@@ -310,11 +346,17 @@ def build_font_bin(
         encoding = ord(char)
         if encoding in bdf_glyphs:
             bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y = bdf_glyphs[encoding]
-            if narrow:
+            if ink_fixed is not None:
+                fw, fh, fx, fy = ink_fixed
+                ink = ink_fixed_from_cell(bitmap_rows, fx, fy, fw, fh)
+            elif narrow:
                 ink = bdf_to_ink_narrow(bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y)
             else:
                 ink = bdf_to_ink12(bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y, font_ascent)
         else:
+            if ink_fixed is not None:
+                # 固定几何模式不做 fallback：备用库几何不同，混入必错位（同 narrow）。
+                continue
             if narrow:
                 # 窄字形库不做 fallback：fallback 字体全是 12px 几何，混入即错位。
                 # 缺字保持空槽（寒蝉 GB2312 覆盖 charmap 全集，实测 0 缺字）。
@@ -335,7 +377,12 @@ def build_font_bin(
                         break
             if ink is None:
                 ink = bytearray(INK_W * INK_H)
-        if narrow:
+        if ink_fixed is not None:
+            fw, fh, _fx, _fy = ink_fixed
+            slot = ink_to_slot16(
+                ink, fw, fh, PAD_TOP if pad_top is None else pad_top, shadow=shadow
+            )
+        elif narrow:
             slot = ink_narrow_to_slot16(ink, shadow=shadow)
         else:
             slot = ink12_to_slot16(ink, shadow=shadow)
@@ -380,6 +427,12 @@ def main() -> None:
     ap.add_argument("--shadow", action=argparse.BooleanOptionalAction, default=True)
     ap.add_argument("--narrow-8x12", action="store_true",
                     help="窄字形库模式（Middle）：8x12 墨迹 → slot 左列，不做 fallback")
+    ap.add_argument("--ink-fixed", type=str, default=None, metavar="WxH+X+Y",
+                    help="固定几何提取（如 11x11+0+2）：跳过 bbox 归一化，从 BDF cell "
+                         "的 (X,Y) 起取 WxH 墨迹；配合 --pad-top 可逐字节还原源字形。"
+                         "不做 fallback")
+    ap.add_argument("--pad-top", type=int, default=None,
+                    help="墨迹落 slot 的起始行（默认 2）")
     ap.add_argument("--phrase-map", type=Path, default=None)
     args = ap.parse_args()
 
@@ -388,6 +441,24 @@ def main() -> None:
             f"error: bytes_per_glyph must be {BYTES_PER_GLYPH}, got {args.bytes_per_glyph}",
             file=sys.stderr,
         )
+        sys.exit(1)
+
+    ink_fixed: tuple[int, int, int, int] | None = None
+    if args.ink_fixed:
+        m = re.fullmatch(r"(\d+)x(\d+)\+(\d+)\+(\d+)", args.ink_fixed.strip())
+        if not m:
+            print(
+                f"error: --ink-fixed 格式应为 WxH+X+Y（如 11x11+0+2），收到 {args.ink_fixed}",
+                file=sys.stderr,
+            )
+            sys.exit(1)
+        iw, ih, ix, iy = (int(v) for v in m.groups())
+        if iw < 1 or ih < 1 or iw > SLOT_W or ih > SLOT_H:
+            print(f"error: --ink-fixed 尺寸越界: {iw}x{ih}", file=sys.stderr)
+            sys.exit(1)
+        ink_fixed = (iw, ih, ix, iy)
+    if args.ink_fixed and args.narrow_8x12:
+        print("error: --ink-fixed 与 --narrow-8x12 互斥", file=sys.stderr)
         sys.exit(1)
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
@@ -419,10 +490,18 @@ def main() -> None:
             f"  Fallback BDF: {fb.name} ({len(fg)} 字形, ascent={fa}) "
             f"—— 主 BDF 缺字时自动补画"
         )
-    print(
-        f"  Target: {INK_W}x{INK_H} ink in {SLOT_W}x{SLOT_H} slot, "
-        f"{BYTES_PER_GLYPH} B/glyph, pad_top={PAD_TOP}, shadow={args.shadow}"
-    )
+    if ink_fixed is not None:
+        print(
+            f"  Target: ink_fixed {ink_fixed[0]}x{ink_fixed[1]}+{ink_fixed[2]}+{ink_fixed[3]} "
+            f"in {SLOT_W}x{SLOT_H} slot, pad_top="
+            f"{PAD_TOP if args.pad_top is None else args.pad_top}, "
+            f"{BYTES_PER_GLYPH} B/glyph, shadow={args.shadow} (no fallback)"
+        )
+    else:
+        print(
+            f"  Target: {INK_W}x{INK_H} ink in {SLOT_W}x{SLOT_H} slot, "
+            f"{BYTES_PER_GLYPH} B/glyph, pad_top={PAD_TOP}, shadow={args.shadow}"
+        )
 
     print(f"Parsing charmap: {args.charmap}")
     charmap = parse_charmap(args.charmap)
@@ -440,6 +519,8 @@ def main() -> None:
             bdf_fallbacks=bdf_fallbacks,
             ttf_fallbacks=ttf_fallbacks,
             narrow=args.narrow_8x12,
+            ink_fixed=ink_fixed,
+            pad_top=args.pad_top,
         )
         if args.slot_sizes and i < len(args.slot_sizes):
             buf = buf[: args.slot_sizes[i]]

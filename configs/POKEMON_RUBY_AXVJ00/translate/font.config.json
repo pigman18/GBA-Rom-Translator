@@ -9,12 +9,16 @@
     {
       "label": "Big1Bpp",
       "addr": 156237824,
+      "bdf": "fonts/default/Normal.bdf",
+      "ink_fixed": "11x11+0+2",
       "glyph_count": 7168,
       "bytes_per_glyph": 16
     },
     {
       "label": "Small1Bpp",
       "addr": 157286400,
+      "bdf": "fonts/default/Small.bdf",
+      "ink_fixed": "9x9+0+5",
       "glyph_count": 7168,
       "bytes_per_glyph": 11
     }
@@ -23,18 +27,27 @@
     {
       "label": "Normal",
       "addr": 150994944,
+      "bdf": "fonts/default/Normal.bdf",
+      "ink_fixed": "11x11+0+2",
+      "pad_top": 2,
       "glyph_count": 7168,
       "bytes_per_glyph": 128
     },
     {
       "label": "Small",
       "addr": 152043520,
+      "bdf": "fonts/default/Small.bdf",
+      "ink_fixed": "9x9+0+5",
+      "pad_top": 5,
       "glyph_count": 7168,
       "bytes_per_glyph": 128
     },
     {
       "label": "Middle",
       "addr": 155189248,
+      "bdf": "fonts/default/Middle.bdf",
+      "ink_fixed": "9x11+0+2",
+      "pad_top": 2,
       "glyph_count": 7168,
       "bytes_per_glyph": 128
     },

@@ -1763,9 +1763,13 @@ class TranslationEngine:
         fonts_dir = game_work / "graphic" / "fonts"
         fonts_dir.mkdir(parents=True, exist_ok=True)
 
+        # 仓库根 graphic/fonts 已于 2026-09-11 删除：BDF 路径下字库由
+        # fonts/default/*.bdf 产出，不再需要项目级默认库；只有真正依赖默认库
+        # （overwrite_bins=True，即 BDF 构建失败/未配置）时才告警。
         src_dir = Path(__file__).resolve().parents[3] / "graphic" / "fonts"
         if not src_dir.is_dir():
-            self._log("warning", "No default fonts found in project graphic/fonts/")
+            if overwrite_bins:
+                self._log("warning", "No default fonts found in project graphic/fonts/")
         else:
             copied = 0
             kept = 0
@@ -1860,40 +1864,31 @@ class TranslationEngine:
             fonts_dir = game_work / "graphic" / "fonts"
             fonts_dir.mkdir(parents=True, exist_ok=True)
             prefix = fp_cfg.get("font_bin_prefix", "PokeRSFontChs")
-            self._restore_unshadow_if_synced_from_primary(fonts_dir, prefix=prefix)
+            # BDF 为唯一取源时（槽位声明了 "bdf"），禁止用 hook/work 参考库回灌 —
+            # 否则 tuned 旧库会盖掉本次按 fonts/default/*.bdf 重建的结果。
+            bdf_driven = any(s.get("bdf") for s in (fp_cfg.get("font_slots") or []))
+            if bdf_driven:
+                self._log("info", "[font] 槽位声明 bdf → 跳过 hook/work 参考库回灌")
+            else:
+                self._restore_unshadow_if_synced_from_primary(fonts_dir, prefix=prefix)
 
             slots = fp_cfg.get("font_slots", [])
             labels = [s.get("label", "Unknown") for s in slots]
             sizes = [s.get("slot_size", s.get("glyph_count", 7168) * s.get("bytes_per_glyph", 128)) for s in slots]
             bpg = int(slots[0].get("bytes_per_glyph", 128)) if slots else 128
 
-            # Middle 窄字形库（8x12 cell）不走主 BDF：源是 fonts/default/Middle.bdf
-            # （寒蝉点阵 7px 经 ttf_to_bdf.py 转换），需 --narrow-8x12 独立构建；
-            # 主 BDF 的 12px 墨迹对窄字形是错误几何。fallback 一并禁用。
-            main_pairs = [(l, s) for l, s in zip(labels, sizes) if l != "Middle"]
-            main_labels = [l for l, _ in main_pairs]
-            main_sizes = [s for _, s in main_pairs]
+            _root = Path(__file__).resolve().parents[3]
+            _scripts_dir = _root / "scripts"
+            _charmap = game_work / "charmap.txt"
+            _shadow = fp_cfg.get("shadow") is not False
 
-            _scripts_dir = Path(__file__).resolve().parents[3] / "scripts"
-            args = [
-                sys.executable,
-                str(_scripts_dir / "build_chinese_font.py"),
-                "--bdf", str(bdf_path),
-                "--charmap", str(game_work / "charmap.txt"),
-                "--output-dir", str(fonts_dir),
-                "--slot-labels", *main_labels,
-                "--slot-sizes", *(str(s) for s in main_sizes),
-                "--prefix", prefix,
-                "--bytes-per-glyph", str(bpg),
-            ]
-            if fp_cfg.get("shadow") is False:
-                args.append("--no-shadow")
-            else:
-                args.append("--shadow")
-            # 备用 BDF：主 BDF（default/Normal）缺字时自动补画。
+            # 备用 BDF：主 BDF 缺字时自动补画。**仅 legacy（非固定几何）路径使用** —
+            # 固定几何模式（--ink-fixed）下备用库几何不同，混入必错位，build_chinese_font
+            # 会自行跳过。
             # 顺序 = 质量：fusion-pixel 12px（原生 12px 像素字，祐 实测形状正确）
             # > SimSun-16（16px 字形裁进 12x12 会变形，仅兜底）。
-            root_fonts = Path(__file__).resolve().parents[3] / "fonts"
+            root_fonts = _root / "fonts"
+            fallback_args: list[str] = []
             for fb_name in (
                 "fusion-pixel/12px-proportional/fusion-pixel-12px-proportional-zh_hans.bdf",
                 "ark-pixel/12px-proportional/ark-pixel-12px-proportional-zh_cn.bdf",
@@ -1902,51 +1897,84 @@ class TranslationEngine:
             ):
                 fb = root_fonts / fb_name
                 if fb.is_file():
-                    args += ["--bdf-fallback", str(fb)]
-            r = subprocess.run(args, capture_output=True, text=True, timeout=120)
-            if r.returncode != 0:
-                raise RuntimeError(f"Font generation failed:\n{r.stderr}\n{r.stdout}")
+                    fallback_args += ["--bdf-fallback", str(fb)]
 
-            # Middle 窄字形库独立构建（紧跟主构建，先于 unshadow 副本与 punct 补丁）
-            if "Middle" in labels:
-                _middle_bdf = root_fonts / "default" / "Middle.bdf"
-                _middle_size = next(
-                    (s for l, s in zip(labels, sizes) if l == "Middle"), None
+            def _run_build(label_list, size_list, bdf_file, ink_fixed, pad_top):
+                cmd = [
+                    sys.executable,
+                    str(_scripts_dir / "build_chinese_font.py"),
+                    "--bdf", str(bdf_file),
+                    "--charmap", str(_charmap),
+                    "--output-dir", str(fonts_dir),
+                    "--slot-labels", *label_list,
+                    "--slot-sizes", *(str(v) for v in size_list),
+                    "--prefix", prefix,
+                    "--bytes-per-glyph", str(bpg),
+                    "--shadow" if _shadow else "--no-shadow",
+                ]
+                if ink_fixed:
+                    cmd += ["--ink-fixed", str(ink_fixed)]
+                if pad_top is not None:
+                    cmd += ["--pad-top", str(pad_top)]
+                if not ink_fixed:
+                    cmd += fallback_args
+                rr = subprocess.run(cmd, capture_output=True, text=True, timeout=300)
+                if rr.returncode != 0:
+                    raise RuntimeError(
+                        f"Font generation failed for {','.join(label_list)}:\n"
+                        f"{rr.stderr}\n{rr.stdout}"
+                    )
+
+            # ── 槽位级取源（2026-09-10）──────────────────────────────────
+            # 槽位自带 "bdf" + "ink_fixed"/"pad_top" 固定几何 ⇒ 按槽取源、不裁 bbox，
+            # 保证「BDF → bin」与源字形逐像素一致。同 (bdf, ink_fixed, pad_top) 的槽
+            # 合并成一次构建。未声明 "bdf" 的槽走 legacy：主 BDF + 12px 几何。
+            groups: dict[tuple, dict] = {}
+            legacy: list[tuple[str, int]] = []
+            fixed_labels: set[str] = set()
+            for slot, lbl, sz in zip(slots, labels, sizes):
+                rel = slot.get("bdf")
+                if not rel:
+                    legacy.append((lbl, sz))
+                    continue
+                bdf_file = Path(rel)
+                if not bdf_file.is_absolute():
+                    bdf_file = _root / rel
+                if not bdf_file.is_file():
+                    raise RuntimeError(f"font slot {lbl}: BDF not found: {bdf_file}")
+                key = (str(bdf_file), slot.get("ink_fixed"), slot.get("pad_top"))
+                g = groups.get(key)
+                if g is None:
+                    g = groups[key] = {
+                        "bdf": bdf_file,
+                        "ink_fixed": slot.get("ink_fixed"),
+                        "pad_top": slot.get("pad_top"),
+                        "labels": [],
+                        "sizes": [],
+                    }
+                g["labels"].append(lbl)
+                g["sizes"].append(sz)
+                fixed_labels.add(lbl)
+
+            for key in sorted(groups, key=lambda k: groups[k]["labels"][0]):
+                g = groups[key]
+                _run_build(g["labels"], g["sizes"], g["bdf"], g["ink_fixed"], g["pad_top"])
+                self._log(
+                    "info",
+                    f"[font] {','.join(g['labels'])} <- {g['bdf'].name} "
+                    f"(ink_fixed={g['ink_fixed']}, pad_top={g['pad_top']})",
                 )
-                if _middle_bdf.is_file() and _middle_size:
-                    _args_mid = [
-                        sys.executable,
-                        str(_scripts_dir / "build_chinese_font.py"),
-                        "--bdf", str(_middle_bdf),
-                        "--charmap", str(game_work / "charmap.txt"),
-                        "--output-dir", str(fonts_dir),
-                        "--slot-labels", "Middle",
-                        "--slot-sizes", str(_middle_size),
-                        "--prefix", prefix,
-                        "--bytes-per-glyph", str(bpg),
-                        "--narrow-8x12",
-                    ]
-                    _args_mid.append(
-                        "--no-shadow" if fp_cfg.get("shadow") is False else "--shadow"
-                    )
-                    _r_mid = subprocess.run(
-                        _args_mid, capture_output=True, text=True, timeout=120
-                    )
-                    if _r_mid.returncode != 0:
-                        raise RuntimeError(
-                            f"Middle font generation failed:\n"
-                            f"{_r_mid.stderr}\n{_r_mid.stdout}"
-                        )
-                    self._log(
-                        "info",
-                        f"Middle font (8x12 narrow) generated from {_middle_bdf.name}",
-                    )
-                else:
-                    self._log(
-                        "warning",
-                        f"Middle slot configured but {_middle_bdf} missing — "
-                        f"Middle bin not built",
-                    )
+
+            if legacy:
+                legacy_labels = [l for l, _ in legacy]
+                _run_build(
+                    legacy_labels, [s for _, s in legacy], bdf_path, None, None
+                )
+                self._log(
+                    "info",
+                    f"[font] legacy 槽 {'/'.join(legacy_labels)} <- "
+                    f"{bdf_path.name} (12px 通用几何)",
+                )
 
             self._fonts_from_bdf = True
             self._log("info", f"Font generated from {bdf_path.name} -> {fonts_dir}")
@@ -1964,6 +1992,36 @@ class TranslationEngine:
                     if plain.is_file():
                         shutil.copy2(plain, unsh)
 
+            # ── 1bpp 位流库：由同一批 BDF 导出（2026-09-10 用户拍板）────────
+            # 汉字**实际渲染**读的是 1bpp 库（text_translater.c 的
+            # ADDR_FONT_1BPP_BIG / ADDR_FONT_1BPP_SMALL）。此前它由
+            # scripts/build_font_1bpp.py 手工跑、源是 pokeE bin + 4bpp 阈值派生
+            # ⇒ 改 fonts/default/*.bdf 根本不会反映到游戏里。现在每轮流水线都从
+            # BDF 重新导出，「改 BDF 即生效」的链条才闭合。
+            _extra_bins = fp_cfg.get("extra_bins") or []
+            if any(s.get("bdf") for s in _extra_bins):
+                _args_1bpp = [
+                    sys.executable,
+                    str(_scripts_dir / "build_font_1bpp.py"),
+                    "--game", self.config.game,
+                ]
+                if _charmap.exists():
+                    _args_1bpp += ["--charmap", str(_charmap)]
+                # 只写 work/：fonts.s 的 .incbin 绝对指向这里。
+                # （仓库根 graphic/fonts 已于 2026-09-11 作为僵尸镜像删除。）
+                _args_1bpp += ["--out-dir", str(fonts_dir)]
+                _r_1bpp = subprocess.run(
+                    _args_1bpp, capture_output=True, text=True, timeout=180
+                )
+                if _r_1bpp.returncode != 0:
+                    raise RuntimeError(
+                        f"1bpp font export failed:\n{_r_1bpp.stderr}\n{_r_1bpp.stdout}"
+                    )
+                self._log(
+                    "info",
+                    "[font] 1bpp 库 <- fonts/default/*.bdf 重新导出（改 BDF 即生效）",
+                )
+
             # Patch punctuation glyphs: baseline alignment + no pass-2 right spill.
             # build_chinese_font places all glyphs via bdf_to_ink12 which ignores BDF
             # baseline (bbx_y) and doesn't restrict glyphs to slot cols 0-7, causing
@@ -1980,11 +2038,16 @@ class TranslationEngine:
                             _bdf_punct = _alt
                         else:
                             _bdf_punct = None
+                    _punct_done = 0
                     for _bin in sorted(fonts_dir.glob("*.bin")):
                         if "_unshadow" in _bin.name or "Sym" in _bin.name:
                             continue
-                        if "Middle" in _bin.name:
-                            continue  # 窄字形库：12px 标点基线逻辑不适用
+                        # 固定几何槽：标点已在 BDF 里（按源字形落位），12px 基线重画
+                        # 会破坏几何、毁掉「BDF→bin 逐字节一致」的保证，必须跳过。
+                        if any(
+                            _bin.name.startswith(f"{prefix}{lbl}(") for lbl in fixed_labels
+                        ):
+                            continue
                         _args_patch = [
                             sys.executable,
                             str(_scripts_dir / "patch_font_punct.py"),
@@ -1997,8 +2060,18 @@ class TranslationEngine:
                         if _no_shadow:
                             _args_patch.append("--no-shadow")
                         subprocess.run(_args_patch, capture_output=True, text=True, timeout=60)
-                    self._log("info", "Punctuation glyphs patched (baseline + no right spill)")
-                    if _no_shadow:
+                        _punct_done += 1
+                    if _punct_done:
+                        self._log(
+                            "info",
+                            "Punctuation glyphs patched (baseline + no right spill)",
+                        )
+                    else:
+                        self._log(
+                            "info",
+                            "[font] 全部汉字槽为固定几何 → 跳过标点重画补丁",
+                        )
+                    if _no_shadow and not bdf_driven:
                         from ..font_patch import (
                             patch_primary_missing_glyphs_from_reference,
                             restore_tuned_font_bins_from_reference,

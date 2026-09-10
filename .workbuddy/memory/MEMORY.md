@@ -102,3 +102,30 @@
   → 游标不复位 → 吃到上界 → 整窗不画（全白）。
 - 编译唯一入口 `configs/.../hook/build.bat`（Git Bash 需先 export PATH 到 arm-none-eabi 的 bin）。
 - 打包：根 `build.bat`（meowth full）。click 在用户站点，本会话 shell 看不到，**别再报「缺 click」**。
+
+## 渲染层：换行「半个字」（2026-09-10 修复）
+- 症状：一行**奇数个**汉字，换行后**行尾那个字只剩半个**（野外对话框实机）。
+- 机制：`PrintNextChar_hook.c:print_glyph_px` 在 `phase != 0` 时
+  `t0 = v8_phase_last_tile()`（复用**上一个字的尾列** tile，相邻字共享一列是设计）。
+  12px 步进 ⇒ 行末累计相位 `= 12n mod 8` ⇒ **n 为奇数时 = 4** ⇒ 换行后相位若没归零，
+  下一行首字带 4 起步、整列覆写行尾字的尾列 ⇒ 只剩左半。n 偶 ⇒ 相位 0 ⇒ 走新领分支 ⇒ 安全
+  （这就是「奇数」二字的来由）。
+- 漏检原因：行标识 `tpl^curY^curTileY` 是**间接**检测；官方 FE「先推一个、另一个稍后才变」。
+- 修法（两处，均在渲染层，不碰分配算法）：
+  1. `PrintNextChar_Hook` 在 **FA/FB/FE** 上显式调 `v8_phase_reset()`（tile_alloc.c 新增；
+     只清 `PHASE/PHASE_ROW/LAST_TILE`，**不动分配游标** —— 游标跨行继续推进才不与上一行重叠）。
+  2. `print_glyph_px`：`t1 = chs_claim_tile()` 返 0（v8 队列耗尽）时**必须放弃右半**（`w1 = 0`）
+     —— 否则写 **tile 0**（charBase 首格＝图集/空白槽）+ 表项指向 tile 0 ⇒ 同症状「半个字」。
+     `phase != 0` 且 `last_tile == 0` 同样退回领新对。
+- 推演：`src/util/work/POKEMON_RUBY_AXVJ00/_newline_half_sim.py`（**ALL PASS**）。
+- 🔴 **第三条（实机截图对应的那条，2026-09-10 18:2x 补）**：**等 A 箭头的落列**。
+  引擎 `DrawInitialDownArrow@0x08003F4C` → 箭图形 blit 到**固定** tile `TILE_BASE+0xFE`
+  → `UpdateTilemap(win, t, t+1)`，**表项格由 `WIN_CURSOR_TILE_X` 决定**
+  （0x08003EA4..EAE 实证）。12px 步进 = 1.5 列 ⇒ 行末 `px & 7 != 0` 时
+  `CURSOR_TILE_X = floor(px/8)` **正是行末字的尾列**（相邻字共享尾列）⇒ 箭头表项一盖，
+  行末字只剩左半。实机样例：`「…要好好培\p育！」` 行末 px=116 ⇒ 落 18 列 = 「培」尾列。
+  修法：`PrintNextChar_Hook` 在 **FA/FB** 且 `v8_phase_get(win) & 7 != 0` 时
+  `CURSOR_TILE_X += 1`（= 文档 `FONT_12PX_DRAW.md`「TILE_X = base_tx + ceil(chs_px/8)，
+  勿减 CURSOR_X」）；tm0 另把 `TILE_OFFSET += 2`（该模式箭图形落在 TILE_OFFSET 那个 tile）。
+  **推完不还原**（闪烁箭头每帧按 CURSOR_TILE_X 重画）；`px == 0`（`\n{\p}`）不动，避免双▼。
+  ⚠ 18:14 那版只做了相位复位 + `t1==0` 守卫，**没有**这条 ⇒ 截图症状仍在。

@@ -484,3 +484,13 @@ void v8_phase_set_last_tile(uint16_t tile)
 {
     *(volatile uint16_t *)ADDR_V8_LAST_TILE = tile;
 }
+
+/* 换行（FA/FB/FE）显式复位行相位 —— 见 tile_alloc.h 声明处的推导。
+ * 只清「行内相位 + 行末尾列 tile + 行标识」三件；**不动分配游标**
+ * （游标跨行继续推进，正是为了让下一行的 tile 不与上一行重叠）。 */
+void v8_phase_reset(void)
+{
+    *(volatile uint16_t *)ADDR_V8_PHASE     = 0u;
+    *(volatile uint16_t *)ADDR_V8_PHASE_ROW = 0u;
+    *(volatile uint16_t *)ADDR_V8_LAST_TILE = 0u;
+}

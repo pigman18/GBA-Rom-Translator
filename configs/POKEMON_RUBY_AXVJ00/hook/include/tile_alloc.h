@@ -57,4 +57,16 @@ void v8_phase_advance(uint16_t adv);
 uint16_t v8_phase_last_tile(void);
 void v8_phase_set_last_tile(uint16_t tile);
 
+/* 显式复位行相位（渲染层在换行控制码 FA/FB/FE 上直调）。
+ *
+ * 为什么需要「显式」：v8_phase_get 的行标识（tpl^curY^curTileY）是**间接**检测，
+ * 依赖引擎在取下一行首字之前就把 curY/curTileY 推到位。官方 FE 的时序是
+ * 「先推一个、另一个稍后才变」（见 v8_phase_get 注释），存在窗口；
+ * 一旦漏检，下一行首字会带着上一行的累计相位起步 ——
+ * 累计相位 = 12n mod 8，**n 为奇数时 = 4**，于是走 phase!=0 分支复用
+ * v8_phase_last_tile()（= 上一行行尾字的尾列 tile）⇒ 覆写行尾字右半
+ * ⇒ 实机「奇数个字的一行，换行后行尾只剩半个字」。
+ * 本函数不依赖时序、由渲染层在换行码上直接调用，是那条链的兜底。 */
+void v8_phase_reset(void);
+
 #endif /* TILE_ALLOC_H */

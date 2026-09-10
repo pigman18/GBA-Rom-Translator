@@ -161,6 +161,14 @@ static unsigned print_glyph_px(TextPrinter *win,
             return adv;
     } else {
         t0 = v8_phase_last_tile();
+        if (t0 == 0u) {
+            /* 相位非 0 却没有可复用的尾列（相位残留/跨块边界）⇒ 退回领新对。
+             * **绝不**让 t0 保持 0：tile 0 = charBase 首格，写它是不可逆的破坏
+             * （像素进官方格 + 表项指向 tile 0）。 */
+            t0 = chs_claim_tile(win, tm, 12u, 2u);
+            if (t0 == 0u)
+                return adv;
+        }
     }
     /* tm0 线性：下一列 = t0+2；tm3 网格：下一列 = t0+1；v8 则再 alloc 一对 */
     if (w1 != 0u) {
@@ -168,8 +176,18 @@ static unsigned print_glyph_px(TextPrinter *win,
             t1 = (uint16_t)(t0 + 2u);
         else if (tm == 3u)
             t1 = (uint16_t)(t0 + 1u);
-        else
+        else {
             t1 = chs_claim_tile(win, tm, 12u, 2u);
+            if (t1 == 0u) {
+                /* 尾列领不到（v8 队列耗尽）⇒ **放弃右半**，绝不退化成写 tile 0。
+                 * tile 0 = charBase 首格（图集/空白槽）：写它一箭双雕地坏 ——
+                 *   ① 该字的右半像素落进官方格 ⇒ 破坏别人的字形；
+                 *   ② 紧接着 UpdateTilemap 把 **tile 0** 写进本格表项 ⇒ 该格
+                 *      显示成空白/官方首格内容。
+                 * 实机表现就是「字只剩半个」。宁缺不砸：本字只留左半。 */
+                w1 = 0u;
+            }
+        }
     } else {
         t1 = 0u;
     }
@@ -386,8 +404,42 @@ int PrintNextChar_Hook(TextPrinter *win)
     c = text[idx];
 
     /* FA..FF：Origin 尾调用进 ROM，返回后本函数后续语句不会执行 */
-    if (c >= 0xFAu)
+    if (c >= 0xFAu) {
+        /* ① 等 A 箭头（FA=\l 滚动 / FB=\p 清屏）：把落列推到 ceil(px/8)，
+         * 别让它压掉本行末字的**尾列**。
+         *   · 引擎 DrawInitialDownArrow@0x08003F4C → 箭图形 blit 到固定 tile
+         *     (TILE_BASE+0xFE) → UpdateTilemap(win, t, t+1)：**表项格由
+         *     [WIN_CURSOR_TILE_X] 决定**（0x08003EA4..EAE 实证）。
+         *   · 我们 12px 步进 = 1.5 列 ⇒ 行末常停在半列（px & 7 != 0）。此时
+         *     CURSOR_TILE_X = floor(px/8) 恰好 = 行末字的**尾列**（12px 两段式
+         *     里相邻字共享尾列）⇒ 箭头表项一盖，行末字只剩左半 = 实机「半个字」。
+         *   · 文档 docs/FONT_12PX_DRAW.md：「同句 \p → TILE_X = base_tx +
+         *     ceil(chs_px/8)（勿减 CURSOR_X）」= 半列时推一列到 ceil。
+         *   ⚠ 推完**不还原**：闪烁箭头每帧按 CURSOR_TILE_X 重画，还原会再压回去。
+         *   ⚠ 行内 px == 0（`\n{\p}` 空行）不动 —— 保持 FE 光标，避免双▼。 */
+        if (c == 0xFAu || c == 0xFBu) {
+            uint16_t px = v8_phase_get(win);
+
+            if ((px & 7u) != 0u) {
+                win_set_u8(win, WIN_CURSOR_TILE_X,
+                           (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
+                /* tm0 线性：箭头**图形**落在 TILE_BASE+TILE_OFFSET 那个 tile
+                 * 上（0x08003DF0 分支）——行末同样停在尾列，一并推一列。 */
+                if ((win_u8(win, WIN_TEXTMODE) & 7u) == 0u)
+                    win_set_u16(win, WIN_TILE_OFFSET,
+                                (uint16_t)(win_u16(win, WIN_TILE_OFFSET) + 2u));
+            }
+        }
+        /* ② 换行类控制码 → 显式复位行相位：FE(\n 换行) / FB(\l 滚动) / FA(\p 清屏)。
+         * 不依赖 v8_phase_get 行标识（tpl^curY^curTileY）的**时序** —— 官方 FE
+         * 是「先推一个、另一个稍后才变」，存在漏检窗口。漏检时新行首字会带
+         * 上一行的累计相位起步：累计 = 12n mod 8，**n 为奇数时 = 4** ⇒ 走
+         * phase!=0 分支复用 v8_phase_last_tile()（上一行行尾字的尾列 tile）
+         * ⇒ 覆写行尾字右半 ⇒ 实机「奇数个字的一行，换行后行尾只剩半个字」。 */
+        if (c == 0xFAu || c == 0xFBu || c == 0xFEu)
+            v8_phase_reset();
         return PrintNextChar_Origin(win);
+    }
 
     win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(idx + 1u));
 

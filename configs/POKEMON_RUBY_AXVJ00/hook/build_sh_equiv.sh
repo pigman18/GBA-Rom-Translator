@@ -31,6 +31,7 @@ $CC $CFLAGS  $TEXT/blend_glyph.c                 -o $BUILD/blend_glyph.o
 $CC $CFLAGS  $TEXT/tile_alloc.c                  -o $BUILD/tile_alloc.o
 $CC $CFLAGS  $TEXT/chinese_glyph.c               -o $BUILD/chinese_glyph.o
 $CC $CFLAGS  $TEXT/text_translater.c             -o $BUILD/text_translater.o
+$CC $CFLAGS  $TEXT/scene_cfg.c                   -o $BUILD/scene_cfg.o
 $CC $ASFLAGS $MAP_POPUP/entry.s                  -o $BUILD/MapNamePopup_entry.o
 $CC $CFLAGS  $MAP_POPUP/MapNamePopup_hook.c      -o $BUILD/MapNamePopup_hook.o
 $CC $ASFLAGS $BATTLE/UpdateNickInHealthbox_entry.s -o $BUILD/UpdateNickInHealthbox_entry.o
@@ -48,6 +49,7 @@ $CC $LDFLAGS -o $OUT/game.elf \
   $BUILD/tile_alloc.o \
   $BUILD/chinese_glyph.o \
   $BUILD/text_translater.o \
+  $BUILD/scene_cfg.o \
   $BUILD/MapNamePopup_entry.o \
   $BUILD/MapNamePopup_hook.o \
   $BUILD/UpdateNickInHealthbox_entry.o \

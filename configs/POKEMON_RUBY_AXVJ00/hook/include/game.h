@@ -25,6 +25,7 @@
 #define ADDR_FD_SUBPRINT                   0x08002DB4u
 #define ADDR_FONT_1BPP_BIG                 0x09500000u
 #define ADDR_FONT_1BPP_SMALL               0x09600000u
+#define ADDR_FONT_1BPP_MIDDLE              0x09700000u
 #define ADDR_FONT_CHS_MIDDLE               0x09400000u
 #define ADDR_FONT_CHS_NORMAL               0x09000000u
 #define ADDR_FONT_CHS_SMALL                0x09100000u

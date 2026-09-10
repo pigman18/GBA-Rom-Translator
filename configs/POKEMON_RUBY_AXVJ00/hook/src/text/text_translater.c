@@ -19,7 +19,9 @@
  * 两档制 2.0（2026-09-08「旧 8px→9px、旧 12/16px→11px」）：
  * tm0/1/3 → 大字体 1bpp 11×11（步进 12）；tm2 血条 → 小字体 1bpp 9×9
  * （步进 10；resolve_draw tm2 分支强制，本宏仅表达档位默认）；
- * fontNum==4 / 请求 8px → 同样落 9×9。 */
+ * fontNum==4 / 请求 8px → 同样落 9×9。
+ * ⚠ 这两个宏只是「默认档」；resolve_draw 会先查场景字号表（scene_cfg.c），
+ *   命中即覆盖（如领航员 → Middle 9×11 步进 10）。 */
 #define CHS_PRINT_TM0_FONT_PX   12u
 #define CHS_PRINT_TM1_FONT_PX   12u
 #define CHS_PRINT_TM2_FONT_PX   10u
@@ -28,9 +30,12 @@
 /* 1bpp 字库单元内垂直行偏移（0=单元顶行）。pokeE 原版=大1/小2；
  * 2026-09-08 实机验收用户反馈整体偏高 ~1px → 下移 1 行。要再调改这里。
  * SMALL 作用于 9×9 库全部使用点（tm2 血条名 + fn4 窗口——两档制 2.0 后
- * 血条名也走 1bpp 小库，旧 Small 4bpp 已退役）。 */
+ * 血条名也走 1bpp 小库，旧 Small 4bpp 已退役）。
+ * MIDDLE 与 BIG 同源（都是从 11 行墨迹而来：Normal 11×11@row2 / Middle 9×11@row2）
+ * ⇒ 行偏移与 BIG 一致 = 2，只是墨宽 11→9。 */
 #define CHS_1BPP_ROW_OFF_BIG    2u
 #define CHS_1BPP_ROW_OFF_SMALL  5u
+#define CHS_1BPP_ROW_OFF_MIDDLE 2u
 
 /* 按当前窗口 textMode 取默认字号（tm 仅 0~3 有效，其余回落 12） */
 static uint8_t chs_print_px(TextPrinter *win)
@@ -66,14 +71,14 @@ int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth
      * （例：白天的「白」=0x0036），图鉴说明会把「白」画成「；」。
      * PCS 标点由 DrawHalfWidth 直接读 ADDR_FONT_CHS_SYM，不经本函数。 */
 
-    /* 中文字形两源（两档制 2.0，2026-09-08）：
+    /* 中文字形三源（2026-09-11 加 Middle）：
      *   lib==1 → 1bpp 大库 11×11 位流（pokeE 格式，16B/字）；
-     *   lib==3/2 → 1bpp 小库 9×9 位流（11B/字）。
+     *   lib==3 → 1bpp 小库 9×9 位流（11B/字）；
+     *   lib==2 → 1bpp Middle 9×11 位流（13B/字）—— 窄身全高，场景表指定。
      * 1bpp 位流运行时转换（阴影右下生成），单元布局与旧 4bpp 库一致。
-     * 旧 4bpp 兼容路径（lib0/lib4）已删：resolve_draw 两档制后只输出
-     * BIG/SMALL，此分支不可达（返回 0 = 调用方放弃绘制，宁缺不砸）。
-     * 行偏移（单元内垂直落位）：pokeE 原版=大1/小2；2026-09-08 实机验收用户
-     * 反馈整体偏高 ~1px → 大2/小4（CHS_1BPP_ROW_OFF_* 可再微调）。 */
+     * 旧 4bpp 兼容路径（lib0/lib4）已删：resolve_draw 只输出三档，
+     * 其余分支不可达（返回 0 = 调用方放弃绘制，宁缺不砸）。
+     * 行偏移（单元内垂直落位）：BIG/MIDDLE=2、SMALL=5（见 CHS_1BPP_ROW_OFF_*）。 */
     if (font_lib == CHS_FONT_LIB_1BPP_BIG) {
         chs_cell_from_1bpp(
             (const uint8_t *)ADDR_FONT_1BPP_BIG
@@ -82,7 +87,15 @@ int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth
         *outWidth = 8u;
         return 1;
     }
-    if (font_lib == CHS_FONT_LIB_1BPP_SMALL || font_lib == CHS_FONT_LIB_MIDDLE) {
+    if (font_lib == CHS_FONT_LIB_MIDDLE) {
+        chs_cell_from_1bpp(
+            (const uint8_t *)ADDR_FONT_1BPP_MIDDLE
+                + ((uint32_t)((uint16_t)code & 0x1FFFu)) * 13u,
+            9u, 11u, CHS_1BPP_ROW_OFF_MIDDLE, out128);
+        *outWidth = 8u;
+        return 1;
+    }
+    if (font_lib == CHS_FONT_LIB_1BPP_SMALL) {
         chs_cell_from_1bpp(
             (const uint8_t *)ADDR_FONT_1BPP_SMALL
                 + ((uint32_t)((uint16_t)code & 0x1FFFu)) * 11u,

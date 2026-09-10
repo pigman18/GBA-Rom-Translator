@@ -52,6 +52,10 @@ echo === Compiling text\text_translater.c ===
 %CC% %CFLAGS% %TEXT%\text_translater.c -o %BUILD%\text_translater.o
 if errorlevel 1 exit /b 1
 
+echo === Compiling text\scene_cfg.c ===
+%CC% %CFLAGS% %TEXT%\scene_cfg.c -o %BUILD%\scene_cfg.o
+if errorlevel 1 exit /b 1
+
 echo === Assembling map_name_popup\entry.s ===
 %CC% %ASFLAGS% %MAP_POPUP%\entry.s -o %BUILD%\MapNamePopup_entry.o
 if errorlevel 1 exit /b 1
@@ -93,6 +97,7 @@ echo === Linking game.elf ===
   %BUILD%/tile_alloc.o ^
   %BUILD%/chinese_glyph.o ^
   %BUILD%/text_translater.o ^
+  %BUILD%/scene_cfg.o ^
   %BUILD%/MapNamePopup_entry.o ^
   %BUILD%/MapNamePopup_hook.o ^
   %BUILD%/UpdateNickInHealthbox_entry.o ^

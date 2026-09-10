@@ -3,7 +3,8 @@
  *
  * 统一模型（2026-09-04）：
  *   1) 非 FA..FF → TranslateHandleChar / DrawGlyph（翻译通路）
- *   2) resolve(tm, fn) → font_px：fn4 / tm2 → 强制 8px；场景表 / 默认 12
+ *   2) resolve(tm, fn, 场景表) → 档位：tm2/fn4/req8 → 小库；场景表 → Middle/小库；
+ *      否则 → 大库（11×11 步进 12）
  *   3) 取字 → g128 → chs_emit：按 tm 落点
  *        tm2     写 win[0x20] 缓冲，列步进 +0x40（官方血条再 CpuSet→OBJ）
  *        tm0     官方线性 TILE_BASE+TILE_OFFSET + UTM（不同 BASE 区互不冲 VRAM）
@@ -16,19 +17,24 @@
 #include "text.h"
 #include "blend_glyph.h"
 #include "tile_alloc.h"
+#include "scene_cfg.h"
 
-/* ---- resolve：tm + fn + 请求步进 → 步进/墨宽/字形源 ----
- * 两档制 2.0（2026-09-08 用户拍板「旧 8px→9px、旧 12/16px→11px」）：
- *   tm2（血条缓冲直绘）        → 1bpp 小库 9×9，步进 10、墨宽 9；
- *   fn4 / 请求 8px             → 1bpp 小库 9×9，步进 10、墨宽 9；
- *   其余                       → 1bpp 大库 11×11，步进 12、墨宽 11。
- * 旧 Small 4bpp（lib4）退役，字库层只剩 pokeE 双库。 */
+/* ---- resolve：tm + fn + 场景表 + 请求步进 → 步进/墨宽/字形源 ----
+ * 档位解析优先级（高 → 低）：
+ *   ① tm2（血条缓冲直绘）/ fn4 / 请求 8px  → 1bpp 小库 9×9，步进 10、墨宽 9；
+ *   ② 场景字号表（scene_cfg.c，键 tpl+win，curX 分区）：
+ *        V6_FONT_PX_MIDDLE → 1bpp Middle 9×11，步进 10、墨宽 9（窄身全高，如领航员）
+ *        V6_FONT_PX_SMALL  → 1bpp 小库 9×9，步进 10、墨宽 9
+ *   ③ 默认 → 1bpp 大库 11×11，步进 12、墨宽 11。
+ * 场景表**不覆盖** ①（血条/强制小字体是硬约束）。
+ * 历史：2026-09-08「两档制 2.0」曾把场景表整体退役；2026-09-11 重建为档位选择器。 */
 static void resolve_draw(TextPrinter *win, uint8_t req_px, uint8_t *tm_out,
                          uint8_t *fn_out, uint8_t *adv_out, uint8_t *ink_out,
                          uint8_t *lib_out)
 {
     uint8_t tm = win_u8(win, WIN_TEXTMODE) & 7u;
     uint8_t fn = win_u8(win, WIN_FONTNUM_REAL);
+    uint8_t scene_px;
 
     if (fn > 6u)
         fn = 3u;
@@ -41,6 +47,26 @@ static void resolve_draw(TextPrinter *win, uint8_t req_px, uint8_t *tm_out,
         *lib_out = CHS_FONT_LIB_1BPP_SMALL;
         return;
     }
+
+    /* 场景字号表：tpl 取 win[0x00] 模板指针，win 取打印器自身地址，
+     * 分区键取 WIN_CURSOR_X（整个字符串的起始列，按串恒定）。 */
+    scene_px = v6_scene_font(win_u32(win, WIN_TEMPLATE),
+                             (uint32_t)(uintptr_t)win,
+                             win_u8(win, WIN_CURSOR_X));
+
+    if (scene_px == V6_FONT_PX_MIDDLE) {
+        *adv_out = 10u;
+        *ink_out = 9u;
+        *lib_out = CHS_FONT_LIB_MIDDLE;
+        return;
+    }
+    if (scene_px == V6_FONT_PX_SMALL) {
+        *adv_out = 10u;
+        *ink_out = 9u;
+        *lib_out = CHS_FONT_LIB_1BPP_SMALL;
+        return;
+    }
+
     *adv_out = 12u;
     *ink_out = 11u;
     *lib_out = CHS_FONT_LIB_1BPP_BIG;

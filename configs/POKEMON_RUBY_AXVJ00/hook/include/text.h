@@ -33,10 +33,10 @@ struct TextGlyph {
 };
 
 /* ---- 字形取字（text_translater.c 提供，PrintNextChar 消费）----
- * font_lib: 1=1bpp 大库 11×11（默认，pokeE 位流运行时转换），
- *           3=1bpp 小库 9×9（tm2 血条名 + fn4 强制小字体），
- *           0=按 fontNum 选 4bpp 旧库（兼容保留，当前无路由），
- *           2=Middle / 4=旧 Small 4bpp（均已退役，2 按 3 处理） */
+ * font_lib: 1=1bpp 大库 11×11（默认 12px 档，pokeE 位流运行时转换），
+ *           3=1bpp 小库 9×9（tm2 血条名 + fn4 强制小字体，10px 档），
+ *           2=1bpp Middle 9×11（窄身全高，步进 10；场景表指定，如领航员），
+ *           0=旧 4bpp 按 fontNum 选库（已退役，当前不可达 ⇒ 返回 0 放弃绘制）。 */
 #define CHS_FONT_LIB_DEFAULT   0u
 #define CHS_FONT_LIB_MIDDLE    2u
 #define CHS_FONT_LIB_1BPP_BIG  1u
@@ -52,11 +52,11 @@ void chs_cell_from_1bpp(const uint8_t *bits, uint32_t width, uint32_t rows,
 
 /* ---- 引擎渲染件（PrintNextChar_hook.c 提供，text_translate.c 消费）---- */
 
-/* v6 统一渲染入口：GetGlyph 解压 → 按 textMode/two档 落址。
+/* v6 统一渲染入口：GetGlyph 解压 → 按 textMode/档位 落址。
  * fontSize=调用方请求步进（翻译层按 tm 传 CHS_PRINT_TMx_FONT_PX；0=无请求回落 12）。
- * 两档制 2.0（2026-09-08「旧 8px→9px、旧 12/16px→11px」）：
- * 默认 1bpp 大库 11×11（步进 12）；tm2 血条名 / fontNum==4 / 请求 8px
- * → 1bpp 小库 9×9（步进 10）。旧 4bpp 字库渲染路径全部退役。 */
+ * 档位解析顺序（resolve_draw）：tm2 血条 / fontNum==4 / 请求 8px → 小库 9×9（步进 10）；
+ * 否则查场景字号表（scene_cfg.c，tpl+win+curX 分区）→ Middle 9×11 / 小库；
+ * 都未命中 → 大库 11×11（步进 12）。旧 4bpp 字库渲染路径全部退役。 */
 void chs_print(TextPrinter *win, uint32_t code, uint8_t fontSize);
 
 /* PCS 单字节（半角）统一渲染入口。

@@ -21,6 +21,14 @@
       "ink_fixed": "9x9+0+5",
       "glyph_count": 7168,
       "bytes_per_glyph": 11
+    },
+    {
+      "label": "Middle1Bpp",
+      "addr": 158334976,
+      "bdf": "fonts/default/Middle.bdf",
+      "ink_fixed": "9x11+0+2",
+      "glyph_count": 7168,
+      "bytes_per_glyph": 13
     }
   ],
   "font_slots": [

@@ -1,0 +1,11 @@
+{
+  "tag": "ss1_menu",
+  "state": "C:\\code\\GBA-Rom-Translator\\roms\\outputs\\POKEMON_RUBY_AXVJ00_translated.ss1",
+  "schedule": "START:180-240",
+  "frames": 540,
+  "redirect": true,
+  "key_writes": 2,
+  "seconds": 9.0,
+  "screenshot": "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_ss1_menu.png",
+  "capture": "OK C:\\code\\GBA-Rom-Translator\\.tmp\\emu_ss1_menu.png 736x542 @977,246"
+}

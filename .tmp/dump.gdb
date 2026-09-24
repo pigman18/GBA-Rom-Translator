@@ -1,0 +1,20 @@
+set confirm off
+set pagination off
+set height 0
+target remote 127.0.0.1:2345
+printf "connected\n"
+printf "PC=0x%08x SP=0x%08x LR=0x%08x\n", $pc, $sp, $lr
+dump binary memory .tmp/gdb_vram.bin 0x06000000 0x06018000
+printf "vram done\n"
+dump binary memory .tmp/gdb_pal.bin 0x05000000 0x05000400
+printf "pal done\n"
+dump binary memory .tmp/gdb_oam.bin 0x07000000 0x07000400
+printf "oam done\n"
+dump binary memory .tmp/gdb_io.bin 0x04000000 0x04000060
+printf "io done\n"
+dump binary memory .tmp/gdb_iwram.bin 0x03000000 0x03008000
+printf "iwram done\n"
+dump binary memory .tmp/gdb_ewram.bin 0x02000000 0x02040000
+printf "ewram done\n"
+detach
+quit

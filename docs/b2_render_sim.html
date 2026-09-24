@@ -1,0 +1,306 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width,initial-scale=1">
+<title>AXVJ00 · 各方案渲染效果对比</title>
+<style>
+  :root{
+    --bg:#12141a; --panel:#1b1e26; --panel2:#22262f; --line:#333845;
+    --tx:#e6e8ee; --tx2:#9aa3b2; --tx3:#6b7280;
+    --ok:#4ade80; --bad:#f87171; --warn:#fbbf24; --acc:#60a5fa;
+  }
+  *{box-sizing:border-box}
+  body{margin:0;background:var(--bg);color:var(--tx);
+       font:14px/1.6 -apple-system,"Segoe UI","Microsoft YaHei",sans-serif;
+       padding:26px 18px 56px}
+  .wrap{max-width:1180px;margin:0 auto}
+  h1{font-size:21px;margin:0 0 4px;font-weight:650}
+  .sub{color:var(--tx2);font-size:12.5px;margin-bottom:20px}
+  .legend{display:flex;gap:16px;font-size:12px;color:var(--tx2);
+          margin-bottom:14px;flex-wrap:wrap;align-items:center}
+  .sw{width:11px;height:11px;border-radius:2px;display:inline-block;
+      margin-right:5px;vertical-align:-1px}
+  .card{background:var(--panel);border:1px solid var(--line);border-radius:10px;
+        padding:16px 18px;margin-bottom:16px}
+  .card h2{font-size:15.5px;margin:0 0 3px;font-weight:620;display:flex;
+           align-items:center;gap:9px;flex-wrap:wrap}
+  .tag{font-size:11px;padding:2px 8px;border-radius:20px;font-weight:600;
+       white-space:nowrap;letter-spacing:.3px}
+  .t-ok{background:rgba(74,222,128,.15);color:var(--ok)}
+  .t-bad{background:rgba(248,113,113,.18);color:var(--bad)}
+  .t-warn{background:rgba(251,191,36,.15);color:var(--warn)}
+  .t-info{background:rgba(96,165,250,.15);color:var(--acc)}
+  .t-gray{background:rgba(107,114,128,.2);color:var(--tx2)}
+  .desc{color:var(--tx2);font-size:12.5px;margin:5px 0 12px}
+  .row{display:flex;gap:14px;flex-wrap:wrap;align-items:flex-start}
+  .cellbox{background:var(--panel2);border:1px solid var(--line);border-radius:7px;
+           padding:10px 11px}
+  .cellbox .lbl{font-size:11px;color:var(--tx2);margin-bottom:6px;
+                white-space:nowrap}
+  .screen{background:#f8f8f0;border-radius:3px;display:inline-block;line-height:0;
+          box-shadow:0 2px 8px rgba(0,0,0,.4)}
+  canvas{display:block;image-rendering:pixelated;border-radius:3px}
+  .verdict{margin-top:11px;font-size:13px;font-weight:640}
+  .v-ok{color:var(--ok)} .v-bad{color:var(--bad)} .v-warn{color:var(--warn)}
+  .v-gray{color:var(--tx2)}
+  .foot{color:var(--tx3);font-size:11.5px;margin-top:22px;
+        padding-top:12px;border-top:1px solid var(--line);line-height:1.8}
+  code{background:#0d0f14;padding:1px 5px;border-radius:3px;
+       font-family:ui-monospace,Consolas,monospace;font-size:11.5px;color:var(--acc)}
+</style>
+</head>
+<body>
+<div class="wrap">
+  <h1>AXVJ00 · 各方案渲染效果对比</h1>
+  <div class="sub">
+    同一批真实中文字模（<code>fonts/default/Normal.bdf</code>，ink 11×11），
+    在各方案下的最终画面。<b>纯静态推演，未运行模拟器。</b>
+  </div>
+
+  <div class="legend">
+    <span><span class="sw" style="background:#f8f8f0;border:1px solid #ccc"></span>背景</span>
+    <span><span class="sw" style="background:#1a1a1a"></span>正确字形</span>
+    <span><span class="sw" style="background:#c0392b"></span>错位 / 丢失</span>
+    <span><span class="sw" style="background:#2980b9"></span>tile 边界</span>
+  </div>
+
+  <div id="cards"></div>
+
+  <div class="foot">
+    字模数据：<code>fonts/default/Normal.bdf</code>（6807 字形，ink 11×11+0+2）<br>
+    打包算法：<code>scripts/build_font_1bpp.py::pack_1bpp</code><br>
+    官方渲染语义：<code>roms/origin/POKEMON_RUBY_AXVJ00.gba</code> 逐指令反汇编
+    （<code>DrawGlyphTiles 0x08003630</code> / <code>CopyGlyph1bppTo4bpp 0x08003830</code> /
+    <code>UpdateTilemap 0x080036DC</code> / <code>GGTP 0x08003730</code>）
+  </div>
+</div>
+
+<script>
+// ===== 真实数据：BDF 16x16 cell + pack_1bpp 打出的 16 字节（禁止手抄）=====
+const DATA = {"\u554a": {"slot": 256,  "rom": [29,254,134,208,221,219,107,109,125,232,225,16,34,4,67,128], "bdf": [0,0,7648,62496,46112,48032,46752,46752,63392,7200,4128,4128,4320,0,0,0]},
+              "\u7684": {"slot": 779,  "rom": [17,4,35,239,197,24,195,20,126,76,73,136,63,6,39,0],            "bdf": [0,0,4352,8448,64480,35360,35872,35360,63776,35104,34848,63520,35264,0,0,0]},
+              "\u4e00": {"slot": 3851, "rom": [0,0,0,0,0,0,5,255,192,0,0,0,0,0,0,0],                          "bdf": [0,0,0,0,0,0,64,65504,0,0,0,0,0,0,0,0]},
+              "\u4e86": {"slot": 2206, "rom": [127,192,16,4,3,0,64,8,1,0,32,4,0,128,112,0],                    "bdf": [0,0,32704,128,256,1536,1024,1024,1024,1024,1024,1024,7168,0,0,0]}};
+
+const GEO = { W:11, H:11, X0:0, Y0:2 };
+const ORDER = ["\u554a","\u7684","\u4e00","\u4e86"];   // 啊 的 一 了
+const PX = 2.6;
+
+// ---------- 取真实 ink（11x11，从 16x16 cell 的 [0,11)x[2,13)）----------
+function trueInk(bdf){
+  const g=[];
+  for(let y=0;y<GEO.H;y++){
+    const v=(bdf[GEO.Y0+y]||0)&0xFFFF;
+    const r=[];
+    for(let x=0;x<GEO.W;x++) r.push(((v>>(15-(GEO.X0+x)))&1)?'#':'.');
+    g.push(r);
+  }
+  return g;
+}
+
+// ---------- 方案1：官方路径直读 ROM（每行 1 字节 = 8 位）----------
+function plan1(rom){
+  const g=[];
+  for(let y=0;y<8;y++){
+    const b=(rom[y]||0)&0xFF, r=[];
+    for(let x=0;x<8;x++) r.push(((b>>(7-x))&1)?'#':'.');
+    g.push(r);
+  }
+  return g;
+}
+
+// ---------- 方案3：每行 2 字节（11位+5位填充），官方只画前 8 列 ----------
+function plan3(rom){
+  // 重打包：把 121 位流按 11 位/行 重排成 22 字节（每行 2 字节）
+  const rows=[];
+  for(let y=0;y<11;y++){
+    let v=0;
+    for(let x=0;x<11;x++){
+      const bit=y*11+x;
+      if((rom[bit>>3]>>(7-(bit&7)))&1) v |= (1<<(15-x));
+    }
+    rows.push(v);
+  }
+  // 官方读法：每行取 1 字节（高 8 位）-> 只剩 8 列，第 9..11 列丢
+  const g=[];
+  for(let y=0;y<8;y++){
+    const b=(rows[y]>>8)&0xFF, r=[];
+    for(let x=0;x<8;x++) r.push(((b>>(7-x))&1)?'#':'.');
+    g.push(r);
+  }
+  return g;
+}
+
+// ---------- 方案4：自写 blit 完整展开 11 列（2 tile 宽）----------
+function plan4(rom){
+  const g=[];
+  for(let y=0;y<11;y++){
+    const r=[];
+    for(let x=0;x<11;x++){
+      const bit=y*11+x;
+      r.push(((rom[bit>>3]>>(7-(bit&7)))&1)?'#':'.');
+    }
+    g.push(r);
+  }
+  return g;
+}
+
+// ---------- 方案5：8 宽 x 16 高（纵向 2 tile），压到 8 列 ----------
+function plan5(bdf){
+  const g=[];
+  for(let y=0;y<16;y++){
+    const v=(bdf[y]||0)&0xFFFF, r=[];
+    // 取 x=0..7 共 8 列；x=8..10 若有 ink 标红（表示被丢）
+    for(let x=0;x<8;x++) r.push(((v>>(15-x))&1)?'#':'.');
+    for(let x=0;x<8;x++){
+      if(!((v>>(15-x))&1) && (((v>>(15-(x+8)))&1))) r[x]='R';
+    }
+    g.push(r);
+  }
+  return g;
+}
+
+// ---------- 方案2：Wokann 16x16（横向 2 tile，日版无写右列）----------
+function plan2(bdf){
+  const g=[];
+  for(let y=0;y<11;y++){
+    const v=(bdf[2+y]||0)&0xFFFF, r=[];
+    for(let x=0;x<16;x++){
+      const on=((v>>(15-x))&1);
+      // 右半（x>=8）在日版会丢失
+      if(x>=8) r.push(on?'R':'.');
+      else r.push(on?'#':'.');
+    }
+    g.push(r);
+  }
+  return g;
+}
+
+// ---------- 绘图 ----------
+function draw(grid, scale, opt){
+  opt = opt || {};
+  const h=grid.length, w=grid[0].length;
+  const cv=document.createElement('canvas');
+  cv.width = Math.ceil(w*scale)+2;
+  cv.height= Math.ceil(h*scale)+2;
+  const ctx=cv.getContext('2d');
+  ctx.fillStyle='#f8f8f0'; ctx.fillRect(0,0,cv.width,cv.height);
+  if(opt.tileW){
+    ctx.strokeStyle='rgba(41,128,185,.85)'; ctx.lineWidth=1;
+    for(let x=opt.tileW;x<w;x+=opt.tileW){
+      const px=Math.round(1+x*scale)+.5;
+      ctx.beginPath(); ctx.moveTo(px,1); ctx.lineTo(px,cv.height-1); ctx.stroke();
+    }
+    if(opt.tileH){
+      ctx.strokeStyle='rgba(41,128,185,.5)';
+      for(let y=opt.tileH;y<h;y+=opt.tileH){
+        const py=Math.round(1+y*scale)+.5;
+        ctx.beginPath(); ctx.moveTo(1,py); ctx.lineTo(cv.width-1,py); ctx.stroke();
+      }
+    }
+  }
+  for(let y=0;y<h;y++) for(let x=0;x<w;x++){
+    const c=grid[y][x];
+    if(c==='.') continue;
+    ctx.fillStyle = (c==='R') ? '#c0392b' : '#1a1a1a';
+    ctx.fillRect(Math.round(1+x*scale), Math.round(1+y*scale),
+                 Math.ceil(scale), Math.ceil(scale));
+  }
+  return cv;
+}
+
+function box(label, grid, scale, opt){
+  const d=document.createElement('div'); d.className='cellbox';
+  const l=document.createElement('div'); l.className='lbl'; l.textContent=label;
+  d.appendChild(l);
+  const s=document.createElement('div'); s.className='screen';
+  s.appendChild(draw(grid, scale, opt));
+  d.appendChild(s);
+  return d;
+}
+
+// ---------- 方案定义 ----------
+const PLANS = [
+  { n:'方案 1', title:'官方路径直读（不改任何东西）', tag:'t-bad', tv:'✗ 全字散架',
+    vc:'v-bad',
+    desc:'字库按 121 位连续流打包，官方 blit 按每行 1 字节读 ⇒ 每行错位 3 位。',
+    gen: ch => plan1(DATA[ch].rom), opt:{tileW:8, tileH:8}, note:'格子 8×8' },
+
+  { n:'方案 A', title:'钩 GGTP 改指针', tag:'t-bad', tv:'✗ 与方案 1 完全相同',
+    vc:'v-bad',
+    desc:'改的是字模指针（从哪取字），不改「怎么读」。位流步长照旧 ⇒ 画面一模一样。',
+    gen: ch => plan1(DATA[ch].rom), opt:{tileW:8, tileH:8}, note:'格子 8×8' },
+
+  { n:'方案 3', title:'改成每行 2 字节（11 位 + 5 位填充）', tag:'t-warn', tv:'△ 纵向对齐了，右 3 列仍丢',
+    vc:'v-warn',
+    desc:'步长修好 ⇒ 每行正确。但官方画布只给 8 列，第 9～11 列装不下。',
+    gen: ch => plan3(DATA[ch].rom), opt:{tileW:8, tileH:8}, note:'格子 8×8' },
+
+  { n:'方案 5', title:'8 宽 × 16 高（用满官方 2 个纵向 tile）', tag:'t-warn',
+    tv:'△ 纵向够用，横向压到 8 列（红=被丢）', vc:'v-warn',
+    desc:'官方原生就是 8 宽 × 16 高（与假名同构）。零代码改动可走通，代价是字形要压到 8 列。',
+    gen: ch => plan5(DATA[ch].bdf), opt:{tileW:8, tileH:8}, note:'格子 8×16' },
+
+  { n:'方案 2', title:'Wokann 16×16（想一字占 2 列）', tag:'t-bad',
+    tv:'✗ 右半丢失（红）', vc:'v-bad',
+    desc:'日版 <UpdateTilemap> 只写 2 个 tilemap 项，没有美版「写右列」分支 ⇒ 结构上不支持一字占 2 列。',
+    gen: ch => plan2(DATA[ch].bdf), opt:{tileW:8, tileH:8}, note:'格子 16×11' },
+
+  { n:'方案 4', title:'自写 blit，完整展开 11 列（2 tile 宽）', tag:'t-ok',
+    tv:'✓ 唯一不失真的路', vc:'v-ok',
+    desc:'自己读位流、自己写 VRAM、自己写 tilemap。代价：要改 4 处（blit/步进/tilemap/列计数）。',
+    gen: ch => plan4(DATA[ch].rom), opt:{tileW:8, tileH:8}, note:'格子 11×11' },
+];
+
+// ---------- 渲染 ----------
+const host = document.getElementById('cards');
+PLANS.forEach((p, i) => {
+  const card = document.createElement('div'); card.className='card';
+  const h2 = document.createElement('h2');
+  h2.innerHTML = `${p.n} · ${p.title} <span class="tag ${p.tag}">${p.note}</span>`;
+  card.appendChild(h2);
+  const d = document.createElement('div'); d.className='desc';
+  d.textContent = p.desc;
+  card.appendChild(d);
+
+  const row = document.createElement('div'); row.className='row';
+
+  // 参考：真值
+  if(i === 0){
+    ORDER.forEach(ch => row.appendChild(
+      box(`${ch} — 真值 11×11`, trueInk(DATA[ch].bdf), PX)
+    ));
+  } else {
+    ORDER.forEach(ch => row.appendChild(
+      box(`${ch}`, p.gen(ch), PX, p.opt)
+    ));
+  }
+  card.appendChild(row);
+
+  const v = document.createElement('div');
+  v.className = 'verdict ' + p.vc;
+  v.textContent = p.tv;
+  card.appendChild(v);
+
+  host.appendChild(card);
+});
+
+// ---------- 自证（控制台）----------
+(function(){
+  let ok = true, msg = [];
+  ORDER.forEach(ch => {
+    // pack_1bpp 往返：ROM 位流 -> 11x11 -> 应等于 BDF 真值
+    const t = trueInk(DATA[ch].bdf);
+    const u = plan4(DATA[ch].rom);
+    let same = true;
+    for(let y=0;y<GEO.H;y++) for(let x=0;x<GEO.W;x++)
+      if(t[y][x] !== u[y][x]) same = false;
+    msg.push(`${ch}:${same?'OK':'BAD'}`);
+    if(!same) ok = false;
+  });
+  console.log('[自证] pack/unpack 往返 =', msg.join(' '), '| 全部通过 =', ok);
+})();
+</script>
+</body>
+</html>

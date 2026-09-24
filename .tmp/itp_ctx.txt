@@ -1,0 +1,662 @@
+目标 0x08002D1C 调用点 = 60 个（前 8 条指令现场）
+
+--- 0x0802B8FE ---
+     0x0802B8EE: ldr	r0, [pc, #32]	@ (0x802b910)
+     0x0802B8F0: strh	r1, [r0, #0]
+     0x0802B8F2: ldr	r0, [pc, #32]	@ (0x802b914)
+     0x0802B8F4: ldr	r1, [pc, #32]	@ (0x802b918)
+     0x0802B8F6: movs	r2, #15
+     0x0802B8F8: str	r2, [sp, #0]
+     0x0802B8FA: movs	r2, #144	@ 0x90
+     0x0802B8FC: movs	r3, #2
+     0x0802B8FE: bl	0x8002d1c  <== BL
+
+--- 0x0802D76A ---
+     0x0802D758: ldrh	r0, [r0, #0]
+     0x0802D75A: bl	0x811b9c0
+     0x0802D75E: ldr	r0, [pc, #52]	@ (0x802d794)
+     0x0802D760: ldr	r1, [pc, #52]	@ (0x802d798)
+     0x0802D762: movs	r2, #15
+     0x0802D764: str	r2, [sp, #0]
+     0x0802D766: movs	r2, #144	@ 0x90
+     0x0802D768: movs	r3, #2
+     0x0802D76A: bl	0x8002d1c  <== BL
+
+--- 0x080327D2 ---
+     0x080327C0: ldrh	r0, [r0, #0]
+     0x080327C2: bl	0x811b9c0
+     0x080327C6: ldr	r0, [pc, #52]	@ (0x80327fc)
+     0x080327C8: ldr	r1, [pc, #52]	@ (0x8032800)
+     0x080327CA: movs	r2, #15
+     0x080327CC: str	r2, [sp, #0]
+     0x080327CE: movs	r2, #144	@ 0x90
+     0x080327D0: movs	r3, #2
+     0x080327D2: bl	0x8002d1c  <== BL
+
+--- 0x080370FE ---
+     0x080370EC: ldrh	r0, [r0, #0]
+     0x080370EE: bl	0x811b9c0
+     0x080370F2: ldr	r0, [pc, #52]	@ (0x8037128)
+     0x080370F4: ldr	r1, [pc, #52]	@ (0x803712c)
+     0x080370F6: movs	r2, #15
+     0x080370F8: str	r2, [sp, #0]
+     0x080370FA: movs	r2, #144	@ 0x90
+     0x080370FC: movs	r3, #2
+     0x080370FE: bl	0x8002d1c  <== BL
+
+--- 0x08040908 ---
+     0x080408F8: ldr	r2, [r0, #0]
+     0x080408FA: adds	r0, r2, #0
+     0x080408FC: adds	r0, #8
+     0x080408FE: adds	r2, #44	@ 0x2c
+     0x08040900: ldrb	r2, [r2, #0]
+     0x08040902: movs	r3, #15
+     0x08040904: str	r3, [sp, #0]
+     0x08040906: movs	r3, #3
+     0x08040908: bl	0x8002d1c  <== BL
+
+--- 0x0804E9CA ---
+     0x0804E9BA: ldrh	r1, [r1, #0]
+     0x0804E9BC: adds	r4, r4, r1
+     0x0804E9BE: lsls	r4, r4, #16
+     0x0804E9C0: lsrs	r4, r4, #16
+     0x0804E9C2: str	r3, [sp, #0]
+     0x0804E9C4: adds	r1, r6, #0
+     0x0804E9C6: adds	r2, r4, #0
+     0x0804E9C8: adds	r3, r5, #0
+     0x0804E9CA: bl	0x8002d1c  <== BL
+
+--- 0x08061D9C ---
+     0x08061D8A: bl	0x8004530
+     0x08061D8E: ldr	r0, [pc, #32]	@ (0x8061db0)
+     0x08061D90: ldr	r1, [pc, #32]	@ (0x8061db4)
+     0x08061D92: ldrh	r2, [r1, #0]
+     0x08061D94: movs	r1, #15
+     0x08061D96: str	r1, [sp, #0]
+     0x08061D98: adds	r1, r4, #0
+     0x08061D9A: movs	r3, #4
+     0x08061D9C: bl	0x8002d1c  <== BL
+
+--- 0x08061DCA ---
+     0x08061DBA: sub	sp, #4
+     0x08061DBC: ldr	r0, [pc, #24]	@ (0x8061dd8)
+     0x08061DBE: ldr	r1, [pc, #28]	@ (0x8061ddc)
+     0x08061DC0: ldr	r2, [pc, #28]	@ (0x8061de0)
+     0x08061DC2: ldrh	r2, [r2, #0]
+     0x08061DC4: movs	r3, #15
+     0x08061DC6: str	r3, [sp, #0]
+     0x08061DC8: movs	r3, #4
+     0x08061DCA: bl	0x8002d1c  <== BL
+
+--- 0x08062390 ---
+     0x08062380: ldr	r2, [pc, #24]	@ (0x806239c)
+     0x08062382: ldrh	r2, [r2, #0]
+     0x08062384: adds	r2, #14
+     0x08062386: lsls	r2, r2, #16
+     0x08062388: lsrs	r2, r2, #16
+     0x0806238A: movs	r3, #15
+     0x0806238C: str	r3, [sp, #0]
+     0x0806238E: movs	r3, #4
+     0x08062390: bl	0x8002d1c  <== BL
+
+--- 0x0806F34A ---
+     0x0806F33A: lsrs	r2, r2, #24
+     0x0806F33C: ldr	r0, [pc, #24]	@ (0x806f358)
+     0x0806F33E: ldr	r0, [r0, #0]
+     0x0806F340: ldr	r1, [pc, #24]	@ (0x806f35c)
+     0x0806F342: ldrh	r4, [r1, #0]
+     0x0806F344: str	r2, [sp, #0]
+     0x0806F346: adds	r1, r5, #0
+     0x0806F348: adds	r2, r4, #0
+     0x0806F34A: bl	0x8002d1c  <== BL
+
+--- 0x0806F374 ---
+     0x0806F364: adds	r1, r0, #0
+     0x0806F366: ldr	r0, [pc, #24]	@ (0x806f380)
+     0x0806F368: ldr	r0, [r0, #0]
+     0x0806F36A: ldr	r2, [pc, #24]	@ (0x806f384)
+     0x0806F36C: ldrh	r2, [r2, #0]
+     0x0806F36E: movs	r3, #15
+     0x0806F370: str	r3, [sp, #0]
+     0x0806F372: movs	r3, #4
+     0x0806F374: bl	0x8002d1c  <== BL
+
+--- 0x080A7634 ---
+     0x080A7622: bl	0x8004530
+     0x080A7626: ldr	r0, [pc, #52]	@ (0x80a765c)
+     0x080A7628: movs	r2, #188	@ 0xbc
+     0x080A762A: lsls	r2, r2, #2
+     0x080A762C: movs	r1, #15
+     0x080A762E: str	r1, [sp, #0]
+     0x080A7630: adds	r1, r4, #0
+     0x080A7632: movs	r3, #1
+     0x080A7634: bl	0x8002d1c  <== BL
+
+--- 0x080A8148 ---
+     0x080A8136: bl	0x8004530
+     0x080A813A: ldr	r0, [pc, #52]	@ (0x80a8170)
+     0x080A813C: movs	r2, #188	@ 0xbc
+     0x080A813E: lsls	r2, r2, #2
+     0x080A8140: movs	r1, #15
+     0x080A8142: str	r1, [sp, #0]
+     0x080A8144: adds	r1, r4, #0
+     0x080A8146: movs	r3, #1
+     0x080A8148: bl	0x8002d1c  <== BL
+
+--- 0x080A88B2 ---
+     0x080A88A0: bl	0x8004530
+     0x080A88A4: ldr	r0, [pc, #52]	@ (0x80a88dc)
+     0x080A88A6: movs	r2, #188	@ 0xbc
+     0x080A88A8: lsls	r2, r2, #2
+     0x080A88AA: movs	r1, #15
+     0x080A88AC: str	r1, [sp, #0]
+     0x080A88AE: adds	r1, r4, #0
+     0x080A88B0: movs	r3, #1
+     0x080A88B2: bl	0x8002d1c  <== BL
+
+--- 0x080A8982 ---
+     0x080A8972: bne.n	0x80a8990
+     0x080A8974: ldr	r0, [pc, #16]	@ (0x80a8988)
+     0x080A8976: ldr	r1, [pc, #20]	@ (0x80a898c)
+     0x080A8978: movs	r2, #188	@ 0xbc
+     0x080A897A: lsls	r2, r2, #2
+     0x080A897C: movs	r3, #15
+     0x080A897E: str	r3, [sp, #0]
+     0x080A8980: movs	r3, #1
+     0x080A8982: bl	0x8002d1c  <== BL
+
+--- 0x080A899E ---
+     0x080A898E: lsrs	r2, r7, #32
+     0x080A8990: ldr	r0, [pc, #40]	@ (0x80a89bc)
+     0x080A8992: ldr	r1, [pc, #44]	@ (0x80a89c0)
+     0x080A8994: movs	r2, #188	@ 0xbc
+     0x080A8996: lsls	r2, r2, #2
+     0x080A8998: movs	r3, #15
+     0x080A899A: str	r3, [sp, #0]
+     0x080A899C: movs	r3, #1
+     0x080A899E: bl	0x8002d1c  <== BL
+
+--- 0x080A89F0 ---
+     0x080A89DE: bl	0x8004530
+     0x080A89E2: ldr	r0, [pc, #60]	@ (0x80a8a20)
+     0x080A89E4: movs	r2, #188	@ 0xbc
+     0x080A89E6: lsls	r2, r2, #2
+     0x080A89E8: movs	r1, #15
+     0x080A89EA: str	r1, [sp, #0]
+     0x080A89EC: adds	r1, r4, #0
+     0x080A89EE: movs	r3, #1
+     0x080A89F0: bl	0x8002d1c  <== BL
+
+--- 0x080A8B2C ---
+     0x080A8B1A: bl	0x8004530
+     0x080A8B1E: ldr	r0, [pc, #64]	@ (0x80a8b60)
+     0x080A8B20: movs	r2, #188	@ 0xbc
+     0x080A8B22: lsls	r2, r2, #2
+     0x080A8B24: movs	r1, #15
+     0x080A8B26: str	r1, [sp, #0]
+     0x080A8B28: adds	r1, r4, #0
+     0x080A8B2A: movs	r3, #1
+     0x080A8B2C: bl	0x8002d1c  <== BL
+
+--- 0x080A8D5E ---
+     0x080A8D4C: bl	0x8004530
+     0x080A8D50: ldr	r0, [pc, #52]	@ (0x80a8d88)
+     0x080A8D52: ldr	r1, [pc, #44]	@ (0x80a8d80)
+     0x080A8D54: movs	r2, #188	@ 0xbc
+     0x080A8D56: lsls	r2, r2, #2
+     0x080A8D58: movs	r3, #15
+     0x080A8D5A: str	r3, [sp, #0]
+     0x080A8D5C: movs	r3, #1
+     0x080A8D5E: bl	0x8002d1c  <== BL
+
+--- 0x080A900E ---
+     0x080A8FFC: bl	0x8004530
+     0x080A9000: ldr	r0, [pc, #64]	@ (0x80a9044)
+     0x080A9002: movs	r2, #188	@ 0xbc
+     0x080A9004: lsls	r2, r2, #2
+     0x080A9006: movs	r1, #15
+     0x080A9008: str	r1, [sp, #0]
+     0x080A900A: adds	r1, r4, #0
+     0x080A900C: movs	r3, #1
+     0x080A900E: bl	0x8002d1c  <== BL
+
+--- 0x080A9078 ---
+     0x080A9066: bl	0x8004530
+     0x080A906A: movs	r2, #188	@ 0xbc
+     0x080A906C: lsls	r2, r2, #2
+     0x080A906E: movs	r0, #15
+     0x080A9070: str	r0, [sp, #0]
+     0x080A9072: adds	r0, r5, #0
+     0x080A9074: adds	r1, r4, #0
+     0x080A9076: movs	r3, #1
+     0x080A9078: bl	0x8002d1c  <== BL
+
+--- 0x080A9118 ---
+     0x080A9106: bl	0x8004530
+     0x080A910A: ldr	r0, [pc, #64]	@ (0x80a914c)
+     0x080A910C: movs	r2, #188	@ 0xbc
+     0x080A910E: lsls	r2, r2, #2
+     0x080A9110: movs	r1, #15
+     0x080A9112: str	r1, [sp, #0]
+     0x080A9114: adds	r1, r4, #0
+     0x080A9116: movs	r3, #1
+     0x080A9118: bl	0x8002d1c  <== BL
+
+--- 0x080A928C ---
+     0x080A927A: bl	0x8004530
+     0x080A927E: ldr	r0, [pc, #52]	@ (0x80a92b4)
+     0x080A9280: movs	r2, #188	@ 0xbc
+     0x080A9282: lsls	r2, r2, #2
+     0x080A9284: movs	r1, #15
+     0x080A9286: str	r1, [sp, #0]
+     0x080A9288: adds	r1, r4, #0
+     0x080A928A: movs	r3, #1
+     0x080A928C: bl	0x8002d1c  <== BL
+
+--- 0x080A964E ---
+     0x080A963C: bl	0x8004530
+     0x080A9640: ldr	r0, [pc, #60]	@ (0x80a9680)
+     0x080A9642: movs	r2, #188	@ 0xbc
+     0x080A9644: lsls	r2, r2, #2
+     0x080A9646: movs	r1, #15
+     0x080A9648: str	r1, [sp, #0]
+     0x080A964A: adds	r1, r6, #0
+     0x080A964C: movs	r3, #1
+     0x080A964E: bl	0x8002d1c  <== BL
+
+--- 0x080A9884 ---
+     0x080A9872: bl	0x8004530
+     0x080A9876: ldr	r0, [pc, #76]	@ (0x80a98c4)
+     0x080A9878: movs	r2, #188	@ 0xbc
+     0x080A987A: lsls	r2, r2, #2
+     0x080A987C: movs	r1, #15
+     0x080A987E: str	r1, [sp, #0]
+     0x080A9880: adds	r1, r4, #0
+     0x080A9882: movs	r3, #1
+     0x080A9884: bl	0x8002d1c  <== BL
+
+--- 0x080ACE9A ---
+     0x080ACE88: bl	0x80aaa84
+     0x080ACE8C: ldr	r0, [pc, #40]	@ (0x80aceb8)
+     0x080ACE8E: movs	r2, #188	@ 0xbc
+     0x080ACE90: lsls	r2, r2, #2
+     0x080ACE92: movs	r1, #15
+     0x080ACE94: str	r1, [sp, #0]
+     0x080ACE96: adds	r1, r4, #0
+     0x080ACE98: movs	r3, #1
+     0x080ACE9A: bl	0x8002d1c  <== BL
+
+--- 0x080F321A ---
+     0x080F3208: movs	r1, #6
+     0x080F320A: bl	0x8002c28
+     0x080F320E: ldr	r0, [r4, #0]
+     0x080F3210: ldr	r1, [pc, #36]	@ (0x80f3238)
+     0x080F3212: movs	r2, #15
+     0x080F3214: str	r2, [sp, #0]
+     0x080F3216: movs	r2, #2
+     0x080F3218: movs	r3, #4
+     0x080F321A: bl	0x8002d1c  <== BL
+
+--- 0x0810D45A ---
+     0x0810D448: adds	r0, r4, #0
+     0x0810D44A: bl	0x8004530
+     0x0810D44E: ldr	r0, [pc, #40]	@ (0x810d478)
+     0x0810D450: movs	r1, #15
+     0x0810D452: str	r1, [sp, #0]
+     0x0810D454: adds	r1, r4, #0
+     0x0810D456: movs	r2, #144	@ 0x90
+     0x0810D458: movs	r3, #2
+     0x0810D45A: bl	0x8002d1c  <== BL
+
+--- 0x0810D6CC ---
+     0x0810D6BA: adds	r0, r4, #0
+     0x0810D6BC: bl	0x8004530
+     0x0810D6C0: ldr	r0, [pc, #116]	@ (0x810d738)
+     0x0810D6C2: movs	r1, #15
+     0x0810D6C4: str	r1, [sp, #0]
+     0x0810D6C6: adds	r1, r4, #0
+     0x0810D6C8: movs	r2, #144	@ 0x90
+     0x0810D6CA: movs	r3, #2
+     0x0810D6CC: bl	0x8002d1c  <== BL
+
+--- 0x0810D8BE ---
+     0x0810D8AC: adds	r0, r4, #0
+     0x0810D8AE: bl	0x8004530
+     0x0810D8B2: ldr	r0, [pc, #40]	@ (0x810d8dc)
+     0x0810D8B4: movs	r1, #15
+     0x0810D8B6: str	r1, [sp, #0]
+     0x0810D8B8: adds	r1, r4, #0
+     0x0810D8BA: movs	r2, #144	@ 0x90
+     0x0810D8BC: movs	r3, #2
+     0x0810D8BE: bl	0x8002d1c  <== BL
+
+--- 0x0810D918 ---
+     0x0810D906: ldr	r0, [r0, #12]
+     0x0810D908: bl	0x811be84
+     0x0810D90C: ldr	r1, [pc, #48]	@ (0x810d940)
+     0x0810D90E: movs	r0, #15
+     0x0810D910: str	r0, [sp, #0]
+     0x0810D912: adds	r0, r4, #0
+     0x0810D914: movs	r2, #144	@ 0x90
+     0x0810D916: movs	r3, #2
+     0x0810D918: bl	0x8002d1c  <== BL
+
+--- 0x0810DA02 ---
+     0x0810D9F0: ldr	r0, [r0, #16]
+     0x0810D9F2: bl	0x811be84
+     0x0810D9F6: ldr	r1, [pc, #40]	@ (0x810da20)
+     0x0810D9F8: movs	r0, #15
+     0x0810D9FA: str	r0, [sp, #0]
+     0x0810D9FC: adds	r0, r4, #0
+     0x0810D9FE: movs	r2, #144	@ 0x90
+     0x0810DA00: movs	r3, #2
+     0x0810DA02: bl	0x8002d1c  <== BL
+
+--- 0x0810DA52 ---
+     0x0810DA40: ldr	r0, [r0, #20]
+     0x0810DA42: bl	0x811be84
+     0x0810DA46: ldr	r1, [pc, #40]	@ (0x810da70)
+     0x0810DA48: movs	r0, #15
+     0x0810DA4A: str	r0, [sp, #0]
+     0x0810DA4C: adds	r0, r4, #0
+     0x0810DA4E: movs	r2, #144	@ 0x90
+     0x0810DA50: movs	r3, #2
+     0x0810DA52: bl	0x8002d1c  <== BL
+
+--- 0x0810DAA0 ---
+     0x0810DA8E: ldr	r0, [r0, #24]
+     0x0810DA90: bl	0x811be84
+     0x0810DA94: ldr	r1, [pc, #136]	@ (0x810db20)
+     0x0810DA96: movs	r0, #15
+     0x0810DA98: str	r0, [sp, #0]
+     0x0810DA9A: adds	r0, r4, #0
+     0x0810DA9C: movs	r2, #144	@ 0x90
+     0x0810DA9E: movs	r3, #2
+     0x0810DAA0: bl	0x8002d1c  <== BL
+
+--- 0x0810DBB2 ---
+     0x0810DBA0: ldr	r0, [r0, #0]
+     0x0810DBA2: bl	0x811be84
+     0x0810DBA6: ldr	r0, [pc, #56]	@ (0x810dbe0)
+     0x0810DBA8: ldr	r1, [pc, #56]	@ (0x810dbe4)
+     0x0810DBAA: movs	r2, #15
+     0x0810DBAC: str	r2, [sp, #0]
+     0x0810DBAE: movs	r2, #144	@ 0x90
+     0x0810DBB0: movs	r3, #2
+     0x0810DBB2: bl	0x8002d1c  <== BL
+
+--- 0x0810DC4A ---
+     0x0810DC38: ldr	r0, [r0, #0]
+     0x0810DC3A: bl	0x811be84
+     0x0810DC3E: ldr	r0, [pc, #48]	@ (0x810dc70)
+     0x0810DC40: ldr	r1, [pc, #48]	@ (0x810dc74)
+     0x0810DC42: movs	r2, #15
+     0x0810DC44: str	r2, [sp, #0]
+     0x0810DC46: movs	r2, #144	@ 0x90
+     0x0810DC48: movs	r3, #2
+     0x0810DC4A: bl	0x8002d1c  <== BL
+
+--- 0x0810DD38 ---
+     0x0810DD26: ldr	r0, [r0, #0]
+     0x0810DD28: bl	0x811be84
+     0x0810DD2C: ldr	r0, [pc, #36]	@ (0x810dd54)
+     0x0810DD2E: ldr	r1, [pc, #40]	@ (0x810dd58)
+     0x0810DD30: movs	r2, #15
+     0x0810DD32: str	r2, [sp, #0]
+     0x0810DD34: movs	r2, #144	@ 0x90
+     0x0810DD36: movs	r3, #2
+     0x0810DD38: bl	0x8002d1c  <== BL
+
+--- 0x0810DDA6 ---
+     0x0810DD94: ldr	r0, [r0, #0]
+     0x0810DD96: bl	0x811be84
+     0x0810DD9A: ldr	r0, [pc, #44]	@ (0x810ddc8)
+     0x0810DD9C: ldr	r1, [pc, #44]	@ (0x810ddcc)
+     0x0810DD9E: movs	r2, #15
+     0x0810DDA0: str	r2, [sp, #0]
+     0x0810DDA2: movs	r2, #144	@ 0x90
+     0x0810DDA4: movs	r3, #2
+     0x0810DDA6: bl	0x8002d1c  <== BL
+
+--- 0x0810DDFE ---
+     0x0810DDEC: ldr	r0, [r0, #28]
+     0x0810DDEE: bl	0x811be84
+     0x0810DDF2: ldr	r1, [pc, #40]	@ (0x810de1c)
+     0x0810DDF4: movs	r0, #15
+     0x0810DDF6: str	r0, [sp, #0]
+     0x0810DDF8: adds	r0, r4, #0
+     0x0810DDFA: movs	r2, #144	@ 0x90
+     0x0810DDFC: movs	r3, #2
+     0x0810DDFE: bl	0x8002d1c  <== BL
+
+--- 0x0810DE50 ---
+     0x0810DE3E: ldr	r0, [r0, #0]
+     0x0810DE40: bl	0x811be84
+     0x0810DE44: ldr	r1, [pc, #36]	@ (0x810de6c)
+     0x0810DE46: movs	r0, #15
+     0x0810DE48: str	r0, [sp, #0]
+     0x0810DE4A: adds	r0, r4, #0
+     0x0810DE4C: movs	r2, #144	@ 0x90
+     0x0810DE4E: movs	r3, #2
+     0x0810DE50: bl	0x8002d1c  <== BL
+
+--- 0x0810DE88 ---
+     0x0810DE76: ldr	r0, [r0, #32]
+     0x0810DE78: bl	0x811be84
+     0x0810DE7C: ldr	r0, [pc, #40]	@ (0x810dea8)
+     0x0810DE7E: ldr	r1, [pc, #44]	@ (0x810deac)
+     0x0810DE80: movs	r2, #15
+     0x0810DE82: str	r2, [sp, #0]
+     0x0810DE84: movs	r2, #144	@ 0x90
+     0x0810DE86: movs	r3, #2
+     0x0810DE88: bl	0x8002d1c  <== BL
+
+--- 0x0810DEC8 ---
+     0x0810DEB6: ldr	r0, [r0, #36]	@ 0x24
+     0x0810DEB8: bl	0x811be84
+     0x0810DEBC: ldr	r0, [pc, #32]	@ (0x810dee0)
+     0x0810DEBE: ldr	r1, [pc, #36]	@ (0x810dee4)
+     0x0810DEC0: movs	r2, #15
+     0x0810DEC2: str	r2, [sp, #0]
+     0x0810DEC4: movs	r2, #144	@ 0x90
+     0x0810DEC6: movs	r3, #2
+     0x0810DEC8: bl	0x8002d1c  <== BL
+
+--- 0x0810DFD4 ---
+     0x0810DFC4: ldr	r1, [r0, #0]
+     0x0810DFC6: adds	r0, r1, #4
+     0x0810DFC8: adds	r1, #40	@ 0x28
+     0x0810DFCA: ldrb	r2, [r1, #0]
+     0x0810DFCC: movs	r1, #15
+     0x0810DFCE: str	r1, [sp, #0]
+     0x0810DFD0: adds	r1, r4, #0
+     0x0810DFD2: movs	r3, #2
+     0x0810DFD4: bl	0x8002d1c  <== BL
+
+--- 0x0810E26E ---
+     0x0810E25E: ldr	r1, [r0, #0]
+     0x0810E260: adds	r0, r1, #4
+     0x0810E262: adds	r1, #40	@ 0x28
+     0x0810E264: ldrb	r2, [r1, #0]
+     0x0810E266: movs	r1, #15
+     0x0810E268: str	r1, [sp, #0]
+     0x0810E26A: adds	r1, r4, #0
+     0x0810E26C: movs	r3, #2
+     0x0810E26E: bl	0x8002d1c  <== BL
+
+--- 0x0810E388 ---
+     0x0810E378: ldr	r2, [r0, #0]
+     0x0810E37A: adds	r0, r2, #4
+     0x0810E37C: ldr	r1, [pc, #32]	@ (0x810e3a0)
+     0x0810E37E: adds	r2, #40	@ 0x28
+     0x0810E380: ldrb	r2, [r2, #0]
+     0x0810E382: movs	r3, #15
+     0x0810E384: str	r3, [sp, #0]
+     0x0810E386: movs	r3, #2
+     0x0810E388: bl	0x8002d1c  <== BL
+
+--- 0x0810E406 ---
+     0x0810E3F6: ldr	r2, [r4, #0]
+     0x0810E3F8: adds	r0, r2, #4
+     0x0810E3FA: ldr	r1, [pc, #48]	@ (0x810e42c)
+     0x0810E3FC: adds	r2, #40	@ 0x28
+     0x0810E3FE: ldrb	r2, [r2, #0]
+     0x0810E400: movs	r3, #15
+     0x0810E402: str	r3, [sp, #0]
+     0x0810E404: movs	r3, #2
+     0x0810E406: bl	0x8002d1c  <== BL
+
+--- 0x0810E4FC ---
+     0x0810E4EC: ldr	r2, [r4, #0]
+     0x0810E4EE: adds	r0, r2, #4
+     0x0810E4F0: ldr	r1, [pc, #36]	@ (0x810e518)
+     0x0810E4F2: adds	r2, #40	@ 0x28
+     0x0810E4F4: ldrb	r2, [r2, #0]
+     0x0810E4F6: movs	r3, #15
+     0x0810E4F8: str	r3, [sp, #0]
+     0x0810E4FA: movs	r3, #2
+     0x0810E4FC: bl	0x8002d1c  <== BL
+
+--- 0x0810E550 ---
+     0x0810E540: ldr	r2, [r4, #0]
+     0x0810E542: adds	r0, r2, #4
+     0x0810E544: ldr	r1, [pc, #36]	@ (0x810e56c)
+     0x0810E546: adds	r2, #40	@ 0x28
+     0x0810E548: ldrb	r2, [r2, #0]
+     0x0810E54A: movs	r3, #15
+     0x0810E54C: str	r3, [sp, #0]
+     0x0810E54E: movs	r3, #2
+     0x0810E550: bl	0x8002d1c  <== BL
+
+--- 0x0810E5A2 ---
+     0x0810E592: ldr	r2, [r4, #0]
+     0x0810E594: adds	r0, r2, #4
+     0x0810E596: ldr	r1, [pc, #152]	@ (0x810e630)
+     0x0810E598: adds	r2, #40	@ 0x28
+     0x0810E59A: ldrb	r2, [r2, #0]
+     0x0810E59C: movs	r3, #15
+     0x0810E59E: str	r3, [sp, #0]
+     0x0810E5A0: movs	r3, #2
+     0x0810E5A2: bl	0x8002d1c  <== BL
+
+--- 0x0810E6CA ---
+     0x0810E6BA: ldr	r2, [r4, #0]
+     0x0810E6BC: adds	r0, r2, #4
+     0x0810E6BE: ldr	r1, [pc, #60]	@ (0x810e6fc)
+     0x0810E6C0: adds	r2, #40	@ 0x28
+     0x0810E6C2: ldrb	r2, [r2, #0]
+     0x0810E6C4: movs	r3, #15
+     0x0810E6C6: str	r3, [sp, #0]
+     0x0810E6C8: movs	r3, #2
+     0x0810E6CA: bl	0x8002d1c  <== BL
+
+--- 0x0810E76A ---
+     0x0810E75A: ldr	r2, [r4, #0]
+     0x0810E75C: adds	r0, r2, #4
+     0x0810E75E: ldr	r1, [pc, #52]	@ (0x810e794)
+     0x0810E760: adds	r2, #40	@ 0x28
+     0x0810E762: ldrb	r2, [r2, #0]
+     0x0810E764: movs	r3, #15
+     0x0810E766: str	r3, [sp, #0]
+     0x0810E768: movs	r3, #2
+     0x0810E76A: bl	0x8002d1c  <== BL
+
+--- 0x0810E862 ---
+     0x0810E852: ldr	r2, [r0, #0]
+     0x0810E854: adds	r0, r2, #4
+     0x0810E856: ldr	r1, [pc, #44]	@ (0x810e884)
+     0x0810E858: adds	r2, #40	@ 0x28
+     0x0810E85A: ldrb	r2, [r2, #0]
+     0x0810E85C: movs	r3, #15
+     0x0810E85E: str	r3, [sp, #0]
+     0x0810E860: movs	r3, #2
+     0x0810E862: bl	0x8002d1c  <== BL
+
+--- 0x0810E8D8 ---
+     0x0810E8C8: ldr	r2, [r0, #0]
+     0x0810E8CA: adds	r0, r2, #4
+     0x0810E8CC: ldr	r1, [pc, #44]	@ (0x810e8fc)
+     0x0810E8CE: adds	r2, #40	@ 0x28
+     0x0810E8D0: ldrb	r2, [r2, #0]
+     0x0810E8D2: movs	r3, #15
+     0x0810E8D4: str	r3, [sp, #0]
+     0x0810E8D6: movs	r3, #2
+     0x0810E8D8: bl	0x8002d1c  <== BL
+
+--- 0x0810E934 ---
+     0x0810E924: ldr	r2, [r4, #0]
+     0x0810E926: adds	r0, r2, #4
+     0x0810E928: ldr	r1, [pc, #36]	@ (0x810e950)
+     0x0810E92A: adds	r2, #40	@ 0x28
+     0x0810E92C: ldrb	r2, [r2, #0]
+     0x0810E92E: movs	r3, #15
+     0x0810E930: str	r3, [sp, #0]
+     0x0810E932: movs	r3, #2
+     0x0810E934: bl	0x8002d1c  <== BL
+
+--- 0x0810E98A ---
+     0x0810E97A: ldr	r2, [r4, #0]
+     0x0810E97C: adds	r0, r2, #4
+     0x0810E97E: ldr	r1, [pc, #36]	@ (0x810e9a4)
+     0x0810E980: adds	r2, #40	@ 0x28
+     0x0810E982: ldrb	r2, [r2, #0]
+     0x0810E984: movs	r4, #15
+     0x0810E986: str	r4, [sp, #0]
+     0x0810E988: movs	r3, #2
+     0x0810E98A: bl	0x8002d1c  <== BL
+
+--- 0x0810E9C6 ---
+     0x0810E9B6: ldr	r2, [r0, #0]
+     0x0810E9B8: adds	r0, r2, #4
+     0x0810E9BA: ldr	r1, [pc, #48]	@ (0x810e9ec)
+     0x0810E9BC: adds	r2, #40	@ 0x28
+     0x0810E9BE: ldrb	r2, [r2, #0]
+     0x0810E9C0: movs	r3, #15
+     0x0810E9C2: str	r3, [sp, #0]
+     0x0810E9C4: movs	r3, #2
+     0x0810E9C6: bl	0x8002d1c  <== BL
+
+--- 0x0810EA0E ---
+     0x0810E9FE: ldr	r2, [r0, #0]
+     0x0810EA00: adds	r0, r2, #4
+     0x0810EA02: ldr	r1, [pc, #40]	@ (0x810ea2c)
+     0x0810EA04: adds	r2, #40	@ 0x28
+     0x0810EA06: ldrb	r2, [r2, #0]
+     0x0810EA08: movs	r3, #15
+     0x0810EA0A: str	r3, [sp, #0]
+     0x0810EA0C: movs	r3, #2
+     0x0810EA0E: bl	0x8002d1c  <== BL
+
+--- 0x0811AFD6 ---
+     0x0811AFC4: ldrh	r0, [r0, #0]
+     0x0811AFC6: bl	0x811b9c0
+     0x0811AFCA: ldr	r0, [pc, #52]	@ (0x811b000)
+     0x0811AFCC: ldr	r1, [pc, #52]	@ (0x811b004)
+     0x0811AFCE: movs	r2, #15
+     0x0811AFD0: str	r2, [sp, #0]
+     0x0811AFD2: movs	r2, #144	@ 0x90
+     0x0811AFD4: movs	r3, #2
+     0x0811AFD6: bl	0x8002d1c  <== BL
+
+--- 0x081268EA ---
+     0x081268D8: ldrh	r0, [r0, #0]
+     0x081268DA: bl	0x811b9c0
+     0x081268DE: ldr	r0, [pc, #52]	@ (0x8126914)
+     0x081268E0: ldr	r1, [pc, #52]	@ (0x8126918)
+     0x081268E2: movs	r2, #15
+     0x081268E4: str	r2, [sp, #0]
+     0x081268E6: movs	r2, #144	@ 0x90
+     0x081268E8: movs	r3, #2
+     0x081268EA: bl	0x8002d1c  <== BL
+
+--- 0x08133ED6 ---
+     0x08133EC4: ldrh	r0, [r0, #0]
+     0x08133EC6: bl	0x811b9c0
+     0x08133ECA: ldr	r0, [pc, #52]	@ (0x8133f00)
+     0x08133ECC: ldr	r1, [pc, #52]	@ (0x8133f04)
+     0x08133ECE: movs	r2, #15
+     0x08133ED0: str	r2, [sp, #0]
+     0x08133ED2: movs	r2, #144	@ 0x90
+     0x08133ED4: movs	r3, #2
+     0x08133ED6: bl	0x8002d1c  <== BL
+

@@ -1,0 +1,16 @@
+{
+  "tag": "optp",
+  "state": "C:\\code\\GBA-Rom-Translator\\roms\\outputs\\POKEMON_RUBY_AXVJ00_translated.ss1",
+  "schedule": "START:180-220,DOWN:400-440,A:600-640",
+  "frames": 1400,
+  "redirect": true,
+  "shots": [
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_optp_t12.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_optp_t14.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_optp_t17.png"
+  ],
+  "key_writes": 6,
+  "seconds": 23.33,
+  "screenshot": "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_optp.png",
+  "capture": "OK C:\\code\\GBA-Rom-Translator\\.tmp\\emu_optp.png 736x542 @977,246"
+}

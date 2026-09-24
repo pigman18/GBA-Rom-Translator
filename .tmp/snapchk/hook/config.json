@@ -1,0 +1,5 @@
+{
+  "expands_rom": true,
+  "expansion_start": "0x01200000",
+  "font_boundary": "0x01FD3000"
+}

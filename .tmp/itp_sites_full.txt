@@ -1,0 +1,483 @@
+目标 0x08002D1C 全 ROM 调用点 = 60 个
+
+call site     写入 r2 的指令                           地址
+------------------------------------------------------------------------------
+0x802b8fe     movs	r2, #144	@ 0x90                0x802b8fa
+0x802d76a     movs	r2, #144	@ 0x90                0x802d766
+0x80327d2     movs	r2, #144	@ 0x90                0x80327ce
+0x80370fe     movs	r2, #144	@ 0x90                0x80370fa
+0x8040908     adds	r2, #44	@ 0x2c                 0x80408fe
+0x804e9ca     adds	r2, r4, #0                     0x804e9c6
+0x8061d9c     (回溯失败)                              -
+0x8061dca     ldr	r2, [pc, #28]	@ (0x8061de0)     0x8061dc0
+0x8062390     adds	r2, #14                        0x8062384
+0x806f34a     adds	r2, r4, #0                     0x806f348
+0x806f374     ldr	r2, [pc, #24]	@ (0x806f384)     0x806f36a
+0x80a7634     movs	r2, #188	@ 0xbc                0x80a7628
+0x80a8148     movs	r2, #188	@ 0xbc                0x80a813c
+0x80a88b2     movs	r2, #188	@ 0xbc                0x80a88a6
+0x80a8982     movs	r2, #188	@ 0xbc                0x80a8978
+0x80a899e     movs	r2, #188	@ 0xbc                0x80a8994
+0x80a89f0     movs	r2, #188	@ 0xbc                0x80a89e4
+0x80a8b2c     movs	r2, #188	@ 0xbc                0x80a8b20
+0x80a8d5e     movs	r2, #188	@ 0xbc                0x80a8d54
+0x80a900e     movs	r2, #188	@ 0xbc                0x80a9002
+0x80a9078     movs	r2, #188	@ 0xbc                0x80a906a
+0x80a9118     movs	r2, #188	@ 0xbc                0x80a910c
+0x80a928c     movs	r2, #188	@ 0xbc                0x80a9280
+0x80a964e     movs	r2, #188	@ 0xbc                0x80a9642
+0x80a9884     movs	r2, #188	@ 0xbc                0x80a9878
+0x80ace9a     movs	r2, #188	@ 0xbc                0x80ace8e
+0x80f321a     movs	r2, #2                         0x80f3216
+0x810d45a     movs	r2, #144	@ 0x90                0x810d456
+0x810d6cc     movs	r2, #144	@ 0x90                0x810d6c8
+0x810d8be     movs	r2, #144	@ 0x90                0x810d8ba
+0x810d918     movs	r2, #144	@ 0x90                0x810d914
+0x810da02     movs	r2, #144	@ 0x90                0x810d9fe
+0x810da52     movs	r2, #144	@ 0x90                0x810da4e
+0x810daa0     movs	r2, #144	@ 0x90                0x810da9c
+0x810dbb2     movs	r2, #144	@ 0x90                0x810dbae
+0x810dc4a     movs	r2, #144	@ 0x90                0x810dc46
+0x810dd38     movs	r2, #144	@ 0x90                0x810dd34
+0x810dda6     movs	r2, #144	@ 0x90                0x810dda2
+0x810ddfe     movs	r2, #144	@ 0x90                0x810ddfa
+0x810de50     movs	r2, #144	@ 0x90                0x810de4c
+0x810de88     movs	r2, #144	@ 0x90                0x810de84
+0x810dec8     movs	r2, #144	@ 0x90                0x810dec4
+0x810dfd4     (回溯失败)                              -
+0x810e26e     (回溯失败)                              -
+0x810e388     adds	r2, #40	@ 0x28                 0x810e37e
+0x810e406     adds	r2, #40	@ 0x28                 0x810e3fc
+0x810e4fc     adds	r2, #40	@ 0x28                 0x810e4f2
+0x810e550     adds	r2, #40	@ 0x28                 0x810e546
+0x810e5a2     adds	r2, #40	@ 0x28                 0x810e598
+0x810e6ca     adds	r2, #40	@ 0x28                 0x810e6c0
+0x810e76a     adds	r2, #40	@ 0x28                 0x810e760
+0x810e862     adds	r2, #40	@ 0x28                 0x810e858
+0x810e8d8     adds	r2, #40	@ 0x28                 0x810e8ce
+0x810e934     adds	r2, #40	@ 0x28                 0x810e92a
+0x810e98a     adds	r2, #40	@ 0x28                 0x810e980
+0x810e9c6     adds	r2, #40	@ 0x28                 0x810e9bc
+0x810ea0e     adds	r2, #40	@ 0x28                 0x810ea04
+0x811afd6     movs	r2, #144	@ 0x90                0x811afd2
+0x81268ea     movs	r2, #144	@ 0x90                0x81268e6
+0x8133ed6     movs	r2, #144	@ 0x90                0x8133ed2
+
+== 展开：每个调用点的上下文（含回溯到的 r2 赋值）==
+--- call site 0x0802B8FE ---
+      0x0802B8F8: 9200                       str	r2, [sp, #0]
+      0x0802B8FA: 2290                       movs	r2, #144	@ 0x90
+      0x0802B8FC: 2302                       movs	r3, #2
+      0x0802B8FE: f7d7 fa0d                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x0802B8FA)
+
+--- call site 0x0802D76A ---
+      0x0802D764: 9200                       str	r2, [sp, #0]
+      0x0802D766: 2290                       movs	r2, #144	@ 0x90
+      0x0802D768: 2302                       movs	r3, #2
+      0x0802D76A: f7d5 fad7                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x0802D766)
+
+--- call site 0x080327D2 ---
+      0x080327CC: 9200                       str	r2, [sp, #0]
+      0x080327CE: 2290                       movs	r2, #144	@ 0x90
+      0x080327D0: 2302                       movs	r3, #2
+      0x080327D2: f7d0 faa3                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x080327CE)
+
+--- call site 0x080370FE ---
+      0x080370F8: 9200                       str	r2, [sp, #0]
+      0x080370FA: 2290                       movs	r2, #144	@ 0x90
+      0x080370FC: 2302                       movs	r3, #2
+      0x080370FE: f7cb fe0d                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x080370FA)
+
+--- call site 0x08040908 ---
+      0x08040902: 230f                       movs	r3, #15
+      0x08040904: 9300                       str	r3, [sp, #0]
+      0x08040906: 2303                       movs	r3, #3
+      0x08040908: f7c2 fa08                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = adds	r2, #44	@ 0x2c   (0x080408FE)
+
+--- call site 0x0804E9CA ---
+      0x0804E9C4: 1c31                       adds	r1, r6, #0
+      0x0804E9C6: 1c22                       adds	r2, r4, #0
+      0x0804E9C8: 1c2b                       adds	r3, r5, #0
+      0x0804E9CA: f7b4 f9a7                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = adds	r2, r4, #0   (0x0804E9C6)
+
+--- call site 0x08061D9C ---
+      0x08061D96: 9100                       str	r1, [sp, #0]
+      0x08061D98: 1c21                       adds	r1, r4, #0
+      0x08061D9A: 2304                       movs	r3, #4
+      0x08061D9C: f7a0 ffbe                  bl	0x8002d1c  <== BL InitTextPrinter
+
+--- call site 0x08061DCA ---
+      0x08061DC4: 230f                       movs	r3, #15
+      0x08061DC6: 9300                       str	r3, [sp, #0]
+      0x08061DC8: 2304                       movs	r3, #4
+      0x08061DCA: f7a0 ffa7                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = ldr	r2, [pc, #28]	@ (0x8061de0)   (0x08061DC0)
+
+--- call site 0x08062390 ---
+      0x0806238A: 230f                       movs	r3, #15
+      0x0806238C: 9300                       str	r3, [sp, #0]
+      0x0806238E: 2304                       movs	r3, #4
+      0x08062390: f7a0 fcc4                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = adds	r2, #14   (0x08062384)
+
+--- call site 0x0806F34A ---
+      0x0806F344: 9200                       str	r2, [sp, #0]
+      0x0806F346: 1c29                       adds	r1, r5, #0
+      0x0806F348: 1c22                       adds	r2, r4, #0
+      0x0806F34A: f793 fce7                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = adds	r2, r4, #0   (0x0806F348)
+
+--- call site 0x0806F374 ---
+      0x0806F36E: 230f                       movs	r3, #15
+      0x0806F370: 9300                       str	r3, [sp, #0]
+      0x0806F372: 2304                       movs	r3, #4
+      0x0806F374: f793 fcd2                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = ldr	r2, [pc, #24]	@ (0x806f384)   (0x0806F36A)
+
+--- call site 0x080A7634 ---
+      0x080A762E: 9100                       str	r1, [sp, #0]
+      0x080A7630: 1c21                       adds	r1, r4, #0
+      0x080A7632: 2301                       movs	r3, #1
+      0x080A7634: f75b fb72                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #188	@ 0xbc   (0x080A7628)
+
+--- call site 0x080A8148 ---
+      0x080A8142: 9100                       str	r1, [sp, #0]
+      0x080A8144: 1c21                       adds	r1, r4, #0
+      0x080A8146: 2301                       movs	r3, #1
+      0x080A8148: f75a fde8                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #188	@ 0xbc   (0x080A813C)
+
+--- call site 0x080A88B2 ---
+      0x080A88AC: 9100                       str	r1, [sp, #0]
+      0x080A88AE: 1c21                       adds	r1, r4, #0
+      0x080A88B0: 2301                       movs	r3, #1
+      0x080A88B2: f75a fa33                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #188	@ 0xbc   (0x080A88A6)
+
+--- call site 0x080A8982 ---
+      0x080A897C: 230f                       movs	r3, #15
+      0x080A897E: 9300                       str	r3, [sp, #0]
+      0x080A8980: 2301                       movs	r3, #1
+      0x080A8982: f75a f9cb                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #188	@ 0xbc   (0x080A8978)
+
+--- call site 0x080A899E ---
+      0x080A8998: 230f                       movs	r3, #15
+      0x080A899A: 9300                       str	r3, [sp, #0]
+      0x080A899C: 2301                       movs	r3, #1
+      0x080A899E: f75a f9bd                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #188	@ 0xbc   (0x080A8994)
+
+--- call site 0x080A89F0 ---
+      0x080A89EA: 9100                       str	r1, [sp, #0]
+      0x080A89EC: 1c21                       adds	r1, r4, #0
+      0x080A89EE: 2301                       movs	r3, #1
+      0x080A89F0: f75a f994                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #188	@ 0xbc   (0x080A89E4)
+
+--- call site 0x080A8B2C ---
+      0x080A8B26: 9100                       str	r1, [sp, #0]
+      0x080A8B28: 1c21                       adds	r1, r4, #0
+      0x080A8B2A: 2301                       movs	r3, #1
+      0x080A8B2C: f75a f8f6                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #188	@ 0xbc   (0x080A8B20)
+
+--- call site 0x080A8D5E ---
+      0x080A8D58: 230f                       movs	r3, #15
+      0x080A8D5A: 9300                       str	r3, [sp, #0]
+      0x080A8D5C: 2301                       movs	r3, #1
+      0x080A8D5E: f759 ffdd                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #188	@ 0xbc   (0x080A8D54)
+
+--- call site 0x080A900E ---
+      0x080A9008: 9100                       str	r1, [sp, #0]
+      0x080A900A: 1c21                       adds	r1, r4, #0
+      0x080A900C: 2301                       movs	r3, #1
+      0x080A900E: f759 fe85                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #188	@ 0xbc   (0x080A9002)
+
+--- call site 0x080A9078 ---
+      0x080A9072: 1c28                       adds	r0, r5, #0
+      0x080A9074: 1c21                       adds	r1, r4, #0
+      0x080A9076: 2301                       movs	r3, #1
+      0x080A9078: f759 fe50                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #188	@ 0xbc   (0x080A906A)
+
+--- call site 0x080A9118 ---
+      0x080A9112: 9100                       str	r1, [sp, #0]
+      0x080A9114: 1c21                       adds	r1, r4, #0
+      0x080A9116: 2301                       movs	r3, #1
+      0x080A9118: f759 fe00                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #188	@ 0xbc   (0x080A910C)
+
+--- call site 0x080A928C ---
+      0x080A9286: 9100                       str	r1, [sp, #0]
+      0x080A9288: 1c21                       adds	r1, r4, #0
+      0x080A928A: 2301                       movs	r3, #1
+      0x080A928C: f759 fd46                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #188	@ 0xbc   (0x080A9280)
+
+--- call site 0x080A964E ---
+      0x080A9648: 9100                       str	r1, [sp, #0]
+      0x080A964A: 1c31                       adds	r1, r6, #0
+      0x080A964C: 2301                       movs	r3, #1
+      0x080A964E: f759 fb65                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #188	@ 0xbc   (0x080A9642)
+
+--- call site 0x080A9884 ---
+      0x080A987E: 9100                       str	r1, [sp, #0]
+      0x080A9880: 1c21                       adds	r1, r4, #0
+      0x080A9882: 2301                       movs	r3, #1
+      0x080A9884: f759 fa4a                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #188	@ 0xbc   (0x080A9878)
+
+--- call site 0x080ACE9A ---
+      0x080ACE94: 9100                       str	r1, [sp, #0]
+      0x080ACE96: 1c21                       adds	r1, r4, #0
+      0x080ACE98: 2301                       movs	r3, #1
+      0x080ACE9A: f755 ff3f                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #188	@ 0xbc   (0x080ACE8E)
+
+--- call site 0x080F321A ---
+      0x080F3214: 9200                       str	r2, [sp, #0]
+      0x080F3216: 2202                       movs	r2, #2
+      0x080F3218: 2304                       movs	r3, #4
+      0x080F321A: f70f fd7f                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #2   (0x080F3216)
+
+--- call site 0x0810D45A ---
+      0x0810D454: 1c21                       adds	r1, r4, #0
+      0x0810D456: 2290                       movs	r2, #144	@ 0x90
+      0x0810D458: 2302                       movs	r3, #2
+      0x0810D45A: f6f5 fc5f                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x0810D456)
+
+--- call site 0x0810D6CC ---
+      0x0810D6C6: 1c21                       adds	r1, r4, #0
+      0x0810D6C8: 2290                       movs	r2, #144	@ 0x90
+      0x0810D6CA: 2302                       movs	r3, #2
+      0x0810D6CC: f6f5 fb26                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x0810D6C8)
+
+--- call site 0x0810D8BE ---
+      0x0810D8B8: 1c21                       adds	r1, r4, #0
+      0x0810D8BA: 2290                       movs	r2, #144	@ 0x90
+      0x0810D8BC: 2302                       movs	r3, #2
+      0x0810D8BE: f6f5 fa2d                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x0810D8BA)
+
+--- call site 0x0810D918 ---
+      0x0810D912: 1c20                       adds	r0, r4, #0
+      0x0810D914: 2290                       movs	r2, #144	@ 0x90
+      0x0810D916: 2302                       movs	r3, #2
+      0x0810D918: f6f5 fa00                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x0810D914)
+
+--- call site 0x0810DA02 ---
+      0x0810D9FC: 1c20                       adds	r0, r4, #0
+      0x0810D9FE: 2290                       movs	r2, #144	@ 0x90
+      0x0810DA00: 2302                       movs	r3, #2
+      0x0810DA02: f6f5 f98b                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x0810D9FE)
+
+--- call site 0x0810DA52 ---
+      0x0810DA4C: 1c20                       adds	r0, r4, #0
+      0x0810DA4E: 2290                       movs	r2, #144	@ 0x90
+      0x0810DA50: 2302                       movs	r3, #2
+      0x0810DA52: f6f5 f963                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x0810DA4E)
+
+--- call site 0x0810DAA0 ---
+      0x0810DA9A: 1c20                       adds	r0, r4, #0
+      0x0810DA9C: 2290                       movs	r2, #144	@ 0x90
+      0x0810DA9E: 2302                       movs	r3, #2
+      0x0810DAA0: f6f5 f93c                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x0810DA9C)
+
+--- call site 0x0810DBB2 ---
+      0x0810DBAC: 9200                       str	r2, [sp, #0]
+      0x0810DBAE: 2290                       movs	r2, #144	@ 0x90
+      0x0810DBB0: 2302                       movs	r3, #2
+      0x0810DBB2: f6f5 f8b3                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x0810DBAE)
+
+--- call site 0x0810DC4A ---
+      0x0810DC44: 9200                       str	r2, [sp, #0]
+      0x0810DC46: 2290                       movs	r2, #144	@ 0x90
+      0x0810DC48: 2302                       movs	r3, #2
+      0x0810DC4A: f6f5 f867                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x0810DC46)
+
+--- call site 0x0810DD38 ---
+      0x0810DD32: 9200                       str	r2, [sp, #0]
+      0x0810DD34: 2290                       movs	r2, #144	@ 0x90
+      0x0810DD36: 2302                       movs	r3, #2
+      0x0810DD38: f6f4 fff0                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x0810DD34)
+
+--- call site 0x0810DDA6 ---
+      0x0810DDA0: 9200                       str	r2, [sp, #0]
+      0x0810DDA2: 2290                       movs	r2, #144	@ 0x90
+      0x0810DDA4: 2302                       movs	r3, #2
+      0x0810DDA6: f6f4 ffb9                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x0810DDA2)
+
+--- call site 0x0810DDFE ---
+      0x0810DDF8: 1c20                       adds	r0, r4, #0
+      0x0810DDFA: 2290                       movs	r2, #144	@ 0x90
+      0x0810DDFC: 2302                       movs	r3, #2
+      0x0810DDFE: f6f4 ff8d                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x0810DDFA)
+
+--- call site 0x0810DE50 ---
+      0x0810DE4A: 1c20                       adds	r0, r4, #0
+      0x0810DE4C: 2290                       movs	r2, #144	@ 0x90
+      0x0810DE4E: 2302                       movs	r3, #2
+      0x0810DE50: f6f4 ff64                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x0810DE4C)
+
+--- call site 0x0810DE88 ---
+      0x0810DE82: 9200                       str	r2, [sp, #0]
+      0x0810DE84: 2290                       movs	r2, #144	@ 0x90
+      0x0810DE86: 2302                       movs	r3, #2
+      0x0810DE88: f6f4 ff48                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x0810DE84)
+
+--- call site 0x0810DEC8 ---
+      0x0810DEC2: 9200                       str	r2, [sp, #0]
+      0x0810DEC4: 2290                       movs	r2, #144	@ 0x90
+      0x0810DEC6: 2302                       movs	r3, #2
+      0x0810DEC8: f6f4 ff28                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x0810DEC4)
+
+--- call site 0x0810DFD4 ---
+      0x0810DFCE: 9100                       str	r1, [sp, #0]
+      0x0810DFD0: 1c21                       adds	r1, r4, #0
+      0x0810DFD2: 2302                       movs	r3, #2
+      0x0810DFD4: f6f4 fea2                  bl	0x8002d1c  <== BL InitTextPrinter
+
+--- call site 0x0810E26E ---
+      0x0810E268: 9100                       str	r1, [sp, #0]
+      0x0810E26A: 1c21                       adds	r1, r4, #0
+      0x0810E26C: 2302                       movs	r3, #2
+      0x0810E26E: f6f4 fd55                  bl	0x8002d1c  <== BL InitTextPrinter
+
+--- call site 0x0810E388 ---
+      0x0810E382: 230f                       movs	r3, #15
+      0x0810E384: 9300                       str	r3, [sp, #0]
+      0x0810E386: 2302                       movs	r3, #2
+      0x0810E388: f6f4 fcc8                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = adds	r2, #40	@ 0x28   (0x0810E37E)
+
+--- call site 0x0810E406 ---
+      0x0810E400: 230f                       movs	r3, #15
+      0x0810E402: 9300                       str	r3, [sp, #0]
+      0x0810E404: 2302                       movs	r3, #2
+      0x0810E406: f6f4 fc89                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = adds	r2, #40	@ 0x28   (0x0810E3FC)
+
+--- call site 0x0810E4FC ---
+      0x0810E4F6: 230f                       movs	r3, #15
+      0x0810E4F8: 9300                       str	r3, [sp, #0]
+      0x0810E4FA: 2302                       movs	r3, #2
+      0x0810E4FC: f6f4 fc0e                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = adds	r2, #40	@ 0x28   (0x0810E4F2)
+
+--- call site 0x0810E550 ---
+      0x0810E54A: 230f                       movs	r3, #15
+      0x0810E54C: 9300                       str	r3, [sp, #0]
+      0x0810E54E: 2302                       movs	r3, #2
+      0x0810E550: f6f4 fbe4                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = adds	r2, #40	@ 0x28   (0x0810E546)
+
+--- call site 0x0810E5A2 ---
+      0x0810E59C: 230f                       movs	r3, #15
+      0x0810E59E: 9300                       str	r3, [sp, #0]
+      0x0810E5A0: 2302                       movs	r3, #2
+      0x0810E5A2: f6f4 fbbb                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = adds	r2, #40	@ 0x28   (0x0810E598)
+
+--- call site 0x0810E6CA ---
+      0x0810E6C4: 230f                       movs	r3, #15
+      0x0810E6C6: 9300                       str	r3, [sp, #0]
+      0x0810E6C8: 2302                       movs	r3, #2
+      0x0810E6CA: f6f4 fb27                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = adds	r2, #40	@ 0x28   (0x0810E6C0)
+
+--- call site 0x0810E76A ---
+      0x0810E764: 230f                       movs	r3, #15
+      0x0810E766: 9300                       str	r3, [sp, #0]
+      0x0810E768: 2302                       movs	r3, #2
+      0x0810E76A: f6f4 fad7                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = adds	r2, #40	@ 0x28   (0x0810E760)
+
+--- call site 0x0810E862 ---
+      0x0810E85C: 230f                       movs	r3, #15
+      0x0810E85E: 9300                       str	r3, [sp, #0]
+      0x0810E860: 2302                       movs	r3, #2
+      0x0810E862: f6f4 fa5b                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = adds	r2, #40	@ 0x28   (0x0810E858)
+
+--- call site 0x0810E8D8 ---
+      0x0810E8D2: 230f                       movs	r3, #15
+      0x0810E8D4: 9300                       str	r3, [sp, #0]
+      0x0810E8D6: 2302                       movs	r3, #2
+      0x0810E8D8: f6f4 fa20                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = adds	r2, #40	@ 0x28   (0x0810E8CE)
+
+--- call site 0x0810E934 ---
+      0x0810E92E: 230f                       movs	r3, #15
+      0x0810E930: 9300                       str	r3, [sp, #0]
+      0x0810E932: 2302                       movs	r3, #2
+      0x0810E934: f6f4 f9f2                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = adds	r2, #40	@ 0x28   (0x0810E92A)
+
+--- call site 0x0810E98A ---
+      0x0810E984: 240f                       movs	r4, #15
+      0x0810E986: 9400                       str	r4, [sp, #0]
+      0x0810E988: 2302                       movs	r3, #2
+      0x0810E98A: f6f4 f9c7                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = adds	r2, #40	@ 0x28   (0x0810E980)
+
+--- call site 0x0810E9C6 ---
+      0x0810E9C0: 230f                       movs	r3, #15
+      0x0810E9C2: 9300                       str	r3, [sp, #0]
+      0x0810E9C4: 2302                       movs	r3, #2
+      0x0810E9C6: f6f4 f9a9                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = adds	r2, #40	@ 0x28   (0x0810E9BC)
+
+--- call site 0x0810EA0E ---
+      0x0810EA08: 230f                       movs	r3, #15
+      0x0810EA0A: 9300                       str	r3, [sp, #0]
+      0x0810EA0C: 2302                       movs	r3, #2
+      0x0810EA0E: f6f4 f985                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = adds	r2, #40	@ 0x28   (0x0810EA04)
+
+--- call site 0x0811AFD6 ---
+      0x0811AFD0: 9200                       str	r2, [sp, #0]
+      0x0811AFD2: 2290                       movs	r2, #144	@ 0x90
+      0x0811AFD4: 2302                       movs	r3, #2
+      0x0811AFD6: f6e7 fea1                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x0811AFD2)
+
+--- call site 0x081268EA ---
+      0x081268E4: 9200                       str	r2, [sp, #0]
+      0x081268E6: 2290                       movs	r2, #144	@ 0x90
+      0x081268E8: 2302                       movs	r3, #2
+      0x081268EA: f6dc fa17                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x081268E6)
+
+--- call site 0x08133ED6 ---
+      0x08133ED0: 9200                       str	r2, [sp, #0]
+      0x08133ED2: 2290                       movs	r2, #144	@ 0x90
+      0x08133ED4: 2302                       movs	r3, #2
+      0x08133ED6: f6ce ff21                  bl	0x8002d1c  <== BL InitTextPrinter
+      → r2 = movs	r2, #144	@ 0x90   (0x08133ED2)
+

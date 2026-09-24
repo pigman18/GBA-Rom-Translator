@@ -1,0 +1,17 @@
+[drv 14:26:24] mGBA pid=3940
+[drv 14:26:34] patcher pid=32056
+[drv 14:26:48] mGBA hwnd=0x120EE0
+[drv 14:26:49] 按键：过标题
+[drv 14:26:56] 按键：继续游戏（A 确认）
+[drv 14:27:00] 按键：走动 + 开门/开菜单（造文字）
+[drv 14:27:07]   cycle 1
+[drv 14:27:13]   cycle 2
+[drv 14:27:20]   cycle 3
+[drv 14:27:26]   cycle 4
+[drv 14:27:33]   cycle 5
+[drv 14:27:39]   cycle 6
+[drv 14:27:39] 按键：开开始菜单（START）
+[drv 14:27:43] 保持采集 130s …
+[drv 14:29:53] 收尾：杀 patcher 取 SUMMARY
+[drv 14:29:53] 日志行数 = 41
+[drv 14:29:53] 完成

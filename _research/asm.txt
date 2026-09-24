@@ -1,0 +1,14 @@
+﻿C:\code\GBA-Rom-Translator\tools\Pokemon_GBA_Font_Patch\old_(PMxxUS_CHPLUS_RELEASE)\PMEMUS_CHPLUS_RELEASE2\src\PrintMonDexNumAndNameChinese.s
+C:\code\GBA-Rom-Translator\tools\Pokemon_GBA_Font_Patch\old_(PMxxUS_CHPLUS_RELEASE)\PMEMUS_CHPLUS_RELEASE2\src\RenderTextChinese.s
+C:\code\GBA-Rom-Translator\tools\Pokemon_GBA_Font_Patch\old_(PMxxUS_CHPLUS_RELEASE)\PMFRUS_CHPLUS_RELEASE3\src\RenderTextChinese.s
+C:\code\GBA-Rom-Translator\tools\Pokemon_GBA_Font_Patch\old_(PMxxUS_CHPLUS_RELEASE)\PMRUS_CHPLUS_RELEASE1\src\DrawGlyphTilesChinese.s
+C:\code\GBA-Rom-Translator\tools\Pokemon_GBA_Font_Patch\old_(PMxxUS_CHPLUS_RELEASE)\PMRUS_CHPLUS_RELEASE1\src\GetGlyphWidthChinese.s
+C:\code\GBA-Rom-Translator\tools\Pokemon_GBA_Font_Patch\pokeFRLG\graphic\fonts.s
+C:\code\GBA-Rom-Translator\tools\Pokemon_GBA_Font_Patch\pokeFRLG\src\HackFunction\GetStringWidthChinese.s
+C:\code\GBA-Rom-Translator\tools\Pokemon_GBA_Font_Patch\pokeFRLG\src\HackFunction\RenderTextChinese.s
+C:\code\GBA-Rom-Translator\tools\Pokemon_GBA_Font_Patch\pokeRS\graphic\fonts.s
+C:\code\GBA-Rom-Translator\tools\Pokemon_GBA_Font_Patch\pokeRS\src\HackFunction\DrawGlyphTilesChinese.s
+C:\code\GBA-Rom-Translator\tools\Pokemon_GBA_Font_Patch\pokeRS\src\HackFunction\GetGlyphWidthChinese.s
+C:\code\GBA-Rom-Translator\tools\Pokemon_GBA_Font_Patch\pokeRS\src\HackFunction\GetStringWidthChinese.s
+C:\code\GBA-Rom-Translator\tools\Pokemon_GBA_Font_Patch\pokeRS\src\HackFunction\UpdateLeftNoOfBallsTextOnHealthboxChinese.s
+C:\code\GBA-Rom-Translator\tools\Pokemon_GBA_Font_Patch\pokeRS\src\HackFunction\UpdateSafariBallsTextInHealthboxChinese.s

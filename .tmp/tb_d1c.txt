@@ -1,0 +1,75 @@
+目标 0x08002D1C 全 ROM 调用点 = 60 个
+
+自证闸门：0x080A7634 的 TILE_BASE 折算 = 752  (期望 752)  ✅
+      链 = movs r2, #188 @ 0xbc ; lsls r2, r2, #2
+
+call site    TILE_BASE a4(X)  a5(Y)   TILE_BASE 写入链
+----------------------------------------------------------------------------------------------------------------------
+0x802b8fe    144      2      15      movs r2, #144 @ 0x90
+0x802d76a    144      2      15      movs r2, #144 @ 0x90
+0x80327d2    144      2      15      movs r2, #144 @ 0x90
+0x80370fe    144      2      15      movs r2, #144 @ 0x90
+0x8040908    ?        3      15      ldr r2, [r0, #0] ; adds r2, #44 @ 0x2c
+0x804e9ca    ?        ?      ?       adds r2, r4, #0
+0x8061d9c    ?        4      15      (未找到写 r2 的指令)
+0x8061dca    ?        4      15      ldr r2, [pc, #28] @ (0x8061de0)
+0x8062390    ?        4      15      ldr r2, [pc, #24] @ (0x806239c) ; adds r2, #14 ; lsls r2, r2, #16 ; lsrs r2, r2, #16
+0x806f34a    ?        ?      ?       lsls r2, r2, #24 ; lsrs r2, r2, #24 ; str r2, [sp, #0] ; adds r2, r4, #0
+0x806f374    ?        4      15      ldr r2, [pc, #24] @ (0x806f384)
+0x80a7634    752      1      15      movs r2, #188 @ 0xbc ; lsls r2, r2, #2
+0x80a8148    752      1      15      movs r2, #188 @ 0xbc ; lsls r2, r2, #2
+0x80a88b2    752      1      15      movs r2, #188 @ 0xbc ; lsls r2, r2, #2
+0x80a8982    752      1      15      movs r2, #188 @ 0xbc ; lsls r2, r2, #2
+0x80a899e    752      1      15      movs r2, #188 @ 0xbc ; lsls r2, r2, #2
+0x80a89f0    752      1      15      movs r2, #188 @ 0xbc ; lsls r2, r2, #2
+0x80a8b2c    752      1      15      movs r2, #188 @ 0xbc ; lsls r2, r2, #2
+0x80a8d5e    752      1      15      movs r2, #188 @ 0xbc ; lsls r2, r2, #2
+0x80a900e    752      1      15      movs r2, #188 @ 0xbc ; lsls r2, r2, #2
+0x80a9078    752      1      15      movs r2, #188 @ 0xbc ; lsls r2, r2, #2
+0x80a9118    752      1      15      movs r2, #188 @ 0xbc ; lsls r2, r2, #2
+0x80a928c    752      1      15      movs r2, #188 @ 0xbc ; lsls r2, r2, #2
+0x80a964e    752      1      15      movs r2, #188 @ 0xbc ; lsls r2, r2, #2
+0x80a9884    752      1      15      movs r2, #188 @ 0xbc ; lsls r2, r2, #2
+0x80ace9a    752      1      15      movs r2, #188 @ 0xbc ; lsls r2, r2, #2
+0x80f321a    2        4      15      movs r2, #2
+0x810d45a    144      2      15      movs r2, #144 @ 0x90
+0x810d6cc    144      2      15      movs r2, #144 @ 0x90
+0x810d8be    144      2      15      movs r2, #144 @ 0x90
+0x810d918    144      2      15      movs r2, #144 @ 0x90
+0x810da02    144      2      15      movs r2, #144 @ 0x90
+0x810da52    144      2      15      movs r2, #144 @ 0x90
+0x810daa0    144      2      15      movs r2, #144 @ 0x90
+0x810dbb2    144      2      15      movs r2, #144 @ 0x90
+0x810dc4a    144      2      15      movs r2, #144 @ 0x90
+0x810dd38    144      2      15      movs r2, #144 @ 0x90
+0x810dda6    144      2      15      movs r2, #144 @ 0x90
+0x810ddfe    144      2      15      movs r2, #144 @ 0x90
+0x810de50    144      2      15      movs r2, #144 @ 0x90
+0x810de88    144      2      15      movs r2, #144 @ 0x90
+0x810dec8    144      2      15      movs r2, #144 @ 0x90
+0x810dfd4    ?        2      15      (未找到写 r2 的指令)
+0x810e26e    ?        2      15      (未找到写 r2 的指令)
+0x810e388    ?        2      15      ldr r2, [r0, #0] ; adds r2, #40 @ 0x28
+0x810e406    ?        2      15      ldr r2, [r4, #0] ; adds r2, #40 @ 0x28
+0x810e4fc    ?        2      15      ldr r2, [r4, #0] ; adds r2, #40 @ 0x28
+0x810e550    ?        2      15      ldr r2, [r4, #0] ; adds r2, #40 @ 0x28
+0x810e5a2    ?        2      15      ldr r2, [r4, #0] ; adds r2, #40 @ 0x28
+0x810e6ca    ?        2      15      ldr r2, [r4, #0] ; adds r2, #40 @ 0x28
+0x810e76a    ?        2      15      ldr r2, [r4, #0] ; adds r2, #40 @ 0x28
+0x810e862    ?        2      15      ldr r2, [r0, #0] ; adds r2, #40 @ 0x28
+0x810e8d8    ?        2      15      ldr r2, [r0, #0] ; adds r2, #40 @ 0x28
+0x810e934    ?        2      15      ldr r2, [r4, #0] ; adds r2, #40 @ 0x28
+0x810e98a    ?        2      15      ldr r2, [r4, #0] ; adds r2, #40 @ 0x28
+0x810e9c6    ?        2      15      ldr r2, [r0, #0] ; adds r2, #40 @ 0x28
+0x810ea0e    ?        2      15      ldr r2, [r0, #0] ; adds r2, #40 @ 0x28
+0x811afd6    144      2      15      movs r2, #144 @ 0x90
+0x81268ea    144      2      15      movs r2, #144 @ 0x90
+0x8133ed6    144      2      15      movs r2, #144 @ 0x90
+
+TILE_BASE 取值集合 = ['0x2', '0x90', '0x2f0']
+TILE_BASE 未折出（运行期取值）的调用点 = 22 个
+
+🔴 容量判据：TILE_BASE + 屏幕格号 必须 < 1024（tilemap 项 10 位）
+    TILE_BASE=2    (0x002) ⇒ 该窗口预算 1022 格
+    TILE_BASE=144  (0x090) ⇒ 该窗口预算  880 格
+    TILE_BASE=752  (0x2F0) ⇒ 该窗口预算  272 格

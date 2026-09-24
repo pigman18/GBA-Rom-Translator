@@ -1,0 +1,18 @@
+{
+  "tag": "t_info",
+  "state": null,
+  "schedule": "A:240-280,A:330-370,A:420-460,A:510-550,A:600-640,A:690-730,A:780-820,A:870-910,A:960-1000,A:1050-1090,A:1140-1180,A:1230-1270,START:1500-1540,DOWN:1700-1740,A:1900-1940,A:2050-2090,A:2250-2290",
+  "frames": 2700,
+  "redirect": true,
+  "key_writes": 34,
+  "seconds": 45.0,
+  "screenshot": "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_t_info.png",
+  "dumps": {
+    "ewram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_t_info_ewram.bin",
+    "vram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_t_info_vram.bin",
+    "iwram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_t_info_iwram.bin",
+    "pal": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_t_info_pal.bin",
+    "io": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_t_info_io.bin"
+  },
+  "capture": "OK C:\\code\\GBA-Rom-Translator\\.tmp\\emu_t_info.png 736x542 @977,246"
+}

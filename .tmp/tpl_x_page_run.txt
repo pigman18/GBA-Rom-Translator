@@ -1,0 +1,167 @@
+====================================================================================================
+A. 模板 × 引用点 × 所属函数
+====================================================================================================
+081BB3DC tm0 cb2  tileData=06008000  引用 1 处:
+        @081BB8D4  owner ???
+081BB3F4 tm0 cb0  tileData=06000000  引用 1 处:
+        @081BB8DC  owner ???
+081BB40C tm2 cb-1  tileData=06010000  引用 1 处:
+        @081BB8FC  owner ???
+081BB424 tm0 cb2  tileData=06008000  引用 1 处:
+        @081BB8E4  owner ???
+081BB43C tm1 cb1  tileData=06004000  引用 1 处:
+        @081BB8EC  owner ???
+081BB454 tm3 cb2  tileData=06008000  引用 1 处:
+        @081BB8F4  owner ???
+081BB46C tm3 cb2  tileData=06008000  引用 1 处:
+        @081BB904  owner ???
+081BB484 tm1 cb2  tileData=06008000  引用 1 处:
+        @081BB90C  owner ???
+081BB49C tm1 cb0  tileData=06000000  引用 1 处:
+        @081BB914  owner ???
+081BB4B4 tm1 cb0  tileData=06000000  引用 1 处:
+        @081BB91C  owner ???
+081BB4CC tm1 cb0  tileData=06000000  引用 1 处:
+        @081BB9DC  owner 081BB954
+081BB4E4 tm1 cb0  tileData=06000000  引用 1 处:
+        @081BB9E4  owner 081BB954
+081BB4FC tm1 cb0  tileData=06000000  引用 1 处:
+        @081BBA6C  owner 081BBA54
+081BB514 tm1 cb3  tileData=0600C000  引用 1 处:
+        @081BB924  owner ???
+081BB52C tm1 cb3  tileData=0600C000  引用 1 处:
+        @081BB92C  owner 081BB924
+081BB544 tm1 cb2  tileData=06008000  引用 1 处:
+        @081BB934  owner 081BB92C
+081BB55C tm1 cb2  tileData=06008000  引用 1 处:
+        @081BB93C  owner 081BB934
+081BB574 tm1 cb2  tileData=06008000  引用 1 处:
+        @081BBA54  owner 081BBA24
+081BB58C tm1 cb2  tileData=06008000  引用 1 处:
+        @081BBA1C  owner 081BB954
+081BB5A4 tm1 cb0  tileData=06000000  引用 1 处:
+        @081BBA24  owner 081BBA1C
+081BB5BC tm1 cb2  tileData=06008000  引用 1 处:
+        @081BB944  owner 081BB93C
+081BB5D4 tm1 cb2  tileData=06008000  引用 1 处:
+        @081BB94C  owner 081BB944
+081BB5EC tm1 cb0  tileData=06000000  引用 1 处:
+        @081BB954  owner 081BB94C
+081BB604 tm1 cb0  tileData=06000000  引用 1 处:
+        @081BB95C  owner 081BB954
+081BB61C tm1 cb0  tileData=06000000  引用 1 处:
+        @081BB964  owner 081BB954
+081BB634 tm1 cb0  tileData=06000000  引用 1 处:
+        @081BB96C  owner 081BB954
+081BB64C tm1 cb0  tileData=06000000  引用 1 处:
+        @081BB974  owner 081BB954
+081BB664 tm1 cb0  tileData=06000000  引用 1 处:
+        @081BB97C  owner 081BB954
+081BB67C tm1 cb0  tileData=06000000  引用 1 处:
+        @081BB984  owner 081BB954
+081BB694 tm1 cb0  tileData=06000000  引用 1 处:
+        @081BB98C  owner 081BB954
+081BB6AC tm0 cb3  tileData=0600C000  引用 1 处:
+        @081BB9EC  owner 081BB954
+081BB6C4 tm0 cb2  tileData=06008000  引用 1 处:
+        @081BB994  owner 081BB954
+081BB6DC tm1 cb2  tileData=06008000  引用 1 处:
+        @081BB99C  owner 081BB954
+081BB6F4 tm0 cb0  tileData=06000000  引用 1 处:
+        @081BB9A4  owner 081BB954
+081BB70C tm0 cb0  tileData=06000000  引用 1 处:
+        @081BB9AC  owner 081BB954
+081BB724 tm0 cb0  tileData=06000000  引用 1 处:
+        @081BB9B4  owner 081BB954
+081BB73C tm0 cb0  tileData=06000000  引用 1 处:
+        @081BB9BC  owner 081BB954
+081BB754 tm0 cb0  tileData=06000000  引用 1 处:
+        @081BB9C4  owner 081BB954
+081BB76C tm1 cb2  tileData=06008000  引用 1 处:
+        @081BB9CC  owner 081BB954
+081BB784 tm1 cb2  tileData=06008000  引用 1 处:
+        @081BB9D4  owner 081BB954
+081BB79C tm1 cb0  tileData=06000000  引用 1 处:
+        @081BB9F4  owner 081BB954
+081BB7B4 tm1 cb0  tileData=06000000  引用 1 处:
+        @081BB9FC  owner 081BB954
+081BB7CC tm1 cb0  tileData=06000000  引用 1 处:
+        @081BBA04  owner 081BB954
+081BB7E4 tm1 cb0  tileData=06000000  引用 1 处:
+        @081BBA4C  owner 081BBA24
+081BB7FC tm1 cb2  tileData=06008000  引用 1 处:
+        @081BBA0C  owner 081BB954
+081BB814 tm1 cb2  tileData=06008000  引用 1 处:
+        @081BBA14  owner 081BB954
+081BB82C tm0 cb1  tileData=06004000  引用 1 处:
+        @081BBA2C  owner 081BBA24
+081BB844 tm0 cb3  tileData=0600C000  引用 1 处:
+        @081BBA34  owner 081BBA24
+081BB85C tm1 cb2  tileData=06008000  引用 1 处:
+        @081BBA3C  owner 081BBA24
+081BB874 tm1 cb2  tileData=06008000  引用 1 处:
+        @081BBA44  owner 081BBA24
+081BB88C tm0 cb1  tileData=06004000  引用 1 处:
+        @081BBA5C  owner 081BBA54
+081BB8A4 tm0 cb1  tileData=06004000  引用 1 处:
+        @081BBA64  owner 081BBA54
+081BB8BC tm1 cb2  tileData=06008000  —— 无引用点（无人直接引用）
+
+====================================================================================================
+B. 每条模板的「真实可用槽」= 512 - |下一块 ∩ 该模板使用者的美术|
+====================================================================================================
+tpl        tm  cb   下一块    使用者数    空闲砖      占用该块的页面
+----------------------------------------------------------------------------------------------------
+081BB3DC   0   2    cb3    0       -1       —（无使用者信息）
+081BB3F4   0   0    cb1    0       -1       —（无使用者信息）
+081BB40C   2   -1   —      0       N/A      charBase=3 ⇒ 空集
+081BB424   0   2    cb3    0       -1       —（无使用者信息）
+081BB43C   1   1    cb2    0       -1       —（无使用者信息）
+081BB454   3   2    cb3    0       -1       —（无使用者信息）
+081BB46C   3   2    cb3    0       -1       —（无使用者信息）
+081BB484   1   2    cb3    0       -1       —（无使用者信息）
+081BB49C   1   0    cb1    0       -1       —（无使用者信息）
+081BB4B4   1   0    cb1    0       -1       —（无使用者信息）
+081BB4CC   1   0    cb1    0       -1       —（无使用者信息）
+081BB4E4   1   0    cb1    0       -1       —（无使用者信息）
+081BB4FC   1   0    cb1    0       -1       —（无使用者信息）
+081BB514   1   3    —      0       N/A      charBase=3 ⇒ 空集
+081BB52C   1   3    —      0       N/A      charBase=3 ⇒ 空集
+081BB544   1   2    cb3    0       -1       —（无使用者信息）
+081BB55C   1   2    cb3    0       -1       —（无使用者信息）
+081BB574   1   2    cb3    0       -1       —（无使用者信息）
+081BB58C   1   2    cb3    0       -1       —（无使用者信息）
+081BB5A4   1   0    cb1    0       -1       —（无使用者信息）
+081BB5BC   1   2    cb3    0       -1       —（无使用者信息）
+081BB5D4   1   2    cb3    0       -1       —（无使用者信息）
+081BB5EC   1   0    cb1    0       -1       —（无使用者信息）
+081BB604   1   0    cb1    0       -1       —（无使用者信息）
+081BB61C   1   0    cb1    0       -1       —（无使用者信息）
+081BB634   1   0    cb1    0       -1       —（无使用者信息）
+081BB64C   1   0    cb1    0       -1       —（无使用者信息）
+081BB664   1   0    cb1    0       -1       —（无使用者信息）
+081BB67C   1   0    cb1    0       -1       —（无使用者信息）
+081BB694   1   0    cb1    0       -1       —（无使用者信息）
+081BB6AC   0   3    —      0       N/A      charBase=3 ⇒ 空集
+081BB6C4   0   2    cb3    0       -1       —（无使用者信息）
+081BB6DC   1   2    cb3    0       -1       —（无使用者信息）
+081BB6F4   0   0    cb1    0       -1       —（无使用者信息）
+081BB70C   0   0    cb1    0       -1       —（无使用者信息）
+081BB724   0   0    cb1    0       -1       —（无使用者信息）
+081BB73C   0   0    cb1    0       -1       —（无使用者信息）
+081BB754   0   0    cb1    0       -1       —（无使用者信息）
+081BB76C   1   2    cb3    0       -1       —（无使用者信息）
+081BB784   1   2    cb3    0       -1       —（无使用者信息）
+081BB79C   1   0    cb1    0       -1       —（无使用者信息）
+081BB7B4   1   0    cb1    0       -1       —（无使用者信息）
+081BB7CC   1   0    cb1    0       -1       —（无使用者信息）
+081BB7E4   1   0    cb1    0       -1       —（无使用者信息）
+081BB7FC   1   2    cb3    0       -1       —（无使用者信息）
+081BB814   1   2    cb3    0       -1       —（无使用者信息）
+081BB82C   0   1    cb2    0       -1       —（无使用者信息）
+081BB844   0   3    —      0       N/A      charBase=3 ⇒ 空集
+081BB85C   1   2    cb3    0       -1       —（无使用者信息）
+081BB874   1   2    cb3    0       -1       —（无使用者信息）
+081BB88C   0   1    cb2    0       -1       —（无使用者信息）
+081BB8A4   0   1    cb2    0       -1       —（无使用者信息）
+081BB8BC   1   2    cb3    0       -1       —（无使用者信息）

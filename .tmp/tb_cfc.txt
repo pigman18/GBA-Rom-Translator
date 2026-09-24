@@ -1,0 +1,60 @@
+目标 0x08002CFC 全 ROM 调用点 = 39 个
+
+call site    TILE_BASE a4(X)  a5(Y)   TILE_BASE 写入链
+----------------------------------------------------------------------------------------------------------------------
+0x80030c0    ?        ?      ?       lsls r2, r2, #16 ; lsrs r2, r2, #16
+0x800b1c6    160      21     2       movs r2, #160 @ 0xa0
+0x800b232    160      21     2       movs r2, #160 @ 0xa0
+0x800b27e    160      21     2       movs r2, #160 @ 0xa0
+0x800b2d2    160      6      2       movs r2, #160 @ 0xa0
+0x800b2e6    168      21     2       movs r2, #168 @ 0xa8
+0x800b31a    160      21     2       movs r2, #160 @ 0xa0
+0x800b32e    168      6      2       movs r2, #168 @ 0xa8
+0x800b3da    32       2      2       movs r2, #32
+0x800b400    64       2      2       movs r2, #64 @ 0x40
+0x800b428    96       2      6       movs r2, #96 @ 0x60
+0x800b450    128      2      6       movs r2, #128 @ 0x80
+0x800b4b0    32       2      3       movs r2, #32
+0x800b4d6    64       2      ?       movs r2, #64 @ 0x40
+0x8020dcc    256      26     9       movs r2, #128 @ 0x80 ; lsls r2, r2, #1
+0x8021156    256      26     9       movs r2, #128 @ 0x80 ; lsls r2, r2, #1
+0x802190a    256      26     9       movs r2, #128 @ 0x80 ; lsls r2, r2, #1
+0x8021e28    256      12     1       movs r2, #128 @ 0x80 ; lsls r2, r2, #1
+0x8028f4c    256      26     9       movs r2, #128 @ 0x80 ; lsls r2, r2, #1
+0x8029c84    656      19     55      movs r2, #164 @ 0xa4 ; lsls r2, r2, #2
+0x802a254    ?        19     55      lsrs r2, r0, #32
+0x802a2c0    656      19     55      movs r2, #164 @ 0xa4 ; lsls r2, r2, #2
+0x802b58c    ?        ?      57      lsls r2, r0, #8
+0x802b628    ?        24     55      ldr r2, [pc, #52] @ (0x802b654)
+0x802b6c8    704      25     57      movs r2, #176 @ 0xb0 ; lsls r2, r2, #2
+0x802b718    656      19     55      movs r2, #164 @ 0xa4 ; lsls r2, r2, #2
+0x802d81e    400      19     35      movs r2, #200 @ 0xc8 ; lsls r2, r2, #1
+0x802d85e    440      2      35      movs r2, #220 @ 0xdc ; lsls r2, r2, #1
+0x802d90e    656      19     55      movs r2, #164 @ 0xa4 ; lsls r2, r2, #2
+0x806b2ae    1        ?      ?       movs r2, #1
+0x806b7a6    1        ?      ?       movs r2, #1
+0x810daf0    256      26     9       movs r2, #128 @ 0x80 ; lsls r2, r2, #1
+0x810e600    ?        26     9       ldr r2, [r5, #0] ; adds r2, #40 @ 0x28 ; adds r2, #128 @ 0x80
+0x8110028    ?        25     9       adds r2, #144 @ 0x90
+0x8110074    ?        25     9       adds r2, #144 @ 0x90
+0x81269a0    400      19     35      movs r2, #200 @ 0xc8 ; lsls r2, r2, #1
+0x81269e0    440      2      35      movs r2, #220 @ 0xdc ; lsls r2, r2, #1
+0x8133f8c    400      19     35      movs r2, #200 @ 0xc8 ; lsls r2, r2, #1
+0x8133fc4    440      2      35      movs r2, #220 @ 0xdc ; lsls r2, r2, #1
+
+TILE_BASE 取值集合 = ['0x1', '0x20', '0x40', '0x60', '0x80', '0xa0', '0xa8', '0x100', '0x190', '0x1b8', '0x290', '0x2c0']
+TILE_BASE 未折出（运行期取值）的调用点 = 7 个
+
+🔴 容量判据：TILE_BASE + 屏幕格号 必须 < 1024（tilemap 项 10 位）
+    TILE_BASE=1    (0x001) ⇒ 该窗口预算 1023 格
+    TILE_BASE=32   (0x020) ⇒ 该窗口预算  992 格
+    TILE_BASE=64   (0x040) ⇒ 该窗口预算  960 格
+    TILE_BASE=96   (0x060) ⇒ 该窗口预算  928 格
+    TILE_BASE=128  (0x080) ⇒ 该窗口预算  896 格
+    TILE_BASE=160  (0x0A0) ⇒ 该窗口预算  864 格
+    TILE_BASE=168  (0x0A8) ⇒ 该窗口预算  856 格
+    TILE_BASE=256  (0x100) ⇒ 该窗口预算  768 格
+    TILE_BASE=400  (0x190) ⇒ 该窗口预算  624 格
+    TILE_BASE=440  (0x1B8) ⇒ 该窗口预算  584 格
+    TILE_BASE=656  (0x290) ⇒ 该窗口预算  368 格
+    TILE_BASE=704  (0x2C0) ⇒ 该窗口预算  320 格

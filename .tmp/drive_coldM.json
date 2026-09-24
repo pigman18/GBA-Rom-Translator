@@ -1,0 +1,20 @@
+{
+  "tag": "coldM",
+  "state": null,
+  "schedule": "A:300-340,A:560-600,A:820-860,START:1100-1140,UP:1300-1340,UP:1440-1480,UP:1580-1620,UP:1720-1760,UP:1860-1900,UP:2000-2040,UP:2140-2180,UP:2280-2320,DOWN:2450-2490,DOWN:2600-2640,DOWN:2750-2790,A:2900-2940",
+  "frames": 3300,
+  "redirect": true,
+  "shots": [
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldM_t20.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldM_t39.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldM_t42.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldM_t44.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldM_t47.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldM_t50.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldM_t53.png"
+  ],
+  "key_writes": 32,
+  "seconds": 55.0,
+  "screenshot": "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldM.png",
+  "capture": "OK C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldM.png 736x542 @977,246"
+}

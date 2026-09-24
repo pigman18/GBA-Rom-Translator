@@ -1,0 +1,3783 @@
+{
+ "sites": [
+  {
+   "vma": 134236192,
+   "hex": "0x08004820",
+   "layers": [
+    1,
+    2,
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134236056,
+   "func_hex": "0x08004798"
+  },
+  {
+   "vma": 134245970,
+   "hex": "0x08006E52",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "imm-basereg"
+   ],
+   "func": 134245652,
+   "func_hex": "0x08006D14"
+  },
+  {
+   "vma": 134248488,
+   "hex": "0x08007828",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134248356,
+   "func_hex": "0x080077A4"
+  },
+  {
+   "vma": 134252410,
+   "hex": "0x0800877A",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134252008,
+   "func_hex": "0x080085E8"
+  },
+  {
+   "vma": 134264820,
+   "hex": "0x0800B7F4",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134264756,
+   "func_hex": "0x0800B7B4"
+  },
+  {
+   "vma": 134270980,
+   "hex": "0x0800D004",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134270956,
+   "func_hex": "0x0800CFEC"
+  },
+  {
+   "vma": 134385002,
+   "hex": "0x08028D6A",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134384828,
+   "func_hex": "0x08028CBC"
+  },
+  {
+   "vma": 134480090,
+   "hex": "0x080400DA",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134479652,
+   "func_hex": "0x0803FF24"
+  },
+  {
+   "vma": 134480230,
+   "hex": "0x08040166",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134479652,
+   "func_hex": "0x0803FF24"
+  },
+  {
+   "vma": 134504374,
+   "hex": "0x08045FB6",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134504132,
+   "func_hex": "0x08045EC4"
+  },
+  {
+   "vma": 134504382,
+   "hex": "0x08045FBE",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134504132,
+   "func_hex": "0x08045EC4"
+  },
+  {
+   "vma": 134515186,
+   "hex": "0x080489F2",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134514504,
+   "func_hex": "0x08048748"
+  },
+  {
+   "vma": 134515772,
+   "hex": "0x08048C3C",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134515328,
+   "func_hex": "0x08048A80"
+  },
+  {
+   "vma": 134516594,
+   "hex": "0x08048F72",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134516376,
+   "func_hex": "0x08048E98"
+  },
+  {
+   "vma": 134517140,
+   "hex": "0x08049194",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134516376,
+   "func_hex": "0x08048E98"
+  },
+  {
+   "vma": 134517492,
+   "hex": "0x080492F4",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134516376,
+   "func_hex": "0x08048E98"
+  },
+  {
+   "vma": 134526092,
+   "hex": "0x0804B48C",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134526040,
+   "func_hex": "0x0804B458"
+  },
+  {
+   "vma": 134529394,
+   "hex": "0x0804C172",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134527984,
+   "func_hex": "0x0804BBF0"
+  },
+  {
+   "vma": 134531210,
+   "hex": "0x0804C88A",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134530436,
+   "func_hex": "0x0804C584"
+  },
+  {
+   "vma": 134689024,
+   "hex": "0x08073100",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134688876,
+   "func_hex": "0x0807306C"
+  },
+  {
+   "vma": 134689480,
+   "hex": "0x080732C8",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134688876,
+   "func_hex": "0x0807306C"
+  },
+  {
+   "vma": 134694942,
+   "hex": "0x0807481E",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134694868,
+   "func_hex": "0x080747D4"
+  },
+  {
+   "vma": 134694954,
+   "hex": "0x0807482A",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134694868,
+   "func_hex": "0x080747D4"
+  },
+  {
+   "vma": 134695012,
+   "hex": "0x08074864",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134694976,
+   "func_hex": "0x08074840"
+  },
+  {
+   "vma": 134695024,
+   "hex": "0x08074870",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134694976,
+   "func_hex": "0x08074840"
+  },
+  {
+   "vma": 134695148,
+   "hex": "0x080748EC",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134695044,
+   "func_hex": "0x08074884"
+  },
+  {
+   "vma": 134695160,
+   "hex": "0x080748F8",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134695044,
+   "func_hex": "0x08074884"
+  },
+  {
+   "vma": 134709430,
+   "hex": "0x080780B6",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134709412,
+   "func_hex": "0x080780A4"
+  },
+  {
+   "vma": 134709438,
+   "hex": "0x080780BE",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134709412,
+   "func_hex": "0x080780A4"
+  },
+  {
+   "vma": 134783788,
+   "hex": "0x0808A32C",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134783160,
+   "func_hex": "0x0808A0B8"
+  },
+  {
+   "vma": 134791972,
+   "hex": "0x0808C324",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134791176,
+   "func_hex": "0x0808C008"
+  },
+  {
+   "vma": 134792850,
+   "hex": "0x0808C692",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134792708,
+   "func_hex": "0x0808C604"
+  },
+  {
+   "vma": 134793892,
+   "hex": "0x0808CAA4",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134793108,
+   "func_hex": "0x0808C794"
+  },
+  {
+   "vma": 134795380,
+   "hex": "0x0808D074",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134794644,
+   "func_hex": "0x0808CD94"
+  },
+  {
+   "vma": 134796888,
+   "hex": "0x0808D658",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134796524,
+   "func_hex": "0x0808D4EC"
+  },
+  {
+   "vma": 134798200,
+   "hex": "0x0808DB78",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134798164,
+   "func_hex": "0x0808DB54"
+  },
+  {
+   "vma": 134798238,
+   "hex": "0x0808DB9E",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134798164,
+   "func_hex": "0x0808DB54"
+  },
+  {
+   "vma": 134798276,
+   "hex": "0x0808DBC4",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134798164,
+   "func_hex": "0x0808DB54"
+  },
+  {
+   "vma": 134798314,
+   "hex": "0x0808DBEA",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134798164,
+   "func_hex": "0x0808DB54"
+  },
+  {
+   "vma": 134801174,
+   "hex": "0x0808E716",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134800780,
+   "func_hex": "0x0808E58C"
+  },
+  {
+   "vma": 134806882,
+   "hex": "0x0808FD62",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134806876,
+   "func_hex": "0x0808FD5C"
+  },
+  {
+   "vma": 134806886,
+   "hex": "0x0808FD66",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134806876,
+   "func_hex": "0x0808FD5C"
+  },
+  {
+   "vma": 134806890,
+   "hex": "0x0808FD6A",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134806876,
+   "func_hex": "0x0808FD5C"
+  },
+  {
+   "vma": 134806894,
+   "hex": "0x0808FD6E",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134806876,
+   "func_hex": "0x0808FD5C"
+  },
+  {
+   "vma": 134826230,
+   "hex": "0x080948F6",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134826212,
+   "func_hex": "0x080948E4"
+  },
+  {
+   "vma": 134827750,
+   "hex": "0x08094EE6",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134827740,
+   "func_hex": "0x08094EDC"
+  },
+  {
+   "vma": 134833986,
+   "hex": "0x08096742",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134833908,
+   "func_hex": "0x080966F4"
+  },
+  {
+   "vma": 134850430,
+   "hex": "0x0809A77E",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134850392,
+   "func_hex": "0x0809A758"
+  },
+  {
+   "vma": 134853878,
+   "hex": "0x0809B4F6",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134853832,
+   "func_hex": "0x0809B4C8"
+  },
+  {
+   "vma": 134853902,
+   "hex": "0x0809B50E",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134853832,
+   "func_hex": "0x0809B4C8"
+  },
+  {
+   "vma": 134853924,
+   "hex": "0x0809B524",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134853832,
+   "func_hex": "0x0809B4C8"
+  },
+  {
+   "vma": 134854064,
+   "hex": "0x0809B5B0",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134853992,
+   "func_hex": "0x0809B568"
+  },
+  {
+   "vma": 134854128,
+   "hex": "0x0809B5F0",
+   "layers": [
+    1,
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134853992,
+   "func_hex": "0x0809B568"
+  },
+  {
+   "vma": 134854152,
+   "hex": "0x0809B608",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134853992,
+   "func_hex": "0x0809B568"
+  },
+  {
+   "vma": 134854206,
+   "hex": "0x0809B63E",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134853992,
+   "func_hex": "0x0809B568"
+  },
+  {
+   "vma": 134854216,
+   "hex": "0x0809B648",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134853992,
+   "func_hex": "0x0809B568"
+  },
+  {
+   "vma": 134854266,
+   "hex": "0x0809B67A",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134853992,
+   "func_hex": "0x0809B568"
+  },
+  {
+   "vma": 134854276,
+   "hex": "0x0809B684",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134853992,
+   "func_hex": "0x0809B568"
+  },
+  {
+   "vma": 134854648,
+   "hex": "0x0809B7F8",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134854508,
+   "func_hex": "0x0809B76C"
+  },
+  {
+   "vma": 134854668,
+   "hex": "0x0809B80C",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134854508,
+   "func_hex": "0x0809B76C"
+  },
+  {
+   "vma": 134854688,
+   "hex": "0x0809B820",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134854508,
+   "func_hex": "0x0809B76C"
+  },
+  {
+   "vma": 134854744,
+   "hex": "0x0809B858",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134854508,
+   "func_hex": "0x0809B76C"
+  },
+  {
+   "vma": 134854764,
+   "hex": "0x0809B86C",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134854508,
+   "func_hex": "0x0809B76C"
+  },
+  {
+   "vma": 134854784,
+   "hex": "0x0809B880",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134854508,
+   "func_hex": "0x0809B76C"
+  },
+  {
+   "vma": 134854796,
+   "hex": "0x0809B88C",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134854508,
+   "func_hex": "0x0809B76C"
+  },
+  {
+   "vma": 134871688,
+   "hex": "0x0809FA88",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134871676,
+   "func_hex": "0x0809FA7C"
+  },
+  {
+   "vma": 134902904,
+   "hex": "0x080A7478",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134902728,
+   "func_hex": "0x080A73C8"
+  },
+  {
+   "vma": 134902912,
+   "hex": "0x080A7480",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134902728,
+   "func_hex": "0x080A73C8"
+  },
+  {
+   "vma": 134911890,
+   "hex": "0x080A9792",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134911872,
+   "func_hex": "0x080A9780"
+  },
+  {
+   "vma": 134911898,
+   "hex": "0x080A979A",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134911872,
+   "func_hex": "0x080A9780"
+  },
+  {
+   "vma": 134929106,
+   "hex": "0x080ADAD2",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134929092,
+   "func_hex": "0x080ADAC4"
+  },
+  {
+   "vma": 134929262,
+   "hex": "0x080ADB6E",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134929092,
+   "func_hex": "0x080ADAC4"
+  },
+  {
+   "vma": 134929272,
+   "hex": "0x080ADB78",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134929092,
+   "func_hex": "0x080ADAC4"
+  },
+  {
+   "vma": 134929458,
+   "hex": "0x080ADC32",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134929344,
+   "func_hex": "0x080ADBC0"
+  },
+  {
+   "vma": 134943006,
+   "hex": "0x080B111E",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134942968,
+   "func_hex": "0x080B10F8"
+  },
+  {
+   "vma": 134943494,
+   "hex": "0x080B1306",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134943488,
+   "func_hex": "0x080B1300"
+  },
+  {
+   "vma": 134943498,
+   "hex": "0x080B130A",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134943488,
+   "func_hex": "0x080B1300"
+  },
+  {
+   "vma": 134943502,
+   "hex": "0x080B130E",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134943488,
+   "func_hex": "0x080B1300"
+  },
+  {
+   "vma": 134943506,
+   "hex": "0x080B1312",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134943488,
+   "func_hex": "0x080B1300"
+  },
+  {
+   "vma": 134960396,
+   "hex": "0x080B550C",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134960376,
+   "func_hex": "0x080B54F8"
+  },
+  {
+   "vma": 134965064,
+   "hex": "0x080B6748",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134964832,
+   "func_hex": "0x080B6660"
+  },
+  {
+   "vma": 134992508,
+   "hex": "0x080BD27C",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 134992476,
+   "func_hex": "0x080BD25C"
+  },
+  {
+   "vma": 135027886,
+   "hex": "0x080C5CAE",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135027828,
+   "func_hex": "0x080C5C74"
+  },
+  {
+   "vma": 135027914,
+   "hex": "0x080C5CCA",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135027828,
+   "func_hex": "0x080C5C74"
+  },
+  {
+   "vma": 135057578,
+   "hex": "0x080CD0AA",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135057544,
+   "func_hex": "0x080CD088"
+  },
+  {
+   "vma": 135058146,
+   "hex": "0x080CD2E2",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135057784,
+   "func_hex": "0x080CD178"
+  },
+  {
+   "vma": 135058188,
+   "hex": "0x080CD30C",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135057784,
+   "func_hex": "0x080CD178"
+  },
+  {
+   "vma": 135058276,
+   "hex": "0x080CD364",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135058236,
+   "func_hex": "0x080CD33C"
+  },
+  {
+   "vma": 135058898,
+   "hex": "0x080CD5D2",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135058536,
+   "func_hex": "0x080CD468"
+  },
+  {
+   "vma": 135058940,
+   "hex": "0x080CD5FC",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135058536,
+   "func_hex": "0x080CD468"
+  },
+  {
+   "vma": 135063670,
+   "hex": "0x080CE876",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135063620,
+   "func_hex": "0x080CE844"
+  },
+  {
+   "vma": 135063806,
+   "hex": "0x080CE8FE",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135063620,
+   "func_hex": "0x080CE844"
+  },
+  {
+   "vma": 135064712,
+   "hex": "0x080CEC88",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135064296,
+   "func_hex": "0x080CEAE8"
+  },
+  {
+   "vma": 135082128,
+   "hex": "0x080D3090",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135082088,
+   "func_hex": "0x080D3068"
+  },
+  {
+   "vma": 135082750,
+   "hex": "0x080D32FE",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135082344,
+   "func_hex": "0x080D3168"
+  },
+  {
+   "vma": 135082800,
+   "hex": "0x080D3330",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135082344,
+   "func_hex": "0x080D3168"
+  },
+  {
+   "vma": 135082948,
+   "hex": "0x080D33C4",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135082908,
+   "func_hex": "0x080D339C"
+  },
+  {
+   "vma": 135083550,
+   "hex": "0x080D361E",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135083172,
+   "func_hex": "0x080D34A4"
+  },
+  {
+   "vma": 135083600,
+   "hex": "0x080D3650",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135083172,
+   "func_hex": "0x080D34A4"
+  },
+  {
+   "vma": 135102506,
+   "hex": "0x080D802A",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135102464,
+   "func_hex": "0x080D8000"
+  },
+  {
+   "vma": 135103178,
+   "hex": "0x080D82CA",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135102744,
+   "func_hex": "0x080D8118"
+  },
+  {
+   "vma": 135103228,
+   "hex": "0x080D82FC",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135102744,
+   "func_hex": "0x080D8118"
+  },
+  {
+   "vma": 135117354,
+   "hex": "0x080DBA2A",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135117268,
+   "func_hex": "0x080DB9D4"
+  },
+  {
+   "vma": 135117944,
+   "hex": "0x080DBC78",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135117912,
+   "func_hex": "0x080DBC58"
+  },
+  {
+   "vma": 135118022,
+   "hex": "0x080DBCC6",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135117912,
+   "func_hex": "0x080DBC58"
+  },
+  {
+   "vma": 135126794,
+   "hex": "0x080DDF0A",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135126708,
+   "func_hex": "0x080DDEB4"
+  },
+  {
+   "vma": 135127438,
+   "hex": "0x080DE18E",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135127324,
+   "func_hex": "0x080DE11C"
+  },
+  {
+   "vma": 135127952,
+   "hex": "0x080DE390",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135127744,
+   "func_hex": "0x080DE2C0"
+  },
+  {
+   "vma": 135128942,
+   "hex": "0x080DE76E",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135128716,
+   "func_hex": "0x080DE68C"
+  },
+  {
+   "vma": 135130240,
+   "hex": "0x080DEC80",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135130068,
+   "func_hex": "0x080DEBD4"
+  },
+  {
+   "vma": 135130902,
+   "hex": "0x080DEF16",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135130604,
+   "func_hex": "0x080DEDEC"
+  },
+  {
+   "vma": 135131036,
+   "hex": "0x080DEF9C",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135131024,
+   "func_hex": "0x080DEF90"
+  },
+  {
+   "vma": 135132680,
+   "hex": "0x080DF608",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135132180,
+   "func_hex": "0x080DF414"
+  },
+  {
+   "vma": 135133418,
+   "hex": "0x080DF8EA",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135132756,
+   "func_hex": "0x080DF654"
+  },
+  {
+   "vma": 135134040,
+   "hex": "0x080DFB58",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135133512,
+   "func_hex": "0x080DF948"
+  },
+  {
+   "vma": 135134740,
+   "hex": "0x080DFE14",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135134140,
+   "func_hex": "0x080DFBBC"
+  },
+  {
+   "vma": 135151018,
+   "hex": "0x080E3DAA",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135150804,
+   "func_hex": "0x080E3CD4"
+  },
+  {
+   "vma": 135151096,
+   "hex": "0x080E3DF8",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135150804,
+   "func_hex": "0x080E3CD4"
+  },
+  {
+   "vma": 135176506,
+   "hex": "0x080EA13A",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135176344,
+   "func_hex": "0x080EA098"
+  },
+  {
+   "vma": 135177842,
+   "hex": "0x080EA672",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135177520,
+   "func_hex": "0x080EA530"
+  },
+  {
+   "vma": 135179300,
+   "hex": "0x080EAC24",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135179004,
+   "func_hex": "0x080EAAFC"
+  },
+  {
+   "vma": 135181158,
+   "hex": "0x080EB366",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135180756,
+   "func_hex": "0x080EB1D4"
+  },
+  {
+   "vma": 135182314,
+   "hex": "0x080EB7EA",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135181676,
+   "func_hex": "0x080EB56C"
+  },
+  {
+   "vma": 135185640,
+   "hex": "0x080EC4E8",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135185616,
+   "func_hex": "0x080EC4D0"
+  },
+  {
+   "vma": 135187004,
+   "hex": "0x080ECA3C",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135186852,
+   "func_hex": "0x080EC9A4"
+  },
+  {
+   "vma": 135187514,
+   "hex": "0x080ECC3A",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135187184,
+   "func_hex": "0x080ECAF0"
+  },
+  {
+   "vma": 135216264,
+   "hex": "0x080F3C88",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135215596,
+   "func_hex": "0x080F39EC"
+  },
+  {
+   "vma": 135223870,
+   "hex": "0x080F5A3E",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135223464,
+   "func_hex": "0x080F58A8"
+  },
+  {
+   "vma": 135252522,
+   "hex": "0x080FCA2A",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135252516,
+   "func_hex": "0x080FCA24"
+  },
+  {
+   "vma": 135252526,
+   "hex": "0x080FCA2E",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135252516,
+   "func_hex": "0x080FCA24"
+  },
+  {
+   "vma": 135252530,
+   "hex": "0x080FCA32",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135252516,
+   "func_hex": "0x080FCA24"
+  },
+  {
+   "vma": 135252534,
+   "hex": "0x080FCA36",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135252516,
+   "func_hex": "0x080FCA24"
+  },
+  {
+   "vma": 135272820,
+   "hex": "0x08101974",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135272536,
+   "func_hex": "0x08101858"
+  },
+  {
+   "vma": 135272966,
+   "hex": "0x08101A06",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135272936,
+   "func_hex": "0x081019E8"
+  },
+  {
+   "vma": 135286310,
+   "hex": "0x08104E26",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135286280,
+   "func_hex": "0x08104E08"
+  },
+  {
+   "vma": 135286316,
+   "hex": "0x08104E2C",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135286280,
+   "func_hex": "0x08104E08"
+  },
+  {
+   "vma": 135286324,
+   "hex": "0x08104E34",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135286280,
+   "func_hex": "0x08104E08"
+  },
+  {
+   "vma": 135288940,
+   "hex": "0x0810586C",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135288860,
+   "func_hex": "0x0810581C"
+  },
+  {
+   "vma": 135292650,
+   "hex": "0x081066EA",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135292520,
+   "func_hex": "0x08106668"
+  },
+  {
+   "vma": 135299158,
+   "hex": "0x08108056",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135299108,
+   "func_hex": "0x08108024"
+  },
+  {
+   "vma": 135313386,
+   "hex": "0x0810B7EA",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135313228,
+   "func_hex": "0x0810B74C"
+  },
+  {
+   "vma": 135331576,
+   "hex": "0x0810FEF8",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135331568,
+   "func_hex": "0x0810FEF0"
+  },
+  {
+   "vma": 135332164,
+   "hex": "0x08110144",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135332028,
+   "func_hex": "0x081100BC"
+  },
+  {
+   "vma": 135332246,
+   "hex": "0x08110196",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135332028,
+   "func_hex": "0x081100BC"
+  },
+  {
+   "vma": 135332732,
+   "hex": "0x0811037C",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135332636,
+   "func_hex": "0x0811031C"
+  },
+  {
+   "vma": 135358118,
+   "hex": "0x081166A6",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135358008,
+   "func_hex": "0x08116638"
+  },
+  {
+   "vma": 135366106,
+   "hex": "0x081185DA",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135366080,
+   "func_hex": "0x081185C0"
+  },
+  {
+   "vma": 135393050,
+   "hex": "0x0811EF1A",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135392760,
+   "func_hex": "0x0811EDF8"
+  },
+  {
+   "vma": 135431812,
+   "hex": "0x08128684",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135431688,
+   "func_hex": "0x08128608"
+  },
+  {
+   "vma": 135432406,
+   "hex": "0x081288D6",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135431688,
+   "func_hex": "0x08128608"
+  },
+  {
+   "vma": 135432728,
+   "hex": "0x08128A18",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135432612,
+   "func_hex": "0x081289A4"
+  },
+  {
+   "vma": 135433336,
+   "hex": "0x08128C78",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135432612,
+   "func_hex": "0x081289A4"
+  },
+  {
+   "vma": 135433352,
+   "hex": "0x08128C88",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135432612,
+   "func_hex": "0x081289A4"
+  },
+  {
+   "vma": 135434202,
+   "hex": "0x08128FDA",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135434092,
+   "func_hex": "0x08128F6C"
+  },
+  {
+   "vma": 135434862,
+   "hex": "0x0812926E",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135434092,
+   "func_hex": "0x08128F6C"
+  },
+  {
+   "vma": 135434878,
+   "hex": "0x0812927E",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135434092,
+   "func_hex": "0x08128F6C"
+  },
+  {
+   "vma": 135467394,
+   "hex": "0x08131182",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135466860,
+   "func_hex": "0x08130F6C"
+  },
+  {
+   "vma": 135488886,
+   "hex": "0x08136576",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135488688,
+   "func_hex": "0x081364B0"
+  },
+  {
+   "vma": 135489428,
+   "hex": "0x08136794",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135489244,
+   "func_hex": "0x081366DC"
+  },
+  {
+   "vma": 135491300,
+   "hex": "0x08136EE4",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135491192,
+   "func_hex": "0x08136E78"
+  },
+  {
+   "vma": 135493532,
+   "hex": "0x0813779C",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135493436,
+   "func_hex": "0x0813773C"
+  },
+  {
+   "vma": 135493566,
+   "hex": "0x081377BE",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135493436,
+   "func_hex": "0x0813773C"
+  },
+  {
+   "vma": 135493666,
+   "hex": "0x08137822",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135493436,
+   "func_hex": "0x0813773C"
+  },
+  {
+   "vma": 135493766,
+   "hex": "0x08137886",
+   "layers": [
+    2
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135493436,
+   "func_hex": "0x0813773C"
+  },
+  {
+   "vma": 135502736,
+   "hex": "0x08139B90",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135502636,
+   "func_hex": "0x08139B2C"
+  },
+  {
+   "vma": 135503248,
+   "hex": "0x08139D90",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135503156,
+   "func_hex": "0x08139D34"
+  },
+  {
+   "vma": 135503940,
+   "hex": "0x0813A044",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135503680,
+   "func_hex": "0x08139F40"
+  },
+  {
+   "vma": 135521248,
+   "hex": "0x0813E3E0",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135521176,
+   "func_hex": "0x0813E398"
+  },
+  {
+   "vma": 135523704,
+   "hex": "0x0813ED78",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135523640,
+   "func_hex": "0x0813ED38"
+  },
+  {
+   "vma": 135531122,
+   "hex": "0x08140A72",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135531096,
+   "func_hex": "0x08140A58"
+  },
+  {
+   "vma": 135532454,
+   "hex": "0x08140FA6",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135532404,
+   "func_hex": "0x08140F74"
+  },
+  {
+   "vma": 135535444,
+   "hex": "0x08141B54",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135535396,
+   "func_hex": "0x08141B24"
+  },
+  {
+   "vma": 135535458,
+   "hex": "0x08141B62",
+   "layers": [
+    0
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135535396,
+   "func_hex": "0x08141B24"
+  },
+  {
+   "vma": 135538618,
+   "hex": "0x081427BA",
+   "layers": [
+    1
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135538572,
+   "func_hex": "0x0814278C"
+  },
+  {
+   "vma": 135542542,
+   "hex": "0x0814370E",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135542260,
+   "func_hex": "0x081435F4"
+  },
+  {
+   "vma": 135543032,
+   "hex": "0x081438F8",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135543020,
+   "func_hex": "0x081438EC"
+  },
+  {
+   "vma": 135543562,
+   "hex": "0x08143B0A",
+   "layers": [
+    3
+   ],
+   "modes": [
+    "literal-BGxCNT"
+   ],
+   "func": 135543076,
+   "func_hex": "0x08143924"
+  }
+ ],
+ "multi": [
+  {
+   "func": "0x08004798",
+   "layers": [
+    1,
+    2,
+    3
+   ],
+   "sites": [
+    "0x08004820"
+   ]
+  },
+  {
+   "func": "0x0803FF24",
+   "layers": [
+    1,
+    2
+   ],
+   "sites": [
+    "0x080400DA",
+    "0x08040166"
+   ]
+  },
+  {
+   "func": "0x08045EC4",
+   "layers": [
+    0,
+    1
+   ],
+   "sites": [
+    "0x08045FB6",
+    "0x08045FBE"
+   ]
+  },
+  {
+   "func": "0x08048E98",
+   "layers": [
+    1,
+    2
+   ],
+   "sites": [
+    "0x08048F72",
+    "0x08049194",
+    "0x080492F4"
+   ]
+  },
+  {
+   "func": "0x0807306C",
+   "layers": [
+    1,
+    2
+   ],
+   "sites": [
+    "0x08073100",
+    "0x080732C8"
+   ]
+  },
+  {
+   "func": "0x080747D4",
+   "layers": [
+    1,
+    2
+   ],
+   "sites": [
+    "0x0807481E",
+    "0x0807482A"
+   ]
+  },
+  {
+   "func": "0x08074840",
+   "layers": [
+    1,
+    2
+   ],
+   "sites": [
+    "0x08074864",
+    "0x08074870"
+   ]
+  },
+  {
+   "func": "0x08074884",
+   "layers": [
+    1,
+    2
+   ],
+   "sites": [
+    "0x080748EC",
+    "0x080748F8"
+   ]
+  },
+  {
+   "func": "0x080780A4",
+   "layers": [
+    1,
+    2
+   ],
+   "sites": [
+    "0x080780B6",
+    "0x080780BE"
+   ]
+  },
+  {
+   "func": "0x0808DB54",
+   "layers": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "sites": [
+    "0x0808DB78",
+    "0x0808DB9E",
+    "0x0808DBC4",
+    "0x0808DBEA"
+   ]
+  },
+  {
+   "func": "0x0808FD5C",
+   "layers": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "sites": [
+    "0x0808FD62",
+    "0x0808FD66",
+    "0x0808FD6A",
+    "0x0808FD6E"
+   ]
+  },
+  {
+   "func": "0x0809B568",
+   "layers": [
+    1,
+    2
+   ],
+   "sites": [
+    "0x0809B5B0",
+    "0x0809B5F0",
+    "0x0809B608",
+    "0x0809B63E",
+    "0x0809B648",
+    "0x0809B67A",
+    "0x0809B684"
+   ]
+  },
+  {
+   "func": "0x0809B76C",
+   "layers": [
+    1,
+    2
+   ],
+   "sites": [
+    "0x0809B7F8",
+    "0x0809B80C",
+    "0x0809B820",
+    "0x0809B858",
+    "0x0809B86C",
+    "0x0809B880",
+    "0x0809B88C"
+   ]
+  },
+  {
+   "func": "0x080A73C8",
+   "layers": [
+    0,
+    2
+   ],
+   "sites": [
+    "0x080A7478",
+    "0x080A7480"
+   ]
+  },
+  {
+   "func": "0x080A9780",
+   "layers": [
+    0,
+    2
+   ],
+   "sites": [
+    "0x080A9792",
+    "0x080A979A"
+   ]
+  },
+  {
+   "func": "0x080ADAC4",
+   "layers": [
+    0,
+    1,
+    2
+   ],
+   "sites": [
+    "0x080ADAD2",
+    "0x080ADB6E",
+    "0x080ADB78"
+   ]
+  },
+  {
+   "func": "0x080B1300",
+   "layers": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "sites": [
+    "0x080B1306",
+    "0x080B130A",
+    "0x080B130E",
+    "0x080B1312"
+   ]
+  },
+  {
+   "func": "0x080C5C74",
+   "layers": [
+    1,
+    2
+   ],
+   "sites": [
+    "0x080C5CAE",
+    "0x080C5CCA"
+   ]
+  },
+  {
+   "func": "0x080E3CD4",
+   "layers": [
+    2,
+    3
+   ],
+   "sites": [
+    "0x080E3DAA",
+    "0x080E3DF8"
+   ]
+  },
+  {
+   "func": "0x080FCA24",
+   "layers": [
+    0,
+    1,
+    2,
+    3
+   ],
+   "sites": [
+    "0x080FCA2A",
+    "0x080FCA2E",
+    "0x080FCA32",
+    "0x080FCA36"
+   ]
+  },
+  {
+   "func": "0x08104E08",
+   "layers": [
+    0,
+    2,
+    3
+   ],
+   "sites": [
+    "0x08104E26",
+    "0x08104E2C",
+    "0x08104E34"
+   ]
+  },
+  {
+   "func": "0x08141B24",
+   "layers": [
+    0,
+    3
+   ],
+   "sites": [
+    "0x08141B54",
+    "0x08141B62"
+   ]
+  }
+ ],
+ "single": [
+  {
+   "func": "0x08006D14",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x08006E52"
+   ]
+  },
+  {
+   "func": "0x080077A4",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x08007828"
+   ]
+  },
+  {
+   "func": "0x080085E8",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x0800877A"
+   ]
+  },
+  {
+   "func": "0x0800B7B4",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x0800B7F4"
+   ]
+  },
+  {
+   "func": "0x0800CFEC",
+   "layers": [
+    0
+   ],
+   "sites": [
+    "0x0800D004"
+   ]
+  },
+  {
+   "func": "0x08028CBC",
+   "layers": [
+    3
+   ],
+   "sites": [
+    "0x08028D6A"
+   ]
+  },
+  {
+   "func": "0x08048748",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080489F2"
+   ]
+  },
+  {
+   "func": "0x08048A80",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x08048C3C"
+   ]
+  },
+  {
+   "func": "0x0804B458",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x0804B48C"
+   ]
+  },
+  {
+   "func": "0x0804BBF0",
+   "layers": [
+    2
+   ],
+   "sites": [
+    "0x0804C172"
+   ]
+  },
+  {
+   "func": "0x0804C584",
+   "layers": [
+    2
+   ],
+   "sites": [
+    "0x0804C88A"
+   ]
+  },
+  {
+   "func": "0x0808A0B8",
+   "layers": [
+    3
+   ],
+   "sites": [
+    "0x0808A32C"
+   ]
+  },
+  {
+   "func": "0x0808C008",
+   "layers": [
+    3
+   ],
+   "sites": [
+    "0x0808C324"
+   ]
+  },
+  {
+   "func": "0x0808C604",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x0808C692"
+   ]
+  },
+  {
+   "func": "0x0808C794",
+   "layers": [
+    2
+   ],
+   "sites": [
+    "0x0808CAA4"
+   ]
+  },
+  {
+   "func": "0x0808CD94",
+   "layers": [
+    2
+   ],
+   "sites": [
+    "0x0808D074"
+   ]
+  },
+  {
+   "func": "0x0808D4EC",
+   "layers": [
+    3
+   ],
+   "sites": [
+    "0x0808D658"
+   ]
+  },
+  {
+   "func": "0x0808E58C",
+   "layers": [
+    3
+   ],
+   "sites": [
+    "0x0808E716"
+   ]
+  },
+  {
+   "func": "0x080948E4",
+   "layers": [
+    3
+   ],
+   "sites": [
+    "0x080948F6"
+   ]
+  },
+  {
+   "func": "0x08094EDC",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x08094EE6"
+   ]
+  },
+  {
+   "func": "0x080966F4",
+   "layers": [
+    2
+   ],
+   "sites": [
+    "0x08096742"
+   ]
+  },
+  {
+   "func": "0x0809A758",
+   "layers": [
+    0
+   ],
+   "sites": [
+    "0x0809A77E"
+   ]
+  },
+  {
+   "func": "0x0809B4C8",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x0809B4F6",
+    "0x0809B50E",
+    "0x0809B524"
+   ]
+  },
+  {
+   "func": "0x0809FA7C",
+   "layers": [
+    2
+   ],
+   "sites": [
+    "0x0809FA88"
+   ]
+  },
+  {
+   "func": "0x080ADBC0",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080ADC32"
+   ]
+  },
+  {
+   "func": "0x080B10F8",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080B111E"
+   ]
+  },
+  {
+   "func": "0x080B54F8",
+   "layers": [
+    2
+   ],
+   "sites": [
+    "0x080B550C"
+   ]
+  },
+  {
+   "func": "0x080B6660",
+   "layers": [
+    2
+   ],
+   "sites": [
+    "0x080B6748"
+   ]
+  },
+  {
+   "func": "0x080BD25C",
+   "layers": [
+    0
+   ],
+   "sites": [
+    "0x080BD27C"
+   ]
+  },
+  {
+   "func": "0x080CD088",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080CD0AA"
+   ]
+  },
+  {
+   "func": "0x080CD178",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080CD2E2",
+    "0x080CD30C"
+   ]
+  },
+  {
+   "func": "0x080CD33C",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080CD364"
+   ]
+  },
+  {
+   "func": "0x080CD468",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080CD5D2",
+    "0x080CD5FC"
+   ]
+  },
+  {
+   "func": "0x080CE844",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080CE876",
+    "0x080CE8FE"
+   ]
+  },
+  {
+   "func": "0x080CEAE8",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080CEC88"
+   ]
+  },
+  {
+   "func": "0x080D3068",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080D3090"
+   ]
+  },
+  {
+   "func": "0x080D3168",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080D32FE",
+    "0x080D3330"
+   ]
+  },
+  {
+   "func": "0x080D339C",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080D33C4"
+   ]
+  },
+  {
+   "func": "0x080D34A4",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080D361E",
+    "0x080D3650"
+   ]
+  },
+  {
+   "func": "0x080D8000",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080D802A"
+   ]
+  },
+  {
+   "func": "0x080D8118",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080D82CA",
+    "0x080D82FC"
+   ]
+  },
+  {
+   "func": "0x080DB9D4",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080DBA2A"
+   ]
+  },
+  {
+   "func": "0x080DBC58",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080DBC78",
+    "0x080DBCC6"
+   ]
+  },
+  {
+   "func": "0x080DDEB4",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080DDF0A"
+   ]
+  },
+  {
+   "func": "0x080DE11C",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080DE18E"
+   ]
+  },
+  {
+   "func": "0x080DE2C0",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080DE390"
+   ]
+  },
+  {
+   "func": "0x080DE68C",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080DE76E"
+   ]
+  },
+  {
+   "func": "0x080DEBD4",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080DEC80"
+   ]
+  },
+  {
+   "func": "0x080DEDEC",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080DEF16"
+   ]
+  },
+  {
+   "func": "0x080DEF90",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080DEF9C"
+   ]
+  },
+  {
+   "func": "0x080DF414",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080DF608"
+   ]
+  },
+  {
+   "func": "0x080DF654",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080DF8EA"
+   ]
+  },
+  {
+   "func": "0x080DF948",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080DFB58"
+   ]
+  },
+  {
+   "func": "0x080DFBBC",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080DFE14"
+   ]
+  },
+  {
+   "func": "0x080EA098",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x080EA13A"
+   ]
+  },
+  {
+   "func": "0x080EA530",
+   "layers": [
+    0
+   ],
+   "sites": [
+    "0x080EA672"
+   ]
+  },
+  {
+   "func": "0x080EAAFC",
+   "layers": [
+    0
+   ],
+   "sites": [
+    "0x080EAC24"
+   ]
+  },
+  {
+   "func": "0x080EB1D4",
+   "layers": [
+    3
+   ],
+   "sites": [
+    "0x080EB366"
+   ]
+  },
+  {
+   "func": "0x080EB56C",
+   "layers": [
+    2
+   ],
+   "sites": [
+    "0x080EB7EA"
+   ]
+  },
+  {
+   "func": "0x080EC4D0",
+   "layers": [
+    2
+   ],
+   "sites": [
+    "0x080EC4E8"
+   ]
+  },
+  {
+   "func": "0x080EC9A4",
+   "layers": [
+    0
+   ],
+   "sites": [
+    "0x080ECA3C"
+   ]
+  },
+  {
+   "func": "0x080ECAF0",
+   "layers": [
+    3
+   ],
+   "sites": [
+    "0x080ECC3A"
+   ]
+  },
+  {
+   "func": "0x080F39EC",
+   "layers": [
+    0
+   ],
+   "sites": [
+    "0x080F3C88"
+   ]
+  },
+  {
+   "func": "0x080F58A8",
+   "layers": [
+    2
+   ],
+   "sites": [
+    "0x080F5A3E"
+   ]
+  },
+  {
+   "func": "0x08101858",
+   "layers": [
+    0
+   ],
+   "sites": [
+    "0x08101974"
+   ]
+  },
+  {
+   "func": "0x081019E8",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x08101A06"
+   ]
+  },
+  {
+   "func": "0x0810581C",
+   "layers": [
+    3
+   ],
+   "sites": [
+    "0x0810586C"
+   ]
+  },
+  {
+   "func": "0x08106668",
+   "layers": [
+    2
+   ],
+   "sites": [
+    "0x081066EA"
+   ]
+  },
+  {
+   "func": "0x08108024",
+   "layers": [
+    0
+   ],
+   "sites": [
+    "0x08108056"
+   ]
+  },
+  {
+   "func": "0x0810B74C",
+   "layers": [
+    0
+   ],
+   "sites": [
+    "0x0810B7EA"
+   ]
+  },
+  {
+   "func": "0x0810FEF0",
+   "layers": [
+    0
+   ],
+   "sites": [
+    "0x0810FEF8"
+   ]
+  },
+  {
+   "func": "0x081100BC",
+   "layers": [
+    0
+   ],
+   "sites": [
+    "0x08110144",
+    "0x08110196"
+   ]
+  },
+  {
+   "func": "0x0811031C",
+   "layers": [
+    2
+   ],
+   "sites": [
+    "0x0811037C"
+   ]
+  },
+  {
+   "func": "0x08116638",
+   "layers": [
+    0
+   ],
+   "sites": [
+    "0x081166A6"
+   ]
+  },
+  {
+   "func": "0x081185C0",
+   "layers": [
+    0
+   ],
+   "sites": [
+    "0x081185DA"
+   ]
+  },
+  {
+   "func": "0x0811EDF8",
+   "layers": [
+    3
+   ],
+   "sites": [
+    "0x0811EF1A"
+   ]
+  },
+  {
+   "func": "0x08128608",
+   "layers": [
+    2
+   ],
+   "sites": [
+    "0x08128684",
+    "0x081288D6"
+   ]
+  },
+  {
+   "func": "0x081289A4",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x08128A18",
+    "0x08128C78",
+    "0x08128C88"
+   ]
+  },
+  {
+   "func": "0x08128F6C",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x08128FDA",
+    "0x0812926E",
+    "0x0812927E"
+   ]
+  },
+  {
+   "func": "0x08130F6C",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x08131182"
+   ]
+  },
+  {
+   "func": "0x081364B0",
+   "layers": [
+    0
+   ],
+   "sites": [
+    "0x08136576"
+   ]
+  },
+  {
+   "func": "0x081366DC",
+   "layers": [
+    3
+   ],
+   "sites": [
+    "0x08136794"
+   ]
+  },
+  {
+   "func": "0x08136E78",
+   "layers": [
+    2
+   ],
+   "sites": [
+    "0x08136EE4"
+   ]
+  },
+  {
+   "func": "0x0813773C",
+   "layers": [
+    2
+   ],
+   "sites": [
+    "0x0813779C",
+    "0x081377BE",
+    "0x08137822",
+    "0x08137886"
+   ]
+  },
+  {
+   "func": "0x08139B2C",
+   "layers": [
+    0
+   ],
+   "sites": [
+    "0x08139B90"
+   ]
+  },
+  {
+   "func": "0x08139D34",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x08139D90"
+   ]
+  },
+  {
+   "func": "0x08139F40",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x0813A044"
+   ]
+  },
+  {
+   "func": "0x0813E398",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x0813E3E0"
+   ]
+  },
+  {
+   "func": "0x0813ED38",
+   "layers": [
+    0
+   ],
+   "sites": [
+    "0x0813ED78"
+   ]
+  },
+  {
+   "func": "0x08140A58",
+   "layers": [
+    3
+   ],
+   "sites": [
+    "0x08140A72"
+   ]
+  },
+  {
+   "func": "0x08140F74",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x08140FA6"
+   ]
+  },
+  {
+   "func": "0x0814278C",
+   "layers": [
+    1
+   ],
+   "sites": [
+    "0x081427BA"
+   ]
+  },
+  {
+   "func": "0x081435F4",
+   "layers": [
+    3
+   ],
+   "sites": [
+    "0x0814370E"
+   ]
+  },
+  {
+   "func": "0x081438EC",
+   "layers": [
+    3
+   ],
+   "sites": [
+    "0x081438F8"
+   ]
+  },
+  {
+   "func": "0x08143924",
+   "layers": [
+    3
+   ],
+   "sites": [
+    "0x08143B0A"
+   ]
+  }
+ ],
+ "cb2": [
+  {
+   "loader": "0x0800ACEC",
+   "reg": "r1",
+   "func": "0x0800ACDC",
+   "uses": [
+    "0800ACEE: bl     #0x800a770             ; CALL #0x800a770",
+    "0800ACF6: bl     #0x800a770             ; CALL #0x800a770"
+   ]
+  },
+  {
+   "loader": "0x0800AD30",
+   "reg": "r1",
+   "func": "0x0800ACDC",
+   "uses": [
+    "0800AD32: bl     #0x800a770             ; CALL #0x800a770",
+    "0800AD3A: bl     #0x800a770             ; CALL #0x800a770"
+   ]
+  },
+  {
+   "loader": "0x0800AD5E",
+   "reg": "r1",
+   "func": "0x0800ACDC",
+   "uses": [
+    "0800AD60: bl     #0x800a770             ; CALL #0x800a770",
+    "0800AD68: bl     #0x800a770             ; CALL #0x800a770"
+   ]
+  },
+  {
+   "loader": "0x0800AD9E",
+   "reg": "r1",
+   "func": "0x0800ACDC",
+   "uses": [
+    "0800ADA0: bl     #0x800a770             ; CALL #0x800a770",
+    "0800ADA8: bl     #0x800a770             ; CALL #0x800a770"
+   ]
+  },
+  {
+   "loader": "0x0800ADD2",
+   "reg": "r1",
+   "func": "0x0800ACDC",
+   "uses": [
+    "0800ADD4: bl     #0x800a770             ; CALL #0x800a770",
+    "0800ADDC: bl     #0x800a770             ; CALL #0x800a770"
+   ]
+  },
+  {
+   "loader": "0x0800AE48",
+   "reg": "r1",
+   "func": "0x0800ACDC",
+   "uses": [
+    "0800AE4A: bl     #0x800a770             ; CALL #0x800a770",
+    "0800AE50: lsls   r0, r1, #2             ; MOVE",
+    "0800AE52: adds   r0, r0, r1             ; MOVE",
+    "0800AE56: adds   r1, r4, #4             ; MOVE",
+    "0800AE58: adds   r0, r0, r1             ; MOVE",
+    "0800AE5E: bl     #0x800a770             ; CALL #0x800a770",
+    "0800AE64: lsls   r0, r1, #2             ; MOVE",
+    "0800AE66: adds   r0, r0, r1             ; MOVE"
+   ]
+  },
+  {
+   "loader": "0x0800AE86",
+   "reg": "r1",
+   "func": "0x0800ACDC",
+   "uses": [
+    "0800AE88: bl     #0x800a770             ; CALL #0x800a770",
+    "0800AE90: bl     #0x800a770             ; CALL #0x800a770"
+   ]
+  },
+  {
+   "loader": "0x0800AEAE",
+   "reg": "r1",
+   "func": "0x0800ACDC",
+   "uses": [
+    "0800AEB0: bl     #0x800a770             ; CALL #0x800a770",
+    "0800AEB8: bl     #0x800a770             ; CALL #0x800a770"
+   ]
+  },
+  {
+   "loader": "0x0800AED6",
+   "reg": "r1",
+   "func": "0x0800ACDC",
+   "uses": [
+    "0800AED8: bl     #0x800a770             ; CALL #0x800a770",
+    "0800AEE0: bl     #0x800a770             ; CALL #0x800a770"
+   ]
+  },
+  {
+   "loader": "0x0800AEFE",
+   "reg": "r1",
+   "func": "0x0800ACDC",
+   "uses": [
+    "0800AF00: bl     #0x800a770             ; CALL #0x800a770",
+    "0800AF08: bl     #0x800a770             ; CALL #0x800a770"
+   ]
+  },
+  {
+   "loader": "0x0800AF26",
+   "reg": "r1",
+   "func": "0x0800ACDC",
+   "uses": [
+    "0800AF28: bl     #0x800a770             ; CALL #0x800a770",
+    "0800AF30: bl     #0x800a770             ; CALL #0x800a770"
+   ]
+  },
+  {
+   "loader": "0x0800AF4E",
+   "reg": "r1",
+   "func": "0x0800ACDC",
+   "uses": [
+    "0800AF50: bl     #0x800a770             ; CALL #0x800a770",
+    "0800AF58: bl     #0x800a770             ; CALL #0x800a770"
+   ]
+  },
+  {
+   "loader": "0x0800AF76",
+   "reg": "r1",
+   "func": "0x0800ACDC",
+   "uses": [
+    "0800AF78: bl     #0x800a770             ; CALL #0x800a770",
+    "0800AF80: bl     #0x800a770             ; CALL #0x800a770",
+    "0800AF86: movs   r1, #0x20              ; MOVE",
+    "0800AF8A: bl     #0x8070a4c             ; CALL #0x8070a4c"
+   ]
+  },
+  {
+   "loader": "0x0800AFA6",
+   "reg": "r1",
+   "func": "0x0800ACDC",
+   "uses": [
+    "0800AFA8: bl     #0x800a770             ; CALL #0x800a770",
+    "0800AFB0: bl     #0x800a770             ; CALL #0x800a770",
+    "0800AFB6: movs   r1, #0x20              ; MOVE",
+    "0800AFBA: bl     #0x8070a4c             ; CALL #0x8070a4c"
+   ]
+  },
+  {
+   "loader": "0x0800BAEA",
+   "reg": "r1",
+   "func": "0x0800B988",
+   "uses": [
+    "0800BAEC: bl     #0x800a770             ; CALL #0x800a770"
+   ]
+  },
+  {
+   "loader": "0x08028D6E",
+   "reg": "r1",
+   "func": "0x08028CBC",
+   "uses": [
+    "08028D70: bl     #0x800a770             ; CALL #0x800a770",
+    "08028D78: bl     #0x800a770             ; CALL #0x800a770",
+    "08028D7E: movs   r1, #0x20              ; MOVE",
+    "08028D82: bl     #0x8070a4c             ; CALL #0x8070a4c"
+   ]
+  },
+  {
+   "loader": "0x0804B616",
+   "reg": "r2",
+   "func": "0x0804B544",
+   "uses": [
+    "0804B61C: str    r2, [r0, #4]           ; STORE",
+    "0804B630: lsls   r4, r2, #3             ; MOVE"
+   ]
+  },
+  {
+   "loader": "0x08073EC2",
+   "reg": "r1",
+   "func": "0x08073DF0",
+   "uses": [
+    "08073EC4: bl     #0x800a770             ; CALL #0x800a770",
+    "08073ECE: movs   r1, #0x20              ; MOVE",
+    "08073ED2: bl     #0x8070a4c             ; CALL #0x8070a4c"
+   ]
+  },
+  {
+   "loader": "0x0807595A",
+   "reg": "r0",
+   "func": "0x0807594C",
+   "uses": [
+    "0807595C: str    r0, [r4]               ; STORE",
+    "08075960: str    r0, [r4, #4]           ; STORE",
+    "08075962: movs   r0, #0xe               ; MOVE",
+    "08075966: movs   r0, r0                 ; MOVE",
+    "08075968: strh   r0, [r0]               ; STORE",
+    "0807596A: lsls   r0, r0, #0x18          ; MOVE",
+    "08075972: str    r0, [r4]               ; STORE",
+    "08075976: str    r0, [r4, #4]           ; STORE"
+   ]
+  },
+  {
+   "loader": "0x0807599A",
+   "reg": "r0",
+   "func": "0x0807598C",
+   "uses": [
+    "0807599C: str    r0, [r4]               ; STORE",
+    "080759A0: str    r0, [r4, #4]           ; STORE",
+    "080759A2: movs   r0, #0xe               ; MOVE",
+    "080759A6: movs   r0, r0                 ; MOVE",
+    "080759A8: strh   r0, [r0]               ; STORE",
+    "080759AA: lsls   r0, r0, #0x18          ; MOVE",
+    "080759B4: bl     #0x8076f4c             ; CALL #0x8076f4c",
+    "080759B8: lsls   r0, r0, #0x18          ; MOVE"
+   ]
+  },
+  {
+   "loader": "0x080791D8",
+   "reg": "r1",
+   "func": "0x080790C4",
+   "uses": [
+    "080791DA: bl     #0x81b1298             ; CALL #0x81b1298",
+    "080791E2: bl     #0x81b1298             ; CALL #0x81b1298",
+    "080791EA: bl     #0x81b1298             ; CALL #0x81b1298",
+    "080791F0: movs   r1, #0xe0              ; MOVE",
+    "080791F4: bl     #0x8070a90             ; CALL #0x8070a90",
+    "080791F8: bl     #0x8086428             ; CALL #0x8086428",
+    "080791FC: bl     #0x8077a64             ; CALL #0x8077a64"
+   ]
+  },
+  {
+   "loader": "0x08096A10",
+   "reg": "r2",
+   "func": "0x08096998",
+   "uses": [
+    "08096A12: adds   r1, r1, r2             ; MOVE",
+    "08096A14: bl     #0x81b1298             ; CALL #0x81b1298",
+    "08096A24: lsls   r2, r5, #0xb           ; MOVE"
+   ]
+  },
+  {
+   "loader": "0x080ADBC8",
+   "reg": "r2",
+   "func": "0x080ADBC0",
+   "uses": []
+  },
+  {
+   "loader": "0x080E3D76",
+   "reg": "r1",
+   "func": "0x080E3CD4",
+   "uses": [
+    "080E3D78: bl     #0x81b1298             ; CALL #0x81b1298",
+    "080E3D7E: movs   r1, #0                 ; MOVE",
+    "080E3D80: mov    sb, r1                 ; MOVE",
+    "080E3D82: str    r1, [sp]               ; STORE",
+    "080E3D84: str    r1, [sp, #4]           ; STORE",
+    "080E3D8A: movs   r1, #0x14              ; MOVE",
+    "080E3D8C: str    r1, [sp, #0xc]         ; STORE",
+    "080E3D90: movs   r1, #0                 ; MOVE"
+   ]
+  },
+  {
+   "loader": "0x080EA5E6",
+   "reg": "r2",
+   "func": "0x080EA530",
+   "uses": [
+    "080EA5EC: str    r2, [r0, #4]           ; STORE",
+    "080EA600: lsls   r4, r2, #3             ; MOVE"
+   ]
+  },
+  {
+   "loader": "0x080EB358",
+   "reg": "r3",
+   "func": "0x080EB1D4",
+   "uses": []
+  },
+  {
+   "loader": "0x080EB5FE",
+   "reg": "r1",
+   "func": "0x080EB56C",
+   "uses": [
+    "080EB600: bl     #0x81b1298             ; CALL #0x81b1298",
+    "080EB614: movs   r1, #0x20              ; MOVE",
+    "080EB618: bl     #0x8070a90             ; CALL #0x8070a90"
+   ]
+  },
+  {
+   "loader": "0x080EC1C8",
+   "reg": "r3",
+   "func": "0x080EC1A4",
+   "uses": []
+  },
+  {
+   "loader": "0x080EC46E",
+   "reg": "r1",
+   "func": "0x080EC388",
+   "uses": [
+    "080EC470: bl     #0x81b1298             ; CALL #0x81b1298",
+    "080EC484: bl     #0x81b1298             ; CALL #0x81b1298"
+   ]
+  },
+  {
+   "loader": "0x080F58EE",
+   "reg": "r1",
+   "func": "0x080F58A8",
+   "uses": [
+    "080F58F0: bl     #0x81b1298             ; CALL #0x81b1298",
+    "080F5904: bl     #0x81b1298             ; CALL #0x81b1298"
+   ]
+  },
+  {
+   "loader": "0x08136726",
+   "reg": "r1",
+   "func": "0x081366DC",
+   "uses": [
+    "08136728: bl     #0x81b1298             ; CALL #0x81b1298",
+    "08136736: str    r1, [r4, #4]           ; STORE",
+    "08136742: bl     #0x81b1298             ; CALL #0x81b1298"
+   ]
+  },
+  {
+   "loader": "0x081428DE",
+   "reg": "r1",
+   "func": "0x081427D0",
+   "uses": [
+    "081428F0: bl     #0x800a770             ; CALL #0x800a770",
+    "081428F8: adds   r1, r1, r0             ; MOVE"
+   ]
+  }
+ ],
+ "cb3": [
+  {
+   "loader": "0x0800AFE6",
+   "reg": "r1",
+   "func": "0x0800AFD8",
+   "uses": [
+    "0800AFE8: bl     #0x800a770             ; CALL #0x800a770",
+    "0800AFEE: movs   r1, #0                 ; MOVE",
+    "0800AFF2: bl     #0x8070a4c             ; CALL #0x8070a4c",
+    "0800AFF6: bl     #0x800ac78             ; CALL #0x800ac78",
+    "0800AFFA: bl     #0x800acdc             ; CALL #0x800acdc"
+   ]
+  },
+  {
+   "loader": "0x0800B9D2",
+   "reg": "r1",
+   "func": "0x0800B988",
+   "uses": [
+    "0800B9D4: bl     #0x800a770             ; CALL #0x800a770"
+   ]
+  },
+  {
+   "loader": "0x08028E2C",
+   "reg": "r0",
+   "func": "0x08028E00",
+   "uses": [
+    "08028E2E: adds   r1, r1, r0             ; MOVE",
+    "08028E34: adds   r0, r2, #1             ; MOVE",
+    "08028E36: mov    sl, r0                 ; MOVE",
+    "08028E3C: lsls   r0, r2, #6             ; MOVE",
+    "08028E40: adds   r3, r4, r0             ; MOVE"
+   ]
+  },
+  {
+   "loader": "0x080791E0",
+   "reg": "r1",
+   "func": "0x080790C4",
+   "uses": [
+    "080791E2: bl     #0x81b1298             ; CALL #0x81b1298",
+    "080791EA: bl     #0x81b1298             ; CALL #0x81b1298",
+    "080791F0: movs   r1, #0xe0              ; MOVE",
+    "080791F4: bl     #0x8070a90             ; CALL #0x8070a90",
+    "080791F8: bl     #0x8086428             ; CALL #0x8086428",
+    "080791FC: bl     #0x8077a64             ; CALL #0x8077a64",
+    "08079200: bl     #0x800074c             ; CALL #0x800074c",
+    "08079204: bl     #0x80023d8             ; CALL #0x80023d8"
+   ]
+  },
+  {
+   "loader": "0x0808D4FC",
+   "reg": "r2",
+   "func": "0x0808D4EC",
+   "uses": [
+    "0808D508: str    r2, [r0, #4]           ; STORE"
+   ]
+  },
+  {
+   "loader": "0x0809A4FE",
+   "reg": "r2",
+   "func": "0x0809A3B8",
+   "uses": [
+    "0809A504: str    r2, [r0, #4]           ; STORE",
+    "0809A512: str    r2, [r0, #4]           ; STORE"
+   ]
+  },
+  {
+   "loader": "0x080AA47E",
+   "reg": "r0",
+   "func": "0x080AA47C",
+   "uses": [
+    "080AA480: bl     #0x80aa498             ; CALL #0x80aa498",
+    "080AA486: bl     #0x80aa498             ; CALL #0x80aa498",
+    "080AA48E: movs   r0, r0                 ; MOVE"
+   ]
+  },
+  {
+   "loader": "0x080AB332",
+   "reg": "r2",
+   "func": "0x080AB28C",
+   "uses": [
+    "080AB334: adds   r1, r1, r2             ; MOVE",
+    "080AB336: movs   r2, #2                 ; MOVE",
+    "080AB338: bl     #0x80012c4             ; CALL #0x80012c4"
+   ]
+  },
+  {
+   "loader": "0x080AB360",
+   "reg": "r7",
+   "func": "0x080AB28C",
+   "uses": [
+    "080AB362: adds   r1, r1, r7             ; MOVE",
+    "080AB366: bl     #0x80012c4             ; CALL #0x80012c4"
+   ]
+  },
+  {
+   "loader": "0x080AB3A2",
+   "reg": "r0",
+   "func": "0x080AB39C",
+   "uses": [
+    "080AB3A4: mov    ip, r0                 ; MOVE",
+    "080AB3B4: adds   r0, r1, #0             ; MOVE",
+    "080AB3B6: adds   r0, #0x56              ; MOVE",
+    "080AB3B8: lsls   r0, r0, #1             ; MOVE",
+    "080AB3BA: add    r0, ip                 ; MOVE"
+   ]
+  },
+  {
+   "loader": "0x080AB6F8",
+   "reg": "r0",
+   "func": "0x080AB5B4",
+   "uses": [
+    "080AB6FA: adds   r1, r1, r0             ; MOVE",
+    "080AB6FE: mov    r0, sp                 ; MOVE",
+    "080AB700: bl     #0x81b1294             ; CALL #0x81b1294",
+    "080AB70A: movs   r0, #0x60              ; MOVE",
+    "080AB70C: bl     #0x80724cc             ; CALL #0x80724cc",
+    "080AB712: adds   r0, r4, #0             ; MOVE",
+    "080AB714: bl     #0x81aebb0             ; CALL #0x81aebb0"
+   ]
+  },
+  {
+   "loader": "0x080BE286",
+   "reg": "r6",
+   "func": "0x080BE230",
+   "uses": [
+    "080BE292: adds   r2, r0, r6             ; MOVE"
+   ]
+  },
+  {
+   "loader": "0x080EA0D6",
+   "reg": "r1",
+   "func": "0x080EA098",
+   "uses": [
+    "080EA0D8: bl     #0x81b1298             ; CALL #0x81b1298"
+   ]
+  },
+  {
+   "loader": "0x080F70E6",
+   "reg": "r1",
+   "func": "0x080F7008",
+   "uses": [
+    "080F70E8: bl     #0x81b1298             ; CALL #0x81b1298"
+   ]
+  },
+  {
+   "loader": "0x08106952",
+   "reg": "r1",
+   "func": "0x08106918",
+   "uses": [
+    "08106954: bl     #0x800a770             ; CALL #0x800a770"
+   ]
+  },
+  {
+   "loader": "0x08107E86",
+   "reg": "r1",
+   "func": "0x08107E74",
+   "uses": [
+    "08107E88: bl     #0x81b1298             ; CALL #0x81b1298",
+    "08107E90: bl     #0x81b1298             ; CALL #0x81b1298",
+    "08107E96: movs   r1, #0xe0              ; MOVE",
+    "08107E9A: bl     #0x8070a90             ; CALL #0x8070a90",
+    "08107EA0: movs   r1, #0xe0              ; MOVE",
+    "08107EA4: bl     #0x8070a90             ; CALL #0x8070a90"
+   ]
+  },
+  {
+   "loader": "0x08108036",
+   "reg": "r1",
+   "func": "0x08108024",
+   "uses": [
+    "08108038: bl     #0x81b1298             ; CALL #0x81b1298",
+    "08108040: bl     #0x81b1298             ; CALL #0x81b1298"
+   ]
+  },
+  {
+   "loader": "0x0810B7A0",
+   "reg": "r1",
+   "func": "0x0810B74C",
+   "uses": [
+    "0810B7A2: bl     #0x81b1298             ; CALL #0x81b1298"
+   ]
+  }
+ ]
+}

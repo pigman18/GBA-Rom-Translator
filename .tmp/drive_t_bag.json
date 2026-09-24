@@ -1,0 +1,18 @@
+{
+  "tag": "t_bag",
+  "state": null,
+  "schedule": "A:240-280,A:330-370,A:420-460,A:510-550,A:600-640,A:690-730,A:780-820,A:870-910,A:960-1000,A:1050-1090,A:1140-1180,A:1230-1270,START:1500-1540,DOWN:1700-1740,DOWN:1850-1890,A:2000-2040",
+  "frames": 2500,
+  "redirect": true,
+  "key_writes": 32,
+  "seconds": 41.67,
+  "screenshot": "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_t_bag.png",
+  "dumps": {
+    "ewram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_t_bag_ewram.bin",
+    "vram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_t_bag_vram.bin",
+    "iwram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_t_bag_iwram.bin",
+    "pal": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_t_bag_pal.bin",
+    "io": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_t_bag_io.bin"
+  },
+  "capture": "OK C:\\code\\GBA-Rom-Translator\\.tmp\\emu_t_bag.png 736x542 @977,246"
+}

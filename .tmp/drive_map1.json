@@ -1,0 +1,19 @@
+{
+  "tag": "map1",
+  "state": "C:\\code\\GBA-Rom-Translator\\roms\\outputs\\POKEMON_RUBY_AXVJ00_translated.ss1",
+  "schedule": "START:180-220,UP:300-340,UP:440-480,UP:580-620,UP:720-760,UP:860-900,UP:1000-1040,UP:1140-1180,UP:1280-1320,UP:1420-1460,DOWN:1560-1600,DOWN:1700-1740,DOWN:1840-1880,A:1980-2020",
+  "frames": 2300,
+  "redirect": true,
+  "shots": [
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_map1_t25.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_map1_t28.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_map1_t30.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_map1_t32.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_map1_t35.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_map1_t37.png"
+  ],
+  "key_writes": 28,
+  "seconds": 39.55,
+  "screenshot": "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_map1.png",
+  "capture": "OK C:\\code\\GBA-Rom-Translator\\.tmp\\emu_map1.png 736x542 @977,246"
+}

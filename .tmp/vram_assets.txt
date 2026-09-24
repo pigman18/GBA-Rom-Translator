@@ -1,0 +1,123 @@
+✅ G1 BL 解码器自证：4 个已知调用点全部命中
+✅ G2 调用点计数：LZ77Vram=118、RLVram=13 与历史实测一致
+⚠ G3：2 条未能读出合法压缩头（src 不可解析或首字节异常）
+✅ G4 交叉验证：0x06005000（号 640）命中 5 次，与 15-0 记录的领航员美术位置一致
+
+==============================================================================
+静态资产占用（BG 号空间视角：号 = (dst - 0x06000000)/32，仅 [0,1024) 可达）
+==============================================================================
+caller       func             src(ROM)     dst          tile     tiles    range
+------------------------------------------------------------------------------
+0x8104e9e    LZ77UnCompVram   0x083D1270   0x06003000   384      41       [384, 425)
+0x8110430    LZ77UnCompVram   0x083D4810   0x06003000   384      33       [384, 417)
+0x8140ae4    LZ77UnCompVram   0x083E8278   0x06003000   384      129      [384, 513)
+0x8141bc8    LZ77UnCompVram   0x083D1270   0x06003000   384      41       [384, 425)
+0x8143836    LZ77UnCompVram   0x083ED4A0   0x06003000   384      129      [384, 513)
+0x8143896    LZ77UnCompVram   0x083EDFB4   0x06003000   384      129      [384, 513)
+0x8143988    LZ77UnCompVram   0x083ED4A0   0x06003000   384      129      [384, 513)
+0x81439e4    LZ77UnCompVram   0x083ED4A0   0x06003000   384      129      [384, 513)
+0x8143a50    LZ77UnCompVram   0x083EDFB4   0x06003000   384      129      [384, 513)
+0x8143aa8    LZ77UnCompVram   0x083EE670   0x06003000   384      129      [384, 513)
+0x80077e6    LZ77UnCompVram   0x081BC03C   0x06003800   448      41       [448, 489)
+0x8008668    LZ77UnCompVram   0x081BC03C   0x06003800   448      41       [448, 489)
+0x8104ea6    LZ77UnCompVram   0x083D13FC   0x06003800   448      65       [448, 513)
+0x81058bc    LZ77UnCompVram   0x083D2758   0x06003800   448      41       [448, 489)
+0x81059de    LZ77UnCompVram   0x083D2A24   0x06003800   448      41       [448, 489)
+0x813eb3e    LZ77UnCompVram   0x083D13FC   0x06003800   448      65       [448, 513)
+0x8141bd0    LZ77UnCompVram   0x083D13FC   0x06003800   448      65       [448, 513)
+0x808d478    LZ77UnCompVram   0x0837C0D4   0x06004000   512      257      [512, 769)
+0x80f3b4a    LZ77UnCompVram   0x00000000   0x06004000   512      0        [512, 513)
+0x81103a6    LZ77UnCompVram   0x087FC168   0x06004000   512      513      [512, 1025)
+0x8136e94    LZ77UnCompVram   0x083E51EC   0x06004000   512      33       [512, 545)
+0x81370d8    LZ77UnCompVram   0x083E5E90   0x06004000   512      9        [512, 521)
+0x814380a    LZ77UnCompVram   0x083EC848   0x06004000   512      257      [512, 769)
+0x814392e    LZ77UnCompVram   0x083EC848   0x06004000   512      257      [512, 769)
+0x80791c2    LZ77UnCompVram   0x0836D030   0x06004800   576      33       [576, 609)
+0x809497a    LZ77UnCompVram   0x0838BF44   0x06005000   640      48       [640, 688)
+0x80eabb0    LZ77UnCompVram   0x083B6FA4   0x06005000   640      65       [640, 705)
+0x80eb290    LZ77UnCompVram   0x083B5908   0x06005000   640      126      [640, 766)
+0x80eb768    LZ77UnCompVram   0x083B678C   0x06005000   640      5        [640, 645)
+0x80ecb7a    LZ77UnCompVram   0x083B5908   0x06005000   640      126      [640, 766)
+0x8101df2    RLUnCompVram     0x083D0088   0x06006000   768      65       [768, 833)
+0x8101e12    RLUnCompVram     0x083D0594   0x06006000   768      65       [768, 833)
+0x808a16a    LZ77UnCompVram   0x0837B808   0x06006500   808      25       [808, 833)
+0x808a1b0    LZ77UnCompVram   0x0837B8D8   0x06006500   808      25       [808, 833)
+0x808a142    LZ77UnCompVram   0x0837BA50   0x06006800   832      41       [832, 873)
+0x8094eec    LZ77UnCompVram   0x0838C320   0x06006800   832      86       [832, 918)
+0x808c862    LZ77UnCompVram   0x0837BD90   0x06007000   896      41       [896, 937)
+0x808ce4e    LZ77UnCompVram   0x0837BE78   0x06007000   896      41       [896, 937)
+0x80e3dda    LZ77UnCompVram   0x083B1D94   0x06007000   896      17       [896, 913)
+0x81370e0    LZ77UnCompVram   0x083E5EFC   0x06007000   896      65       [896, 961)
+0x808a14a    LZ77UnCompVram   0x0837BBA0   0x06007800   960      41       [960, 1001)
+0x808c0e2    LZ77UnCompVram   0x0837BC5C   0x06007800   960      41       [960, 1001)
+0x808d482    LZ77UnCompVram   0x0837BC5C   0x06007800   960      41       [960, 1001)
+0x808e5fe    LZ77UnCompVram   0x083880A0   0x06007800   960      41       [960, 1001)
+0x8143812    LZ77UnCompVram   0x083ECCC8   0x06007800   960      65       [960, 1025)
+0x8143936    LZ77UnCompVram   0x083ECCC8   0x06007800   960      65       [960, 1025)
+
+==============================================================================
+合并后的占用区间（并集，未区分场景加载时机）
+==============================================================================
+  [ 384,  425)   41 号   来自 LZ77UnCompVram @0x08104E9E
+  [ 448,  489)   41 号   来自 LZ77UnCompVram @0x080077E6
+  [ 512,  873)  361 号   来自 LZ77UnCompVram @0x0808D478
+  [ 896,  937)   41 号   来自 LZ77UnCompVram @0x0808C862
+  [ 960, 1001)   41 号   来自 LZ77UnCompVram @0x0808A14A
+
+==============================================================================
+空闲区间（号 [0,1024) 减去占用）
+==============================================================================
+  [   0,  384)  384 号
+  [ 425,  448)   23 号
+  [ 489,  512)   23 号
+  [ 873,  896)   23 号
+  [ 937,  960)   23 号
+  [1001, 1024)   23 号
+
+  ⇒ 最大连续空闲 = [0, 384) = 384 号
+
+⚠ dst 不可静态解析：44 个
+     0x080077DE  LZ77UnCompVram
+     0x08008660  LZ77UnCompVram
+     0x08053F04  LZ77UnCompVram
+     0x08053F5C  LZ77UnCompVram
+     0x080791BA  LZ77UnCompVram
+     0x0808A13A  LZ77UnCompVram
+     0x0808C0DA  LZ77UnCompVram
+     0x0808C85A  LZ77UnCompVram
+     0x0808CE46  LZ77UnCompVram
+     0x0808D226  LZ77UnCompVram
+     0x0808E5F6  LZ77UnCompVram
+     0x08096A14  LZ77UnCompVram
+     0x080EAEE2  LZ77UnCompVram
+     0x080F3B74  LZ77UnCompVram
+     0x08104E96  LZ77UnCompVram
+     0x081057A0  LZ77UnCompVram
+     0x0811039E  LZ77UnCompVram
+     0x08115370  LZ77UnCompVram
+     0x0811E28A  LZ77UnCompVram
+     0x081363D8  LZ77UnCompVram
+     0x08136720  LZ77UnCompVram
+     0x08136E8C  LZ77UnCompVram
+     0x0813E2D0  LZ77UnCompVram
+     0x0813EB36  LZ77UnCompVram
+     0x0813FE10  LZ77UnCompVram
+     0x08140ADC  LZ77UnCompVram
+     0x08141BC0  LZ77UnCompVram
+     0x0814382E  LZ77UnCompVram
+     0x0814388E  LZ77UnCompVram
+     0x08143980  LZ77UnCompVram
+     0x081439DC  LZ77UnCompVram
+     0x08143A48  LZ77UnCompVram
+     0x08143AA0  LZ77UnCompVram
+     0x08101C32  RLUnCompVram
+     0x08101C4A  RLUnCompVram
+     0x08101C62  RLUnCompVram
+     0x08101C7A  RLUnCompVram
+     0x08101C9E  RLUnCompVram
+     0x08101D4E  RLUnCompVram
+     0x08101DA2  RLUnCompVram
+     0x08101DBA  RLUnCompVram
+     0x08101DD2  RLUnCompVram
+     0x08101DEA  RLUnCompVram
+     0x08101E0A  RLUnCompVram

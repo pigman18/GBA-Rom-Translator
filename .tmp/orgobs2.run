@@ -1,0 +1,17 @@
+pool word @0x08000468 = 0x04000130 -> 0x08900000
+rom: C:/code/GBA-Rom-Translator\.tmp\obs_origin.gba 8388608  sav: C:/code/GBA-Rom-Translator\.tmp\obs_origin.sav 131088
+rc = 0
+[drive] shot t=  8.00s -> emu_org2_t8.png  (OK C:\code\GBA-Rom-Translator\.tmp\emu_org2_t8.png 736x542 @977,246)
+[drive] shot t= 14.00s -> emu_org2_t14.png  (OK C:\code\GBA-Rom-Translator\.tmp\emu_org2_t14.png 736x542 @977,246)
+[drive] shot t= 20.00s -> emu_org2_t20.png  (OK C:\code\GBA-Rom-Translator\.tmp\emu_org2_t20.png 736x542 @977,246)
+[drive] shot t= 26.00s -> emu_org2_t26.png  (OK C:\code\GBA-Rom-Translator\.tmp\emu_org2_t26.png 736x542 @977,246)
+[drive] shot t= 32.00s -> emu_org2_t32.png  (OK C:\code\GBA-Rom-Translator\.tmp\emu_org2_t32.png 736x542 @977,246)
+[drive] shot t= 38.00s -> emu_org2_t38.png  (OK C:\code\GBA-Rom-Translator\.tmp\emu_org2_t38.png 736x542 @977,246)
+[drive] shot t= 45.00s -> emu_org2_t45.png  (OK C:\code\GBA-Rom-Translator\.tmp\emu_org2_t45.png 736x542 @977,246)
+[drive] final shot -> emu_org2_final.png
+[drive] dump {'ewram': True, 'vram': True, 'iwram': True} (OK)
+[io] IO DISPCNT 0x4000000:	0x7140
+[io] IO BG0CNT 0x4000008:	0x0f08
+[io] IO BG1CNT 0x400000a:	0x0000
+[io] IO BG2CNT 0x400000c:	0x0000
+[io] IO BG3CNT 0x400000e:	0x1e43

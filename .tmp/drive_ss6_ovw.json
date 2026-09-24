@@ -1,0 +1,11 @@
+{
+  "tag": "ss6_ovw",
+  "state": "C:\\code\\GBA-Rom-Translator\\roms\\outputs\\POKEMON_RUBY_AXVJ00_translated.ss6",
+  "schedule": "B:180-220,B:400-440,START:700-740",
+  "frames": 900,
+  "redirect": true,
+  "key_writes": 6,
+  "seconds": 15.0,
+  "screenshot": "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_ss6_ovw.png",
+  "capture": "OK C:\\code\\GBA-Rom-Translator\\.tmp\\emu_ss6_ovw.png 736x542 @977,246"
+}

@@ -1,0 +1,206 @@
+ROM POKEMON_RUBY_AXVJ00.gba  |  bl Vram 118 / bl Wram 42
+
+============================================================================
+FUNC 0x08007724   2 站点（其中 dst 落 VRAM 2）
+   080077DE Vram  src=0x081BBE94 size=0x600    tiles=48    dst=0x06000000 VRAM
+   080077E6 Vram  src=0x081BC03C size=0x500    tiles=40    dst=0x06003800 VRAM
+============================================================================
+FUNC 0x080085E8   2 站点（其中 dst 落 VRAM 2）
+   08008660 Vram  src=0x081BBE94 size=0x600    tiles=48    dst=0x06000000 VRAM
+   08008668 Vram  src=0x081BC03C size=0x500    tiles=40    dst=0x06003800 VRAM
+============================================================================
+FUNC 0x08078EE8   5 站点（其中 dst 落 VRAM 5）
+   080791BA Vram  src=0x0836D268 size=0x2700   tiles=312   dst=0x06000000 VRAM
+   080791C2 Vram  src=0x0836D030 size=0x400    tiles=32    dst=0x06004800 VRAM
+   080791DA Vram  src=0x0836F110 size=0x2000   tiles=256   dst=0x06008000 VRAM
+   080791E2 Vram  src=0x0836F8AC size=0x500    tiles=40    dst=0x0600C000 VRAM
+   080791EA Vram  src=0x0836FAB8 size=0x800    tiles=64    dst=0x0600C800 VRAM
+============================================================================
+FUNC 0x0808A0B8   6 站点（其中 dst 落 VRAM 6）
+   0808A13A Vram  src=0x0837C0D4 size=0x2000   tiles=256   dst=0x06000000 VRAM
+   0808A142 Vram  src=0x0837BA50 size=0x500    tiles=40    dst=0x06006800 VRAM
+   0808A14A Vram  src=0x0837BBA0 size=0x500    tiles=40    dst=0x06007800 VRAM
+   0808A16A Vram  src=0x0837B808 size=0x300    tiles=24    dst=0x06006500 VRAM
+   0808A1B0 Vram  src=0x0837B8D8 size=0x300    tiles=24    dst=0x06006500 VRAM
+   0808A25C Vram  src=0x0837C08C size=0x80     tiles=4     dst=0x0600BF80 VRAM
+============================================================================
+FUNC 0x0808BF68   2 站点（其中 dst 落 VRAM 2）
+   0808C0DA Vram  src=0x0837C0D4 size=0x2000   tiles=256   dst=0x06000000 VRAM
+   0808C0E2 Vram  src=0x0837BC5C size=0x500    tiles=40    dst=0x06007800 VRAM
+============================================================================
+FUNC 0x0808C5B4   2 站点（其中 dst 落 VRAM 2）
+   0808C85A Vram  src=0x0837C0D4 size=0x2000   tiles=256   dst=0x06000000 VRAM
+   0808C862 Vram  src=0x0837BD90 size=0x500    tiles=40    dst=0x06007000 VRAM
+============================================================================
+FUNC 0x0808CD94   4 站点（其中 dst 落 VRAM 2）
+   0808CE46 Vram  src=0x0837C0D4 size=0x2000   tiles=256   dst=0x06000000 VRAM
+   0808CE4E Vram  src=0x0837BE78 size=0x500    tiles=40    dst=0x06007000 VRAM
+   0808D226 Vram  src=?          size=-        tiles=-     dst=?
+   0808D26A Vram  src=?          size=-        tiles=-     dst=?
+============================================================================
+FUNC 0x0808D3E4   2 站点（其中 dst 落 VRAM 2）
+   0808D478 Vram  src=0x0837C0D4 size=0x2000   tiles=256   dst=0x06004000 VRAM
+   0808D482 Vram  src=0x0837BC5C size=0x500    tiles=40    dst=0x06007800 VRAM
+============================================================================
+FUNC 0x0808E574   2 站点（其中 dst 落 VRAM 2）
+   0808E5F6 Vram  src=0x08387B14 size=0x1000   tiles=128   dst=0x06000000 VRAM
+   0808E5FE Vram  src=0x083880A0 size=0x500    tiles=40    dst=0x06007800 VRAM
+============================================================================
+FUNC 0x080948E4   1 站点（其中 dst 落 VRAM 1）
+   0809490C Vram  src=0x0838BE08 size=0x800    tiles=64    dst=0x0600F000 VRAM
+============================================================================
+FUNC 0x08094974   2 站点（其中 dst 落 VRAM 2）
+   0809497A Vram  src=0x0838BF44 size=0x5E0    tiles=47    dst=0x06005000 VRAM
+   08094982 Vram  src=0x0838C160 size=0x500    tiles=40    dst=0x0600F800 VRAM
+============================================================================
+FUNC 0x08094D50   2 站点（其中 dst 落 VRAM 1）
+   08094EEC Vram  src=0x0838C320 size=0xAA0    tiles=85    dst=0x06006800 VRAM
+   08094EF6 Vram  src=0x0838C78C size=0x210    tiles=16    dst=0x020000C8
+============================================================================
+FUNC 0x080E3CD4   10 站点（其中 dst 落 VRAM 1）
+   080E3D24 Wram  src=?          size=-        tiles=-     dst=?
+   080E3D30 Wram  src=?          size=-        tiles=-     dst=?
+   080E3D3C Wram  src=?          size=-        tiles=-     dst=?
+   080E3D46 Wram  src=?          size=-        tiles=-     dst=?
+   080E3D50 Wram  src=?          size=-        tiles=-     dst=?
+   080E3D5A Wram  src=?          size=-        tiles=-     dst=?
+   080E3D66 Wram  src=?          size=-        tiles=-     dst=?
+   080E3D70 Wram  src=?          size=-        tiles=-     dst=?
+   080E3D78 Vram  src=0x083B1E60 size=0xC00    tiles=96    dst=0x06008000 VRAM
+   080E3DDA Vram  src=0x083B1D94 size=0x21C    tiles=16    dst=?
+============================================================================
+FUNC 0x080EA098   2 站点（其中 dst 落 VRAM 2）
+   080EA0D8 Vram  src=0x083B4BD0 size=0xFE0    tiles=127   dst=0x0600C000 VRAM
+   080EA0EC Vram  src=0x083B5148 size=0x600    tiles=48    dst=0x0600D800 VRAM
+============================================================================
+FUNC 0x080EA530   4 站点（其中 dst 落 VRAM 4）
+   080EA5D4 Vram  src=0x083B5544 size=0x500    tiles=40    dst=0x0600F800 VRAM
+   080EA60C Vram  src=0x083B5634 size=0x550    tiles=42    dst=0x0600E000 VRAM
+   080EA620 Vram  src=0x083B6DA4 size=0x800    tiles=64    dst=0x0600E800 VRAM
+   080EA634 Vram  src=0x083B6B94 size=0x560    tiles=43    dst=0x06008020 VRAM
+============================================================================
+FUNC 0x080EAAFC   1 站点（其中 dst 落 VRAM 1）
+   080EABB0 Vram  src=0x083B6FA4 size=0x800    tiles=64    dst=0x06005000 VRAM
+============================================================================
+FUNC 0x080EB1D4   3 站点（其中 dst 落 VRAM 3）
+   080EB290 Vram  src=0x083B5908 size=0xFA0    tiles=125   dst=0x06005000 VRAM
+   080EB2A4 Vram  src=0x083B608C size=0x500    tiles=40    dst=0x0600F000 VRAM
+   080EB300 Vram  src=0x083B62E4 size=0x500    tiles=40    dst=0x0600B800 VRAM
+============================================================================
+FUNC 0x080EB550   3 站点（其中 dst 落 VRAM 3）
+   080EB5EE Vram  src=0x083B6524 size=0x500    tiles=40    dst=0x0600E800 VRAM
+   080EB600 Vram  src=0x083B6468 size=0x220    tiles=17    dst=0x06008000 VRAM
+   080EB768 Vram  src=0x083B678C size=0x80     tiles=4     dst=0x06005000 VRAM
+============================================================================
+FUNC 0x080EC388   3 站点（其中 dst 落 VRAM 2）
+   080EC44C Wram  src=?          size=-        tiles=-     dst=?
+   080EC470 Vram  src=0x083B6860 size=0x160    tiles=11    dst=0x06008000 VRAM
+   080EC484 Vram  src=0x083B69AC size=0x300    tiles=24    dst=0x06008200 VRAM
+============================================================================
+FUNC 0x080EC9A4   1 站点（其中 dst 落 VRAM 1）
+   080EC9DA Vram  src=0x083B57FC size=0x500    tiles=40    dst=0x0600E800 VRAM
+============================================================================
+FUNC 0x080ECAF0   3 站点（其中 dst 落 VRAM 3）
+   080ECB7A Vram  src=0x083B5908 size=0xFA0    tiles=125   dst=0x06005000 VRAM
+   080ECB8C Vram  src=0x083B608C size=0x500    tiles=40    dst=0x0600F000 VRAM
+   080ECBD4 Vram  src=0x083B62E4 size=0x500    tiles=40    dst=0x0600B800 VRAM
+============================================================================
+FUNC 0x080F38E4   2 站点（其中 dst 落 VRAM 2）
+   080F3B4A Vram  src=?          size=-        tiles=-     dst=0x06004000 VRAM
+   080F3B74 Vram  src=?          size=-        tiles=-     dst=0x06000000 VRAM
+============================================================================
+FUNC 0x080F5854   4 站点（其中 dst 落 VRAM 2）
+   080F58F0 Vram  src=0x083BDA5C size=0x3A40   tiles=466   dst=0x06008000 VRAM
+   080F5904 Vram  src=0x083BE7C0 size=0x1000   tiles=128   dst=0x0600E000 VRAM
+   080F5930 Wram  src=?          size=-        tiles=-     dst=?
+   080F594C Wram  src=?          size=-        tiles=-     dst=?
+============================================================================
+FUNC 0x080F6FC0   2 站点（其中 dst 落 VRAM 2）
+   080F70E8 Vram  src=0x083BF2E4 size=0xC0     tiles=6     dst=0x0600C000 VRAM
+   080F70FC Vram  src=0x083BF31C size=0x500    tiles=40    dst=0x0600F000 VRAM
+============================================================================
+FUNC 0x08104E08   3 站点（其中 dst 落 VRAM 2）
+   08104E96 Vram  src=0x083D15F4 size=0x2000   tiles=256   dst=?
+   08104E9E Vram  src=0x083D1270 size=0x500    tiles=40    dst=0x06003000 VRAM
+   08104EA6 Vram  src=0x083D13FC size=0x800    tiles=64    dst=0x06003800 VRAM
+============================================================================
+FUNC 0x081056D8   1 站点（其中 dst 落 VRAM 1）
+   081057A0 Vram  src=0x083D2CBC size=0x1000   tiles=128   dst=0x06000000 VRAM
+============================================================================
+FUNC 0x081058AC   2 站点（其中 dst 落 VRAM 2）
+   081058BC Vram  src=0x083D2758 size=0x500    tiles=40    dst=0x06003800 VRAM
+   081059DE Vram  src=0x083D2A24 size=0x500    tiles=40    dst=0x06003800 VRAM
+============================================================================
+FUNC 0x08107C7C   4 站点（其中 dst 落 VRAM 4）
+   08107E88 Vram  src=0x083D3DC4 size=0x400    tiles=32    dst=0x0600C000 VRAM
+   08107E90 Vram  src=0x083D3BE4 size=0x800    tiles=64    dst=0x0600F800 VRAM
+   08108038 Vram  src=0x083D3DC4 size=0x400    tiles=32    dst=0x0600C000 VRAM
+   08108040 Vram  src=0x083D3BE4 size=0x800    tiles=64    dst=0x0600F800 VRAM
+============================================================================
+FUNC 0x0810B704   1 站点（其中 dst 落 VRAM 1）
+   0810B7A2 Vram  src=0x083D3FE4 size=0x600    tiles=48    dst=0x0600C000 VRAM
+============================================================================
+FUNC 0x0811031C   4 站点（其中 dst 落 VRAM 3）
+   0811039E Vram  src=0x087FBA3C size=0x2000   tiles=256   dst=0x06000000 VRAM
+   081103A6 Vram  src=0x087FC168 size=0x4000   tiles=512   dst=0x06004000 VRAM
+   08110428 Wram  src=0x083D466C size=0x300    tiles=24    dst=0x02018800
+   08110430 Vram  src=0x083D4810 size=0x400    tiles=32    dst=0x06003000 VRAM
+============================================================================
+FUNC 0x0811E03C   1 站点（其中 dst 落 VRAM 1）
+   0811E28A Vram  src=0x087F9D0C size=0x4000   tiles=512   dst=0x06000000 VRAM
+============================================================================
+FUNC 0x081366DC   5 站点（其中 dst 落 VRAM 5）
+   08136720 Vram  src=0x083E2E7C size=0x8000   tiles=1024  dst=0x06000000 VRAM
+   08136728 Vram  src=0x083E228C size=0x800    tiles=64    dst=0x06008000 VRAM
+   08136742 Vram  src=0x083E2640 size=0x800    tiles=64    dst=0x06009000 VRAM
+   08136758 Vram  src=0x083E2974 size=0x800    tiles=64    dst=0x0600A000 VRAM
+   0813676E Vram  src=0x083E2C64 size=0x800    tiles=64    dst=0x0600B000 VRAM
+============================================================================
+FUNC 0x08136E3C   2 站点（其中 dst 落 VRAM 2）
+   08136E8C Vram  src=0x083E531C size=0x4000   tiles=512   dst=0x06000000 VRAM
+   08136E94 Vram  src=0x083E51EC size=0x400    tiles=32    dst=0x06004000 VRAM
+============================================================================
+FUNC 0x08136FCC   2 站点（其中 dst 落 VRAM 2）
+   081370D8 Vram  src=0x083E5E90 size=0x100    tiles=8     dst=0x06004000 VRAM
+   081370E0 Vram  src=0x083E5EFC size=0x800    tiles=64    dst=0x06007000 VRAM
+============================================================================
+FUNC 0x0813E020   1 站点（其中 dst 落 VRAM 1）
+   0813E2D0 Vram  src=?          size=-        tiles=-     dst=0x06000000 VRAM
+============================================================================
+FUNC 0x0813E77C   2 站点（其中 dst 落 VRAM 2）
+   0813EB36 Vram  src=0x083D15F4 size=0x2000   tiles=256   dst=0x06000000 VRAM
+   0813EB3E Vram  src=0x083D13FC size=0x800    tiles=64    dst=0x06003800 VRAM
+============================================================================
+FUNC 0x08140A58   2 站点（其中 dst 落 VRAM 1）
+   08140ADC Vram  src=0x083E89B4 size=0x1A00   tiles=208   dst=?
+   08140AE4 Vram  src=0x083E8278 size=0x1000   tiles=128   dst=0x06003000 VRAM
+============================================================================
+FUNC 0x08141B24   4 站点（其中 dst 落 VRAM 3）
+   08141BC0 Vram  src=0x083D15F4 size=0x2000   tiles=256   dst=?
+   08141BC8 Vram  src=0x083D1270 size=0x500    tiles=40    dst=0x06003000 VRAM
+   08141BD0 Vram  src=0x083D13FC size=0x800    tiles=64    dst=0x06003800 VRAM
+   08141BD8 Vram  src=0x083EBF3C size=0x180    tiles=12    dst=0x06010020 VRAM
+============================================================================
+FUNC 0x081437AC   6 站点（其中 dst 落 VRAM 6）
+   0814380A Vram  src=0x083EC848 size=0x2000   tiles=256   dst=0x06004000 VRAM
+   08143812 Vram  src=0x083ECCC8 size=0x800    tiles=64    dst=0x06007800 VRAM
+   0814382E Vram  src=0x083ECEC4 size=0x2000   tiles=256   dst=0x06000000 VRAM
+   08143836 Vram  src=0x083ED4A0 size=0x1000   tiles=128   dst=0x06003000 VRAM
+   0814388E Vram  src=0x083ED92C size=0x2000   tiles=256   dst=0x06000000 VRAM
+   08143896 Vram  src=0x083EDFB4 size=0x1000   tiles=128   dst=0x06003000 VRAM
+============================================================================
+FUNC 0x08143924   12 站点（其中 dst 落 VRAM 12）
+   0814392E Vram  src=0x083EC848 size=0x2000   tiles=256   dst=0x06004000 VRAM
+   08143936 Vram  src=0x083ECCC8 size=0x800    tiles=64    dst=0x06007800 VRAM
+   08143980 Vram  src=0x083ECEC4 size=0x2000   tiles=256   dst=0x06000000 VRAM
+   08143988 Vram  src=0x083ED4A0 size=0x1000   tiles=128   dst=0x06003000 VRAM
+   081439A0 Vram  src=0x083ED7B0 size=0x400    tiles=32    dst=0x06010000 VRAM
+   081439DC Vram  src=0x083ECEC4 size=0x2000   tiles=256   dst=0x06000000 VRAM
+   081439E4 Vram  src=0x083ED4A0 size=0x1000   tiles=128   dst=0x06003000 VRAM
+   081439FC Vram  src=0x083ED7B0 size=0x400    tiles=32    dst=0x06010000 VRAM
+   08143A48 Vram  src=0x083ED92C size=0x2000   tiles=256   dst=0x06000000 VRAM
+   08143A50 Vram  src=0x083EDFB4 size=0x1000   tiles=128   dst=0x06003000 VRAM
+   08143AA0 Vram  src=0x083EE464 size=0x600    tiles=48    dst=0x06000000 VRAM
+   08143AA8 Vram  src=0x083EE670 size=0x1000   tiles=128   dst=0x06003000 VRAM
+
+（含 VRAM 站点的函数组: 40）

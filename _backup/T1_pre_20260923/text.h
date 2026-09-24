@@ -1,0 +1,86 @@
+/* =====================================================================================
+ * text.h — 文本引擎公共类型与跨模块 API（include/src 布局）
+ *
+ * 结构仿 pokeemerald text.h（upstream: rh-hideout-chinese/pokeemerald-expansion）：
+ *   struct TextGlyph / gCurGlyph —— 引擎级字形缓冲（DecompressGlyph_Chinese 填充，
+ *   渲染行读取），与 upstream 同名字段对齐，便于后续 upstream 更新对照。
+ *
+ * 模块划分（解耦，用途见各文件头）：
+ *   src/text.c           引擎：状态机 / 取字 / 渲染行 / PCS 分发（本文件 API 提供方）
+ *   src/chinese_text.c   中文内容解析（upstream 移植）：字模解压 + 宽度
+ *   src/text_translate.c 翻译链路：F9 协议（F900 汉字 / F980 短语 / SLT2 slot）
+ * ===================================================================================== */
+#ifndef TEXT_H
+#define TEXT_H
+
+#include "game.h"
+
+/* ---- upstream struct TextGlyph（pokeemerald text.h 同构）----
+ * gfxBufferTop = 上半行两 tile（TL | TR），gfxBufferBottom = 下半行（BL | BR），
+ * 各 16×u32 = 2×32B tile。width/height 由 DecompressGlyph_Chinese 设置。
+ *
+ * ⚠️ 存储位置（2026-08-25 定案）：upstream 的 gCurGlyph 是链接器分配的全局；
+ * 本工程 game.bin 为 freestanding 平坦镜像（link/game.ld 无 RAM 段），全局
+ * 变量会落 ROM（0x088xxxxx）→ 写入被硬件丢弃（首版五图全花根因，game.map
+ * gCurGlyph=0x08801a34 实证）。故字形缓冲改为**打印机栈上局部变量**，由
+ * 调用方（PrintGlyph）显式传入 DecompressGlyph_Chinese——与旧引擎栈上
+ * buf[128] 同款，为全工程唯一被长期验证的可写暂存。 */
+struct TextGlyph {
+    uint32_t gfxBufferTop[16];
+    uint32_t gfxBufferBottom[16];
+    uint8_t width;
+    uint8_t height;
+};
+
+/* ---- 字形取字（text_translater.c 提供，PrintNextChar 消费）----
+ * font_lib: 1=1bpp 大库 11×11（默认 12px 档，pokeE 位流运行时转换），
+ *           3=1bpp 小库 9×9（tm2 血条名 + fn4 强制小字体，10px 档），
+ *           2=1bpp Middle 9×11（窄身全高，步进 10；场景表指定，如领航员），
+ *           0=旧 4bpp 按 fontNum 选库（已退役，当前不可达 ⇒ 返回 0 放弃绘制）。 */
+#define CHS_FONT_LIB_DEFAULT   0u
+#define CHS_FONT_LIB_MIDDLE    2u
+#define CHS_FONT_LIB_1BPP_BIG  1u
+#define CHS_FONT_LIB_1BPP_SMALL 3u
+int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth,
+             uint8_t font_lib);
+
+/* pokeE 式 1bpp 位流 → 128B 4bpp 字形单元（src/text/chinese_glyph.c）。
+ * 位流每行 width 位 MSB-first 连续排布共 rows 行，置于 line_off 行起；
+ * 墨迹=15、右下阴影(+1,+1 重叠去除)=14、空=0。纯函数零状态。 */
+void chs_cell_from_1bpp(const uint8_t *bits, uint32_t width, uint32_t rows,
+                        uint32_t line_off, uint8_t cell[CHS_CELL_BYTES]);
+
+/* ---- 引擎渲染件（PrintNextChar_hook.c 提供，text_translate.c 消费）---- */
+
+/* v6 统一渲染入口：GetGlyph 解压 → 按 textMode/档位 落址。
+ * fontSize=调用方请求步进（翻译层按 tm 传 chs_print_px 档位；0=无请求回落 12）。
+ * 档位解析顺序（resolve_draw）：tm2 血条 / fontNum==4 / 请求 8px → 小库 9×9（步进 10）；
+ * 否则查场景字号表（scene_cfg.c，tpl+win+curX 分区）→ Middle 9×11 / 小库；
+ * 都未命中 → 大库 11×11（步进 12）。旧 4bpp 字库渲染路径全部退役。 */
+void chs_print(TextPrinter *win, uint32_t code, uint8_t fontSize);
+
+/* PCS 单字节（半角）统一渲染入口。
+ *   SYM 标点带（0x36-0x3E，tm0/tm3）→ 中文标点字库相位感知自绘；
+ *   其余半角（tm0/tm3）→ 先把相位补齐到列首，再交原生（防覆盖前字尾 +
+ *   防 4px 空洞）；tm1/tm2 无像素路径 → 返回 0 交调用方原生分发。
+ * 返回 1=已消费；0=未消费。fontfunc thunk 在原生分发**之前**调用它。 */
+int DrawHalfWidth(TextPrinter *win, uint32_t cur_char);
+
+/* PCS 单字节渲染入口（text_translater.c 的 slot/phrase 替换流内消费）。
+ * 恒返回 1=已消费（引擎零回落：不可印位直接吞掉）。 */
+int DrawGlyph(TextPrinter *win, uint32_t cur_char);
+
+/* v6：非 F9 控制码回落官方 PrintNextChar（entry.s 续跑）。 */
+int PrintNextChar_Origin(TextPrinter *win);
+int PrintNextChar_Hook(TextPrinter *win);
+
+/* ---- 翻译链路（src/text_translate.c 提供，text.c 状态机消费）---- */
+
+/* 翻译层单字符入口：
+ *   CHS_ESCAPE (0xF9) → 读 op 分派：op==0 单汉字（PrintGlyph）；
+ *     op==0x80/其他 短语（PhraseTable 内联或切流）
+ *   其余 PCS 字节     → SLT2 slot 表匹配 → 替换流绘制
+ * 返回 1=已消费；0=交还引擎原生渲染（DrawGlyph）。 */
+int TranslateHandleChar(TextPrinter *win, uint32_t c);
+
+#endif /* TEXT_H */

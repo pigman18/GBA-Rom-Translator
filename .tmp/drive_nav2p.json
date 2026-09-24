@@ -1,0 +1,16 @@
+{
+  "tag": "nav2p",
+  "state": "C:\\code\\GBA-Rom-Translator\\roms\\outputs\\POKEMON_RUBY_AXVJ00_translated.ss1",
+  "schedule": "START:180-220,UP:380-420,UP:560-600,A:740-780",
+  "frames": 1400,
+  "redirect": true,
+  "shots": [
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_nav2p_t12.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_nav2p_t15.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_nav2p_t18.png"
+  ],
+  "key_writes": 8,
+  "seconds": 23.33,
+  "screenshot": "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_nav2p.png",
+  "capture": "OK C:\\code\\GBA-Rom-Translator\\.tmp\\emu_nav2p.png 736x542 @977,246"
+}

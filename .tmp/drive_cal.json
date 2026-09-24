@@ -1,0 +1,10 @@
+{
+  "tag": "cal",
+  "state": "C:\\code\\GBA-Rom-Translator\\roms\\outputs\\POKEMON_RUBY_AXVJ00_translated.ss1",
+  "schedule": "",
+  "frames": 240,
+  "gdb_seconds": 14.15,
+  "connected": true,
+  "drive_done": true,
+  "wall_per_frame_ms": 58.959
+}

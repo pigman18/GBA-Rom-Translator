@@ -1,0 +1,17 @@
+{
+  "tag": "o_sum2",
+  "state": null,
+  "schedule": "A:240-280,A:330-370,A:420-460,A:510-550,A:600-640,A:690-730,A:780-820,A:870-910,A:960-1000,A:1050-1090,A:1140-1180,A:1230-1270,START:1500-1540,DOWN:1700-1740,A:1900-1940,RIGHT:2050-2090,RIGHT:2200-2240,RIGHT:2350-2390",
+  "frames": 2800,
+  "redirect": true,
+  "key_writes": 36,
+  "seconds": 46.67,
+  "screenshot": "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_o_sum2.png",
+  "dumps": {
+    "ewram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_o_sum2_ewram.bin",
+    "vram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_o_sum2_vram.bin",
+    "iwram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_o_sum2_iwram.bin",
+    "pal": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_o_sum2_pal.bin"
+  },
+  "capture": "OK C:\\code\\GBA-Rom-Translator\\.tmp\\emu_o_sum2.png 736x542 @977,246"
+}

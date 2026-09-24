@@ -1,0 +1,33 @@
+[setup] 0x8000468:	0x08900000
+[probe] running
+[cap] EWRAM m 读 -> 拒 cmd 'm2000000,4' 反复被拒（naks=6）
+[arm] 0x08800084 entry+4         -> b'OK'
+[arm] 0x088000A0 tpl!=0          -> b'OK'
+[arm] 0x088000B4 tileData loaded -> b'OK'
+[arm] 0x088000C4 gateA ok, tm    -> b'OK'
+[arm] 0x088000C8 BOTH gates ok   -> b'OK'
+[arm] 0x088000CE call canvas     -> b'OK'
+[arm] 0x088000D2 canvas returned -> b'OK'
+
+===== 断点命中 =====
+  0x08800084 entry+4          ×173
+  0x088000A0 tpl!=0           ×0
+  0x088000B4 tileData loaded  ×0
+  0x088000C4 gateA ok, tm     ×0
+  0x088000C8 BOTH gates ok    ×0
+  0x088000CE call canvas      ×0
+  0x088000D2 canvas returned  ×0
+  原始 stop 包: ['T05hwbreak:;', 'T05hwbreak:;', 'T05hwbreak:;', 'T05hwbreak:;']
+
+===== 门控真值分布 =====
+  [entry+4        ] r1=tile_base(官方请求) r4=win
+      0x00000001 ×173
+
+===== 首批样本 (r0,r1,r2,r3,r4) =====
+  [0x08800084] entry+4         r1=tile_base(官方请求) r4=win
+      0202e658 00000001 0000000f 00000005 0202e658
+      0202e658 00000001 00000013 00000005 0202e658
+      0202e658 00000001 00000017 00000005 0202e658
+      0202e658 00000001 0000000f 00000005 0202e658
+
+[shot] OK C:\code\GBA-Rom-Translator\.tmp\emu_hookprobe2.png 736x542 @977,246

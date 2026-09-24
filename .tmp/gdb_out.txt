@@ -1,0 +1,22 @@
+warning: No executable has been specified and target does not support
+determining executable automatically.  Try using the "file" command.
+0x000001f4 in ?? ()
+PC=0x000001f4
+
+=== 1) read original pool word @0x08000468 ===
+0x8000468:	0x04000130
+
+=== 2) try ROM write: pool word -> 0x0203FFF0 ===
+0x8000468:	0x0203fff0
+
+=== 3) try RAM write @0x0203FFF0 = 0x3F7 ===
+0x203fff0:	0x03f7
+
+=== 4) try register write r1 = 0x1234 ===
+r1             0x1234              4660
+
+=== 5) read gMain @0x030016E0+0x28..0x34 ===
+0x30016e0:	0x15c5	0x0805	0x1619	0x0805	0x1781	0x0805	0x1a65	0x0805
+
+done
+can't detach process: E07

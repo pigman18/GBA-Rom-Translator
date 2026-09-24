@@ -1,0 +1,509 @@
+/* =====================================================================================
+ * text_translate.c — 翻译链路（F9 协议层）
+ *
+ * 职责：文本流中翻译标记的解释与分派，不含任何渲染实现。
+ *   F9 00 ll tt        单汉字 → pack_glyph_index → chs_print（渲染层统一入口）
+ *   F9 <op> hi lo      短语引用 → PhraseTable（内联绘制或切流）
+ *   PCS 单字节          → SLT2 slot 表匹配 → 替换流绘制
+ *   宽度工具            → phrase_width_px / GetStringWidth（F9 感知流遍历）
+ *
+ * 与渲染层的边界（v6 三段管线）：本文件只做 Stage1「解压」GetGlyph（字模数据）
+ * 与翻译决策，把要画的字形 code 交给渲染层统一入口 chs_print（渲染层内部再
+ * GetGlyph→栅格化→落址）。本文件不碰 tile/VRAM/游标，不依赖任何窗口模板。
+ *
+ * 来源：原 src/text.c §2/§12/§13/§16 原样迁出。协议常量 CHS_ESCAPE 等见 game.h。
+ * ===================================================================================== */
+#include "text.h"
+
+/* F9 汉字默认步进：按 textMode 分档，chs_print 的 fontSize 实参来源。
+ * 两档制 2.0（2026-09-08「旧 8px→9px、旧 12/16px→11px」）：
+ * tm0/1/3 → 大字体 1bpp 11×11；tm2 血条 → 小字体 1bpp 9×9；
+ * fontNum==4 / 请求 8px → 同样落 9×9。
+ * R1-A 宽度单源（2026-09-23）：档位值直接引用 game.h 宽度单源
+ * （CHS_GLYPH_ADVANCE_PX / CHS_GLYPH_ADVANCE_SMALL_PX），本文件不再
+ * 自持 12/10 字面量宏。本函数只表达「默认档」；resolve_draw 仍会先查
+ * 场景字号表（scene_cfg.c），命中即覆盖（如领航员 → Middle 9×11 步进 10）。 */
+
+/* 1bpp 字库单元内垂直行偏移（0=单元顶行）。pokeE 原版=大1/小2；
+ * 2026-09-08 实机验收用户反馈整体偏高 ~1px → 下移 1 行。要再调改这里。
+ * SMALL 作用于 9×9 库全部使用点（tm2 血条名 + fn4 窗口——两档制 2.0 后
+ * 血条名也走 1bpp 小库，旧 Small 4bpp 已退役）。
+ * MIDDLE 与 BIG 同源（都是从 11 行墨迹而来：Normal 11×11@row2 / Middle 9×11@row2）
+ * ⇒ 行偏移与 BIG 一致 = 2，只是墨宽 11→9。 */
+#define CHS_1BPP_ROW_OFF_BIG    2u
+#define CHS_1BPP_ROW_OFF_SMALL  5u
+#define CHS_1BPP_ROW_OFF_MIDDLE 2u
+
+/* 按当前窗口 textMode 取默认字号（tm 仅 0~3 有效，其余回落大档） */
+static uint8_t chs_print_px(TextPrinter *win)
+{
+    switch (win_u8(win, WIN_TEXTMODE) & 7u) {
+    case 2u:  return CHS_GLYPH_ADVANCE_SMALL_PX;
+    default:  return CHS_GLYPH_ADVANCE_PX;
+    }
+}
+
+/* =====================================================================
+ * §G  GetGlyph — 字形取数（翻译层消费，渲染层经 chs_print 间接调用）
+ * ===================================================================== */
+int GetGlyph(TextPrinter *win, uint32_t code, uint8_t *out128, uint8_t *outWidth,
+             uint8_t font_lib)
+{
+    uint8_t fontNum = win_u8(win, WIN_FONTNUM_REAL);
+    if (fontNum > 6u)
+        fontNum = 3u;
+
+    if (code == 0) {
+        unsigned i;
+        for (i = 0; i < 128u; i++)
+            out128[i] = 0;
+        *outWidth = 8u;
+        return 1;
+    }
+
+    /* ⚠ 禁止把 code∈[0x36,0x3E] 当 SYM 标点：F9 00 打包索引也会落在此带
+     * （例：白天的「白」=0x0036），图鉴说明会把「白」画成「；」。
+     * PCS 标点由 DrawHalfWidth 直接读 ADDR_FONT_CHS_SYM，不经本函数。 */
+
+    /* 中文字形三源（2026-09-11 加 Middle）：
+     *   lib==1 → 1bpp 大库 11×11 位流（pokeE 格式，16B/字）；
+     *   lib==3 → 1bpp 小库 9×9 位流（11B/字）；
+     *   lib==2 → 1bpp Middle 9×11 位流（13B/字）—— 窄身全高，场景表指定。
+     * 1bpp 位流运行时转换（阴影右下生成），单元布局与旧 4bpp 库一致。
+     * 旧 4bpp 兼容路径（lib0/lib4）已删：resolve_draw 只输出三档，
+     * 其余分支不可达（返回 0 = 调用方放弃绘制，宁缺不砸）。
+     * 行偏移（单元内垂直落位）：BIG/MIDDLE=2、SMALL=5（见 CHS_1BPP_ROW_OFF_*）。 */
+    if (font_lib == CHS_FONT_LIB_1BPP_BIG) {
+        chs_cell_from_1bpp(
+            (const uint8_t *)ADDR_FONT_1BPP_BIG
+                + ((uint32_t)((uint16_t)code & 0x1FFFu)) * 16u,
+            11u, 11u, CHS_1BPP_ROW_OFF_BIG, out128);
+        *outWidth = 8u;
+        return 1;
+    }
+    if (font_lib == CHS_FONT_LIB_MIDDLE) {
+        chs_cell_from_1bpp(
+            (const uint8_t *)ADDR_FONT_1BPP_MIDDLE
+                + ((uint32_t)((uint16_t)code & 0x1FFFu)) * 13u,
+            9u, 11u, CHS_1BPP_ROW_OFF_MIDDLE, out128);
+        *outWidth = 8u;
+        return 1;
+    }
+    if (font_lib == CHS_FONT_LIB_1BPP_SMALL) {
+        chs_cell_from_1bpp(
+            (const uint8_t *)ADDR_FONT_1BPP_SMALL
+                + ((uint32_t)((uint16_t)code & 0x1FFFu)) * 11u,
+            9u, 9u, CHS_1BPP_ROW_OFF_SMALL, out128);
+        *outWidth = 8u;
+        return 1;
+    }
+    (void)fontNum; /* 旧 4bpp lib0 路径按 fontNum 选库，已删 */
+    return 0;
+}
+
+/* =====================================================================
+ * §T1 协议原语（原 text.c §2）
+ * ===================================================================== */
+static int lead_trail_ok(uint8_t lead, uint8_t trail)
+{
+    if (lead >= 0xFA || trail >= 0xFA)
+        return 0;
+    if (lead < 0x01 || lead > 0x1E)
+        return 0;
+    if (lead == 0x06 || lead == 0x1B)
+        return 0;
+    return 1;
+}
+
+static uint16_t pack_glyph_index(uint8_t lead, uint8_t trail)
+{
+    uint32_t idx = lead;
+    if (idx >= 6) {
+        if (idx >= 0x1B)
+            idx -= 1;
+        idx -= 1;
+    }
+    idx -= 1;
+    return (uint16_t)((idx << 8) | trail);
+}
+
+/* =====================================================================
+ * §T2 PhraseTable（原 text.c §12）
+ * layout: PhraseOffsets[code] (u32 @ADDR_PHRASE_OFFSETS, sentinel≥0x01000000)
+ *         → PhraseTable + off (PCS 流 @ADDR_PHRASE_TABLE, 终止 0xFF)
+ * ===================================================================== */
+static const uint8_t *phrase_stream_lookup(uint16_t code)
+{
+    const uint32_t *offsets = (const uint32_t *)ADDR_PHRASE_OFFSETS;
+    const uint8_t *table = (const uint8_t *)ADDR_PHRASE_TABLE;
+    uint32_t off = offsets[code];
+
+    if (off >= 0x01000000u)
+        return 0;
+    return table + off;
+}
+
+static int phrase_stream_no_wait_controls(const uint8_t *stream)
+{
+    unsigned i = 0;
+
+    if (!stream)
+        return 0;
+    while (stream[i] != 0xFF) {
+        if (stream[i] == CHS_ESCAPE) {
+            if (stream[i + 1] != 0)
+                return 0;
+            i += 4;
+            if (i > 256u)
+                return 0;
+            continue;
+        }
+        if (stream[i] == 0xFD) {
+            /* FD nn：占位符，可由 fd_expand_print 调官方展开对内联打印 */
+            i += 2;
+            if (i > 256u)
+                return 0;
+            continue;
+        }
+        if (stream[i] >= 0xFAu)
+            return 0;
+        i++;
+    }
+    return 1;
+}
+
+/* ---- FD 占位符：官方展开对（ADDR_FD_RESOLVER + ADDR_FD_SUBPRINT）--------
+ * 快径循环（0x08002DE8）state7 的官方实现就是：
+ *   index += 1; SUBPRINT(win, RESOLVER(text[旧 index]))。
+ * RESOLVER 查 0x081BBAC8 函数表返回变量串指针；SUBPRINT 换 text/index 跑
+ * 快径循环把串打完（缓冲内容里的 F9 80 嵌套引用会再次进我们的重定向，
+ * 道具名等因此显示中文）再恢复 text/index/state。
+ * ⚠ 打印器的 state7（0x08002F78）只是"跳过 id"的残迹；预处理循环
+ *   （0x08002E54）没有 s7 分支——FD 在那条路上会漏成 id 字节被当字形
+ *   （PCS 0x01=あ / 0x03=う，2026-08-29 拾道具对话实证）。 */
+typedef uint32_t (*fn_fd_resolver)(uint32_t id);
+typedef void (*fn_fd_subprint)(TextPrinter *win, uint32_t str);
+
+static void fd_expand_print(TextPrinter *win, uint8_t id)
+{
+    uint32_t str = ((fn_fd_resolver)(ADDR_FD_RESOLVER | 1u))((uint32_t)id);
+
+    ((fn_fd_subprint)(ADDR_FD_SUBPRINT | 1u))(win, str);
+}
+
+/* 通用 slot 查找（可作用于任意流，供替换流内日文字符递归翻译）。定义见 §T3。 */
+static int slot_lookup_stream(TextPrinter *win, uint32_t cur_char,
+                              const uint8_t *text, uint16_t index);
+
+static int inline_phrase_no_controls(TextPrinter *win, uint16_t index, uint16_t code)
+{
+    const uint8_t *stream = phrase_stream_lookup(code);
+    unsigned i = 0;
+    unsigned n = 0;
+
+    if (!stream || !phrase_stream_no_wait_controls(stream))
+        return 0;
+
+    while (stream[i] != 0xFF) {
+        if (stream[i] == CHS_ESCAPE && stream[i + 1] == 0) {
+            uint8_t lead = stream[i + 2];
+            uint8_t trail = stream[i + 3];
+            uint16_t gidx;
+            if (!lead_trail_ok(lead, trail))
+                return 0;
+            gidx = pack_glyph_index(lead, trail);
+            if (gidx < CHS_FONT_GLYPH_MAX)
+                chs_print(win, gidx, chs_print_px(win));
+            i += 4;
+        } else if (stream[i] == 0xFD) {
+            fd_expand_print(win, stream[i + 1]);
+            i += 2;
+        } else {
+            /* 日文字符：先在本短语流上递归查 slot → f900 中文，查不到才画日文 */
+            if (!slot_lookup_stream(win, stream[i], stream,
+                                    (uint16_t)(i + 1)))
+                if (!DrawGlyph(win, stream[i]))
+                    return 0;
+            i++;
+        }
+        if (++n > 32u)
+            break;
+    }
+    win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(index + 3));
+    return 1;
+}
+
+static void redirect_phrase_stream(TextPrinter *win, uint16_t code)
+{
+    const uint8_t *stream = phrase_stream_lookup(code);
+
+    if (!stream)
+        return;
+    win_set_u32(win, WIN_TEXT_PTR, (uint32_t)(uintptr_t)stream);
+    win_set_u16(win, WIN_TEXT_INDEX, 0);
+}
+
+/* =====================================================================
+ * §T3 SlotTable 查找族（原 text.c §13；'SLT2' 分桶）
+ * ===================================================================== */
+static uint32_t slot_rd_le32(const uint8_t *p)
+{
+    return (uint32_t)p[0] | ((uint32_t)p[1] << 8)
+         | ((uint32_t)p[2] << 16) | ((uint32_t)p[3] << 24);
+}
+
+/* 通用 slot 查找（可作用于任意流，供替换流内日文字符递归翻译）。定义见下。 */
+static int slot_lookup_stream(TextPrinter *win, uint32_t cur_char,
+                              const uint8_t *text, uint16_t index);
+
+static int slot_draw_chinese(TextPrinter *win, const uint8_t *chinese,
+                             uint16_t next_index)
+{
+    unsigned ci = 0;
+
+    while (chinese[ci] != 0xFF) {
+        if (chinese[ci] == CHS_ESCAPE && chinese[ci + 1] == 0) {
+            uint8_t lead = chinese[ci + 2];
+            uint8_t trail = chinese[ci + 3];
+            uint16_t gidx;
+            if (lead_trail_ok(lead, trail)) {
+                gidx = pack_glyph_index(lead, trail);
+                if (gidx < CHS_FONT_GLYPH_MAX)
+                    chs_print(win, gidx, chs_print_px(win));
+            }
+            ci += 4;
+        } else if (chinese[ci] == 0xFD) {
+            fd_expand_print(win, chinese[ci + 1]);
+            ci += 2;
+        } else {
+            /* 日文字符：先在本替换流上递归查 slot → 对应 f900 中文（用户拍板：
+             * slot 本身支持日文字符查 f900，替换流内日文不应直接画日文）。 */
+            if (!slot_lookup_stream(win, chinese[ci], chinese,
+                                    (uint16_t)(ci + 1)))
+                DrawGlyph(win, chinese[ci]);
+            ci++;
+        }
+    }
+    /* 覆盖内层递归临时写入的 TEXT_INDEX，恢复本层消费位置。 */
+    win_set_u16(win, WIN_TEXT_INDEX, next_index);
+    return 1;
+}
+
+#define SLOT_TABLE_MAGIC_V2   0x32544C53u  /* 'SLT2' */
+#define SLOT_V2_MAX_WINDOW    32u
+
+static int slot_lookup_v2(TextPrinter *win, uint32_t cur_char,
+                          const uint8_t *table,
+                          const uint8_t *text, uint16_t index)
+{
+    uint16_t n_buckets = (uint16_t)(table[4] | (table[5] << 8));
+    uint16_t max_jp = (uint16_t)(table[6] | (table[7] << 8));
+    const uint8_t *offs;
+    uint32_t beg, end, i;
+    uint8_t stream_buf[SLOT_V2_MAX_WINDOW];
+    uint32_t ph[SLOT_V2_MAX_WINDOW + 1];
+    unsigned cap;
+    unsigned cnt = 0;
+
+    if (n_buckets == 0 || cur_char >= n_buckets || max_jp == 0)
+        return 0;
+    if (max_jp > SLOT_V2_MAX_WINDOW)
+        max_jp = SLOT_V2_MAX_WINDOW;
+
+    offs = table + 8;
+    beg = slot_rd_le32(offs + (uint32_t)cur_char * 4u);
+    end = slot_rd_le32(offs + (uint32_t)cur_char * 4u + 4u);
+    if (beg >= end)
+        return 0;
+
+    ph[0] = 0x811c9dc5u;
+    {
+        int pos = (int)index - 1;
+        cap = max_jp;
+        while (cnt < cap) {
+            uint8_t b = (cnt == 0) ? (uint8_t)cur_char : text[pos + cnt];
+            if (b == 0xFF)
+                break;
+            stream_buf[cnt] = b;
+            ph[cnt + 1] = (ph[cnt] ^ b) * 0x01000193u;
+            cnt++;
+        }
+    }
+    if (cnt == 0)
+        return 0;
+
+    {
+        uint16_t best_len = 0;
+        const uint8_t *best_cn = 0;
+        uint16_t best_next = 0;
+
+        for (i = beg; i < end;) {
+            uint16_t len = (uint16_t)(table[i + 4] | (table[i + 5] << 8));
+            if (len >= 1u && len <= cnt && slot_rd_le32(table + i) == ph[len]) {
+                unsigned k, match = 1;
+                for (k = 0; k < len; k++) {
+                    if (table[i + 6 + k] != stream_buf[k]) {
+                        match = 0;
+                        break;
+                    }
+                }
+                if (match && len >= best_len) {
+                    best_len = len;
+                    best_cn = table + i + 6u + len;
+                    best_next = (uint16_t)(index - 1 + len);
+                }
+            }
+            i += 6u + len;
+            while (i < end && table[i] != 0xFF)
+                i++;
+            i++;
+        }
+        if (best_len > 0)
+            return slot_draw_chinese(win, best_cn, best_next);
+    }
+    return 0;
+}
+
+/* 通用 slot 查找：对指定流 text 的 index 位置做 slot 匹配并绘制。
+ *   index 语义同官方（pos=index-1 为 cur_char 前驱游标）。
+ *   slot_draw_chinese / inline_phrase_no_controls 的替换流内日文字符复用此
+ *   入口递归翻译（用户拍板：slot 支持日文字符直接查对应 f900）。
+ * 旧 legacy 平铺表回退已删（2026-09-08）：slot 表恒由打包端生成为 SLT2，
+ * magic 不匹配 = 数据损坏，直接放弃（宁缺不砸）。 */
+static int slot_lookup_stream(TextPrinter *win, uint32_t cur_char,
+                              const uint8_t *text, uint16_t index)
+{
+    const uint8_t *table = (const uint8_t *)ADDR_SLOT_TABLE;
+
+    if (cur_char >= 0x100u)
+        return 0;
+    if (slot_rd_le32(table) != SLOT_TABLE_MAGIC_V2)
+        return 0;
+    return slot_lookup_v2(win, cur_char, table, text, index);
+}
+
+static int slot_lookup_and_draw(TextPrinter *win, uint32_t cur_char)
+{
+    const uint8_t *text =
+        (const uint8_t *)(uintptr_t)win_u32(win, WIN_TEXT_PTR);
+    uint16_t index = win_u16(win, WIN_TEXT_INDEX);
+
+    return slot_lookup_stream(win, cur_char, text, index);
+}
+
+/* =====================================================================
+ * §T4 翻译层单字符入口（原 text.c §15 PrintNextChar_Hook 的
+ * F9 分支 + slot 分支；F9 短语 op → pitch 槽 write_op（scene_mode2_apply 消费）
+ * ===================================================================== */
+int TranslateHandleChar(TextPrinter *win, uint32_t c)
+{
+    const uint8_t *text;
+    uint16_t idx2;
+    const uint8_t *p;
+    uint8_t op;
+
+    if (c != CHS_ESCAPE)
+        return slot_lookup_and_draw(win, c);
+
+    text = (const uint8_t *)(uintptr_t)win_u32(win, WIN_TEXT_PTR);
+    idx2 = win_u16(win, WIN_TEXT_INDEX);
+    p = text + idx2;
+    op = p[0];
+
+    if (op == 0) {
+        uint8_t lead = p[1];
+        uint8_t trail = p[2];
+        uint16_t gidx;
+        /* 旧 chs_pitch_set_write_op 已随 pitch 分配器移除（落址回归原生协议） */
+        (void)win_u32(win, WIN_TEXT_PTR);
+
+        if (!lead_trail_ok(lead, trail)) {
+            win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(idx2 + 3));
+            return 1;
+        }
+        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(idx2 + 3));
+        gidx = pack_glyph_index(lead, trail);
+        if (gidx < CHS_FONT_GLYPH_MAX)
+            chs_print(win, gidx, chs_print_px(win));
+        return 1;
+    }
+
+    {
+        uint16_t code = (uint16_t)((p[1] << 8) | p[2]);
+
+        (void)op;                       /* 旧 pitch write_op 随分配器一并移除 */
+
+        /* 无等待控制码的短语一律先走内联打印（含 FD 占位符官方展开）。
+         * ⚠ 旧的 phrase_parent_continues 短路必须去掉：短语恰好是整条消息时
+         *   （父串只剩 0xFF）它返回 false → 跳过内联 → 重定向 → 原生打印器的
+         *   FD 残迹路径把 id 字节画成 あ/う（2026-08-29 拾道具对话实证）。
+         *   内联路径对"父串续/父串结束"都正确（结束场景 index 落在 0xFF 上）。 */
+        if (inline_phrase_no_controls(win, idx2, code))
+            return 1;
+
+        /* 有等待控制码（FA~FE 等）的短语仍走重定向，交原生状态机 */
+        redirect_phrase_stream(win, code);
+        return 1;
+    }
+}
+
+/* =====================================================================
+ * §T5 流像素宽度（原 text.c §16；GetStringWidth 为导出工具，
+ * 消费方 src/map_name_popup/MapNamePopup_hook.c）
+ * ===================================================================== */
+static uint32_t phrase_width_px(const uint8_t *stream)
+{
+    uint32_t w = 0;
+    uint32_t i = 0;
+
+    if (!stream)
+        return CHS_GLYPH_ADVANCE_PX;
+
+    while (i < 256u && stream[i] != 0xFF) {
+        uint8_t b = stream[i];
+        if (b == CHS_ESCAPE) {
+            if (stream[i + 1] == 0)
+                w += CHS_GLYPH_ADVANCE_PX;
+            i += 4;
+            continue;
+        }
+        if (b >= PCS_CTRL_BASE) {
+            i += 1;
+            continue;
+        }
+        w += CHS_GLYPH_ADVANCE_JP_PX;
+        i += 1;
+    }
+    return w;
+}
+
+uint32_t GetStringWidth(const uint8_t *buf, uint32_t max_bytes)
+{
+    uint32_t w = 0;
+    uint32_t len = 0;
+    const uint32_t *offsets = (const uint32_t *)ADDR_PHRASE_OFFSETS;
+
+    while (len < max_bytes && buf[len] != 0xFF) {
+        if (buf[len] == CHS_ESCAPE && len + 3 < max_bytes) {
+            uint8_t op = buf[len + 1];
+            uint16_t code = (uint16_t)((buf[len + 2] << 8) | buf[len + 3]);
+            if (op == 0) {
+                w += CHS_GLYPH_ADVANCE_PX;
+            } else if (code < 0x2000u) {
+                uint32_t off = offsets[code];
+                w += (off < 0x01000000u)
+                         ? phrase_width_px((const uint8_t *)ADDR_PHRASE_TABLE + off)
+                         : CHS_GLYPH_ADVANCE_PX;
+            } else {
+                w += CHS_GLYPH_ADVANCE_PX;
+            }
+            len += 4;
+        } else if (buf[len] >= PCS_CTRL_BASE) {
+            len += 1;
+        } else {
+            w += CHS_GLYPH_ADVANCE_JP_PX;
+            len += 1;
+        }
+    }
+    return w;
+}

@@ -1,0 +1,37 @@
+﻿
+Name                   Mode  
+----                   ----  
+.git                   d--h--
+.all-contributorsrc    -a----
+.gitattributes         -a----
+.gitignore             -a----
+asmdiff.ps1            -a----
+asmdiff.sh             -a----
+audio_rules.mk         -a----
+build_tools.sh         -a----
+charmap.txt            -a----
+check_history.sh       -a----
+config.mk              -a----
+CONTRIBUTING.md        -a----
+CONTRIBUTING_ZH.md     -a----
+CREDITS.md             -a----
+FEATURES.md            -a----
+FEATURES_ZH.md         -a----
+graphics_file_rules.mk -a----
+INSTALL.md             -a----
+installdeps.sh         -a----
+INSTALL_ZH.md          -a----
+json_data_rules.mk     -a----
+ld_script.ld           -a----
+ld_script_modern.ld    -a----
+ld_script_test.ld      -a----
+Makefile               -a----
+make_tools.mk          -a----
+map_data_rules.mk      -a----
+README.md              -a----
+README_ZH.md           -a----
+rom.sha1               -a----
+spritesheet_rules.mk   -a----
+trainer_rules.mk       -a----
+
+

@@ -1,0 +1,6 @@
+[run] drive rc=0 tail:
+[drive] t= 33.33s (~frame 2000.0) keys=0x37F  DOWN press
+[drive] done in 38.0s, key writes=32
+[drive] keep-alive：mGBA 保持运行（RSP 已关），可接 gdb 采样
+[run] stub port:
+  TCP    0.0.0.0:2345           0.0.0.0:0              LISTENING

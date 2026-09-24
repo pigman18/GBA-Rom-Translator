@@ -1,0 +1,18 @@
+{
+  "tag": "z4_opt",
+  "state": null,
+  "schedule": "A:240-280,A:330-370,A:420-460,A:510-550,A:600-640,A:690-730,A:780-820,A:870-910,A:960-1000,A:1050-1090,A:1140-1180,A:1230-1270,START:1500-1540,DOWN:1700-1740,DOWN:1850-1890,DOWN:2000-2040,DOWN:2150-2190,DOWN:2300-2340,DOWN:2450-2490,A:2600-2640,A:2750-2790",
+  "frames": 3100,
+  "redirect": true,
+  "key_writes": 42,
+  "seconds": 51.67,
+  "screenshot": "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_z4_opt.png",
+  "dumps": {
+    "ewram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_z4_opt_ewram.bin",
+    "vram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_z4_opt_vram.bin",
+    "iwram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_z4_opt_iwram.bin",
+    "pal": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_z4_opt_pal.bin",
+    "io": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_z4_opt_io.bin"
+  },
+  "capture": "OK C:\\code\\GBA-Rom-Translator\\.tmp\\emu_z4_opt.png 736x542 @444,641"
+}

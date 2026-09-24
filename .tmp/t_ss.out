@@ -1,0 +1,6 @@
+[WARN] GBA Savestate: Savestate is for a different version of the game
+[GAME ERROR] GBA DMA: Invalid DMA source address: 0x00004D12
+[GAME ERROR] GBA DMA: Invalid DMA source address: 0x00006200
+[GAME ERROR] GBA DMA: Invalid DMA source address: 0x00006830
+[GAME ERROR] GBA DMA: Invalid DMA source address: 0x0000EBE8
+[WARN] Debugger: Connection lost

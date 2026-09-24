@@ -1,0 +1,32 @@
+origin size = 8388608
+pool word @0x08000468 = 0x04000130
+wrote C:/code/GBA-Rom-Translator\.tmp\obs_origin.gba pool -> 0x08900000
+rc = 0
+[drive] t=  4.00s (~frame  240.0) keys=0x3FE  A press
+[drive] t=  5.50s (~frame  330.0) keys=0x3FE  A press
+[drive] t=  7.00s (~frame  420.0) keys=0x3FE  A press
+[drive] t=  8.50s (~frame  510.0) keys=0x3FE  A press
+[drive] t= 10.00s (~frame  600.0) keys=0x3FE  A press
+[drive] t= 11.50s (~frame  690.0) keys=0x3FE  A press
+[drive] t= 13.00s (~frame  780.1) keys=0x3FE  A press
+[drive] t= 14.50s (~frame  870.0) keys=0x3FE  A press
+[drive] t= 16.00s (~frame  960.0) keys=0x3FE  A press
+[drive] t= 17.50s (~frame 1050.0) keys=0x3FE  A press
+[drive] t= 19.00s (~frame 1140.0) keys=0x3FE  A press
+[drive] t= 20.50s (~frame 1230.0) keys=0x3FE  A press
+[drive] t= 25.00s (~frame 1500.0) keys=0x3F7  START press
+[drive] t= 28.33s (~frame 1700.0) keys=0x37F  DOWN press
+[drive] t= 30.83s (~frame 1850.1) keys=0x37F  DOWN press
+[drive] t= 33.33s (~frame 2000.0) keys=0x37F  DOWN press
+[drive] t= 35.83s (~frame 2150.1) keys=0x37F  DOWN press
+[drive] t= 38.33s (~frame 2300.0) keys=0x37F  DOWN press
+[drive] t= 40.83s (~frame 2450.0) keys=0x37F  DOWN press
+[drive] t= 43.33s (~frame 2600.0) keys=0x3FE  A press
+[drive] t= 45.83s (~frame 2750.0) keys=0x3FE  A press
+[drive] final shot -> emu_orgObs_final.png
+[drive] dump {'ewram': True, 'vram': True, 'iwram': True} (OK)
+[io] IO DISPCNT 0x4000000:	0x1340
+[io] IO BG0CNT 0x4000008:	0x1f08
+[io] IO BG1CNT 0x400000a:	0x0703
+[io] IO BG2CNT 0x400000c:	0x0000
+[io] IO BG3CNT 0x400000e:	0x9603

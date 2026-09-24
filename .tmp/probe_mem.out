@@ -1,0 +1,20 @@
+[GAME ERROR] GBA I/O: Write to read-only I/O register: 006
+[GAME ERROR] GBA DMA: Invalid DMA source address: 0x00000000
+[GAME ERROR] GBA DMA: Invalid DMA source address: 0x00000000
+[GAME ERROR] GBA DMA: Invalid DMA source address: 0x00000000
+[GAME ERROR] GBA DMA: Invalid DMA source address: 0x00000000
+[GAME ERROR] GBA DMA: Invalid DMA source address: 0x00000000
+[GAME ERROR] GBA DMA: Invalid DMA source address: 0x00000000
+[GAME ERROR] GBA DMA: Invalid DMA source address: 0x00000000
+[GAME ERROR] GBA DMA: Invalid DMA source address: 0x00000000
+[GAME ERROR] GBA Video: Invalid video register: 0x04E
+[GAME ERROR] GBA Video: Invalid video register: 0x056
+[GAME ERROR] GBA Video: Invalid video register: 0x058
+[GAME ERROR] GBA Video: Invalid video register: 0x05A
+[GAME ERROR] GBA Video: Invalid video register: 0x05C
+[GAME ERROR] GBA Video: Invalid video register: 0x05E
+[GAME ERROR] GBA Savedata: Bad flash write: 0x5555 = 0xf0
+[GAME ERROR] GBA Memory: Bad memory Store32: 0x00000000
+[WARN] Debugger: Checksum error: expected 2d, got 02
+[WARN] Debugger: Packet error
+[WARN] Debugger: Connection lost

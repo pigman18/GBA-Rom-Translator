@@ -1,0 +1,6 @@
+﻿OK src/text.c 94994
+OK include/text.h 7349
+OK src/window.c 23010
+OK include/window.h 3173
+OK src/chinese_text.c 4605
+OK include/chinese_text.h 474

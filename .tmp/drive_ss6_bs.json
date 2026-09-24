@@ -1,0 +1,18 @@
+{
+  "tag": "ss6_bs",
+  "state": "C:\\code\\GBA-Rom-Translator\\roms\\outputs\\POKEMON_RUBY_AXVJ00_translated.ss6",
+  "schedule": "B:180-240,B:480-540,B:780-840,B:1080-1140,B:1380-1440",
+  "frames": 1800,
+  "redirect": true,
+  "shots": [
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_ss6_bs_t9.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_ss6_bs_t14.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_ss6_bs_t19.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_ss6_bs_t24.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_ss6_bs_t29.png"
+  ],
+  "key_writes": 10,
+  "seconds": 31.02,
+  "screenshot": "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_ss6_bs.png",
+  "capture": "OK C:\\code\\GBA-Rom-Translator\\.tmp\\emu_ss6_bs.png 736x542 @977,246"
+}

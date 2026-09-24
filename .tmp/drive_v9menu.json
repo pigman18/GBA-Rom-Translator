@@ -1,0 +1,16 @@
+{
+  "tag": "v9menu",
+  "state": null,
+  "schedule": "A:240-280,A:330-370,A:420-460,A:510-550,A:600-640,A:690-730,A:780-820,A:870-910,A:960-1000,A:1050-1090,A:1140-1180,A:1230-1270,START:1500-1540",
+  "frames": 1900,
+  "redirect": true,
+  "key_writes": 26,
+  "seconds": 31.67,
+  "dumps": {
+    "ewram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_v9menu_ewram.bin",
+    "vram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_v9menu_vram.bin",
+    "iwram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_v9menu_iwram.bin",
+    "pal": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_v9menu_pal.bin",
+    "io": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_v9menu_io.bin"
+  }
+}

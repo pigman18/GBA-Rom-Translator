@@ -1,0 +1,25 @@
+{
+  "tag": "org2",
+  "state": null,
+  "schedule": "A:180-220,START:300-340,A:430-470,A:600-640,START:700-740,A:830-870,START:1200-1240,DOWN:1400-1440,DOWN:1520-1560,DOWN:1640-1680,DOWN:1760-1800,DOWN:1880-1920,DOWN:2000-2040,A:2200-2240,A:2350-2390",
+  "frames": 2700,
+  "redirect": false,
+  "shots": [
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_org2_t8.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_org2_t14.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_org2_t20.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_org2_t26.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_org2_t32.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_org2_t38.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_org2_t45.png"
+  ],
+  "key_writes": 30,
+  "seconds": 46.99,
+  "screenshot": "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_org2.png",
+  "dumps": {
+    "ewram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_org2_ewram.bin",
+    "vram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_org2_vram.bin",
+    "iwram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_org2_iwram.bin"
+  },
+  "capture": "OK C:\\code\\GBA-Rom-Translator\\.tmp\\emu_org2.png 736x542 @977,246"
+}

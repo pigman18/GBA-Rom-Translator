@@ -1,0 +1,61 @@
+GDB 已连接，停因=S02
+
+===== gdb_patcher log @ 14:26:35 [POKEMON_RUBY_AXVJ00: DrawGlyphTiles, GetCursorTileNum, GetGlyphTilePointers, InitTextPrinter, PrintNextChar, InitWindowTileData] 日文PCS + F900/F980 字库 C:\code\GBA-Rom-Translator\configs\POKEMON_RUBY_AXVJ00\charmap.txt =====
+  tiles 采集关闭 (--no-tiles)
+  断点 DrawGlyphTiles @0x08003630 OK
+  断点 GetCursorTileNum @0x08003708 OK
+  断点 GetGlyphTilePointers @0x08003730 OK
+  断点 InitTextPrinter @0x08002C68 OK
+  断点 PrintNextChar @0x080032F8 OK
+  断点 InitWindowTileData @0x08002A50 OK
+  ✅ 接管点自检通过（1 个点 ROM 首字节全部与期望一致）
+  ✅ ROM 指纹：注入区 0x08800000 有 hook 代码（00 49 08 47 69 08 80 08 …，16B 内 15 个有效字节）⇒ 跑的是注入版。
+  🔴 S3 补丁自检失败：⑤ @0x08062080 运行镜像 = 00 04 ≠ 期望 10 b5 ⇒ **mGBA 加载的不是含 S3 的 ROM**（重开 ROM 再测；EWRAM 里的 v10 发号器状态也一并作废）
+追踪中：到目标界面操作，Ctrl-C 结束。日志: C:\code\GBA-Rom-Translator\src\util\work\POKEMON_RUBY_AXVJ00\dgt_jp.log
+
+[InitTextPrinter] PC=0x08002C68 LR=0x08002D14 r0=0x0202E658 r1=0x03007DE4 r2=0x00000001 r3=0x00000002
+
+[W0-ITP] win=0x0202E658 文本=0x03007DE4~0x03007DEB (IWRAM) LR=0x08002D14
+  r2.tile_base=0x0001 r3.cur_x=2
+  state=0 textMode=3 fontNum=3 色C/D/E=1/15/8 pal=15 TILE_BASE=0x0001 TILE_OFF=0x0000 curX=0 curTX=0 curY=0 curTY=0 index=0
+  模板@0x081BB46C: charBase=2 pal=15 C/D/E=1/15/8 font=3 textMode=3 spacing=0 tileData=0x06008000 tilemap=0x0600F800
+  预算: 30×20划界 → tile[1,603) span=602 绝对VRAM=0x06008020..0x0600CB60 charblock=cb2→cb3 ⚠跨charblock
+  原始字节: fc 01 0e f9 80 0d 0e ff
+  内容: '\\CC010E{F9 80→短语0D0E:继续游戏}'
+
+[BGMAP…] 轨迹尚未初始化（magic=0x00000000） ⇒ bg_remap 还没被调用过，静默等待（进文本窗口后自会写入）。
+
+[PrintNextChar] PC=0x080032F8 LR=0x08002E28 r0=0x0202E658 r1=0x00000000 r2=0x00000001 r3=0x00000000
+
+[PncEntry] win=0x0202E658 LR=0x08002E28 即将处理@0x03007DE4(IWRAM) index=0
+  state=1 textMode=3 fontNum=3 色C/D/E=1/15/8 pal=15 TILE_BASE=0x0001 TILE_OFF=0x0000 curX=2 curTX=0 curY=1 curTY=0 index=0
+  字节流: fc 01 0e f9 80 0d 0e ff ff ff ff ff ff ff f9 00 0b c6 f9 00 10 94 ff ff
+
+[PrintNextChar] PC=0x080032F8 LR=0x08002E28 r0=0x0202E658 r1=0x08002E29 r2=0x08003301 r3=0x0202E658
+
+[PncEntry] win=0x0202E658 LR=0x08002E28 即将处理@0x03007DE7(IWRAM) index=3
+  state=1 textMode=3 fontNum=3 色C/D/E=14/15/8 pal=15 TILE_BASE=0x0001 TILE_OFF=0x0000 curX=2 curTX=0 curY=1 curTY=0 index=3
+  字节流: f9 80 0d 0e ff ff ff ff ff ff ff f9 00 0b c6 f9 00 10 94 ff ff f9 80 0c
+
+[GetCursorTileNum] PC=0x08003708 LR=0x080036F0 r0=0x0202E658 r1=0x00000023 r2=0x00000041 r3=0x080036DD
+
+[GCTN] win=0x0202E658 xOff=35 yOff=65 返回=tilemap项@0x0603008A → 砖号=0x0000 LR=0x080036F0
+Traceback (most recent call last):
+  File "C:\code\GBA-Rom-Translator\src\util\gdb_patcher.py", line 5422, in <module>
+    raise SystemExit(main())
+                     ~~~~^^
+  File "C:\code\GBA-Rom-Translator\src\util\gdb_patcher.py", line 5415, in main
+    return run_log(args)
+  File "C:\code\GBA-Rom-Translator\src\util\gdb_patcher.py", line 4998, in run_log
+    hook.fn(gdb, regs, ctx, hook.point.cfg)
+    ~~~~~~~^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^^
+  File "C:\code\GBA-Rom-Translator\src\util\gdb_patcher.py", line 3722, in _on_get_cursor_tile
+    _on_get_cursor_tile_num_jp(gdb, regs, ctx, cfg)
+    ~~~~~~~~~~~~~~~~~~~~~~~~~~^^^^^^^^^^^^^^^^^^^^^
+  File "C:\code\GBA-Rom-Translator\src\util\gdb_patcher.py", line 1325, in _on_get_cursor_tile_num_jp
+    f" tileData=0x{u32(wb, 0x20):08X} [{why}]"
+                   ~~~^^^^^^^^^^
+  File "C:\code\GBA-Rom-Translator\src\util\gdb_patcher.py", line 89, in u32
+    return b[o] | (b[o + 1] << 8) | (b[o + 2] << 16) | (b[o + 3] << 24)
+           ~^^^
+IndexError: index out of range

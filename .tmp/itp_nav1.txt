@@ -1,0 +1,5 @@
+warning: No executable has been specified and target does not support
+determining executable automatically.  Try using the "file" command.
+0x0807b4b2 in ?? ()
+Breakpoint 1 at 0x8002c68
+ITP 1 win=0x202e658 tb=1 a4=4 a5=17 lr=0x8002d15 tpl=0x81bb49c tiled=0x6000000 tmap=0x600f800

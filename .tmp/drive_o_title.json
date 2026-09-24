@@ -1,0 +1,18 @@
+{
+  "tag": "o_title",
+  "state": null,
+  "schedule": "A:240-280,A:330-370,A:420-460,START:600-640",
+  "frames": 700,
+  "redirect": true,
+  "key_writes": 8,
+  "seconds": 11.67,
+  "screenshot": "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_o_title.png",
+  "dumps": {
+    "ewram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_o_title_ewram.bin",
+    "vram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_o_title_vram.bin",
+    "iwram": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_o_title_iwram.bin",
+    "pal": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_o_title_pal.bin",
+    "io": "C:\\code\\GBA-Rom-Translator\\.tmp\\drive_o_title_io.bin"
+  },
+  "capture": "OK C:\\code\\GBA-Rom-Translator\\.tmp\\emu_o_title.png 736x542 @977,246"
+}

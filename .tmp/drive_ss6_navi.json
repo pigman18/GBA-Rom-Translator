@@ -1,0 +1,15 @@
+{
+  "tag": "ss6_navi",
+  "state": "C:\\code\\GBA-Rom-Translator\\roms\\outputs\\POKEMON_RUBY_AXVJ00_translated.ss6",
+  "schedule": "B:180-240,B:480-540,B:780-840,B:1080-1140,START:1800-1860,DOWN:2100-2160,DOWN:2340-2400,A:2580-2640",
+  "frames": 2900,
+  "redirect": true,
+  "shots": [
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_ss6_navi_t42.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_ss6_navi_t48.png"
+  ],
+  "key_writes": 16,
+  "seconds": 50.02,
+  "screenshot": "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_ss6_navi.png",
+  "capture": "OK C:\\code\\GBA-Rom-Translator\\.tmp\\emu_ss6_navi.png 736x542 @977,246"
+}

@@ -1,0 +1,120 @@
+﻿DIR:
+rhc 1
+pokeruby_text.c 122716
+GREP:
+94: static void ApplyColors_UnshadowedFont(const u8 *, u32 *, u8, u8);
+95: static void ApplyColors_ShadowedFont(const void *, void *, u8, u8, u8);
+122: static u16 GetCursorTileNum(struct Window *, u32, u32);
+123: static s32 DrawGlyphTiles(struct Window *, u32, u32);
+126: static s32 DrawGlyphTile_ShadowedFont(struct GlyphTileInfo *);
+163: static void ShiftGlyphTile_UnshadowedFont_Width0(struct GlyphBuffer *, u8 *, u32 *, u8);
+164: static void ShiftGlyphTile_UnshadowedFont_Width1(struct GlyphBuffer *, u8 *, u32 *, u8);
+165: static void ShiftGlyphTile_UnshadowedFont_Width2(struct GlyphBuffer *, u8 *, u32 *, u8);
+166: static void ShiftGlyphTile_UnshadowedFont_Width3(struct GlyphBuffer *, u8 *, u32 *, u8);
+167: static void ShiftGlyphTile_UnshadowedFont_Width4(struct GlyphBuffer *, u8 *, u32 *, u8);
+168: static void ShiftGlyphTile_UnshadowedFont_Width5(struct GlyphBuffer *, u8 *, u32 *, u8);
+169: static void ShiftGlyphTile_UnshadowedFont_Width6(struct GlyphBuffer *, u8 *, u32 *, u8);
+170: static void ShiftGlyphTile_UnshadowedFont_Width7(struct GlyphBuffer *, u8 *, u32 *, u8);
+171: static void ShiftGlyphTile_UnshadowedFont_Width8(struct GlyphBuffer *, u8 *, u32 *, u8);
+173: static void ShiftGlyphTile_ShadowedFont_Width0(struct GlyphBuffer *, u32 *, u32 *, u8);
+174: static void ShiftGlyphTile_ShadowedFont_Width1(struct GlyphBuffer *, u32 *, u32 *, u8);
+175: static void ShiftGlyphTile_ShadowedFont_Width2(struct GlyphBuffer *, u32 *, u32 *, u8);
+176: static void ShiftGlyphTile_ShadowedFont_Width3(struct GlyphBuffer *, u32 *, u32 *, u8);
+177: static void ShiftGlyphTile_ShadowedFont_Width4(struct GlyphBuffer *, u32 *, u32 *, u8);
+178: static void ShiftGlyphTile_ShadowedFont_Width5(struct GlyphBuffer *, u32 *, u32 *, u8);
+179: static void ShiftGlyphTile_ShadowedFont_Width6(struct GlyphBuffer *, u32 *, u32 *, u8);
+180: static void ShiftGlyphTile_ShadowedFont_Width7(struct GlyphBuffer *, u32 *, u32 *, u8);
+181: static void ShiftGlyphTile_ShadowedFont_Width8(struct GlyphBuffer *, u32 *, u32 *, u8);
+251: static const u32 sGlyphMasks[9][8][3] =
+470: ShiftGlyphTile_UnshadowedFont_Width0,
+471: ShiftGlyphTile_UnshadowedFont_Width1,
+472: ShiftGlyphTile_UnshadowedFont_Width2,
+473: ShiftGlyphTile_UnshadowedFont_Width3,
+474: ShiftGlyphTile_UnshadowedFont_Width4,
+475: ShiftGlyphTile_UnshadowedFont_Width5,
+476: ShiftGlyphTile_UnshadowedFont_Width6,
+477: ShiftGlyphTile_UnshadowedFont_Width7,
+478: ShiftGlyphTile_UnshadowedFont_Width8,
+485: ShiftGlyphTile_ShadowedFont_Width0,
+486: ShiftGlyphTile_ShadowedFont_Width1,
+487: ShiftGlyphTile_ShadowedFont_Width2,
+488: ShiftGlyphTile_ShadowedFont_Width3,
+489: ShiftGlyphTile_ShadowedFont_Width4,
+490: ShiftGlyphTile_ShadowedFont_Width5,
+491: ShiftGlyphTile_ShadowedFont_Width6,
+492: ShiftGlyphTile_ShadowedFont_Width7,
+493: ShiftGlyphTile_ShadowedFont_Width8,
+1808: ApplyColors_UnshadowedFont(sBlankTile, (u32 *)(buffer + 32), win->template->foregroundColor, win->template->backgroundColor);
+1830: ApplyColors_UnshadowedFont(&sFont1LatinGlyphs[8 * i], (u32 *)buffer, win->foregroundColor, win->backgroundColor);
+1842: ApplyColors_ShadowedFont(&gFont4LatinGlyphs[8 * i], buffer, win->foregroundColor, win->shadowColor, win->backgroundColor);
+1854: ApplyColors_UnshadowedFont(&sBrailleGlyphs[8 * i], (u32 *)buffer, win->foregroundColor, win->backgroundColor);
+1919: ApplyColors_UnshadowedFont(
+1928: ApplyColors_ShadowedFont(
+2032: u16 val = GetCursorTileNum(win, 0, 0);
+2034: ApplyColors_UnshadowedFont(sBlankTile, (u32 *)buffer, win->backgroundColor, win->backgroundColor);
+2035: ApplyColors_UnshadowedFont(&sFont1LatinGlyphs[8 * 0x6E], (u32 *)(buffer + 32), win->foregroundColor, win->backgroundColor);
+2247: u16 index = GetCursorTileNum(win, 0, 0);
+2257: index = GetCursorTileNum(win, 0, 1);
+2581: u32 tilesWidth = DrawGlyphTiles(win, glyph, pixelsWidth);
+2636: u32 tilesWidth = DrawGlyphTiles(win, glyph, pixelsWidth);
+2653: ApplyColors_UnshadowedFont(upperTile, (u32 *)dest, win->foregroundColor, win->backgroundColor);
+2654: ApplyColors_UnshadowedFont(lowerTile, (u32 *)(dest + 32), win->foregroundColor, win->backgroundColor);
+2659: ApplyColors_ShadowedFont(upperTile, dest, win->foregroundColor, win->shadowColor, win->backgroundColor);
+2660: ApplyColors_ShadowedFont(lowerTile, dest + 32, win->foregroundColor, win->shadowColor, win->backgroundColor);
+2729: static void ApplyColors_UnshadowedFont(const u8 *src, u32 *dest, u8 foreground, u8 background)
+2752: static void ApplyColors_ShadowedFont(const void *src, void *dest, u8 foreground, u8 shadow, u8 background)
+2832: DrawGlyphTiles(win, 0, 8);
+2846: const u32 *masks = sGlyphMasks[8][pixel];
+2850: u16 tileNum = GetCursorTileNum(win, 0, 0);
+2860: tileNum = GetCursorTileNum(win, 0, 1);
+2881: const u32 *masks = sGlyphMasks[8 - pixelX][pixelX];
+2887: tileNum = GetCursorTileNum(win, 0, 0);
+2899: tileNum = GetCursorTileNum(win, 0, 1);
+3085: u8 *buf1 = win->tileData + 32 * GetCursorTileNum(win, 0, -2);
+3086: u8 *buf2 = win->tileData + 32 * GetCursorTileNum(win, 0, 0);
+3163: buffer = win->tileData + 32 * GetCursorTileNum(win, 0, 0);
+3188: ApplyColors_ShadowedFont(downArrowTiles, buffer, win->foregroundColor, win->shadowColor, win->backgroundColor);
+3189: ApplyColors_ShadowedFont(downArrowTiles + 8, buffer + 32, win->foregroundColor, win->shadowColor, win->backgroundColor);
+3206: glyphTileInfo.dest = (u32 *)(win->tileData + 32 * GetCursorTileNum(win, 1, 0));
+3208: DrawGlyphTile_ShadowedFont(&glyphTileInfo);
+3210: glyphTileInfo.dest = (u32 *)(win->tileData + 32 * GetCursorTileNum(win, 1, 1));
+3211: DrawGlyphTile_ShadowedFont(&glyphTileInfo);
+3215: glyphTileInfo.dest = (u32 *)(win->tileData + 32 * GetCursorTileNum(win, 0, 0));
+3217: DrawGlyphTile_ShadowedFont(&glyphTileInfo);
+3219: glyphTileInfo.dest = (u32 *)(win->tileData + 32 * GetCursorTileNum(win, 0, 1));
+3220: DrawGlyphTile_ShadowedFont(&glyphTileInfo);
+3877: static s32 DrawGlyphTile_UnshadowedFont(struct GlyphTileInfo *glyphTileInfo)
+3882: const u32 *masks = sGlyphMasks[glyphTileInfo->width][glyphTileInfo->startPixel];
+3952: static void ShiftGlyphTile_UnshadowedFont_Width0(struct GlyphBuffer *glyphBuffer, u8 *src, u32 *a3, u8 startPixel)
+3956: static void ShiftGlyphTile_UnshadowedFont_Width1(struct GlyphBuffer *glyphBuffer, u8 *src, u32 *colors, u8 startPixel)
+3969: static void ShiftGlyphTile_UnshadowedFont_Width2(struct GlyphBuffer *glyphBuffer, u8 *src, u32 *colors, u8 startPixel)
+3983: static void ShiftGlyphTile_UnshadowedFont_Width3(struct GlyphBuffer *glyphBuffer, u8 *src, u32 *colors, u8 startPixel)
+4000: static void ShiftGlyphTile_UnshadowedFont_Width4(struct GlyphBuffer *glyphBuffer, u8 *src, u32 *colors, u8 startPixel)
+4016: static void ShiftGlyphTile_UnshadowedFont_Width5(struct GlyphBuffer *glyphBuffer, u8 *src, u32 *colors, u8 startPixel)
+4033: static void ShiftGlyphTile_UnshadowedFont_Width6(struct GlyphBuffer *glyphBuffer, u8 *src, u32 *colors, u8 startPixel)
+4051: static void ShiftGlyphTile_UnshadowedFont_Width7(struct GlyphBuffer *glyphBuffer, u8 *src, u32 *colors, u8 startPixel)
+4070: static void ShiftGlyphTile_UnshadowedFont_Width8(struct GlyphBuffer *glyphBuffer, u8 *src, u32 *colors, u8 startPixel)
+4090: static s32 DrawGlyphTile_ShadowedFont(struct GlyphTileInfo *glyphTileInfo)
+4094: const u32 *masks = sGlyphMasks[glyphTileInfo->width][glyphTileInfo->startPixel];
+4161: static void ShiftGlyphTile_ShadowedFont_Width0(struct GlyphBuffer *glyphBuffer, u32 *src, u32 *colors, u8 startPixel)
+4165: static void ShiftGlyphTile_ShadowedFont_Width1(struct GlyphBuffer *glyphBuffer, u32 *src, u32 *colors, u8 startPixel)
+4178: static void ShiftGlyphTile_ShadowedFont_Width2(struct GlyphBuffer *glyphBuffer, u32 *src, u32 *colors, u8 startPixel)
+4192: static void ShiftGlyphTile_ShadowedFont_Width3(struct GlyphBuffer *glyphBuffer, u32 *src, u32 *colors, u8 startPixel)
+4207: static void ShiftGlyphTile_ShadowedFont_Width4(struct GlyphBuffer *glyphBuffer, u32 *src, u32 *colors, u8 startPixel)
+4232: static void ShiftGlyphTile_ShadowedFont_Width5(struct GlyphBuffer *glyphBuffer, u32 *src, u32 *colors, u8 startPixel)
+4256: static void ShiftGlyphTile_ShadowedFont_Width6(struct GlyphBuffer *glyphBuffer, u32 *src, u32 *colors, u8 startPixel)
+4281: static void ShiftGlyphTile_ShadowedFont_Width7(struct GlyphBuffer *glyphBuffer, u32 *src, u32 *colors, u8 startPixel)
+4307: static void ShiftGlyphTile_ShadowedFont_Width8(struct GlyphBuffer *glyphBuffer, u32 *src, u32 *colors, u8 startPixel)
+4321: static s32 DrawGlyphTiles(struct Window *win, u32 glyph, u32 glyphWidth)
+4333: glyphTileInfo.dest = (u32 *)(win->tileData + 32 * GetCursorTileNum(win, 0, 0));
+4342: DrawGlyphTile_UnshadowedFont(&glyphTileInfo);
+4344: glyphTileInfo.dest = (u32 *)(win->tileData + 32 * GetCursorTileNum(win, 0, 1));
+4345: retVal = DrawGlyphTile_UnshadowedFont(&glyphTileInfo);
+4350: DrawGlyphTile_ShadowedFont(&glyphTileInfo);
+4352: glyphTileInfo.dest = (u32 *)(win->tileData + 32 * GetCursorTileNum(win, 0, 1));
+4353: retVal = DrawGlyphTile_ShadowedFont(&glyphTileInfo);
+4366: u16 upperLeftTileNum = GetCursorTileNum(win, 0, 0);
+4367: u16 lowerLeftTileNum = GetCursorTileNum(win, 0, 1);
+4372: u16 upperRightTileNum = GetCursorTileNum(win, 1, 0);
+4373: u16 lowerRightTileNum = GetCursorTileNum(win, 1, 1);
+4380: static u16 GetCursorTileNum(struct Window *win, u32 xOffset, u32 yOffset)

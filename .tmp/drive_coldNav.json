@@ -1,0 +1,17 @@
+{
+  "tag": "coldNav",
+  "state": null,
+  "schedule": "A:240-280,A:330-370,A:420-460,A:510-550,A:600-640,A:690-730,A:780-820,A:870-910,A:960-1000,A:1050-1090,A:1140-1180,A:1230-1270,START:1500-1540,DOWN:1700-1740,DOWN:1850-1890,DOWN:2000-2040,A:2150-2190",
+  "frames": 2900,
+  "redirect": true,
+  "shots": [
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldNav_t26.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldNav_t35.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldNav_t39.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldNav_t42.png"
+  ],
+  "key_writes": 34,
+  "seconds": 48.33,
+  "screenshot": "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldNav.png",
+  "capture": "OK C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldNav.png 736x542 @977,246"
+}

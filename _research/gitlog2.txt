@@ -1,0 +1,40 @@
+﻿git : Cloning into 'full'...
+所在位置 行:451 字符: 215
++ ... $d\r1.txt"; git clone --depth 1 --filter=blob:none --sparse https://g ...
++                 ~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~~
+    + CategoryInfo          : NotSpecified: (Cloning into 'full'...:String) [] 
+   , RemoteException
+    + FullyQualifiedErrorId : NativeCommandError
+ 
+Updating files:   3% (1/31)
+Updating files:   6% (2/31)
+Updating files:   9% (3/31)
+Updating files:  12% (4/31)
+Updating files:  16% (5/31)
+Updating files:  19% (6/31)
+Updating files:  22% (7/31)
+Updating files:  25% (8/31)
+Updating files:  29% (9/31)
+Updating files:  32% (10/31)
+Updating files:  35% (11/31)
+Updating files:  38% (12/31)
+Updating files:  41% (13/31)
+Updating files:  45% (14/31)
+Updating files:  48% (15/31)
+Updating files:  51% (16/31)
+Updating files:  54% (17/31)
+Updating files:  58% (18/31)
+Updating files:  61% (19/31)
+Updating files:  64% (20/31)
+Updating files:  67% (21/31)
+Updating files:  70% (22/31)
+Updating files:  74% (23/31)
+Updating files:  77% (24/31)
+Updating files:  80% (25/31)
+Updating files:  83% (26/31)
+Updating files:  87% (27/31)
+Updating files:  90% (28/31)
+Updating files:  93% (29/31)
+Updating files:  96% (30/31)
+Updating files: 100% (31/31)
+Updating files: 100% (31/31), done.

@@ -1,0 +1,93 @@
+P1 0x080027DC：调用点 80，解出 key 80
+P2 0x08002C28：调用点 30，解出 key 30
+P3 0x0806F158：调用点 53，解出 key 19
+
+界面 08004798  1 层：BG0/k6/cb2/tm3/f3
+界面 08005948  1 层：BG0/k6/cb2/tm3/f3
+界面 08006D14  1 层：BG0/k0/cb2/tm0/f0
+界面 08007724  1 层：BG0/k0/cb2/tm0/f0
+界面 08007ACC  1 层：BG0/k0/cb2/tm0/f0
+界面 0800BD5C  3 层：BG0/k1/cb0/tm0/f3,BG1/k49/cb1/tm0/f3,BG2/k50/cb1/tm0/f3
+界面 0800D138  3 层：BG0/k1/cb0/tm0/f3,BG1/k49/cb1/tm0/f3,BG2/k50/cb1/tm0/f3
+界面 0803FEBC  1 层：BG0/k23/cb2/tm0/f3
+界面 08044FA8  1 层：BG0/k23/cb2/tm0/f3
+界面 080485FC  2 层：BG0/k23/cb2/tm0/f3,BG0/k44/cb3/tm0/f3
+界面 0804B514  1 层：BG0/k35/cb3/tm0/f3
+界面 0804BA90  1 层：BG0/k35/cb3/tm0/f3
+界面 0804F740  1 层：BG0/k6/cb2/tm3/f3
+界面 08051A84  1 层：BG0/k0/cb2/tm0/f0
+界面 08051BA4  1 层：BG0/k0/cb2/tm0/f0
+界面 08051CFC  1 层：BG0/k0/cb2/tm0/f0
+界面 08051E00  1 层：BG0/k0/cb2/tm0/f0
+界面 08061BC8  1 层：BG0/k6/cb2/tm3/f3
+界面 08067D84  1 层：BG0/k6/cb2/tm3/f3
+界面 080683FC  1 层：BG0/k3/cb1/tm1/f4
+界面 0806ED34  1 层：BG0/k6/cb2/tm3/f3
+界面 0806EF90  1 层：BG0/k0/cb2/tm0/f0
+界面 0806F074  1 层：BG0/k0/cb2/tm0/f0
+界面 08077D94  1 层：BG0/k1/cb0/tm0/f3
+界面 080851F4  1 层：BG0/k6/cb2/tm3/f3
+界面 080854E4  1 层：BG0/k6/cb2/tm3/f3
+界面 080883E4  1 层：BG0/k46/cb2/tm1/f3
+界面 0808900C  1 层：BG2/k32/cb2/tm1/f3
+界面 08089A3C  1 层：BG2/k32/cb2/tm1/f3
+界面 0808BF68  1 层：BG2/k32/cb2/tm1/f3
+界面 0808C5B4  1 层：BG3/k31/cb2/tm1/f3
+界面 0808CD94  2 层：BG3/k31/cb2/tm1/f3,BG2/k32/cb2/tm1/f3
+界面 0808E574  1 层：BG2/k32/cb2/tm1/f3
+界面 0808FF08  1 层：BG0/k9/cb3/tm1/f3 [k9 cb3无解]
+界面 0809005C  1 层：BG0/k0/cb2/tm0/f0
+界面 080933A4  1 层：BG0/k8/cb0/tm1/f3
+界面 08094D50  1 层：BG0/k1/cb0/tm0/f3
+界面 0809A190  1 层：BG0/k13/cb2/tm1/f3 [k13池撞k13-map0600F000]
+界面 0809F6F4  1 层：BG0/k11/cb2/tm1/f3 [k11池撞k11-map0600F800]
+界面 080A568C  1 层：BG0/k0/cb2/tm0/f0
+界面 080A6A2C  2 层：BG0/k28/cb0/tm0/f3,BG0/k29/cb0/tm0/f3
+界面 080AE9B8  1 层：BG0/k11/cb2/tm1/f3 [k11池撞k11-map0600F800]
+界面 080B1390  1 层：BG0/k15/cb0/tm1/f3
+界面 080B2F08  1 层：BG1/k18/cb0/tm1/f3
+界面 080B54CC  1 层：BG0/k0/cb2/tm0/f0
+界面 080B6660  1 层：BG0/k0/cb2/tm0/f0
+界面 080BCE28  1 层：BG1/k26/cb0/tm0/f3
+界面 080E100C  1 层：BG0/k8/cb0/tm1/f3
+界面 080E4108  1 层：BG0/k0/cb2/tm0/f0
+界面 080E44B8  2 层：BG0/k5/cb0/tm2/f4,BG0/k8/cb0/tm1/f3
+界面 080E4534  1 层：BG0/k8/cb0/tm1/f3
+界面 080E47C0  1 层：BG0/k0/cb2/tm0/f0
+界面 080EA530  1 层：BG0/k8/cb0/tm1/f3
+界面 080EAAFC  1 层：BG0/k8/cb0/tm1/f3
+界面 080EB1D4  1 层：BG3/k36/cb0/tm1/f3
+界面 080EB550  1 层：BG3/k47/cb0/tm1/f3
+界面 080EB9C0  2 层：BG0/k0/cb2/tm0/f0,BG0/k1/cb0/tm0/f3
+界面 080EBCB4  1 层：BG0/k0/cb2/tm0/f0
+界面 080EBE0C  1 层：BG0/k0/cb2/tm0/f0
+界面 080EC388  1 层：BG2/k38/cb0/tm1/f3
+界面 080F3188  1 层：BG0/k6/cb2/tm3/f3
+界面 080F38E4  1 层：BG0/k11/cb2/tm1/f3 [k11池撞k11-map0600F800]
+界面 080F6FC0  1 层：BG0/k8/cb0/tm1/f3
+界面 080FCAC4  1 层：BG0/k39/cb2/tm1/f3 [k39池撞k39-map0600F800]
+界面 08101760  1 层：BG1/k43/cb1/tm0/f3
+界面 08104E08  1 层：BG0/k0/cb2/tm0/f0
+界面 081056D8  1 层：BG0/k0/cb2/tm0/f0
+界面 08106634  2 层：BG1/k41/cb2/tm1/f3,BG0/k42/cb0/tm1/f3 [k41池撞k41-map0600F800] [k41池撞k42-map0600E000]
+界面 08106AAC  1 层：BG0/k3/cb1/tm1/f4
+界面 081074D4  1 层：BG0/k0/cb2/tm0/f0
+界面 0810C7B8  2 层：BG0/k1/cb0/tm0/f3,BG0/k23/cb2/tm0/f3
+界面 0811031C  1 层：BG0/k0/cb2/tm0/f0
+界面 0812D48C  1 层：BG0/k6/cb2/tm3/f3
+界面 08130F1C  1 层：BG3/k36/cb0/tm1/f3
+界面 08131878  1 层：BG0/k2/cb2/tm0/f0
+界面 08131A10  1 层：BG0/k1/cb0/tm0/f3
+界面 08139578  1 层：BG0/k37/cb0/tm1/f3
+界面 0813CBC0  2 层：BG0/k45/cb2/tm1/f3,BG0/k46/cb2/tm1/f3
+界面 0813E020  1 层：BG0/k46/cb2/tm1/f3
+界面 0813E77C  1 层：BG0/k52/cb2/tm1/f3 [k52池撞k52-map0600E000]
+界面 08140A58  1 层：BG0/k0/cb2/tm0/f0
+界面 08140D58  1 层：BG0/k48/cb2/tm1/f3 [k48池撞k48-map0600F800]
+界面 0814160C  1 层：BG0/k6/cb2/tm3/f3
+界面 08141B24  1 层：BG0/k0/cb2/tm0/f0
+界面 08142578  1 层：BG0/k42/cb0/tm1/f3
+界面 081435F4  1 层：BG0/k0/cb2/tm0/f0
+
+真冲突（cb+1 或 cb3）： 1
+池撞 screenblock： 9 （运行时 chs_collect_blocked 已挖）

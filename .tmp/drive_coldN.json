@@ -1,0 +1,21 @@
+{
+  "tag": "coldN",
+  "state": null,
+  "schedule": "A:240-280,A:330-370,A:420-460,A:510-550,A:600-640,A:690-730,A:780-820,A:870-910,A:960-1000,A:1050-1090,A:1140-1180,A:1230-1270,UP:1680-1720,UP:1800-1840,UP:1920-1960,UP:2040-2080,UP:2160-2200,UP:2280-2320,UP:2400-2440,UP:2520-2560,START:1500-1540,DOWN:2700-2740,DOWN:2850-2890,DOWN:3000-3040,A:3150-3190",
+  "frames": 3800,
+  "redirect": true,
+  "shots": [
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldN_t22.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldN_t27.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldN_t43.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldN_t46.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldN_t49.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldN_t51.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldN_t55.png",
+    "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldN_t58.png"
+  ],
+  "key_writes": 50,
+  "seconds": 63.33,
+  "screenshot": "C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldN.png",
+  "capture": "OK C:\\code\\GBA-Rom-Translator\\.tmp\\emu_coldN.png 736x542 @977,246"
+}

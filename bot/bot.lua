@@ -344,6 +344,31 @@ for i, st in ipairs(STEPS) do
             stop(1, string.format("[ERR] roam step %d bad steps", i))
         end
         total_frames = total_frames + (st.n or 100) * (st.steps or 8) * #st.seq
+    elseif st.act == "warp" then
+        -- ★★★ 精确跳图（2026-11-03 跑通的方案）。
+        --
+        -- 原理：Gen3 的「传送术」野外效果 = 回到 SaveBlock1.lastHealLocation，
+        -- 走 Overworld_ResetStateAfterTeleport → WarpIntoMap 那条路
+        -- （这是 WarpIntoMap 全文件仅有的三处调用之一，普通走门不走它）。
+        -- 所以先 poke lastHealLocation，再让游戏自己传送，就精确落点。
+        --
+        -- 实测成功样本：
+        --   城市 map=0:2 (23,17) → poke lastHealLocation=0:33 (68,7)
+        --   → 菜单里用传送 → 落地 map=0:33 grid=(68,7) 一字不差
+        --
+        -- ⚠ 前置：存档里必须有会「传送术(moveId=100)」的宝可梦，
+        --   由 scripts/warp_tool.py --apply 植入。
+        -- 参数：
+        --   map = "group:num"   目标地图
+        --   x, y                目标格坐标（s16）
+        --   mon = 第几只（0-based，默认 1）
+        if type(st.map) ~= "string" or not st.map:match("^%-?%d+:%-?%d+$") then
+            stop(1, string.format("[ERR] warp step %d needs map=\"g:n\"", i))
+        end
+        if type(st.x) ~= "number" or type(st.y) ~= "number" then
+            stop(1, string.format("[ERR] warp step %d needs x/y", i))
+        end
+        total_frames = total_frames + 1200
     else
         stop(1, string.format("[ERR] unknown act at step %d: %s", i, st.act))
     end
@@ -1418,6 +1443,193 @@ local function roam_step(fr)
     return true
 end
 
+-- ── 精确跳图（warp）运行态 ─────────────────────────────────────────────────
+-- 两阶段：
+--   WARP_SET：等稳定 → poke lastHealLocation → 进 WARP_KEYS
+--   WARP_KEYS：按实测成功的按键序列操作菜单（START→宝可梦→选中→A→A）
+--              传送一旦发生，map 会变；检测到 map 变化即收尾
+local WARP_ACTIVE = false
+local WARP_PHASE = "set"
+local WARP_TX, WARP_TY = 0, 0
+local WARP_TMAPG, WARP_TMAPN = 0, 0
+local WARP_MON = 1
+local WARP_SEQ = nil
+local WARP_SEQI = 0
+local WARP_MAPG0, WARP_MAPN0 = -99, -99
+local WARP_T0 = 0
+local WARP_TO = 1200
+
+local function warp_pos()
+    if SB2_RUNTIME == nil then return nil end
+    local p = emu:readRange(SB2_RUNTIME + SB1_DELTA, 6)
+    if not p or #p < 6 then return nil end
+    local x = u16(p, 0); if x > 32767 then x = x - 65536 end
+    local y = u16(p, 2); if y > 32767 then y = y - 65536 end
+    return x, y, s8v(u8(p, 4)), s8v(u8(p, 5))
+end
+
+-- ⚠ warp_build_seq 定义在 warp_begin 之后，必须先前向声明，
+--   否则 warp_begin 里拿到的是 nil 全局（Lua 的 local 作用域从声明处生效）。
+local warp_build_seq
+
+local function warp_begin(st, fr)
+    -- ⚠ 必须显式关掉 settle：advance 会让上一步进入 settle 状态，
+    --   而主循环里 `if settle_step(fr) then return end` 在 warp_step 之前，
+    --   settle 一直 active 就永远走不到 warp（实测：只剩 set 阶段日志，
+    --   后面的 key 日志一条都不出）。
+    S.active = false
+    WARP_ACTIVE = true
+    WARP_PHASE = "set"
+    local g, n = st.map:match("^(%-?%d+):(%-?%d+)$")
+    WARP_TMAPG, WARP_TMAPN = tonumber(g), tonumber(n)
+    WARP_TX, WARP_TY = st.x, st.y
+    WARP_MON = st.mon or 1
+    -- ⚠ 不要在这里调用 warp_build_seq：它定义在 warp_begin **之后**，
+    --   Lua 的 local 前向声明在赋值前仍是 nil（实测 #WARP_SEQ = -1）。
+    --   改为在 keys 阶段首次进入时懒构建。
+    WARP_SEQ = nil
+    WARP_TO = st.n or 1200
+    WARP_T0 = fr
+    local x, y, mg, mn = warp_pos()
+    WARP_MAPG0, WARP_MAPN0 = mg or -99, mn or -99
+    log(string.format(
+        "[WARP] start f=%d from=(%d,%d) map=%d:%d → target map=%d:%d (%d,%d) mon=%d",
+        fr, x or -1, y or -1, mg or -99, mn or -99,
+        WARP_TMAPG, WARP_TMAPN, WARP_TX, WARP_TY, WARP_MON))
+    log(string.format("[WARP] baseline set to %d:%d", WARP_MAPG0, WARP_MAPN0))
+end
+
+-- 按键序列（实测成功的那条），运行时按 mon 展开成扁平列表：
+--   START → UP×8 → DOWN×1 → A →（DOWN × mon）→ A → A
+-- ⚠ 这里必须是 `warp_build_seq = function`，不能写 `local function`。
+--   因为 1473 行已经 `local warp_build_seq` 前向声明过，
+--   再写 `local function` 会新建一个同名 local，前面的那个仍是 nil
+--   （实测症状：warp_begin 里调用即抛错，日志连 start 都打不出来）。
+warp_build_seq = function(mon)
+    local seq = {}
+    local function tap(k, n, after)
+        seq[#seq + 1] = { key = k, hold = n, wait = after or 0 }
+    end
+    -- ⚠ 起手先按 B 清场：上一轮 warp 结束后可能还停在某个菜单里，
+    --   直接按 START 会变成「在菜单里按 START」（无效），
+    --   随后那串 UP 就变成**走路**（实测：角色一路走回商店 map=10:7）。
+    --   野外 B 无副作用，室内也只会退出一层，多按几次总能回到可自由行动。
+    for _ = 1, 4 do tap("B", 4, 25) end
+    tap("START", 4, 60)
+    for _ = 1, 8 do tap("UP", 4, 6) end
+    tap("DOWN", 4, 12)
+    tap("A", 4, 80)
+    for _ = 1, mon do tap("DOWN", 4, 22) end
+    tap("A", 4, 70)
+    tap("A", 4, 40)
+    return seq
+end
+
+local WARP_SEQ = nil
+local WARP_SEQI = 0
+local WARP_HOLD = 0
+local WARP_WAIT = 0
+
+-- 返回 true = 本帧被 warp 占用
+local function warp_step(fr)
+    if not WARP_ACTIVE then return false end
+    -- 入口探针：若这条不出现，说明主循环没走到 warp_step
+    if fr % 60 == 0 then
+        log(string.format("[WARP] alive f=%d phase=%s seqi=%d/%d hold=%d wait=%d",
+                          fr, WARP_PHASE, WARP_SEQI,
+                          WARP_SEQ and #WARP_SEQ or -1, WARP_HOLD, WARP_WAIT))
+    end
+
+    local x, y, mg, mn = warp_pos()
+
+    -- 阶段 1：写 lastHealLocation
+    if WARP_PHASE == "set" then
+        local sb1 = SB2_RUNTIME + SB1_DELTA
+        emu:write8(sb1 + 0x1C, WARP_TMAPG & 0xFF)
+        emu:write8(sb1 + 0x1D, WARP_TMAPN & 0xFF)
+        emu:write8(sb1 + 0x1E, 0xFF)
+        emu:write8(sb1 + 0x1F, 0x00)
+        emu:write16(sb1 + 0x20, WARP_TX & 0xFFFF)
+        emu:write16(sb1 + 0x22, WARP_TY & 0xFFFF)
+        log(string.format(
+            "[WARP] set lastHealLocation f=%d -> %d:%d (%d,%d)",
+            fr, WARP_TMAPG, WARP_TMAPN, WARP_TX, WARP_TY))
+        WARP_PHASE = "keys"
+        WARP_SEQI = 1
+        WARP_HOLD, WARP_WAIT = 0, 0
+        WARP_T0 = fr
+        return true
+    end
+
+    -- 阶段 2 起：每帧先检测是否已换图（这才是成功信号）
+    -- 懒构建序列（见 warp_begin 里的注释）
+    if WARP_SEQ == nil then
+        WARP_SEQ = warp_build_seq(WARP_MON)
+        log(string.format("[WARP] seq built: %d keys (mon=%d)",
+                          #WARP_SEQ, WARP_MON))
+    end
+
+    if x ~= nil and (mg ~= WARP_MAPG0 or mn ~= WARP_MAPN0) then
+        emu:setKeys(0)
+        WARP_ACTIVE = false
+        log(string.format(
+            "[WARP] hit f=%d map=%d:%d grid=(%d,%d) target=%d:%d (%d,%d)%s",
+            fr, mg, mn, x, y, WARP_TMAPG, WARP_TMAPN, WARP_TX, WARP_TY,
+            (mg == WARP_TMAPG and mn == WARP_TMAPN
+             and x == WARP_TX and y == WARP_TY) and " OK 完全命中" or " (部分偏差)"))
+        advance(fr)
+        return true
+    end
+
+    if WARP_SEQI > #WARP_SEQ then
+        if fr - WARP_T0 > WARP_TO then
+            emu:setKeys(0)
+            WARP_ACTIVE = false
+            log(string.format(
+                "[WARP] TIMEOUT f=%d 按完序列仍未换图（map 仍 %d:%d）"
+                .. " -> 检查存档里是否真有传送术", fr, mg or -99, mn or -99))
+            advance(fr)
+            return true
+        end
+        return true
+    end
+
+    local st2 = WARP_SEQ[WARP_SEQI]
+
+    -- 等待段（按键后的间隔）
+    if WARP_WAIT > 0 then
+        WARP_WAIT = WARP_WAIT - 1
+        if WARP_WAIT == 0 then
+            -- 等待结束 → 推进到下一个按键。
+            -- ⚠ 这里漏过一次：只递减不推进，导致序列永远停在第一个键，
+            --   实测空转 150 万帧（[HB] step=13/20 一动不动）。
+            WARP_SEQI = WARP_SEQI + 1
+            WARP_HOLD = 0
+        end
+        return true
+    end
+
+    -- 按住段
+    if WARP_HOLD > 0 then
+        emu:setKeys(1 << KEYBIT[st2.key])
+        WARP_HOLD = WARP_HOLD - 1
+        if WARP_HOLD == 0 then
+            emu:setKeys(0)
+            if st2.wait > 0 then
+                WARP_WAIT = st2.wait
+            else
+                WARP_SEQI = WARP_SEQI + 1
+            end
+        end
+        return true
+    end
+
+    -- 进入这个按键
+    WARP_HOLD = st2.hold
+    log(string.format("[WARP] key %d/%d = %s (hold=%d wait=%d) f=%d",
+                      WARP_SEQI, #WARP_SEQ, st2.key, st2.hold, st2.wait, fr))
+    return true
+end
 -- ── 多帧连续采集 ────────────────────────────────────────────────────────────
 -- 已进入 burst 状态（BURST_LEFT>0）时每帧调用；负责计数、间隔、取名、收尾。
 -- 返回 true = 本帧已被 burst 占用。
@@ -1484,6 +1696,9 @@ advance = function(fr)
     elseif st.act == "roam" then
         -- roam 自己逐帧管方向与撞墙，不需要 settle
         roam_begin(st, fr)
+    elseif st.act == "warp" then
+        -- warp 自己逐帧推进（写 lastHealLocation → 按键序列 → 检测换图）
+        warp_begin(st, fr)
     else
         settle_begin(st.act .. (st.name and (":" .. st.name) or ""), fr)
     end
@@ -1542,6 +1757,9 @@ callbacks:add("keysRead", function()
 
     -- ①'' 跨图漫游进行中：只按方向推进，不依赖绝对坐标
     if roam_step(fr) then return end
+
+    -- ①''' 精确跳图进行中：写 lastHealLocation → 走菜单按键 → 等换图
+    if warp_step(fr) then return end
 
     -- ①'' burst 进行中：由它接管本帧（数帧、拍、到点收尾并 advance）
     if burst_step(fr) then return end

@@ -169,6 +169,39 @@ function M.new()
                           wild = opt.wild }
             return api
         end,
+        -- ★★ 跨图漫游：只按方向推进，不依赖绝对格坐标。
+        --   为什么必须有它（2026-11-03 实测）：
+        --   换地图靠改 .sav **无效**，但**走位跨图有效** ——
+        --   商店 (3,3) 向下走 ⇒ map=0:2 城市 (23,17)。
+        --   而换图会把坐标重置，所以按绝对格坐标 walk 会立刻判「已到位/被挡」。
+        --   本动作每方向连走 steps 格，撞墙（40 帧没挪格）自动换下一方向。
+        --   用法：api.roam{ seq={"DOWN","LEFT","UP","UP","RIGHT"}, steps=8 }
+        roam = function(opt)
+            opt = opt or {}
+            S[#S + 1] = { act = "roam", seq = opt.seq or { "DOWN" },
+                          steps = opt.steps or 8, n = opt.timeout or 100 }
+            return api
+        end,
+        -- ★★★ 精确跳图（2026-11-03 实测跑通）。
+        --
+        -- 原理：Gen3「传送术」的野外效果 = 回到 SaveBlock1.lastHealLocation，
+        -- 走 Overworld_ResetStateAfterTeleport → WarpIntoMap
+        -- （WarpIntoMap 全文件仅三处调用之一；普通走门走 CB2_LoadMap，不读它）。
+        -- 所以先写 lastHealLocation，再让游戏自己传送，落点精确到格。
+        --
+        -- 实测：城市 map=0:2 (23,17) → warp{map="0:33",x=68,y=7}
+        --       → 落地 map=0:33 grid=(68,7)，一字不差。
+        --
+        -- 前置：存档里必须有会「传送术(moveId=100)」的宝可梦：
+        --   python scripts/warp_tool.py --apply --out <新存档>
+        --   然后用这份存档跑场景。
+        -- 用法：api.warp{ map = "0:33", x = 68, y = 7, mon = 1 }
+        warp = function(opt)
+            opt = opt or {}
+            S[#S + 1] = { act = "warp", map = opt.map, x = opt.x, y = opt.y,
+                          mon = opt.mon or 1, n = opt.timeout or 1200 }
+            return api
+        end,
     }
     return api
 end

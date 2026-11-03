@@ -28,13 +28,17 @@ api.shot("overworld")
 L.open_menu_at(api, L.MENU.NAV)
 api.shot("nav_on_item")
 api.tap("A", 4, 90)
+-- 2026-11-03：开机动画 + 主菜单淡入，连帧覆盖（单帧会停在黑屏/logo）
+api.burst("nav_boot_f", 20, 8)
 api.shot("nav_boot")            -- 开机动画帧（可能还是黑屏/logo）
 api.wait(60)
 api.shot("nav_home")            -- 主菜单首项
 
 -- ── 主菜单 5 项逐项下移：每项都会重画底部说明（最长句在这里）──────────────
+-- 说明句整句重画是 BUG 3（左侧背景被涂）的标准现场，必须连帧看
 for i = 2, 5 do
     api.tap("DOWN", 4, 30)
+    api.burst(string.format("nav_item%d_f", i), 8, 6)
     api.shot(string.format("nav_item%d", i))
 end
 -- 回顶：反向再走一遍，检查「选中态高亮 + 说明句」重绘后有没有残影
@@ -46,11 +50,13 @@ api.shot("nav_back_top")
 for _ = 1, 2 do api.tap("DOWN", 4, 20) end
 api.shot("nav_on_trainer")
 api.tap("A", 4, 90)
+api.burst("nav_trainer_enter_f", 14, 8)
 api.shot("nav_trainer_enter")
 
 -- 列表逐项下移：左栏背景 + 选中高亮 + 底部工具栏同时重绘
 for i = 2, 6 do
     api.tap("DOWN", 4, 30)
+    api.burst(string.format("nav_trainer_%d_f", i), 6, 6)
     api.shot(string.format("nav_trainer_%d", i))
 end
 for _ = 1, 5 do api.tap("UP", 4, 10) end

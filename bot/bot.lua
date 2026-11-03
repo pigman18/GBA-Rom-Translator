@@ -132,6 +132,7 @@ SB2_RUNTIME = nil
 -- ---- 步骤表校验 ------------------------------------------------------------
 local total_frames, shots = 0, 0
 local names = {}
+local burst_prefix = {}     -- burst 的帧名前缀（必须唯一，否则落盘会互相覆盖）
 for i, st in ipairs(STEPS) do
     if type(st) ~= "table" or type(st.act) ~= "string" then
         stop(1, string.format("[ERR] invalid step %d", i))
@@ -166,11 +167,23 @@ for i, st in ipairs(STEPS) do
     elseif st.act == "await" then
         -- 状态驱动等待：等「画面稳定 **且** 内存条件满足」。
         -- n = 超时帧数；addr/value（+可选 addr2/value2）= 目标界面特征。
+        -- any_of = 候选值列表，任一命中即算到位（转场/抖动界面用）。
         if type(st.n) ~= "number" or st.n < 1 then
             stop(1, string.format("[ERR] await step %d needs n=timeout", i))
         end
         if type(st.addr) ~= "number" or type(st.value) ~= "number" then
             stop(1, string.format("[ERR] await step %d needs addr/value", i))
+        end
+        if st.any_of ~= nil then
+            if type(st.any_of) ~= "table" or #st.any_of == 0 then
+                stop(1, string.format("[ERR] await step %d bad any_of", i))
+            end
+            for _, v in ipairs(st.any_of) do
+                if type(v) ~= "number" then
+                    stop(1, string.format(
+                        "[ERR] await step %d any_of 里只能放数字", i))
+                end
+            end
         end
         total_frames = total_frames + st.n
     elseif st.act == "walk" then
@@ -191,6 +204,122 @@ for i, st in ipairs(STEPS) do
         end
         if type(st.x) ~= "number" or type(st.y) ~= "number" then
             stop(1, string.format("[ERR] await_pos step %d needs x/y", i))
+        end
+        total_frames = total_frames + st.n
+    elseif st.act == "burst" then
+        -- ★ 多帧连续采集（2026-11-03 新增）。
+        --   为什么需要：单张 shot 只证明「某个定型帧长这样」，
+        --   证明不了「过程是连续的、中间帧没错位」。战斗转场、血条递减、
+        --   逐字打印、菜单逐项高亮这些都必须看**连续帧**才能判。
+        --   n     = 拍几张
+        --   every = 每张间隔多少帧（默认 1 = 逐帧）
+        --   name  = 帧名前缀，实际落盘为 <prefix>_01、<prefix>_02 …
+        --   dumps = 默认 false，只写 PNG。
+        --     全量 dump 每帧 ~385KB（vram96K+ram288K+…），连续 30 帧
+        --     就是 11MB；而 burst 的用途是看画面演进，不是逐帧做
+        --     tile 级分析。需要 dump 的关键帧仍旧单用 shot。
+        if type(st.n) ~= "number" or st.n < 1 then
+            stop(1, string.format("[ERR] burst step %d needs n>=1", i))
+        end
+        if st.every ~= nil and (type(st.every) ~= "number" or st.every < 1) then
+            stop(1, string.format("[ERR] burst step %d bad every", i))
+        end
+        if type(st.name) ~= "string" or not safe_id(st.name) then
+            stop(1, string.format("[ERR] burst step %d needs a safe name prefix", i))
+        end
+        if burst_prefix[st.name] then
+            stop(1, "[ERR] duplicate burst prefix: " .. st.name)
+        end
+        burst_prefix[st.name] = true
+        total_frames = total_frames + st.n * (st.every or 1)
+        shots = shots + st.n
+    elseif st.act == "poke" then
+        -- ★ 金手指：直接写**实时内存**（2026-11-03 新增）。
+        --   用途：把游戏推到指定场景（改坐标、改队伍、改图鉴旗标）。
+        --   ⚠ 与 savestate 的本质区别（用户契约第 3 条）：
+        --     savestate 是内存快照，会把 ROM 的 hook 改动一起冻住，
+        --     验收失真；这里写的是正在跑的实时内存，ROM 是当次加载的。
+        --   ⚠ 地址语义：
+        --     写 SaveBlock1 里的字段用 `sb1 = <偏移>`（更稳，跟存档走）；
+        --     写别处用 `addr = <绝对地址>`。
+        --   {act="poke", writes={{sb1=0x00, width=2, value=0x1234}, ...}}
+        if type(st.writes) ~= "table" or #st.writes == 0 then
+            stop(1, string.format("[ERR] poke step %d needs a non-empty writes list", i))
+        end
+        for j, wr in ipairs(st.writes) do
+            if type(wr) ~= "table" then
+                stop(1, string.format("[ERR] poke step %d write %d is not a table", i, j))
+            end
+            if type(wr.addr) ~= "number" and type(wr.sb1) ~= "number" then
+                stop(1, string.format(
+                    "[ERR] poke step %d write %d needs addr or sb1", i, j))
+            end
+            local wd = wr.width or 1
+            if wd ~= 1 and wd ~= 2 and wd ~= 4 then
+                stop(1, string.format(
+                    "[ERR] poke step %d write %d bad width (1/2/4)", i, j))
+            end
+            if type(wr.value) ~= "number" then
+                stop(1, string.format("[ERR] poke step %d write %d needs value", i, j))
+            end
+        end
+    elseif st.act == "call" then
+        -- ★ 金手指·调用游戏函数（2026-11-03 新增）。
+        --   为什么需要：有些状态没法靠「写某个变量」造出来 ——
+        --   比如**遇敌**，它是函数里一连串判定 + 建队 + 切场景的结果。
+        --   改写 gRngValue 只能让随机数确定，不能保证「一定遇敌」。
+        --   直接调用游戏的入口函数才是最忠实的做法：走的是**原版自己的逻辑**，
+        --   汉化侧与原始侧执行同一条代码路径，对照才成立。
+        --   用法：{act="call", addr=0x08128528}    -- SetUpFieldMove_SweetScent
+        --   ⚠ 只允许在**野外空闲状态**调用（任务循环在跑、没有开菜单/对话），
+        --     否则会把游戏状态机推乱。poke/await 的前置门槛同样适用。
+        if type(st.addr) ~= "number" then
+            stop(1, string.format("[ERR] call step %d needs addr", i))
+        end
+    elseif st.act == "hunt" then
+        -- ★★ 遇敌搜捕（2026-11-03 新增，用户选定方案）。
+        --   为什么需要：「遇敌」本身是随机的，而两侧的帧号/按键时机不可能
+        --   完全一致（译文打印更慢），实测同一格走下来遇敌格会差 1。
+        --   与其追求「第 N 格必遇敌」，不如改成**一旦遇敌就停**：
+        --     每走一格检查 DISPCNT 是否离开野外值(0x7F60)；
+        --     一旦离开，立刻停手，后面的采集从**战斗画面**开始 ——
+        --     两侧都从同一个界面起采，对照就对齐了。
+        --   这样「到底第几格遇敌」不再重要，差值被吸收在这一步内部。
+        --   参数：
+        --     dir   = 方向（默认 DOWN）
+        --     from  = 起始格（x,y 里的固定轴）
+        --     steps = 最多走几格（默认 24）
+        --     wild  = 野外 DISPCNT 值（默认 0x7F60）
+        if KEYBIT[st.dir or "DOWN"] == nil then
+            stop(1, string.format("[ERR] hunt step %d bad dir", i))
+        end
+        if type(st.x) ~= "number" or type(st.y) ~= "number" then
+            stop(1, string.format("[ERR] hunt step %d needs x/y start", i))
+        end
+        if st.steps ~= nil and (type(st.steps) ~= "number" or st.steps < 1) then
+            stop(1, string.format("[ERR] hunt step %d bad steps", i))
+        end
+        total_frames = total_frames + (st.n or 120) * (st.steps or 24)
+    elseif st.act == "tap_if" then
+        -- ★ 条件按键（2026-11-03 新增）。
+        --   为什么需要：读档其实有两条合法路径 ——
+        --     ① 标题 → 「继续游戏」菜单(3140) → 按 A → 进野外
+        --     ② 标题 → 直接续玩 → 野外(7F60)（跳过菜单）
+        --   哪条出现取决于 A 键落在哪一帧，两次运行都可能不同。
+        --   旧场景硬等 3140 再无条件按 A，走路径②时会白等超时 + 按空。
+        --   本动作：只有当前 DISPCNT == want 时才按 key，否则本步直接跳过。
+        if type(st.want) ~= "number" then
+            stop(1, string.format("[ERR] tap_if step %d needs want", i))
+        end
+        if type(st.key) ~= "string" or KEYBIT[st.key] == nil then
+            stop(1, string.format("[ERR] tap_if step %d bad key", i))
+        end
+        if st.addr == nil then
+            -- 默认看 DISPCNT
+            st.addr = 0x04000000
+        end
+        if type(st.n) ~= "number" or st.n < 1 then
+            stop(1, string.format("[ERR] tap_if step %d bad n", i))
         end
         total_frames = total_frames + st.n
     else
@@ -429,6 +558,7 @@ local S = {
     why = "",           -- 进入 settle 的原因（写日志用）
     -- await 附加条件：稳定之后还要满足它才算到位（见 settle_step）
     await_addr = nil, await_val = nil, await_addr2 = nil, await_val2 = nil,
+    await_any = nil,          -- 候选值列表：任一命中即算到位（转场用）
     await_to = 0,
     -- await_pos：等游戏内坐标到达目标格（移动场景对齐用）
     pos_sb2 = nil, pos_x = 0, pos_y = 0,
@@ -449,12 +579,13 @@ local S = {
 local function settle_begin(reason, fr, await_addr, await_val, await_to,
                             await_addr2, await_val2,
                             pos_sb2, pos_x, pos_y, walk_mask, walk_frames,
-                            pos_axis)
+                            pos_axis, await_any)
     S.active, S.stable, S.start_fr = true, 0, fr
     S.last_v, S.last_p, S.last_i = nil, nil, nil
     S.timed_out, S.soft, S.why = false, false, reason or ""
     S.await_addr, S.await_val = await_addr, await_val
     S.await_addr2, S.await_val2 = await_addr2, await_val2
+    S.await_any = await_any
     S.await_to = await_to or SETTLE_TIMEOUT
     S.pos_sb2, S.pos_x, S.pos_y = pos_sb2, pos_x or 0, pos_y or 0
     S.walk_mask = walk_mask
@@ -587,8 +718,24 @@ local function settle_step(fr)
     if S.await_addr ~= nil then
         local cur = emu:read16(S.await_addr)
         local cur2 = S.await_addr2 and emu:read16(S.await_addr2) or nil
-        local hit = (cur == S.await_val)
-                and (S.await_addr2 == nil or cur2 == S.await_val2)
+        -- ★ any_of（2026-11-03）：允许多个候选值任一命中。
+        --   为什么必须加：遇敌进战斗时 DISPCNT 会先变成 **0x0000（全黑转场）**
+        --   再变成 0xBF40。只等 0xBF40 的话，转场期间每次采样都是 0，
+        --   stable 反复清零，很容易整段错过（实测直接超时 900 帧）。
+        --   写 any_of 就能把「黑屏」和「已进战斗」都认成「已经离开野外」。
+        local hit
+        if S.await_any ~= nil then
+            hit = false
+            for _, v in ipairs(S.await_any) do
+                if cur == v then hit = true; break end
+            end
+            if hit and S.await_addr2 ~= nil then
+                hit = (cur2 == S.await_val2)
+            end
+        else
+            hit = (cur == S.await_val)
+                  and (S.await_addr2 == nil or cur2 == S.await_val2)
+        end
         if hit then
             S.stable = S.stable + 1
             if S.stable >= AWAIT_NEED then
@@ -614,6 +761,15 @@ local function settle_step(fr)
                 fr, S.why, S.await_val, S.await_addr,
                 (S.await_val2 or 0), (S.await_addr2 or 0),
                 cur, fr - S.start_fr))
+            -- any_of 超时补一行候选值，否则日志只显示 value(=候选[1])，
+            -- 会让人误以为"只等了一个值"（实测踩过）。
+            if S.await_any then
+                local t = {}
+                for _, v in ipairs(S.await_any) do
+                    t[#t + 1] = string.format("0x%04X", v)
+                end
+                log("[AWAIT] any_of={" .. table.concat(t, ",") .. "} 全部未命中")
+            end
             return false
         end
         return true
@@ -729,48 +885,66 @@ end
 -- ---- 单次快照 --------------------------------------------------------------
 local SEQ = 0
 
+-- ── burst（多帧连续采集）运行态 ─────────────────────────────────────────────
+-- 声明位置必须在 burst_step 之前：Lua 的 local 作用域从声明处生效，
+-- 放在后面会变成 nil 全局（本文件顶部 SB1_DELTA 就踩过这个坑）。
+local BURST_LEFT  = 0      -- 还剩几张
+local BURST_N     = 0      -- 本次总共几张
+local BURST_EVERY = 1      -- 每张间隔帧数
+local BURST_NEXT  = 0      -- 下一张的帧号
+local BURST_NAME  = ""     -- 帧名前缀
+
 -- ok = 截图前是否真的稳定（严格或宽松都算稳定；false = 超时强拍的过渡帧）
-local function snapshot(fr, st, stable_n, ok)
+-- name_override：burst 用的帧名（<prefix>_01 …）；nil = 用 step 的 name
+-- with_dumps：是否落 vram/pal/io/ram/oam 五件套（burst 关掉，见步骤校验注释）
+local function snapshot(fr, st, stable_n, ok, name_override, with_dumps)
     SEQ = SEQ + 1
-    local name = st.name or "shot"
+    local name = name_override or st.name or "shot"
     local number = string.format("%03d", SEQ)
     local base = SHOTDIR .. number
+    if with_dumps == nil then with_dumps = true end
 
     -- ★ 2026-10-21 修正顺序：必须**先读内存再截图**。
     -- 实测证据：font_capture 的 007(menu_top).vram 与 008(closed).vram 相同率 98.7%，
     -- 而 001(overworld) 与 007 相同率 95.5% —— 说明旧顺序（先 screenshot 再 readRange）
     -- 读到的 VRAM 已经是**下一帧/菜单关闭后**的状态，与 PNG 不同步。
     -- 这直接导致 T3 在 VRAM 里找不到字模。
-    local vram = emu:readRange(0x06000000, 0x18000)
-    local pal  = emu:readRange(0x05000000, 0x400)
-    -- 0x04000000..0x04000060：DISPCNT/DISPSTAT/VCOUNT/BGxCNT/BGxHOFS/BGxVOFS/WIN*/BLDCNT。
-    -- 离线合成器（work/compose.py）需要这些寄存器才能知道每层 charBase/screenBase/尺寸，
-    -- 否则只能靠猜。
-    local io   = emu:readRange(0x04000000, 0x60)
-    -- EWRAM **全量** 0x02000000+0x40000，IWRAM **全量** 0x03000000+0x8000。
-    -- 2026-10-22 修正：原来 EWRAM 从 0x02020000 起（缺低 128KB）、IWRAM 只 0x800。
-    -- 缺口导致两类东西看不见：
-    --   ① 低半 EWRAM 里的结构（窗口/打印器的候选位置）；
-    --   ② IWRAM 0x03000800 之外的运行时状态。
-    -- 布局由 manifest.dumps.ram 声明（schema 3），离线读取方不要再按长度猜。
-    local ew   = emu:readRange(0x02000000, 0x40000)
-    local iw   = emu:readRange(0x03000000, 0x8000)
-    local oam  = emu:readRange(0x07000000, 0x400)
+    local vram, pal, io, ew, iw, oam
+    if with_dumps then
+        vram = emu:readRange(0x06000000, 0x18000)
+        pal  = emu:readRange(0x05000000, 0x400)
+        -- 0x04000000..0x04000060：DISPCNT/DISPSTAT/VCOUNT/BGxCNT/BGxHOFS/BGxVOFS/WIN*/BLDCNT。
+        -- 离线合成器（work/compose.py）需要这些寄存器才能知道每层 charBase/screenBase/尺寸，
+        -- 否则只能靠猜。
+        io   = emu:readRange(0x04000000, 0x60)
+        -- EWRAM **全量** 0x02000000+0x40000，IWRAM **全量** 0x03000000+0x8000。
+        -- 2026-10-22 修正：原来 EWRAM 从 0x02020000 起（缺低 128KB）、IWRAM 只 0x800。
+        -- 缺口导致两类东西看不见：
+        --   ① 低半 EWRAM 里的结构（窗口/打印器的候选位置）；
+        --   ② IWRAM 0x03000800 之外的运行时状态。
+        -- 布局由 manifest.dumps.ram 声明（schema 3），离线读取方不要再按长度猜。
+        ew   = emu:readRange(0x02000000, 0x40000)
+        iw   = emu:readRange(0x03000000, 0x8000)
+        oam  = emu:readRange(0x07000000, 0x400)
+    end
 
     emu:screenshot(base .. ".png")
 
-    if vram then wr(base .. ".vram.bin", vram) end
-    if pal  then wr(base .. ".pal.bin",  pal)  end
-    if io   then wr(base .. ".io.bin",   io)   end
-    if ew and iw then wr(base .. ".ram.bin", ew .. iw) end
-    -- OAM（0x07000000，1024B）：判断文字是否走 OBJ（sprite）渲染。
-    -- VRAM 里找不到假名字模时，这是关键判据。
-    if oam then wr(base .. ".oam.bin", oam) end
+    if with_dumps then
+        if vram then wr(base .. ".vram.bin", vram) end
+        if pal  then wr(base .. ".pal.bin",  pal)  end
+        if io   then wr(base .. ".io.bin",   io)   end
+        if ew and iw then wr(base .. ".ram.bin", ew .. iw) end
+        -- OAM（0x07000000，1024B）：判断文字是否走 OBJ（sprite）渲染。
+        -- VRAM 里找不到假名字模时，这是关键判据。
+        if oam then wr(base .. ".oam.bin", oam) end
+    end
 
     local dispcnt = emu:read16(0x04000000)
-    log(string.format("[SHOT %03d] name=%s f=%d dispcnt=%04X stable=%d settled=%s",
+    log(string.format("[SHOT %03d] name=%s f=%d dispcnt=%04X stable=%d settled=%s%s",
                       SEQ, name, fr, dispcnt, stable_n,
-                      ok and (S.soft and "soft" or "yes") or "NO(超时强拍)"))
+                      ok and (S.soft and "soft" or "yes") or "NO(超时强拍)",
+                      with_dumps and "" or " png-only"))
     local bg = {}
     for b = 0, 3 do
         bg[b] = emu:read16(0x04000008 + b * 2)
@@ -805,7 +979,9 @@ local function snapshot(fr, st, stable_n, ok)
             log(string.format("[POS] shot=%s grid=(%d,%d)", name, px, py))
         end
     end
-    log(string.format("  dumps: %s.{png,vram.bin,pal.bin,ram.bin}", number))
+    if with_dumps then
+        log(string.format("  dumps: %s.{png,vram.bin,pal.bin,ram.bin}", number))
+    end
 
     -- 末列 stable：截图前连续稳定的帧数。
     -- settled 列：1=严格稳定（VRAM 全等） 2=宽松稳定（忽略 VRAM 动画） 0=超时强拍
@@ -869,6 +1045,252 @@ local function exec_instant(fr, st, timeout_flag)
     return true
 end
 
+-- ── 金手指：把一组写操作打到**实时内存**上 ──────────────────────────────────
+-- 返回写入条数；任何一条失败返回 nil + 错误信息。
+-- 写之前把原值读出来记进日志：出问题能回滚，也能证明"写之前确实不是这个值"。
+local function do_poke(fr, st)
+    -- ★★ 硬门槛（2026-11-03，用户口径）：金手指**必须在读档成功之后**才允许执行。
+    --   为什么：savestate 那条路已经证明过「内存快照会把 ROM 的 hook 冻住，
+    --   验收失真」。金手指虽然写的是实时内存、不冻 ROM，但如果写早了
+    --   （还在标题/主菜单、存档尚未载入），改的是**还没被存档初始化**的
+    --   EWRAM 区域，游戏读档时会把它整个覆盖掉 —— 表现为「按了没反应」，
+    --   更糟的是可能写坏别的结构，让人误判成汉化有问题。
+    --   SB2_RUNTIME 只在 do_prove 命中「存档身份字节」后才被赋值，
+    --   所以它非 nil 就等价于「这份 .sav 已经真的进了内存」。
+    if SB2_RUNTIME == nil then
+        return nil, "金手指被拒绝：prove 还没成功（存档未载入），" ..
+                    "必须先走完 读档→prove 这一段"
+    end
+
+    -- ★ 第二道门槛：DISPCNT 必须已经不是标题/主菜单。
+    --   prove 的语义边界是「存档进了内存」，而 Gen3 在**标题画面**就已经
+    --   把存档读进来用于画「继续游戏」摘要 —— 光靠 SB2_RUNTIME 拦不住
+    --   「还在标题就写内存」。这两个签名是 _lib 里实测的标题/主菜单特征。
+    local dis = emu:read16(0x04000000)
+    if dis == 0x1741 or dis == 0x3140 then
+        return nil, string.format(
+            "金手指被拒绝：当前 DISPCNT=0x%04X 仍是标题/继续游戏画面，" ..
+            "存档还没真正进入游戏世界", dis)
+    end
+
+    local n = 0
+    for j, wr in ipairs(st.writes) do
+        local addr
+        local via
+        if wr.sb1 ~= nil then
+            if SB2_RUNTIME == nil then
+                return nil, string.format(
+                    "poke write %d 用 sb1 偏移但 prove 还没跑过（SB2 未知）", j)
+            end
+            addr = SB2_RUNTIME + SB1_DELTA + wr.sb1
+            via = string.format("sb1+0x%X", wr.sb1)
+        else
+            addr = wr.addr
+            via = "abs"
+        end
+
+        local wd = wr.width or 1
+        -- 读原值（未对齐的宽读会让 mGBA 报错，这里按宽度手工拼）
+        local old = 0
+        if wd == 1 then old = emu:read8(addr)
+        elseif wd == 2 then
+            old = emu:read16(addr)
+        else
+            old = emu:read32(addr)
+        end
+
+        local ok, err
+        if wd == 1 then ok, err = pcall(function() emu:write8(addr, wr.value) end)
+        elseif wd == 2 then ok, err = pcall(function() emu:write16(addr, wr.value) end)
+        else ok, err = pcall(function() emu:write32(addr, wr.value) end) end
+        if not ok then
+            return nil, string.format("poke write %d 失败: %s", j, tostring(err))
+        end
+
+        -- 写后复核：这是金手指最容易出错的地方（地址算错会静默改坏别的内存）
+        local now
+        if wd == 1 then now = emu:read8(addr)
+        elseif wd == 2 then now = emu:read16(addr)
+        else now = emu:read32(addr) end
+
+        local mask = (wd == 4) and 0xFFFFFFFF or ((1 << (wd * 8)) - 1)
+        local want = wr.value & mask
+        if now ~= want then
+            return nil, string.format(
+                "poke write %d 复核失败 @0x%08X: 写入 0x%X 读回 0x%X",
+                j, addr, want, now)
+        end
+
+        log(string.format(
+            "[POKE] f=%d #%d @0x%08X (%s) w%d 0x%X -> 0x%X %s",
+            fr, j, addr, via, wd, old & mask, now,
+            wr.note and ("; " .. wr.note) or ""))
+        n = n + 1
+    end
+    return n
+end
+
+-- ── 金手指·调用游戏函数 ────────────────────────────────────────────────────
+-- 真正调用 ROM 里的函数（走原版自己的逻辑），而不是「猜着改某个变量」。
+--
+-- ⚠ mGBA 的 Lua 绑定**没有** callFunction 之类的接口，所以这里用 GBA 的
+--   BIOS 软中断做一次「一次性跳板」：
+--     ① 在 EWRAM 末尾（本项目 hook 的调试区之后）写一段 ARM 跳板
+--     ② 跳到目标函数（Thumb），返回后跳回一个死循环
+--     ③ 用 Halt 让 CPU 停在那
+--   实测这条路的风险比「假装能调用」高得多，所以先只做**保守版**：
+--   只在明确验证过跳板可用之后才启用；否则如实报错，不静默假装成功。
+local function do_call(fr, st)
+    if SB2_RUNTIME == nil then
+        return nil, "call 被拒绝：prove 还没成功（存档未载入）"
+    end
+    local dis = emu:read16(0x04000000)
+    if dis == 0x1741 or dis == 0x3140 then
+        return nil, string.format(
+            "call 被拒绝：当前 DISPCNT=0x%04X 仍是标题/菜单画面", dis)
+    end
+    return nil, string.format(
+        "call 暂未启用：mGBA Lua 绑定没有函数调用接口（只有 read/write），" ..
+        "跳板方案需要单独验证。目标 0x%08X", st.addr)
+end
+
+-- ── 遇敌搜捕（hunt）运行态 ─────────────────────────────────────────────────
+-- 逐格走，每帧看 DISPCNT 是否离开野外值；一离开就停手并 advance。
+-- 关键：**不在格子层面判等**（那正是两侧差 1 的来源），只判「界面变了」。
+local HUNT_ACTIVE = false
+local HUNT_DIR    = "DOWN"
+local HUNT_TX     = 0
+local HUNT_TY     = 0        -- 目标格（每格 +1）
+local HUNT_STEPS  = 0        -- 计划最多走几格
+local HUNT_DONE   = 0        -- 已走几格
+local HUNT_WILD   = 0x7F60
+local HUNT_TO     = 120      -- 单格超时帧数
+local HUNT_T0     = 0
+local HUNT_REL    = 0        -- 松手后的冷却帧数
+
+local function hunt_begin(st, fr)
+    HUNT_ACTIVE = true
+    HUNT_DIR  = st.dir or "DOWN"
+    HUNT_STEPS = st.steps or 24
+    HUNT_WILD = st.wild or 0x7F60
+    HUNT_TO   = st.n or 120
+    HUNT_DONE = 0
+    HUNT_T0   = fr
+    HUNT_REL  = 0
+
+    -- 起点来自 SaveBlock1（prove 之后可用）；取不到就用场景给的 x/y
+    local sx, sy = st.x, st.y
+    if SB2_RUNTIME ~= nil then
+        local p = emu:readRange(SB2_RUNTIME + SB1_DELTA, 4)
+        if p and #p >= 4 then
+            local px = u16(p, 0); if px > 32767 then px = px - 65536 end
+            local py = u16(p, 2); if py > 32767 then py = py - 65536 end
+            sx, sy = px, py
+        end
+    end
+    HUNT_TX, HUNT_TY = sx, sy
+    log(string.format("[HUNT] start f=%d from=(%d,%d) dir=%s steps=%d wild=%04X",
+                      fr, sx, sy, HUNT_DIR, HUNT_STEPS, HUNT_WILD))
+end
+
+-- 返回 true = 本帧已被 hunt 占用
+local function hunt_step(fr)
+    if not HUNT_ACTIVE then return false end
+
+    -- ① 遇敌判定优先：DISPCNT 一旦不是野外值，立刻停手
+    local dis = emu:read16(0x04000000)
+    if dis ~= HUNT_WILD then
+        emu:setKeys(0)
+        HUNT_ACTIVE = false
+        log(string.format(
+            "[HUNT] hit f=%d after %d steps DISPCNT=%04X ⇒ 已遇敌，"
+            .. "后面的采集从战斗画面开始", fr, HUNT_DONE, dis))
+        advance(fr)
+        return true
+    end
+
+    -- ② 全部走完还没遇敌：不算失败，记下来，由后续 await 决定
+    if HUNT_DONE >= HUNT_STEPS then
+        emu:setKeys(0)
+        HUNT_ACTIVE = false
+        log(string.format(
+            "[HUNT] gave-up f=%d walked %d steps, DISPCNT 仍是 %04X ⇒ 没遇到",
+            fr, HUNT_DONE, dis))
+        advance(fr)
+        return true
+    end
+
+    -- ③ 冷却（松手让「按下沿」成立）
+    if HUNT_REL > 0 then
+        emu:setKeys(0)
+        HUNT_REL = HUNT_REL - 1
+        if HUNT_REL == 0 then HUNT_DONE = HUNT_DONE + 1; HUNT_T0 = fr end
+        return true
+    end
+
+    -- ④ 走一格：按住方向，等坐标真的挪过去（或超时）
+    --   ★ 往返模式（2026-11-03）：只朝一个方向走会撞出草丛/撞墙
+    --     （实测 30 格全程没遇敌，因为走出了草丛）。这里每到边界就掉头，
+    --     保证一直在草丛里来回踩，遇敌判定才会持续累计。
+    local mask = (1 << KEYBIT[HUNT_DIR])
+    emu:setKeys(mask)
+
+    local moved = false
+    if SB2_RUNTIME ~= nil then
+        local p = emu:readRange(SB2_RUNTIME + SB1_DELTA, 4)
+        if p and #p >= 4 then
+            local px = u16(p, 0); if px > 32767 then px = px - 65536 end
+            local py = u16(p, 2); if py > 32767 then py = py - 65536 end
+            moved = (px ~= HUNT_TX) or (py ~= HUNT_TY)
+        end
+    end
+
+    if moved then
+        -- 到位：松手并进入冷却
+        emu:setKeys(0)
+        local p = emu:readRange(SB2_RUNTIME + SB1_DELTA, 4)
+        if p and #p >= 4 then
+            local px = u16(p, 0); if px > 32767 then px = px - 65536 end
+            local py = u16(p, 2); if py > 32767 then py = py - 65536 end
+            HUNT_TX, HUNT_TY = px, py
+        end
+        HUNT_REL = 6
+        return true
+    end
+
+    if fr - HUNT_T0 > HUNT_TO then
+        -- 这一格走不动（被挡/撞墙），也算走完一格，并**掉头**
+        log(string.format("[HUNT] step%d blocked f=%d at=(%d,%d) ⇒ 掉头",
+                          HUNT_DONE + 1, fr, HUNT_TX, HUNT_TY))
+        emu:setKeys(0)
+        HUNT_REL = 6
+        HUNT_T0 = fr
+        HUNT_DIR = (HUNT_DIR == "DOWN") and "UP" or "DOWN"
+    end
+    return true
+end
+
+-- ── 多帧连续采集 ────────────────────────────────────────────────────────────
+-- 已进入 burst 状态（BURST_LEFT>0）时每帧调用；负责计数、间隔、取名、收尾。
+-- 返回 true = 本帧已被 burst 占用。
+local function burst_step(fr)
+    if BURST_LEFT <= 0 then return false end
+    if fr < BURST_NEXT then return true end      -- 间隔期：什么都不做，但仍占着本帧
+
+    local i = BURST_N - BURST_LEFT + 1
+    snapshot(fr, { name = BURST_NAME }, S.stable, true,
+             string.format("%s_%02d", BURST_NAME, i), false)
+
+    BURST_LEFT = BURST_LEFT - 1
+    BURST_NEXT = fr + BURST_EVERY
+    if BURST_LEFT <= 0 then
+        log(string.format("[BURST] done name=%s n=%d every=%d f=%d",
+                          BURST_NAME, BURST_N, BURST_EVERY, fr))
+        advance(fr)
+    end
+    return true
+end
+
 -- 进入下一步：只负责「切到下一步 + 请求 settle」。
 -- ⚠ 瞬时步骤（shot/prove）**不在这里执行** —— 统一由主循环在 settle 结束后的
 --   同一个分支里执行一次。否则 advance 执行一次、主循环又执行一次 = 双份截图。
@@ -885,7 +1307,8 @@ advance = function(fr)
     local st = STEPS[IDX]
     if st.act == "await" then
         settle_begin(string.format("await:0x%04X@%08X", st.value, st.addr), fr,
-                     st.addr, st.value, st.n, st.addr2, st.value2)
+                     st.addr, st.value, st.n, st.addr2, st.value2,
+                     nil, nil, nil, nil, 0, nil, st.any_of)
     elseif st.act == "walk" or st.act == "await_pos" then
         -- 需要 prove 先找到 SaveBlock2 的运行时地址
         local wm = (st.act == "walk") and (1 << KEYBIT[st.dir]) or nil
@@ -897,6 +1320,19 @@ advance = function(fr)
         settle_begin(string.format("%s:(%d,%d)", st.act, st.x, st.y), fr,
                      nil, nil, st.n, nil, nil, SB2_RUNTIME, st.x, st.y, wm,
                      st.hold or 20, st.axis)
+    elseif st.act == "poke" then
+        -- poke 要在**画面稳定之后**执行：否则可能刚好在转场中途改内存，
+        -- 游戏下一帧就会用旧值重算，改了等于没改。settle 后动手成功率高得多。
+        settle_begin("poke", fr)
+    elseif st.act == "burst" then
+        -- burst 之前也要 settle：否则第一张会拍到上一动作的过渡帧。
+        settle_begin("burst:" .. tostring(st.name), fr)
+    elseif st.act == "hunt" then
+        -- hunt 不需要 settle（它自己逐帧判 DISPCNT），直接起
+        hunt_begin(st, fr)
+    elseif st.act == "tap_if" then
+        -- 条件按键也要先等画面稳定，否则可能在上一个界面的过渡帧里判条件
+        settle_begin("tap_if", fr)
     else
         settle_begin(st.act .. (st.name and (":" .. st.name) or ""), fr)
     end
@@ -911,7 +1347,8 @@ do
     local st1 = STEPS[1]
     if st1.act == "await" then
         settle_begin(string.format("await:0x%04X@%08X", st1.value, st1.addr), 0,
-                     st1.addr, st1.value, st1.n, st1.addr2, st1.value2)
+                     st1.addr, st1.value, st1.n, st1.addr2, st1.value2,
+                     nil, nil, nil, nil, 0, nil, st1.any_of)
     else
         settle_begin("boot", 0)
     end
@@ -948,6 +1385,12 @@ callbacks:add("keysRead", function()
 
     -- ① 稳定检测优先：不稳定就不推进任何东西
     if settle_step(fr) then return end
+
+    -- ①' 遇敌搜捕进行中：由它接管本帧（逐帧判 DISPCNT，一遇敌就 advance）
+    if hunt_step(fr) then return end
+
+    -- ①'' burst 进行中：由它接管本帧（数帧、拍、到点收尾并 advance）
+    if burst_step(fr) then return end
 
     local timeout_flag = S.timed_out
 
@@ -994,6 +1437,45 @@ callbacks:add("keysRead", function()
                 return
             end
             advance(fr)
+            return
+        elseif st.act == "tap_if" then
+            -- 条件按键：当前值匹配才按，否则静默跳过本步
+            local cur = emu:read16(st.addr)
+            if cur == st.want then
+                log(string.format("[TAP_IF] f=%d match 0x%04X ⇒ 按 %s",
+                                  fr, cur, st.key))
+                HOLD = st.n or 4
+                REL = HOLD < 4 and 4 or HOLD
+                ELEFT = HOLD
+                PHASE = "hold"
+                mask = (1 << KEYBIT[st.key])
+            else
+                log(string.format("[TAP_IF] f=%d skip（当前 0x%04X ≠ wish 0x%04X）",
+                                  fr, cur, st.want))
+                advance(fr)
+            end
+            return
+        elseif st.act == "poke" then
+            local n, err = do_poke(fr, st)
+            if n == nil then
+                emu:setKeys(0)
+                stop(1, string.format("[ERR] poke 失败 step=%d f=%d: %s",
+                                      IDX, fr, tostring(err)))
+                return
+            end
+            log(string.format("[POKE] step=%d 共写入 %d 项", IDX, n))
+            advance(fr)
+            return
+        elseif st.act == "burst" then
+            -- 多帧连续采集：本步不按键，按 every 间隔连拍 n 张 PNG
+            BURST_LEFT  = st.n
+            BURST_N     = st.n
+            BURST_EVERY = st.every or 1
+            BURST_NEXT  = fr
+            BURST_NAME  = st.name
+            log(string.format("[BURST] start name=%s n=%d every=%d f=%d",
+                              BURST_NAME, BURST_N, BURST_EVERY, fr))
+            if not burst_step(fr) then advance(fr) end
             return
         elseif st.act == "talk" then
             -- ★ 对话闸门（详见 step 校验处的注释）：

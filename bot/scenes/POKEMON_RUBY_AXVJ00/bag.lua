@@ -24,23 +24,30 @@ local L = dofile((os.getenv("BOT_ROOT") or "."):gsub("\\", "/"):gsub("/+$", "")
                  .. "/scenes/" .. os.getenv("BOT_GAME_ID") .. "/_lib.lua")
 
 local function body(api)
+    -- 2026-11-03：入口连帧，覆盖「列表淡入 + 底部说明首次绘制」
+    api.burst("bag_enter", 10, 6)
     api.shot("bag_open")
 
     -- ── ① 第 1 项「学习装置」按 A：道具子菜单（使用/携带/丢弃/取消）──────────
     --    此时子菜单框 + 底部「想做什么？」+ 右侧列表三块同屏
     api.tap("A", 4, 45)
+    api.burst("bag_item_menu_in", 8, 6)
     api.shot("bag_item_menu")
 
     -- ── ② 选「使用」：说明对话框第 1 页（撞 UI 最严重的一帧）────────────────
     api.tap("A", 4, 45)
+    api.burst("bag_use_p1_f", 12, 6)
     api.shot("bag_use_p1")
 
     -- ── ③ 翻到第 2 页（`\p`）：只有「用！」，第 1 页的字模应该被清掉 ─────────
+    --    翻页是「整块窗口重写」，连抓 16 帧才能看到旧字模有没有残留
     api.tap("A", 4, 45)
+    api.burst("bag_use_p2_f", 16, 5)
     api.shot("bag_use_p2")
 
     -- ── ④ 关掉对话框：回到列表，检查框体区域有没有擦花 ───────────────────────
     api.tap("A", 4, 45)
+    api.burst("bag_use_closed_f", 10, 6)
     api.shot("bag_use_closed")
 
     -- ── ⑤ 再开子菜单，逐项移动：底部提示每换一项整句重画（残留高发点）────────
@@ -48,6 +55,7 @@ local function body(api)
     api.shot("bag_item_menu_re")
     for i = 2, 4 do
         api.tap("DOWN", 4, 30)
+        api.burst(string.format("bag_item_menu%d_f", i), 6, 5)
         api.shot(string.format("bag_item_menu%d", i))
     end
     for _ = 1, 3 do api.tap("UP", 4, 12) end
@@ -60,6 +68,7 @@ local function body(api)
     -- ── ⑦ 逐个口袋翻页（RIGHT 切换口袋，整屏重绘）───────────────────────────
     for i = 2, 4 do
         api.tap("RIGHT", 4, 40)
+        api.burst(string.format("bag_pocket%d_f", i), 10, 6)
         api.shot(string.format("bag_pocket%d", i))
     end
     api.tap("LEFT", 4, 40)
@@ -70,6 +79,7 @@ local function body(api)
     -- ── ⑧ 列表逐项下移 + 滚到底（越过一屏 => 触发列表滚动重绘）───────────────
     for i = 1, 4 do
         api.tap("DOWN", 4, 25)
+        api.burst(string.format("bag_item%d_f", i + 1), 4, 5)
         api.shot(string.format("bag_item%d", i + 1))
     end
     for _ = 5, 9 do

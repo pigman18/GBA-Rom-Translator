@@ -961,6 +961,48 @@ C:\Python314\python.exe scripts\scan_window_templates.py
 
 ---
 
+## 9.1 全角标点渲染缺陷（2026-11-03 动态发现，**未修**）
+
+> 这是把 bot 扩到「战斗全界面」之后才暴露出来的**真实缺陷**，不是分析结论。
+
+**现象**：战斗开场台词 `啊！野生的雷电球跳出来了！` 里，
+两个「！」都渲染成畸形叠字，且把后面的字挤开。
+
+**量化证据**（`scripts/measure_text_row.py`，同一帧的文字行）：
+
+| 侧 | 字形段宽度序列 |
+|---|---|
+| origin | 12, **8**, 5, 8, 23 … （「！」= 8px，与原版半角一致） |
+| translated | 12, **11**, **19**, 11, 11, 11, 9, 11, **7**, **3**, 9 … |
+
+- 原版「！」占 **8px**（半角槽）；
+- 译文里出现 **19px** 与 **11px** 的异常段，以及 3px 碎片 ⇒ 标点被按全角画，
+  并把相邻字推挤重叠。
+
+**根因**（代码依据）：
+
+1. `configs/POKEMON_RUBY_AXVJ00/charmap.txt` 把 `3C=！`、`3D=？`、`37=。`、
+   `3A=、`、`3B=，`、`3E=：` 全部映射到**日文单字节 PCS**（第 84/161/164-168 行），
+   注释也写明「Sentence punct … use JP PCS single-bytes」。
+2. 但这几个码位在**原版字库里是半角 8px**（上面实测）。
+3. `hook/src/text/text_render.c` 的 `GetChineseFontWidthFunc()`（第 85–112 行）
+   **只按 fontId 返回固定步进**（Small=8 / 其余=12），完全不看字符。
+   于是标点也被按 12px 排，一个 8px 的字形被塞进 12px 的步进里 ⇒ 挤压/叠字。
+
+**影响面**：`translate/texts_translated.json` 里 **3316 / 14572** 条译文含全角「！」。
+
+**待决策的修法**（都还没做，不能猜着改）：
+
+- 方案 A：让 `GetChineseFontWidthFunc()` 对这几个单字节标点返回 8；
+  风险：单字节字符走的是原版字体路径，可能根本不进这个函数。
+- 方案 B：把标点映射到中文 BDF 里的全角槽（需要 BDF 真有该字形 ——
+  实测三套 BDF 里 `！？。，、：；` **全部缺失**，只覆盖 `（）「」『』—～·`）。
+- 方案 C：译文层面把全角标点换成原版用的半角，或换成全角但补字模。
+
+> 复现命令：`python scripts/measure_text_row.py <png> --y0 126 --y1 134`
+
+---
+
 ## 10. 版本记录
 
 | 日期 | 内容 |
@@ -971,3 +1013,5 @@ C:\Python314\python.exe scripts\scan_window_templates.py
 | 2026-11-03 | 修：符号表 5 处错位实证（`TextMode0/1`、`GetCursorTilemapPointer`、`Text_PrintWindowSimple`、54 个假模板）|
 | 2026-11-03 | 联网核对美版 `pokeruby/include/text.h`：确认 `WindowTemplate` 前 6 字段与日版一致；发现 `tilemap` 偏移日版 `+0x10` vs 美版 `+0x14`；发现 `struct Window` 日美布局不同（§0.5）|
 | 2026-11-03 | 补：窗口实例真实枚举 —— 37 个函数 / 45 处 `Text_InitWindowWithTemplate` 调用（§7.2）；证实日版无静态模板数组（§7.2.1）|
+| 2026-11-03 | **补 §9.1**：动态采到战斗全界面后，实测发现全角标点渲染畸形（原版 8px / 译文 19px），影响 3316 条译文；三个修法待决策 |
+| 2026-11-03 | 补：`gWildMonHeaders @0x0839D454` 实测**不是**简单 (mapGroup,mapNum) 索引表，28 字节表项混着地形行为表与外部指针，结构未定死，**不可据此改 ROM** |

@@ -38,19 +38,26 @@ api.shot("overworld")        -- 商店内，日志里有 [POS] grid=(3,3)
 -- ── ① 转身向左（6 帧只够转身，走不动一格）→ 开对话（硬闸门）──────────────
 api.tap("LEFT", 6, 40)
 api.talk{ timeout = 300 }
+-- ★ 2026-11-03：逐字打印过程要连帧看。单帧只证明「打完定型」，
+--   证明不了打字过程中有没有错位/覆盖（这是 BUG 2 的另一种形态）。
+api.burst("dlg_typing", 20, 6)
 api.wait(60)
 api.shot("dlg_welcome")      -- 第 1 句（打印完成）
 
 -- ── ② 推进：A 进商店菜单 → A 进购买列表（对话框 + 列表 + 底部说明同屏）──────
 api.tap("A", 4, 50)
+api.burst("dlg_shopmenu_f", 10, 6)
 api.shot("dlg_shopmenu")
 api.tap("A", 4, 50)
+api.burst("dlg_buylist_f", 12, 6)
 api.shot("dlg_buylist")
 
 -- ── ③ 退出：B 退购买列表 → B 退商店菜单 → 告别语 → 关掉 ────────────────────
 api.tap("B", 4, 45)
+api.burst("dlg_back1_f", 8, 6)
 api.shot("dlg_back1")
 api.tap("B", 4, 45)
+api.burst("dlg_farewell_f", 12, 6)
 api.shot("dlg_farewell")
 api.tap("A", 4, 45)
 api.shot("dlg_back_overworld")
@@ -58,6 +65,7 @@ api.shot("dlg_back_overworld")
 -- ── ④ 再开一次：同一段文字从头重写，检查旧字/旧 tile 有没有被带出来 ───────
 api.tap("LEFT", 6, 30)
 api.talk{ timeout = 300 }
+api.burst("dlg_reopen_f", 16, 6)
 api.wait(60)
 api.shot("dlg_reopen")
 api.tap("B", 4, 45)

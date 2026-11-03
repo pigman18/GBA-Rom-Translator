@@ -15,7 +15,16 @@ L.preamble(api)
 api.shot("overworld")
 
 -- 逐项浏览（含回顶反向检查）
-L.browse_start_menu(api, "start_menu")
+-- 2026-11-03：菜单首次打开 + 每项选中高亮都连帧。
+-- 8 项菜单是文本最密集的一屏之一，高亮重绘的残影只在过渡帧里看得到。
+L.open_menu_at(api, 1)
+api.burst("start_menu_open_f", 10, 6)
+api.shot("start_menu_top")
+for i = 1, L.MENU_COUNT - 1 do
+    api.tap("DOWN", 4, 25)
+    api.burst(string.format("start_menu_%d_f", i + 1), 5, 5)
+    api.shot(string.format("start_menu_%d", i + 1))
+end
 
 -- 回顶清一次选中态残留
 for _ = 1, L.MENU_COUNT do api.tap("UP", 4, 12) end

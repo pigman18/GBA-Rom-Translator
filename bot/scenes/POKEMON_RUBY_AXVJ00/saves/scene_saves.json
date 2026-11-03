@@ -21,6 +21,20 @@
     "dialogue": "MauvilleCity_Mart_3-3.sav",
     "shop": "MauvilleCity_Mart_3-3.sav",
     "_probe_talk": "MauvilleCity_Mart_3-3.sav",
-    "_probe_use": "Route118_68-7.sav"
+    "_probe_use": "Route118_68-7.sav",
+    "_probe_new": "Route118_68-7.sav",
+    "_probe_menu_map": "Route118_68-7.sav",
+    "_probe_warp": "Route118_68-7.sav",
+    "_probe_warp2": "Route118_68-7.sav",
+    "_probe_battle_poke": "Route118_68-7.sav",
+    "_probe_battle2": "Route118_68-7.sav",
+    "_probe_rng": "Route118_68-7.sav",
+    "_probe_detbattle": "Route118_68-7.sav",
+    "_probe_detbattle2": "Route118_68-7.sav",
+    "_probe_detbattle3": "Route118_68-7.sav",
+    "_probe_detbattle4": "Route118_68-7.sav",
+    "_probe_hunt": "Route118_68-7.sav",
+    "_probe_hunt2": "Route118_68-7.sav",
+    "battle_full": "Route118_68-7.sav"
   }
 }

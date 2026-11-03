@@ -88,9 +88,43 @@ schema 2 的旧批次仍是旧布局，靠 `manifest.schema` 区分。
 | `dex` | Route118 | 图鉴列表翻页 | 宝可梦名 + 分类名（最长文本之一） | settle |
 | `trainer_card` | Route118 | 训练家卡片正反面 | 标签 + 徽章图形混排（撞图形） | settle |
 | `options` | Route118 | 设置菜单 | 大量文字（相似度天然 ~0.77） | await |
-| `battle` | Route118 | 遇敌 → 战斗 | 战斗文本 | walk(soft) |
+| `battle` | Route118 | 遇敌 → 战斗（单帧） | 战斗文本 | walk(soft) |
+| **`battle_full`** | Route118 | **遇敌 → 转场 → 开场台词 → 战斗主菜单四项 → 招式列表 → 队伍 → 逃跑** | **Small(8×8) 主战场**：我方/敌方名+等级、HP「77/115」、招式名+PP「31/35」、属性名 | `poke`(钉RNG) + `hunt` + `await` |
 | `_probe_talk` | MauvilleCity_Mart | 四方向各按一次 A | **诊断**：找哪一面有可对话 NPC | 无（故意打空） |
 | `_probe_use` | Route118 | 背包「学习装置 → 使用 → A/B 各推几下」 | **诊断**：确认说明框几页、退回到哪一层 | 无 |
+| `_probe_hunt` `_probe_hunt2` | Route118 | 遇敌搜捕可行性 | **诊断**：验证 hunt / 钉RNG | 无 |
+
+---
+
+## 2.1 2026-11-03 新增的三个 bot 动作
+
+| 动作 | 作用 | 用法 | 关键约束 |
+|---|---|---|---|
+| `burst(prefix, n, every)` | **多帧连续采集** | `api.burst("bt_menu", 20, 8)` | 只出 PNG（全量 dump 每帧 385KB），落名 `<prefix>_01..NN` |
+| `poke(writes)` | **金手指：写实时内存** | `api.poke{ {addr=0x03004818, width=4, value=0xAAAA} }` | **必须在 prove 之后**（顺序铁律）；写后自动复核读回值 |
+| `hunt{dir,x,y,steps}` | **遇敌搜捕**：逐格走，`DISPCNT≠0x7F60` 立刻停 | `api.hunt{ dir="DOWN", steps=40 }` | 撞墙自动掉头；走满没遇到会记 `gave-up`，由后续 `await` 判定 |
+
+**`poke` 的两道硬门槛**（用户口径「先加载 .sav 再用金手指」）：
+1. 运行时：`SB2_RUNTIME == nil` ⇒ 拒绝（等价于「存档没进内存」）
+2. 运行时：`DISPCNT == 0x1741`（标题）或 `0x3140`（继续游戏菜单）⇒ 拒绝
+3. 准备期：`_lib.poke()` 断言此前已有 `prove` 步骤，顺序写错在开跑前就炸
+
+**确定性遇敌的最终方案**（实测 6 轮定下来，勿再改）：
+
+```
+prove → poke 钉 gRngValue(0x03004818)=0x0000AAAA → hunt → await{any_of={0x0000,0xBF40}}
+```
+
+| 试过 | 结果 |
+|---|---|
+| 只钉 RNG（逐格递增） | 两侧遇敌格差 1（origin 第7 / translated 第6） |
+| 只 hunt | translated 侧 30 格没遇到，纯随机 |
+| 只钉一次 RNG + hunt | **两侧都在第 5 / 第 7 格遇敌，完全一致** ✅ |
+
+> 为什么「差 1 格」治不掉：两侧写入的 RNG 序列**逐值相同**、走位坐标**逐格相同**，
+> 说明还有帧号相关判定参与遇敌。`hunt` 把这点差异吸收在内部（一遇敌就停），
+> 后面全部从战斗画面对齐。
+
 
 ---
 

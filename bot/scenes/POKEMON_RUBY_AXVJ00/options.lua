@@ -21,15 +21,20 @@ api.shot("overworld")
 L.open_menu_at(api, L.MENU.OPTION)
 api.shot("opt_on_item")
 api.tap("A", 4, 60)
+-- 2026-11-03：进入过渡 + 首屏连帧
+api.burst("opt_enter_f", 12, 6)
 api.shot("opt_enter")
 api.wait(40)
 api.shot("opt_open")                 -- ★ 对照 验收效果/2.PNG
 
 -- 3) 逐行下移 + 左右改值（每次改值都会重绘该行 → 抓重绘态）
+--    改值是**单行重绘**，最容易只擦掉自己写过的那半边 ⇒ 必须连帧
 for i = 1, 5 do
     api.tap("RIGHT", 4, 25)
+    api.burst(string.format("opt_row%d_right_f", i), 6, 5)
     api.shot(string.format("opt_row%d_right", i))
     api.tap("DOWN", 4, 25)
+    api.burst(string.format("opt_row%d_f", i + 1), 6, 5)
     api.shot(string.format("opt_row%d", i + 1))
 end
 

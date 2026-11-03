@@ -11,15 +11,21 @@ local L = dofile((os.getenv("BOT_ROOT") or "."):gsub("\\", "/"):gsub("/+$", "")
                  .. "/scenes/" .. os.getenv("BOT_GAME_ID") .. "/_lib.lua")
 
 local function body(api)
+    -- 2026-11-03：入口连帧，覆盖图鉴列表首屏绘制
+    api.burst("dex_enter", 12, 6)
     api.shot("dex_open")
 
     -- 上下翻几屏（图鉴列表是长列表）
+    -- 每项都连抓 4 帧：宝可梦名/分类名重绘时的过渡帧是溢出高发点
     for i = 1, 5 do
         api.tap("DOWN", 4, 25)
+        api.burst(string.format("dex_down%d_f", i), 4, 5)
         api.shot(string.format("dex_down%d", i))
     end
+    -- 左右翻页 = 整屏换页，连抓 10 帧看旧页字模有没有被带过来
     for i = 1, 2 do
         api.tap("RIGHT", 4, 40)
+        api.burst(string.format("dex_page%d_f", i + 1), 10, 6)
         api.shot(string.format("dex_page%d", i + 1))
     end
     for _ = 1, 4 do api.tap("UP", 4, 12) end

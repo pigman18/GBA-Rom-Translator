@@ -46,11 +46,14 @@ function M.new()
         --   用法：api.await{ dispcnt=0x1741, bg0=0x180B, timeout=3000, tag="title" }
         await = function(opt)
             opt = opt or {}
-            assert(opt.dispcnt, "await 需要 dispcnt（DISPCNT 实测值）")
+            assert(opt.dispcnt or opt.any_of,
+                "await 需要 dispcnt（DISPCNT 实测值）或 any_of（候选值列表）")
             S[#S + 1] = {
                 act = "await",
                 n = opt.timeout or 3000,
-                addr = 0x04000000, value = opt.dispcnt,
+                addr = 0x04000000,
+                value = opt.dispcnt or (opt.any_of and opt.any_of[1]) or 0,
+                any_of = opt.any_of,
                 addr2 = opt.bg0 and 0x04000008 or nil, value2 = opt.bg0,
                 tag = opt.tag or "await",
             }
@@ -92,12 +95,78 @@ function M.new()
                           press = opt.press or 4, soft = opt.soft or false }
             return api
         end,
+        -- ★ 条件按键：当前 DISPCNT == want 时才按 key，否则直接跳过本步。
+        --   用途：读档有两条合法路径（经「继续游戏」菜单 / 直接续玩进野外），
+        --   哪条出现取决于 A 落在哪一帧。写死「等菜单再按 A」在另一条路径上
+        --   会白等超时 + 按空（2026-11-03 selfcheck 实测）。
+        tap_if_menu = function(want, key, n, w)
+            S[#S + 1] = { act = "tap_if", want = want, key = key or "A", n = n or 4 }
+            if w then S[#S + 1] = { act = "wait", n = w } end
+            return api
+        end,
         -- ★ 读档证明：在 EWRAM 里搜 .sav 的存档身份字节。
         --   ⚠ 语义边界：Gen3 在**标题画面**就已经把存档读进内存（用于画
         --     「继续游戏」摘要），所以 prove 通过 = **存档有效且被识别**，
         --     不等于「已经进入野外」。后者由 await 的画面特征负责。
         prove = function()
             S[#S + 1] = { act = "prove", n = 0 }
+            return api
+        end,
+        -- ★★ 多帧连续采集：拍 n 张，每张间隔 every 帧（默认逐帧）。
+        --   用途：单张 shot 只能证明「某个定型帧长这样」，证明不了过程连续。
+        --   战斗转场、血条递减、逐字打印、菜单逐项高亮都必须看连续帧。
+        --   落盘名：<prefix>_01.png、<prefix>_02.png …
+        --   ⚠ 只出 PNG（不出 vram/ram 五件套）：全量 dump 每帧 ~385KB，
+        --     连续 30 帧就 11MB，而 burst 是用来看画面演进的，不是逐帧做
+        --     tile 级分析。需要 dump 的关键帧仍旧单用 shot。
+        burst = function(prefix, n, every)
+            S[#S + 1] = { act = "burst", n = n or 10, every = every or 1,
+                          name = prefix }
+            return api
+        end,
+        -- ★★ 金手指：把一组写操作打到**实时内存**。
+        --   与 savestate 的本质区别（用户契约第 3 条）：savestate 是内存快照，
+        --   会把 ROM 的 hook 改动一起冻住，验收失真；这里写的是正在跑的实时
+        --   内存，ROM 是当次加载的。
+        --
+        --   ⚠⚠ 顺序铁律（2026-11-03 用户口径）：**必须先读档再改内存**。
+        --     写早了（标题/主菜单阶段）改的是尚未被存档初始化的 EWRAM，
+        --     读档时会被整个覆盖 ⇒ 表现成「按了没反应」；更糟的是可能
+        --     写坏别的结构，让人误判成汉化有问题。
+        --     bot.lua 侧有两道运行时门槛：SB2_RUNTIME 已定位（prove 命中）
+        --     + DISPCNT 不在标题(1741)/继续菜单(3140)。这里再加一道**准备期**
+        --     断言，让场景作者把顺序写错时在开跑前就炸，而不是跑到底才发现。
+        --   用法：
+        --     api.poke{ {sb1=0x00, width=2, value=0x0844, note="传送到 x"} }
+        --     api.poke{ {addr=0x02024EA4, width=1, value=1} }
+        --   sb1 = SaveBlock1 内偏移（推荐；跟存档走，地址由 prove 定位）
+        --   addr= 绝对地址（VD 用）
+        --   width = 1/2/4；value 会被截断到对应宽度；写后会复核读回值
+        poke = function(writes)
+            local proved = false
+            for _, s in ipairs(S) do
+                if s.act == "prove" then proved = true end
+            end
+            assert(proved,
+                "poke 之前必须已有 prove 步骤：金手指只能在读档成功后执行，" ..
+                "否则改到的是尚未被存档初始化的 EWRAM（等于没改，还可能写坏数据）")
+            S[#S + 1] = { act = "poke", writes = writes }
+            return api
+        end,
+        -- ★★ 遇敌搜捕：逐格走，一旦 DISPCNT 离开野外值就停手。
+        --   为什么这样最好（2026-11-03 用户选定的方案）：
+        --   实测 5 轮证明「第 N 格必遇敌」做不到 —— 两侧写入的 RNG 序列
+        --   逐值相同、走位坐标逐格相同，遇敌格仍差 1（还有帧号相关判定）。
+        --   与其继续攻，不如**一旦遇敌就停**：后面的采集从战斗画面开始，
+        --   两侧都从同一个界面对齐，差值被吸收在 hunt 内部。
+        --   用法：api.hunt{ dir="DOWN", x=68, y=7, steps=24 }
+        hunt = function(opt)
+            opt = opt or {}
+            S[#S + 1] = { act = "hunt", dir = opt.dir or "DOWN",
+                          x = opt.x, y = opt.y,
+                          steps = opt.steps or 24,
+                          n = opt.timeout or 120,
+                          wild = opt.wild }
             return api
         end,
     }
@@ -125,9 +194,22 @@ function M.boot_and_load(api, opts)
     api.await{ dispcnt = 0x1741, bg0 = 0x180B, timeout = 4000, tag = "title" }
     api.tap("A", 20, 30)
 
-    -- ② 等「继续游戏」菜单出现
-    api.await{ dispcnt = 0x3140, bg0 = 0x1F08, timeout = 4000, tag = "mainmenu" }
-    api.tap("A", 20, 30)
+    -- ② 等「继续游戏」菜单 —— 但**它不一定出现**（2026-11-03 实测）
+    --
+    -- ★ 踩坑记录：selfcheck 场景里 A 命中的时机稍早/稍晚，游戏会
+    --   直接续玩进野外（DISPCNT 从标题 1741 跳到野外 7F60），
+    --   中间根本没有 3140 那个「继续游戏」菜单。
+    --   旧写法硬等 0x3140 ⇒ 白等 4000 帧后整场失败，而那只说明
+    --   「这次走了另一条合法路径」，不是 bot 坏了。
+    --
+    -- 新写法：等「3140（菜单）**或** 7F60（已进野外）」任一命中，
+    --   然后按是否真的到了菜单，决定还要不要按 A。
+    --   用 any_of 一次等手段，避免"先等菜单超时再补等野外"烧两倍帧数。
+    api.await{ any_of = { 0x3140, 0x7F60 }, timeout = 4000, tag = "mainmenu" }
+
+    -- 若停在菜单（3140），按 A 进去；已在野外就直接进第 ③ 步。
+    -- 判据直接读当前 DISPCNT，不再靠场景里的猜测。
+    api.tap_if_menu(0x3140, "A", 20, 30)
 
     -- ③ 等读档淡入 + 地图加载
     api.wait(400)

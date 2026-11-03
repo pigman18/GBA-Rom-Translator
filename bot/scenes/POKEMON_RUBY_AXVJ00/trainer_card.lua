@@ -12,11 +12,16 @@ local L = dofile((os.getenv("BOT_ROOT") or "."):gsub("\\", "/"):gsub("/+$", "")
                  .. "/scenes/" .. os.getenv("BOT_GAME_ID") .. "/_lib.lua")
 
 local function body(api)
+    -- 2026-11-03：卡片是「标签 + 数字 + 徽章图形」混排，进入时整屏绘制，
+    -- 连帧才能看出文字是否压到徽章图形上。
+    api.burst("card_enter", 12, 6)
     api.shot("trainer_card")
     -- 卡片可翻面（正面/背面）
     api.tap("A", 4, 50)
+    api.burst("card_back_f", 10, 6)
     api.shot("trainer_card_back")
     api.tap("A", 4, 50)
+    api.burst("card_front_f", 10, 6)
     api.shot("trainer_card_front")
 end
 

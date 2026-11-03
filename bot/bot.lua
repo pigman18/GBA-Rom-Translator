@@ -322,6 +322,28 @@ for i, st in ipairs(STEPS) do
             stop(1, string.format("[ERR] tap_if step %d bad n", i))
         end
         total_frames = total_frames + st.n
+    elseif st.act == "roam" then
+        -- ★★ 跨图漫游（2026-11-03 新增，为覆盖道馆/大赛）。
+        --   为什么需要：实测「换地图改 .sav」无效，但**走位跨图有效**
+        --   （商店 (3,3) 向下走 → map=0:2 城市 (23,17)）。问题在于
+        --   **坐标会被换图重置**，按绝对格坐标 walk 会立刻判"已到位/被挡"。
+        --   本动作只按**相对方向**推进：每个方向连走 steps 格，
+        --   撞墙就换下一个方向，全程不依赖绝对坐标。
+        --   参数：seq = 方向序列，如 {"DOWN","LEFT","UP","UP","RIGHT"}；
+        --         steps = 每个方向连走几格（默认 8）
+        --         collect = true 时每格都截一张（用 name 作前缀）
+        if type(st.seq) ~= "table" or #st.seq == 0 then
+            stop(1, string.format("[ERR] roam step %d needs seq", i))
+        end
+        for _, d in ipairs(st.seq) do
+            if KEYBIT[d] == nil then
+                stop(1, string.format("[ERR] roam step %d bad dir %s", i, tostring(d)))
+            end
+        end
+        if st.steps ~= nil and (type(st.steps) ~= "number" or st.steps < 1) then
+            stop(1, string.format("[ERR] roam step %d bad steps", i))
+        end
+        total_frames = total_frames + (st.n or 100) * (st.steps or 8) * #st.seq
     else
         stop(1, string.format("[ERR] unknown act at step %d: %s", i, st.act))
     end
@@ -972,11 +994,17 @@ local function snapshot(fr, st, stable_n, ok, name_override, with_dumps)
     --   写场景时靠它确定「往哪走几格」，跑完回看日志即可校正 ——
     --   不必再靠截图目测数格子。
     if SB2_RUNTIME ~= nil then
-        local p = emu:readRange(SB2_RUNTIME + SB1_DELTA, 4)
-        if p and #p >= 4 then
+        local p = emu:readRange(SB2_RUNTIME + SB1_DELTA, 6)
+        if p and #p >= 6 then
             local px = u16(p, 0); if px > 32767 then px = px - 65536 end
             local py = u16(p, 2); if py > 32767 then py = py - 65536 end
-            log(string.format("[POS] shot=%s grid=(%d,%d)", name, px, py))
+            -- ★ 顺带打地图 ID（2026-11-03）。
+            --   为什么必须打：走位跨图（室内走出去 / 换城）是覆盖道馆、大赛的
+            --   唯一可行手段，而只看坐标判断不出「现在在哪张图」。
+            --   +0x04 = location.mapGroup, +0x05 = mapNum（实测与 .sav 一致）。
+            local mg, mn = s8v(u8(p, 4)), s8v(u8(p, 5))
+            log(string.format("[POS] shot=%s grid=(%d,%d) map=%d:%d",
+                              name, px, py, mg, mn))
         end
     end
     if with_dumps then
@@ -1202,9 +1230,19 @@ local function hunt_step(fr)
     if dis ~= HUNT_WILD then
         emu:setKeys(0)
         HUNT_ACTIVE = false
+        -- 顺带打地图 ID：换成室内图（道馆/会场）时也会触发停止，
+        -- 这时"不是遇敌"而是"进图了"，日志里必须能分辨。
+        local mg, mn = -1, -1
+        if SB2_RUNTIME ~= nil then
+            local p = emu:readRange(SB2_RUNTIME + SB1_DELTA, 6)
+            if p and #p >= 6 then
+                mg, mn = s8v(u8(p, 4)), s8v(u8(p, 5))
+            end
+        end
         log(string.format(
-            "[HUNT] hit f=%d after %d steps DISPCNT=%04X ⇒ 已遇敌，"
-            .. "后面的采集从战斗画面开始", fr, HUNT_DONE, dis))
+            "[HUNT] hit f=%d after %d steps DISPCNT=%04X map=%d:%d"
+            .. " ⇒ 界面已改变，后面的采集从这里开始",
+            fr, HUNT_DONE, dis, mg, mn))
         advance(fr)
         return true
     end
@@ -1266,6 +1304,116 @@ local function hunt_step(fr)
         HUNT_REL = 6
         HUNT_T0 = fr
         HUNT_DIR = (HUNT_DIR == "DOWN") and "UP" or "DOWN"
+    end
+    return true
+end
+
+-- ── 跨图漫游（roam）运行态 ─────────────────────────────────────────────────
+-- 只按方向推进，不用绝对坐标：换图会重置坐标，绝对坐标会立刻判"到位"。
+local ROAM_ACTIVE = false
+local ROAM_SEQ    = nil
+local ROAM_SEQI   = 0        -- 当前方向下标
+local ROAM_LEFT   = 0        -- 当前方向还要走几格
+local ROAM_STEPS  = 8
+local ROAM_PX     = 0
+local ROAM_PY     = 0
+local ROAM_MAPG   = 0
+local ROAM_MAPN   = 0
+local ROAM_HOLD   = 0        -- 本次按住已持续帧数
+local ROAM_BLOCK  = 0        -- 按住却不动已持续帧数
+local ROAM_TO     = 100      -- 单格超时
+
+local function roam_pos()
+    if SB2_RUNTIME == nil then return nil end
+    local p = emu:readRange(SB2_RUNTIME + SB1_DELTA, 6)
+    if not p or #p < 6 then return nil end
+    local x = u16(p, 0); if x > 32767 then x = x - 65536 end
+    local y = u16(p, 2); if y > 32767 then y = y - 65536 end
+    return x, y, s8v(u8(p, 4)), s8v(u8(p, 5))
+end
+
+local function roam_begin(st, fr)
+    ROAM_ACTIVE = true
+    ROAM_SEQ   = st.seq
+    ROAM_SEQI  = 1
+    ROAM_STEPS = st.steps or 8
+    ROAM_LEFT  = ROAM_STEPS
+    ROAM_TO    = st.n or 100
+    ROAM_HOLD  = 0
+    ROAM_BLOCK = 0
+    local x, y, g, n = roam_pos()
+    ROAM_PX, ROAM_PY, ROAM_MAPG, ROAM_MAPN = x or 0, y or 0, g or 0, n or 0
+    log(string.format(
+        "[ROAM] start f=%d at=(%d,%d) map=%d:%d seq=%s steps=%d",
+        fr, ROAM_PX, ROAM_PY, ROAM_MAPG, ROAM_MAPN,
+        table.concat(ROAM_SEQ, ","), ROAM_STEPS))
+end
+
+-- 返回 true = 本帧被 roam 占用
+local function roam_step(fr)
+    if not ROAM_ACTIVE then return false end
+
+    -- 全部方向走完 → 收尾
+    if ROAM_SEQI > #ROAM_SEQ then
+        emu:setKeys(0)
+        ROAM_ACTIVE = false
+        local x, y, g, n = roam_pos()
+        log(string.format("[ROAM] done f=%d at=(%d,%d) map=%d:%d",
+                          fr, x or -1, y or -1, g or -9, n or -9))
+        advance(fr)
+        return true
+    end
+
+    local dir = ROAM_SEQ[ROAM_SEQI]
+    local x, y, g, n = roam_pos()
+    if x == nil then
+        -- 读不到坐标（还没 prove）：直接跳过，避免静默卡死
+        emu:setKeys(0)
+        ROAM_ACTIVE = false
+        log("[ROAM] abort：读不到 SaveBlock1 坐标（prove 未执行？）")
+        advance(fr)
+        return true
+    end
+
+    -- 换图了：坐标已重置，重新定位并继续按序列走（不中止）
+    if g ~= ROAM_MAPG or n ~= ROAM_MAPN then
+        log(string.format("[ROAM] map %d:%d -> %d:%d at f=%d (坐标重置为 %d,%d)",
+                          ROAM_MAPG, ROAM_MAPN, g, n, fr, x, y))
+        ROAM_MAPG, ROAM_MAPN = g, n
+        ROAM_PX, ROAM_PY = x, y
+        ROAM_HOLD, ROAM_BLOCK = 0, 0
+        emu:setKeys(0)
+        return true
+    end
+
+    -- 位置变了 = 走成功了一格
+    if x ~= ROAM_PX or y ~= ROAM_PY then
+        ROAM_PX, ROAM_PY = x, y
+        ROAM_HOLD, ROAM_BLOCK = 0, 0
+        ROAM_LEFT = ROAM_LEFT - 1
+        emu:setKeys(0)
+        if ROAM_LEFT <= 0 then
+            log(string.format("[ROAM] dir=%s done f=%d at=(%d,%d) map=%d:%d",
+                              dir, fr, x, y, g, n))
+            ROAM_SEQI = ROAM_SEQI + 1
+            ROAM_LEFT = ROAM_STEPS
+        end
+        return true
+    end
+
+    -- 没动：按住继续推；推太久判撞墙，换下一个方向
+    ROAM_HOLD  = ROAM_HOLD + 1
+    ROAM_BLOCK = ROAM_BLOCK + 1
+    emu:setKeys(1 << KEYBIT[dir])
+
+    if ROAM_BLOCK > 40 or ROAM_HOLD > ROAM_TO then
+        emu:setKeys(0)
+        log(string.format(
+            "[ROAM] dir=%s BLOCKED f=%d at=(%d,%d) map=%d:%d ⇒ 换下一方向",
+            dir, fr, x, y, g, n))
+        ROAM_SEQI = ROAM_SEQI + 1
+        ROAM_LEFT = ROAM_STEPS
+        ROAM_HOLD, ROAM_BLOCK = 0, 0
     end
     return true
 end
@@ -1333,6 +1481,9 @@ advance = function(fr)
     elseif st.act == "tap_if" then
         -- 条件按键也要先等画面稳定，否则可能在上一个界面的过渡帧里判条件
         settle_begin("tap_if", fr)
+    elseif st.act == "roam" then
+        -- roam 自己逐帧管方向与撞墙，不需要 settle
+        roam_begin(st, fr)
     else
         settle_begin(st.act .. (st.name and (":" .. st.name) or ""), fr)
     end
@@ -1388,6 +1539,9 @@ callbacks:add("keysRead", function()
 
     -- ①' 遇敌搜捕进行中：由它接管本帧（逐帧判 DISPCNT，一遇敌就 advance）
     if hunt_step(fr) then return end
+
+    -- ①'' 跨图漫游进行中：只按方向推进，不依赖绝对坐标
+    if roam_step(fr) then return end
 
     -- ①'' burst 进行中：由它接管本帧（数帧、拍、到点收尾并 advance）
     if burst_step(fr) then return end

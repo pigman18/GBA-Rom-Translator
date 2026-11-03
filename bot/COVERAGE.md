@@ -439,6 +439,35 @@ prove → poke 钉 gRngValue(0x03004818)=0x0000AAAA → hunt → await{any_of={0
 
 ## 4. 重写 text 引擎后的回归流程
 
+### 4.0 ★ 先看基线（2026-11-04 建立）
+
+**119 个场景、32816 帧跑完完整 verify 后，分级：A=83 / B=25 / C=9。**
+
+完整基线与判据误报的证据在 [`docs/BASELINE_SCENES.md`](../docs/BASELINE_SCENES.md)。
+
+**关键认知：verify 的失败不等于汉化有问题。** 三类实测结论：
+
+| 判据 | 是真是假 | 实测证据 |
+|---|---|---|
+| `g_collide` | **误报** | `center_mauville` 第 5 帧相似度 0.9949 仍判 fail，块仅 16/14/2 px；放大对比发现是**同一 NPC 站立动画的两帧**（帽子差 1-2px） |
+| `g_garble` | **误报** | 判据查「origin 全局不存在的颜色」，但汉字笔画密度远高于假名，抗锯齿天然产生新色。A 级场景平均 60-73 帧被误判，而 `s_scene=0` |
+| `s_scene` | **真问题，但根因是采集方法** | 汉字用 F9 双字节、假名单字节 ⇒ 同句 translated 的 text index 约是 origin 的 **2 倍**（实测 105 vs 53）⇒ `talk` settle 时长不同 ⇒ 后续按键落在不同状态 ⇒ 走位分岔 |
+
+> 改进方向（未做）：让 `talk` 按「文本 index 停止变化」收尾，而不是固定帧数等待。
+
+**所以验收看什么**：
+
+```powershell
+python scripts/run_verify_batch.py --all --skip-done   # 采集
+python scripts/build_baseline.py                       # 生成基线
+python scripts/show_baseline.py C                      # 看 C 级有没有变多
+```
+
+判断标准不是「有没有 fail」，而是**分级分布有没有变差**、
+**A 级场景有没有掉到 B/C**。
+
+---
+
 1. 打包 → `roms/outputs/POKEMON_RUBY_AXVJ00_translated.gba`
 2. 逐场景采集：`python bot/run.py POKEMON_RUBY_AXVJ00 <scene> --verify`
 3. 看 `verdict.md`：`fail` 帧 + 可疑块 bbox 直接定位到像素

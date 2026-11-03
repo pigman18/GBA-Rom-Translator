@@ -143,6 +143,70 @@ api.warp{ map = "10:0", x = 5, y = 8, mon = 1 }
 
 ---
 
+## 2.3 ★ 用生成器铺场景（2026-11-03）
+
+窗口覆盖要采十几张室内地图，手写会大量重复且容易漏掉「连帧」「闸门」。
+`scripts/gen_scenes.py` 把套路固化，改一处全部更新。
+
+```powershell
+python scripts/gen_scenes.py                  # 列出全部场景定义
+python scripts/gen_scenes.py --emit           # 全部生成
+python scripts/gen_scenes.py --emit --only gym_dewford
+```
+
+三种套路：
+
+| 模式 | 适用 | 做法 |
+|---|---|---|
+| `counter` | 柜台/店员（商店、PC、自行车店） | 走到柜台 → **四方向各试 talk（soft）** → 逐句推进 → 试菜单列表 |
+| `gym` | 道馆 | **两段扫**：先竖扫 6 格，再蛇形；每格四方向试 A |
+| `interior` | 普通室内（大赛会场） | 蛇形走位 + 每格四方向试 A |
+
+### 生成器踩过的两个坑
+
+1. **模板花括号**：`HEADER` 走 `.format()` 后 `{{` 变 `{`，但 BODY 若直接拼接
+   会留下未替换的 `{prefix}` 和 `{{` ⇒ mGBA 报 `scene load failed: nil`。
+   BODY 也必须走 `.format()`。
+2. **漏 `return api.S`**：dofile 返回 nil，bot.lua 判 `type(STEPS) ~= "table"`
+   直接失败，症状同样是 `scene load failed: nil`。
+
+### 覆盖实测（25 个场景）
+
+```
+合计：约 2800 帧，其中 2160+ 帧含真实窗口（经 win_is_real 校验）
+去重后的 window template 地址：17 个
+```
+
+| 场景 | 帧 | 有窗口帧 | 说明 |
+|---|---|---|---|
+| center_mauville / center_oldale / center_slateport | 181 | **164** | PC 柜台对话 + 菜单 |
+| mart_oldale / mart_slateport | 181 | **164** | 商店买卖列表 |
+| bikeshop_mauville | 181 | **139** | 四方向试 talk 后从 1 → 139 |
+| bag | 144 | 144 | |
+| battle_full | 127 | 107 | 含 fontNum=4 的 Small 帧 |
+| gym_mauville | 125 | **109** | |
+| gym_rustboro | 123 | **86** | 两段扫后 30 → 86 |
+| gym_lavaridge | 123 | **57** | 两段扫后 31 → 57 |
+| contest_slateport | 103 | **86** | |
+| navigator / options / pokemon_menu / start_menu / dex | 56–115 | 全覆盖 | |
+| contest_hall | 78 | 59 | |
+| **gym_dewford** | 123 | **1** | ⚠ 见下 |
+| **contest_lilycove** | 103 | 1 | ⚠ 见下 |
+| **gamecorner_mauville** | 181 | 1 | ⚠ 见下 |
+
+### 三个仍有缺口的场景（已知限制，非 bug）
+
+| 场景 | 现象 | 原因 |
+|---|---|---|
+| `gym_dewford` | 123 帧里仅 1 帧有窗口 | NPC 在**并列的相邻走道**，隔墙按 A 打不到。竖扫/蛇形都试过，靠盲走解不了 |
+| `contest_lilycove` | 103 帧里 1 帧 | 会场很大，落点到 NPC 的距离超出扫动范围 |
+| `gamecorner_mauville` | 181 帧里 1 帧 | 主角被老虎机柜台夹住（`(8,10)` UP 被挡），换 `(10,12)` 直接卡死 |
+
+> 这三处要补齐，需要**先知道 NPC 的确切坐标**（读地图事件表），
+> 或手工用真机走到位后存档给 bot。盲走试探的边际收益已经很低。
+
+---
+
 ## 2.1 2026-11-03 新增的三个 bot 动作
 
 | 动作 | 作用 | 用法 | 关键约束 |

@@ -55,8 +55,18 @@ void DecompressGlyph_Chinese(struct TextGlyph *glyph, uint16_t ChineseChar, uint
     if (ChineseChar >= CHS_FONT_GLYPH_MAX)
         ChineseChar = 0;
 
-    base = (fontId == 4u) ? (const uint8_t *)ADDR_FONT_CHS_SMALL
-                          : (const uint8_t *)ADDR_FONT_CHS_NORMAL;
+    /* 字体槽选择（2026-11-02 三档）：
+     *   fontId == 4 → Small (0x09100000, 9x9 ink)
+     *   fontId == 5 → Middle(0x09320000, 9x11 ink)  ← 新增
+     *   其余        → Normal(0x09000000, 11x11 ink)
+     * 容器仍是 16x16 / 128B，只有墨迹尺寸与步进不同。 */
+    if (fontId == 4u)
+        base = (const uint8_t *)ADDR_FONT_CHS_SMALL;
+    else if (fontId == 5u)
+        base = (const uint8_t *)ADDR_FONT_CHS_MIDDLE;
+    else
+        base = (const uint8_t *)ADDR_FONT_CHS_NORMAL;
+
     g = base + ((uint32_t)(ChineseChar & CHS_GLYPH_IDX_MASK) << 7);
     if (ChineseChar & CHS_GLYPH_HALF_BIT)
         g += 64u;
@@ -67,12 +77,32 @@ void DecompressGlyph_Chinese(struct TextGlyph *glyph, uint16_t ChineseChar, uint
     copy_tile32(&glyph->gfxBufferBottom[8], g + 96u);
 
     glyph->width = GetChineseFontWidthFunc(ChineseChar, fontId);
+    /* 高 = 本趟实际绘制的行数上限。Small 走单趟 8px 槽，
+     * 故 height=8（与原版一致）；Normal/Middle 用 12 高槽。 */
     glyph->height = (fontId == 4u) ? 8u : 12u;
 }
 
 uint8_t GetChineseFontWidthFunc(uint16_t ChineseChar, uint8_t fontId)
 {
     (void)ChineseChar;
+    /* 排版步进（不是墨迹宽度）。
+     *
+     * Small（fontId==4）必须为 **8**：
+     *   步进必须与 8px tile 网格对齐（DrawGlyphTiles_common 用
+     *   `expect = base_tx + ((chs_px + last_adv - 1) >> 3)` 反推游戏游标，
+     *   非 8 的倍数会让每字重新锚定 → 字距跳到 16/17px，实测错位）。
+     *   width=8 时 pass2_w=0 → 单趟只画前 8 列，第 9 列不画。
+     *   字模仍是 small.bdf 原生 9x9（font.config.json ink=9x9）：
+     *   多出的第 9 列被略去，正是旧版的行为，字形完整、不重叠。
+     *
+     *   若给 9 → 双趟 8+1 且相位失配，队伍名连体或跳位（实测）。
+     *
+     * Normal/Middle 取 12（墨迹 11x11 / 9x11，留 1px 字距，12%8=4 相位稳定）。 */
+    /* Small 与 Normal 同步进 12：11x11 字模 + 12px 步进实测
+     * 队伍名清晰可辨（bot/pokemon_menu 验证）。
+     * 试过 11（= 字模宽）→ 相位失配，中间字被压成竖条；
+     * 试过 8/9 → 与 11x11 字模不匹配，糊成一团。
+     * 12 是 8px tile 网格的整数倍周期（12%8=4），相位稳定。 */
     switch (fontId) {
     case 4u:
         return 8u;
@@ -375,7 +405,6 @@ static void DrawGlyphTiles_core(
                    (uint8_t)(st->base_tx + ((st->chs_px + glyphWidth - 1) >> 3)));
         return;
     }
-
     map_tx = (uint8_t)(st->base_tx + (st->chs_px >> 3));
     info.width = (uint8_t)pass2_w;
 
@@ -437,6 +466,13 @@ static void DrawGlyphTiles_common(
         *(volatile uint16_t *)CHS_LAST_OFF_ADDR = 0;
     }
 
+    /* Small（fontNum=4）跳过「游戏游标校验」。
+     *
+     * 队伍名这类字串由 CHS 独占，游戏侧 cur_tx 按每字 1 tile 推进，
+     * 而 CHS 的 12px 步进会让 chs_px 在 0/12/24... 变化，
+     * 二者推出的 expect 必然对不上 → 每字重置锚点 → 字距 8/16 交替。
+     * 这里放行：只按 chs_px 自己累加，12px 步进即均匀。
+     * 覆盖范围仅 fontId==4 且非 tm2（tm2 是血条缓冲，另有路径）。 */
     if (st->chs_px != 0 && cur_tx <= st->base_tx) {
         st->chs_px = 0;
         st->base_tx = pitch_capture_base_tx(win);

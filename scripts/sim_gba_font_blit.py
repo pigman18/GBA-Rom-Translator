@@ -395,7 +395,7 @@ def main() -> None:
     ap.add_argument(
         "--bdf",
         type=Path,
-        default=Path(r"C:\code\gba\fonts\ark-pixel\12px-monospaced\ark-pixel-12px-monospaced-zh_cn.bdf"),
+        default=Path("configs/POKEMON_RUBY_AXVJ00/fonts/normal.bdf"),
     )
     ap.add_argument("--out-dir", type=Path, default=out_default)
     ap.add_argument("--color-c", type=int, default=DEFAULT_C)

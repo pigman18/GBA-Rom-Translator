@@ -71,6 +71,9 @@ PhraseTableVMA                          equ 0x08820000  ; C: ADDR_PHRASE_TABLE
 FontChsNormal                          equ 0x09000000  ; C: ADDR_FONT_CHS_NORMAL
 ; 8px 小汉库（meowth 管线生成，与 Normal 同 128B/字 容器；队伍名等小字窗使用）
 FontChsSmall                           equ 0x09100000  ; C: ADDR_FONT_CHS_SMALL
+; 中汉库（9x11 墨迹，2026-11-02 新增第 4 槽；源 middle.bdf）
+; 落点 0x09320000 在原版 8MB ROM 之外，且与 Sym/SlotTable/tiles 均不重叠。
+FontChsMiddle                          equ 0x09320000  ; C: ADDR_FONT_CHS_MIDDLE
 ; FontFunc[1] 二级分发表 / font1/4 配对表（文档参考）
 FontSubTable                           equ 0x081BB3BC  ; C: ADDR_FONT_SUBTABLE
 FontType1Map                           equ 0x081B34A8  ; C: ADDR_FONT_TYPE1_MAP

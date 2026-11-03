@@ -1,0 +1,26 @@
+{
+  "schema": 1,
+  "gameId": "POKEMON_RUBY_AXVJ00",
+  "note": "场景 → 默认存档。run.py 在没有 --save 时读这里；两侧仍然共用同一份文件。",
+  "why": {
+    "Route118_68-7.sav": "野外起点，系统菜单类场景（背包/宝可梦/领航员…）都用它",
+    "MauvilleCity_Mart_3-3.sav": "室内商店：对话/多窗口场景必须用它 —— 野外草丛按 A 会触发野生遭遇，RNG 让两侧分岔，对照失效",
+    "OldaleTown_PokemonCenter_1F_5-5.sav": "⚠ 实测这份存档载入后角色仍在 Route118 地形上（warp 未生效），暂不可用于室内场景"
+  },
+  "scenes": {
+    "selfcheck": "Route118_68-7.sav",
+    "start_menu": "Route118_68-7.sav",
+    "title_menu": "Route118_68-7.sav",
+    "options": "Route118_68-7.sav",
+    "bag": "Route118_68-7.sav",
+    "dex": "Route118_68-7.sav",
+    "pokemon_menu": "Route118_68-7.sav",
+    "trainer_card": "Route118_68-7.sav",
+    "navigator": "Route118_68-7.sav",
+    "battle": "Route118_68-7.sav",
+    "dialogue": "MauvilleCity_Mart_3-3.sav",
+    "shop": "MauvilleCity_Mart_3-3.sav",
+    "_probe_talk": "MauvilleCity_Mart_3-3.sav",
+    "_probe_use": "Route118_68-7.sav"
+  }
+}

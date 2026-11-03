@@ -30,7 +30,7 @@
 | P01 | `0x080032F8` | `ldr r1,=(JP2CHS_Entry\|1); bx r1`（6B+pool，r0=win 原样进 C） | JMP | **全面接管**（Phase C 换装）：原生 PrintNextChar 整函数替换——FA-FF 控制码 + FC 子类型 1-16 + EF/F9/slot/可印字形全由引擎消化，零回落 FontFunc；返回值契约 docs/ruby_jp_text.md §六A。2026-08-24 收敛后为文本域唯一 ROM hook（P02/P05 移除、P05 折入本钩 FA/FB 分支）；入口跳板=`hook/src/entry.s` EngineEntry | `src/text.c` `PrintNextChar()`（AXVJ 同名函数入口；引擎=`hook/src/text.c`） |
 | ~~P02~~ | `0x08003730` | （已移除 2026-08-24）原：`push {r4}; ldr r4,=(GetGlyphTilePointers_Hook\|1); bx r4` | ~~JMP~~ | **已移除**（只 hook PrintNextChar 收敛）：CHS 字模取址收归 `text.c` 内部 `static GetGlyphTilePointers`；原生函数恢复原样由 `chs_get_glyph_tile_pointers` 直调。ID 永不复用 | `src/text.c` `GetGlyphTilePointers()`（美版多 language 参数，日版 4 参） |
 | ~~P05~~ | `0x08003F4C` | （已移除 2026-08-24）原：`ldr r3,=(WaitArrow_Prepare_Hook\|1); bx r3` 回落主体 `0x08003DAD` | ~~JMP~~ | **已移除并折入 P01**：相位同步逻辑进 `text.c static DrawInitialDownArrow`（pokeruby 同名），FA/FB 分支直调；反汇编实证原生包装 ≡ `win[6]=0 + 尾调 0x08003DAC`，等价成立。ID 永不复用 | `src/text.c` FA/FB 等 A 箭头绘制段（DrawInitialDownArrow 同名折入） |
-| P24 | `0x08002A50` | `ldr r3,=(GlyphIwtdTramp|1); bx r3`（6B+pool，覆盖原 prologue 前 4 条指令） | JMP | **InitWindowTileData 页游标复位**：多帧字库加载 worker（gdb 采集 2656 命中实证 JP=US 同址）入口改跳 entry.s GlyphIwtdTramp 跳板——保存全现场、调 text.c InitWindowTileData_Hook（复位该 tilemap 的 CHS 页游标：窗体初始化=旧文本作废，跨场景累积清零，修能力/技能/开始菜单回绕互踩）、恢复现场、重执行被覆盖的 4 条 prologue、落回 0x2A58 原函数体（字库加载不受影响）。ARMv4T 远调用惯用法（mov lr,pc+bx，无 blx） | src/text.c InitWindowTileData()（AXVJ 同址同构，256 字模分帧加载） |
+| ~~P24~~ | `0x08002A50` | （**2026-08-25 已移除**，ROM 该址保持原版 `70 b5 82 b0 04 1c…`） | ~~JMP~~ | **已移除**：页游标表落 `0x0203FFD2` 撞游戏数据区 → 背包/队伍死机（PC=0x00000004 实证）。`entry.s` 的 `GlyphIwtdTramp` 与 `src/text/hook_origin.s` 桩同步删除；`game_addrs.asm` 的 `InitWindowTileData` equ 仅作文档参考、**不再订址**。ID 永不复用。原设计（供考古）：**InitWindowTileData 页游标复位**：多帧字库加载 worker（gdb 采集 2656 命中实证 JP=US 同址）入口改跳 entry.s GlyphIwtdTramp 跳板——保存全现场、调 text.c InitWindowTileData_Hook（复位该 tilemap 的 CHS 页游标：窗体初始化=旧文本作废，跨场景累积清零，修能力/技能/开始菜单回绕互踩）、恢复现场、重执行被覆盖的 4 条 prologue、落回 0x2A58 原函数体（字库加载不受影响）。ARMv4T 远调用惯用法（mov lr,pc+bx，无 blx） | src/text.c InitWindowTileData()（AXVJ 同址同构，256 字模分帧加载） |
 
 ### B. 战斗
 
@@ -77,12 +77,12 @@
 
 | 官方地址 | AXVJ 符号 | pokeruby 对应 | C 层调用者 |
 |---|---|---|---|
-| `0x08003730` | GetGlyphTilePointers | text.c 同名 | chs_get_glyph_tile_pointers（JP 字模取址） |
-| `0x08003830` / `0x080038A0` | CopyGlyph1bppTo4bpp / CopyGlyph2bppTo4bpp | text.c 同名辅助 | 颜色重映射 |
-| `0x080036DC` | UpdateTilemap | text.c tilemap 更新 | chs_update_tilemap |
+| `0x08003730` | GetGlyphTilePointers | text/ 同名 | `text_render.c` 内取址（JP 字模） |
+| `0x08003830` / `0x080038A0` | CopyGlyph1bppTo4bpp / CopyGlyph2bppTo4bpp | text/ 同名辅助 | 颜色重映射 |
+| `0x080036DC` | UpdateTilemap | text/ tilemap 更新 | `text_render.c` |
 | `0x0806F16C` | Menu_PrintText | `src/menu.c` Menu_PrintText | option/dex hook 组串后委托 |
 | `0x0800436C` | StringLength | `src/string_util.c` | （弹窗原路径用） |
-| `0x08004228` / `0x08004530` | GetGlyphWidth / GetStringWidth | text.c 同名 | ⚠️ 未接线；且 0x04228 有「实为 spacing 表」的争议记录，见 GetGlyphWidth_hook.c 头注 |
+| `0x08004228` / `0x08004530` | ~~GetGlyphWidth / GetStringWidth~~ | — | ⚠️ **AXVJ 无此二函数，已定论不再订址**（2026-08-22）：`0x08004228` 实为 `{u32,u32}` 表查映射（表@0x081BB8D4，6 callers）；`0x08004530` 实为 FA~FF 控制码字符串展开复制（125 callers）。日版步进由 FontFuncTable 各处理器硬编码。美版 US=0x080048E8/0x08004BCC。 |
 | `0x081BB3AC` / `0x081B12DC` | FontFuncTable / CallViaR2 | lib 工具段 | PrintNextChar 回落官方 FontFunc |
 | `0x081B1294` | CpuSet | crt0/lib 工具段 | 血条遮罩（池常量被 P03 改短） |
 
@@ -94,47 +94,88 @@
 4. **P19~P23 共用一个常量**：DEX_NAME_COLUMN 定义在 game_addrs.asm，改值即可全局调整。
 5. 死代码：旧引擎死代码 GetGlyphWidthHook / GetStringWidthChinese 已随 2026-08-24 收敛彻底消失（text.c 内部化后 nm 无残留）；现存 HealthboxNickCpuset*（仅导出常量，占 game.bin 空间不影响运行）。
 
-## 4. 已实施的拆分结构（2026-08-22）
+## 4. 已实施的拆分结构（2026-08-22；2026-11-02 校正为现状）
+
+> 实际结构以 `configs/POKEMON_RUBY_AXVJ00/hook/README.md` §1 为准（本节已同步）。
+> 文本引擎已由单文件 `src/text.c` 拆为 `src/text/` 四文件（2026-08-24 收敛）。
 
 ```
 hook/
 ├── main.asm                        # 纯装配骨架：open/include 清单/game.bin/fonts/slot 表
 ├── game_addrs.asm                  # 纯 equ 唯一来源（未动）
+├── build.bat                       # Windows 构建（权威）
+├── Makefile                        # WSL 构建（⚠️ 源清单过时，见 §4 末尾说明）
 ├── patches/                        # 【纯值补丁】就地指令/数据改写，无 C 依赖
-│   ├── ui_starter.asm              # P06 P09 P10 P11 P12（初始宠 label 整组）
-│   ├── ui_pss.asm                  # P17 P18（PSS 图标列）
-│   ├── ui_dex.asm                  # P19~P23（图鉴名字列 ×5）
-│   └── clean_suffix.asm            # P13–P16（ひき→只 / こ→个，F9 cave）
+│   ├── player.asm                  #   玩家名/性别
+│   ├── player_pc.asm               #   PC 玩家名
+│   ├── initialpoke.asm             # P06 P09 P10 P11 P12（初始宠 label 整组）
+│   ├── pokedex.asm                 # P19~P23（图鉴名字列 ×5）
+│   ├── start_menu.asm              #   开始菜单
+│   └── ui_pss.asm                  # P17 P18（PSS 图标列）
+├── reference/                      # 官方 pokeruby/pokeemerald 移植件（参与 gcc）
 └── src/
-    ├── entry.s                     # P01 跳板（EngineEntry，链接首位 = game.bin 起点）
-    ├── hooks_origin.s              # P01（订址桩；逻辑在 src/text.c，只 hook PrintNextChar）
-    ├── text.c                      # 文本引擎（2026-08-24 由 text_ruby_jp.c 改名收敛）
+    ├── text/                       # 【文本引擎域】
+    │   ├── entry.s                 #   P01 跳板（EngineEntry，链接首位 = game.bin 起点）
+    │   ├── hook_origin.s           #   P01 订址桩（只 hook PrintNextChar）
+    │   ├── PrintNextChar_hook.c    #   引擎主体
+    │   ├── text_translter.c        #   F9 协议层 / PhraseTable 查找
+    │   ├── text_render.c           #   共享绘制原语（GlyphScratchRange/页游标）
+    │   └── text_scene.c            #   场景布局闸
     ├── map_name_popup/             # P04 三件套（entry.s / MapNamePopup_hook.c / hooks_origin.s）
-    ├── battle/hooks_origin.s       # P03（池常量；原 UpdateNickInHealthbox_hook_origin.s 改名）
-    ├── pokedex/hooks_origin.s      # P07
-    ├── option/hooks_origin.s       # P08
-    └── bak/text/                   # 旧多文件引擎归档（2026-08-24，不参与构建）
+    ├── battle/                     # P03 池常量 + UpdateNickInHealthbox_{entry.s,_hook.c}
+    ├── pokedex/                    # P07 + UnusedPrintMonName_{entry.s,_hook.c}
+    └── option/                     # P08 + DrawOptionMenuChoice_{entry.s,_hook.c}
 ```
 
 分层规则：
 - **纯值**（改指令/数据，无逻辑）→ `patches/{类名}.asm`
-- **复杂钩**（需要 C 逻辑/寄存器编组）→ `src/{类名}/entry.s` 钉跳板 + `src/{类名}/*_hook.c` 逻辑，
-  ROM 侧订址桩统一放 `src/{类名}/hooks_origin.s`（armips include，不进 gcc）
+- **复杂钩**（需要 C 逻辑/寄存器编组）→ `src/{域}/{Name}_entry.s` 钉跳板 + `src/{域}/{Name}_hook.c` 逻辑，
+  ROM 侧订址桩统一放 `src/{域}/hooks_origin.s`（armips include，不进 gcc）
 
-### 已验证
+> ⚠️ **`Makefile` 当前不可用**：其 `OBJS` 仍引用 `src/text.c`、`src/chinese_text.c`、
+> `src/text_translate.c`（均已不存在）与 `src/entry.s`（已移入 `src/text/`）。
+> 在补齐为新四文件结构前，构建一律以 **`build.bat`** 为准（该脚本的 6 个漏编 obj 已于
+> 2026-11-02 修复，实测 `game.bin` 15452B 构建通过）。
+
+### 已验证（2026-11-02 在原版 AXVJ 上重测）
 
 | 项 | 结果 |
 |---|---|
-| 整理前后 game.bin | md5 一致 `a7fd0038aafb8ff1ea3be5586112b1f9`（纯移动，零语义变化） |
-| armips 全量装配 | exit=0，output.gba 32,131,389B |
-| 六个订址桩字面量 | 全部命中回滚后 syms 地址 ✅ |
-| P03 血条池 | 0x04000006 ✅ |
+| 订址点原版字节 | 16 处逐一核对通过（PrintNextChar `10 b5 04 1c…`、InitWindowTileData `70 b5 82 b0…`、P04 `64 f7 75 fe…` 等） |
+| FontFuncTable 7 项 | `08003569 / 0800360D / 0800338D / 08003495 / 08003585 / 080035A1 / 080035C9`，与文档一致 |
+| `build.bat` 全量编译 | 15 个 obj 全过，`out/game.bin` 15452B |
+| 成品 ROM hook 落地 | P01/P04/P07/P08 桩全部命中；P03 三池 `0x04000006`；`game.bin` 嵌入一致 |
+| PhraseOffsets 位宽 | u32 单调递增（`0x0 / 0x9 / 0x12 / 0x1b`），符合 DONT#12 |
 
 ### 踩坑记录（重要）
 
 1. **armips 不认 GNU as 的 `@` 行注释**——且不是报错，是**静默崩溃 exit=9 无任何输出**。
    armips 侧文件注释一律用 `;`；`@` 只允许出现在 gcc 汇编（GNU as）文件里。
-2. **WSL 调 Windows 控制台 exe 必须重定向 stdin**（`</dev/null`），否则永久阻塞。
+2. **armips 不能在 `hook/` 原地跑**：`main.asm` 的 `.loadtable "./charmap.txt"` 与
+   `.include "./graphic/fonts.s"`、`.include "./gen/translated_slot.asm"` 都依赖
+   `font_patch.apply_font_patch()` 组装出的 staging 目录（`work/{game}/build/`），
+   由它复制 charmap、生成 fonts.s、落 phrase_data。直接 `cd hook && armips main.asm`
+   会以 `charmap.txt / graphic\fonts.s does not exist` 中止——**这是正常现象，不是缺陷**。
+3. **WSL 调 Windows 控制台 exe 必须重定向 stdin**（`</dev/null`），否则永久阻塞。
    tools/wsl-bin/ 三个包装器已内置；新加包装器务必照抄这一行。
-3. Makefile 已修复：16 个 obj 补齐 + text_entry.o 链接首位规则 + CR 安全 grep +
-   6 符号 syms 输出（与 build.bat 对齐）。
+4. `build.bat` 曾漏编 3 个域共 6 个 obj（battle/pokedex/option），链接期才报
+   `cannot find UpdateNickInHealthbox_entry.o`。已修（2026-11-02）。
+5. **流水线不自动编译 C（重要）**：`font_patch.apply_font_patch()` 只是把
+   `hook/out/game.bin` **现有文件**复制进 staging 再用 armips 嵌入，**不会调用
+   `build.bat`**。所以：
+   - 改了 `hook/src/**` 后，**必须先跑 `build.bat`，再打包**，否则打进 ROM 的是旧引擎；
+   - 它会做 `_verify_game_bin_embedded()` 校验，但校验的是「ROM 里的 == 刚才复制的那个
+     game.bin」，**不校验该 bin 是否由当前源码编出**——源码与 bin 脱节时静默通过。
+   - 2026-11-02 实测踩到：仓库里遗留的旧 `out/game.bin`（trampoline 目标
+     `0x08800159`）被静默打包；重跑 `build.bat` 后应为 `0x08800165`。
+   - **自检**：打包后确认 `struct.unpack_from('<I', rom, 0x800004)` 等于
+     `out/game.map` 里 `EngineEntry`/首个符号的地址。
+6. **`reference/` 已移除（2026-11-02）**：`hook/reference/` 的
+   `pokeemerald/copy_glyph_to_tiles.c` 与 `pokeruby/draw_glyph_tile.c` 编译后只提供 5 个
+   `ref_glyph_copy` / `ref_fill_rect4bit` / `refpr_*` 全局符号，**全仓无任何调用者**
+   （纯死代码，原占 `.text 0x161C + .rodata 0x3E8` ≈ 8KB）。绘制原语早已内联在
+   `src/text/text_render.c`。移除后 `game.bin` 由 15452B → 8840B。
+7. **字体来源单一化（2026-11-02）**：唯一来源是
+   `configs/<game>/fonts/{normal,middle,small}.bdf`；仓根 `fonts/`（224MB / 95 文件）
+   已删除并入 `.gitignore`，`engine.py` 不再回退扫描它。四套字库由
+   `font.config.json` 的 `font_slots[].bdf` + `[].ink` 逐槽指定。

@@ -12,7 +12,8 @@
 
 Build 会：打字库、按 **翻译模块** 注入（默认安全集 `ui+script_early+ime`，见 [`MODULES.md`](MODULES.md)）、Geo 地址带可选收窄、保护标题 logo 类。  
 扩展剧本/名表在 GUI **勾选模块**（或 `MEOWTH_AXVJ_MODULES`）并验收，禁止写死剧情名单。  
-每次 Build 写入 `<rom>.gba.build.json`（含 `modules`）与 `build_history.jsonl`，见 [`BUILD_VERSION.md`](BUILD_VERSION.md)。  
+每次 Build 写入 `<rom>.gba.build.json` 与 `build_history.jsonl`（产物内省入口；
+`BUILD_VERSION.md` 在当前仓库中**不存在**，字段以实际 json 为准）。  
 工作目录自动为输出目录同级的 `work\`（会合并其中已有的 `texts_translated.json`，避免重跑丢译文）。
 
 「仅词库/种子」只适合调试字库；勾了剧情会大量留日文。
@@ -23,7 +24,10 @@ Build 会：打字库、按 **翻译模块** 注入（默认安全集 `ui+script
 
 权威说明：[`MODULES.md`](MODULES.md) + Cursor 规则 `axvj-funnel-no-hardcode`。
 
-注入规则集中在 [`src/meowth/axvj_modules.py`](../src/meowth/axvj_modules.py)（勾选划分）+ [`axvj_policy.py`](../src/meowth/axvj_policy.py)，**从粗到细（大→小）**，禁止在 `rom_writer` / extract 再堆平行特例与剧情地址名单：
+注入规则集中在 [`src/meowth/policy.py`](../src/meowth/policy.py)（S0–S6 漏斗 + 域规则），**从粗到细（大→小）**，禁止在 `rom_writer` / extract 再堆平行特例与剧情地址名单：
+
+> 历史注：早期文档引用的 `src/meowth/axvj_modules.py`、`axvj_policy.py`、`funnels.py`
+> 均已收编进 `policy.py`（`funnels.py` 仍在，作漏斗原语）。`--modules` CLI 参数已废弃。
 
 | 级 | 只回答 | 要点 |
 |----|--------|------|
@@ -38,8 +42,11 @@ Build 会：打字库、按 **翻译模块** 注入（默认安全集 `ui+script
 | Version | 产物是谁？ | `.build.json` / 补丁树哈希 |
 
 字库补丁：`main.asm` + `out/game.bin` + `game_addrs.asm`；源码 `hook/src/`（`game.h` + `text/PrintNextChar/`）。  
-构建需 **arm-none-eabi-gcc**；见 [`HOOKS.md`](../configs/docs/HOOKS.md)。  
-布局与踩坑记录见 [`configs/POKEMON_RUBY_AXVJ00/docs/CHS_TILE_LAYOUT.md`](../configs/POKEMON_RUBY_AXVJ00/docs/CHS_TILE_LAYOUT.md)。  
+构建需 **arm-none-eabi-gcc**；hook 目录组织见 [`hook/README.md`](../configs/POKEMON_RUBY_AXVJ00/hook/README.md)
+（早期引用的 `configs/docs/HOOKS.md` 在本仓**不存在**）。
+布局与踩坑记录见 [`hook/README.md` §10](../configs/POKEMON_RUBY_AXVJ00/hook/README.md) 与
+[`FONT_12PX_DRAW.md`](FONT_12PX_DRAW.md)
+（早期引用的 `configs/POKEMON_RUBY_AXVJ00/docs/CHS_TILE_LAYOUT.md` 在本仓**不存在**）。  
 **不** hook ClearWindow / StringLength / TitleMenu。
 
 ## 多游戏注册表
@@ -70,4 +77,8 @@ Build 会：打字库、按 **翻译模块** 注入（默认安全集 `ui+script
 
 **翻译范围：** 凡日文能纳入的都译；**仅**起名输入法五十音格保留日文。强制留日名单见 `configs/POKEMON_RUBY_AXVJ00/translate/README.md`（性别主文、起名主文、选宠两条 FC 精确串等）。短标签「男孩/女孩」、时钟是/否合串走 lexicon。交付只走 `start_gui.bat` 正统流程，勿手改成品 ROM。
 
-**回归门禁：** `scripts/check_axvj_regressions.py` — 漏斗 oracle（关键 UI 含 `F9`；title/gfx 指针不得拐进 expansion）。
+**回归门禁**：⚠️ 早期本文引用的 `scripts/check_axvj_regressions.py` 在当前仓库中**不存在**。
+现行回归入口是 **`scripts/verify_output_rom.py`**（静态字节核对，不启模拟器）：
+- 流水线基线：`7297 replaced / 2221 relocated / 0 skipped`（原版 AXVJ，`--seed-only`）
+- 产物核对项：P01/P04/P07/P08 订址桩命中、P03 三池 `0x04000006`、
+  `game.bin` 嵌入一致、PhraseOffsets u32 单调、SlotTable `SLT2`、字库非空

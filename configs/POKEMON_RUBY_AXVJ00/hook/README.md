@@ -10,26 +10,44 @@ hook/
 ├── main.asm                  # 【骨架】只做装配，禁止再堆 .org 补丁
 ├── game_addrs.asm            # 【地址唯一事实来源】所有 equ 在此定义
 ├── patches/                  # 【纯值补丁】armips 就地改写，无 C 依赖
-│   ├── ui_starter.asm        #    文件名 = {域}_{对象}.asm，小写下划线
-│   ├── ui_pss.asm
-│   ├── ui_dex.asm
-│   └── clean_suffix.asm
+│   ├── player.asm            #    玩家名/性别
+│   ├── player_pc.asm         #    PC 玩家名
+│   ├── initialpoke.asm       #    P06 P09 P10 P11 P12 初始宠 label 整组
+│   ├── pokedex.asm           #    P19~P23 图鉴名字列 ×5
+│   ├── start_menu.asm        #    开始菜单
+│   └── ui_pss.asm            #    P17 P18 PSS 图标列
 ├── src/                      # 【复杂钩子】gcc 编入 out/game.bin + armips 订址桩
-│   ├── entry.s               #    gcc：引擎入口跳板 EngineEntry（链接首位约束）
-│   ├── hooks_origin.s        #    armips：文本引擎订址桩（只 hook PrintNextChar/P01）
-│   ├── text.c                #    gcc：JP 全面接管引擎（2026-08-24 由 text_ruby_jp.c 改名；
-│   │                         #        除 PrintNextChar 与 GetStringWidth_PCS 全部 static）
+│   ├── text/                 #    文本引擎域（2026-08-24 由单文件 text.c 拆分）
+│   │   ├── entry.s           #      P01 跳板 EngineEntry（链接首位约束）
+│   │   ├── hook_origin.s     #      P01 订址桩（armips 侧，只 hook PrintNextChar）
+│   │   ├── PrintNextChar_hook.c  #  引擎主体（接管日版打印）
+│   │   ├── text_translter.c  #      F9 协议层 / PhraseTable 查找
+│   │   ├── text_render.c     #      共享绘制原语（GlyphScratchRange / 页游标）
+│   │   └── text_scene.c      #      场景布局闸
 │   ├── map_name_popup/       #    P04 地名弹窗域三件套
 │   │   ├── entry.s           #      跳板 MapName_DisplayCellLength
 │   │   ├── MapNamePopup_hook.c
 │   │   └── hooks_origin.s
-│   ├── battle/hooks_origin.s #    同上；另有 {Name}_entry.s + {Name}_hook.c 成对
-│   ├── pokedex/hooks_origin.s
-│   ├── option/hooks_origin.s
-│   └── bak/text/             #    旧多文件引擎归档（2026-08-24，不参与任何构建）
+│   ├── battle/               #    P03 池常量 + 复杂钩三件套
+│   │   ├── hooks_origin.s    #      池字面量 0x04000008→0x04000006
+│   │   ├── UpdateNickInHealthbox_entry.s
+│   │   └── UpdateNickInHealthbox_hook.c
+│   ├── pokedex/              #    P07 三件套
+│   │   ├── hooks_origin.s
+│   │   ├── UnusedPrintMonName_entry.s
+│   │   └── UnusedPrintMonName_hook.c
+│   └── option/               #    P08 三件套
+│       ├── hooks_origin.s
+│       ├── DrawOptionMenuChoice_entry.s
+│       └── DrawOptionMenuChoice_hook.c
+├── reference/                # 【2026-11-02 已删除】5 个 ref* 符号无调用者（原占约 8KB）
+│                              #   绘制原语已内联在 src/text/text_render.c
 ├── link/game.ld              # gcc 链接脚本（VMA 0x08800000）
+├── gen/                      # 生成物：translated_slot.asm（流水线写，勿手改）
+├── graphic/                  # 生成物：fonts.s + phrase_data（流水线写，勿手改）
 ├── out/                      # 生成物：game.bin / game.map / game_syms.asm（勿手改）
-└── build.bat / Makefile      # Windows / WSL 两条等价构建路径
+├── build.bat                 # 【权威】Windows 构建
+└── Makefile                  # WSL 构建（2026-11-02 已按 src/text/ 四文件重写，未实测）
 ```
 
 ## 2. 新补丁分类决策树
@@ -130,15 +148,26 @@ Q1 需要用 C 写逻辑吗？（查表 / 协议解析 / 寄存器编组 / 超�
 ## 7. 构建顺序与联动
 
 ```
-改 C/hook.c ──► build.bat（或 WSL make）──► out/game.bin + out/game_syms.asm
-                                                      │ syms 地址可能变化
-改 asm 补丁 ──────────────────────────────────────────┤
-                                                      ▼
-                                     armips main.asm ──► output.gba
+改 C/hook.c ──► build.bat ──► out/game.bin + out/game_syms.asm
+                                     │ syms 地址可能变化
+改 asm 补丁 ─────────────────────────┤
+                                     ▼
+              meowth 流水线（font_patch.apply_font_patch）
+                     ├─ 复制 hook/ → work/{game}/build/
+                     ├─ 复制 charmap.txt 到 staging 根
+                     ├─ 生成 graphic/fonts.s + phrase_data.asm
+                     ├─ 生成 gen/translated_slot.asm
+                     └─ armips main.asm ──► output.gba
 ```
 
 - **game.bin 重编后必须重跑 armips**（syms 回填变了）；
-- WSL 构建：先 `scripts/wsl-interop-setup.sh`（binfmt 注册），然后
+- **不要 `cd hook && armips main.asm`**：`main.asm` 的 `./charmap.txt`、
+  `./graphic/fonts.s`、`./gen/translated_slot.asm` 只在流水线 staging 目录里齐全，
+  原地跑必然报 `does not exist`。单独验证汇编层请用完整打包命令（见 `docs/PACK_ROM.md`）。
+- **`build.bat` 是权威构建脚本**（Windows）。`Makefile` 已于 2026-11-02 按实际
+  `src/text/` 四文件结构重写并与 `build.bat` 的 15 个 obj 顺序逐项对齐，
+  但当前环境未装 WSL，**尚未实测**——首次使用请先核对产物 `game.bin` 大小/符号。
+- WSL 构建（待实测）：先 `scripts/wsl-interop-setup.sh`（binfmt 注册），然后
   `PATH="$REPO/tools/wsl-bin:$PATH" make`；包装器内置 `</dev/null`
   （Windows 控制台 exe 在此环境不重定向 stdin 会永久阻塞）。
 
@@ -251,7 +280,64 @@ InitWindowTileData_Origin     # 预留未实现
 的唯一解，表是 JP 场景分区的实测描述，不是补丁）。表的每一行都有 gdb 证据链
 （本节 F1-F10），新场景出乱码 = 表缺一行，补一行即收口。
 
-### 10.6 实施顺序（2026-08-25 深夜定稿并完成 ✓）
+### 10.8 参考汉化版实测（2026-11-03）
+
+改字号前先看成熟汉化版怎么排的，别凭空定数。实测对象：
+`roms/translated/宝可梦火红日版汉化2.2.gba`（火红汉化 2.2）。
+
+**正文汉字实测**（帮助页「首先，进行游戏的操作以及所分配的按键说明。」，
+纯净白字蓝底，无抗锯齿干扰）：
+
+| 指标 | 实测值 |
+|---|---|
+| 汉字墨迹宽 | **12px**（多数，个别 11） |
+| 字起点间距（步进） | **13px** |
+| 字高 | 12px |
+| 行距 | 15px |
+| 标点 | 3px 窄符 |
+
+对照本工程：Normal `ink=11x11` / `advance=12`；火红是 `ink=12x12` / `advance=13`。
+**成熟实现的规律是 `advance = ink_w + 1`**（12→13，11→12），本工程正好符合。
+这说明「步进必须等于墨迹宽」是错的（那样 12px 字挤在一起），
+`advance = ink_w + 1` 才留得出 1px 字距。
+
+> ⚠️ **队伍小字（fontNum=4）仍未实测**：手头的火红 `.sav`
+> （`roms/translated/宝可梦火红日版汉化2.2.sav`，2026-11-03 提供）经解析
+> **只有 SaveBlock2 两组副本、缺 SaveBlock1**，游戏读档后停在「操作说明」帮助页，
+> 进不了队伍。`savlib.rebuild()` 报 `missing_sectors` 含 14–31 就是这个原因。
+> 需要一个**含 SaveBlock1** 的完整存档（进游戏能走能按 START）。
+> 校验：两组扇区内容不能都是「玩家名开头」的 SaveBlock2。
+
+### 10.7 三档字库（2026-11-02）与两条必守铁律
+
+字库来源唯一：`configs/{game}/fonts/{normal,middle,small}.bdf`；四套槽位由
+`translate/font.config.json` 的 `font_slots[].bdf` / `[].ink` 逐槽指定。
+
+| 槽位 | 地址 | BDF | 墨迹 | 步进 | 使用者 |
+|---|---|---|---|---|---|
+| Normal | `0x09000000` | normal.bdf | 11×11 | 12 | 对话/菜单/摘要 |
+| Middle | `0x09320000` | middle.bdf | 9×11 | 12 | 备用第 4 套 |
+| Small  | `0x09100000` | small.bdf | 9×9 | 9 | 队伍名/战斗名（`fontId==4`） |
+| Sym    | `0x091E0000` | normal.bdf | 11×11 | — | 标点 |
+
+**铁律 1 —— 半字节顺序必须是 lo-first。**
+`pack_slot16_4bpp(lo_first=True)`：左像素占**低** 4 位。旧 `*_unshadow` bin 是这个
+布局，hook 的 `DrawGlyphTile_refpr` / `CopyGlyph2bppTo4bpp_Origin` 也按它读。
+若误用 hi-first（primary 布局），墨迹整体横移半像素 → **重影**（title_menu 实测
+每个字都叠一层）。`build_chinese_font.py --nibble-order` 默认已是 `lo-first`。
+
+**铁律 2 —— 步进 ≥ 墨迹宽度，且尽量与 8px 栅格同周期。**
+`DrawGlyphTiles_common` 用 `expect = base_tx + ((chs_px + last_adv - 1) >> 3)`
+反推游标；步进与 8 的关系决定相位稳定性。
+- 步进 **< 墨迹宽** → 相邻字重叠（Small 曾用 8 而墨迹 9 → 队伍名糊成一片）；
+- 步进 **11**（与 8 无稳定周期）→ 相位逐字漂移、反复重锚 → 字粘连成一条
+  （start_menu 实测墨块由 `[11,11]` 退化为 `[28]`）。
+- 现行：Normal/Middle 12（12%8=4 二相稳定），Small 9（9%8=1，仅短名用，可接受）。
+
+改字体尺寸时**只改** `font.config.json` 的 `ink`，步进在
+`GetChineseFontWidthFunc` 与 `game.h` 的 `CHS_GLYPH_ADVANCE_PX` 两处同步。
+
+### 10.6 实施顺序（2026-08-25 深夜定稿；P24 已撤销）
 
 0. ✓ cb2 自由区 [0x100,0x1C8]（并入 `GlyphScratchRange`）
 1. ✓ 改名（§3.1 全表，entry.s / map_name_popup 同步）
@@ -260,8 +346,12 @@ InitWindowTileData_Origin     # 预留未实现
    重绘幂等）；删 `AllocGlyphTiles`/`MONO_TILE_NEXT`/共享列 hack/`PcsPrint_NativeTm1`；
    struct 位域重排 8B 零迁移
 3. ✓ 场景章由自由区表编码；新场景出乱码 = §10.4 表补一行
-4. ✓ 构建 7888B；**P24 已实装**：`InitWindowTileData_Hook`（0x08002A50 入口桩 →
-   `entry.s GlyphIwtdTramp` 跳板：全现场保存→C 钩复位页游标→恢复→重执行
-   4 条 prologue→落回 0x2A58）——窗体初始化=页游标归零，跨场景累积清零
-   （修开始菜单"维纤设孟"/图鉴行互渗/能力页标签碎片的页游标回绕踩踏）
+4. ~~✓ **P24 已实装**~~ → ❌ **2026-08-25 已撤销**：页游标表落 `0x0203FFD2`
+   撞游戏数据区，导致背包/队伍死机（PC=0x00000004 实证）。`src/text/hook_origin.s`
+   的 P24 桩、`src/text/entry.s` 的 `GlyphIwtdTramp` 均已删除；`0x08002A50`
+   在成品 ROM 中保持原版 `70 b5 82 b0 04 1c…`。`game_addrs.asm` 的
+   `InitWindowTileData` equ 与 `game.h` 的 `ADDR_INIT_WINDOW_TILE_DATA` 仅作文档参考，
+   **不再订址**。ID 永不复用。
+   > 结论：页游标「跨场景累积」问题未根治，当前靠「同页块顺序 disjoint +
+   > 页重入重印自愈」兜底。
 5. 待回归六场景：队伍（HP标签/♂/铁哑铃）、图鉴、能力↔技能页、弹窗、对话、开始菜单

@@ -16,6 +16,7 @@ from ..config_loader import (
     load_game_config,
     get_game_patch_dir,
     get_charmap_path,
+    game_config_dir,
     load_modules,
     module_translate_rules,
     module_wrap_kwargs,
@@ -1809,28 +1810,38 @@ class TranslationEngine:
         self._log("info", f"[短语] PhraseTable {n_ph} 条流, {nbytes}B -> {phrase_asm.name}")
 
     def _resolve_bdf_font_path(self, explicit: Path | None = None) -> Path | None:
-        """Resolve CJK BDF: CLI ``--bdf`` > known defaults > ``fonts/**/*.bdf``."""
+        """解析 CJK BDF：CLI ``--bdf`` > ``configs/{game}/fonts/normal.bdf``。
+
+        2026-11-02：**不再回退仓根 ``fonts/``**（该目录已废弃并删除）。
+        逐 slot 的 BDF 由 ``font.config.json`` 的 ``font_slots[].bdf`` 指定，
+        见 ``_resolve_slot_bdf``；本函数只提供「默认 BDF」。
+        """
         if explicit is not None:
             p = Path(explicit)
             if p.is_file():
                 return p
-        root = Path(__file__).resolve().parents[3]
-        candidates: list[Path] = []
-        for rel in (
-            "fonts/meowth/Meowth-Normal.bdf",
-            "fonts/fusion-pixel/12px-proportional/fusion-pixel-12px-proportional-zh_hans.bdf",
-            "fonts/shortcuts/fusion-12px-proportional-fusion-pixel-12px-proportional-zh_hans.bdf",
-        ):
-            p = root / rel
+        game_fonts = game_config_dir(self.config.game) / "fonts"
+        for name in ("normal.bdf", "middle.bdf", "small.bdf"):
+            p = game_fonts / name
             if p.is_file():
-                candidates.append(p)
-        fonts_root = root / "fonts"
-        if fonts_root.is_dir():
-            for pat in ("*zh_hans*.bdf", "*zh_cn*.bdf", "*.bdf"):
-                for p in sorted(fonts_root.rglob(pat)):
-                    if p.is_file() and p not in candidates:
-                        candidates.append(p)
-        return candidates[0] if candidates else None
+                return p
+        if game_fonts.is_dir():
+            found = sorted(game_fonts.glob("*.bdf"))
+            if found:
+                return found[0]
+        return None
+
+    def _resolve_slot_bdf(self, slot: dict, default: Path | None) -> Path | None:
+        """解析某个 slot 的 BDF：``font_slots[].bdf``（相对 configs/{game}/fonts）。"""
+        name = slot.get("bdf")
+        if name:
+            p = Path(name)
+            if not p.is_absolute():
+                p = game_config_dir(self.config.game) / "fonts" / p
+            if p.is_file():
+                return p
+            self._log("warning", f"slot {slot.get('label')} 的 BDF 不存在: {p}")
+        return default
 
     def _build_font_from_bdf(self, work_dir: Path | None = None):
         """Generate font .bin from BDF + ``charmap.txt`` (always refresh before armips)."""
@@ -1865,6 +1876,21 @@ class TranslationEngine:
             sizes = [s.get("slot_size", s.get("glyph_count", 7168) * s.get("bytes_per_glyph", 128)) for s in slots]
             bpg = int(slots[0].get("bytes_per_glyph", 128)) if slots else 128
 
+            # 逐 slot 的 BDF / ink 尺寸（2026-11-02）：font.config.json 的
+            # font_slots[].bdf 与 [].ink 决定每个槽用哪份字库、墨迹多大。
+            bdf_map_args: list[str] = []
+            ink_map_args: list[str] = []
+            pad_map_args: list[str] = []
+            for s in slots:
+                lbl = s.get("label", "Unknown")
+                pb = self._resolve_slot_bdf(s, bdf_path)
+                if pb is not None:
+                    bdf_map_args.append(f"{lbl}={pb}")
+                if s.get("ink"):
+                    ink_map_args.append(f"{lbl}={s['ink']}")
+                if s.get("pad_top") is not None:
+                    pad_map_args.append(f"{lbl}={int(s['pad_top'])}")
+
             _scripts_dir = Path(__file__).resolve().parents[3] / "scripts"
             args = [
                 sys.executable,
@@ -1877,6 +1903,12 @@ class TranslationEngine:
                 "--prefix", prefix,
                 "--bytes-per-glyph", str(bpg),
             ]
+            if bdf_map_args:
+                args += ["--bdf-map", *bdf_map_args]
+            if ink_map_args:
+                args += ["--ink-map", *ink_map_args]
+            if pad_map_args:
+                args += ["--pad-map", *pad_map_args]
             if fp_cfg.get("shadow") is False:
                 args.append("--no-shadow")
             else:
@@ -1895,14 +1927,15 @@ class TranslationEngine:
                 _charmap_path = get_charmap_path(self.config.game)
                 if _charmap_path.exists():
                     _no_shadow = fp_cfg.get("shadow") is False
-                    _bdf_punct = Path("fonts/firefly-bdf-bitmap/fireflyR12.bdf")
-                    if not _bdf_punct.exists():
-                        # also check repo root
-                        _alt = Path(__file__).resolve().parents[3] / "fonts" / "firefly-bdf-bitmap" / "fireflyR12.bdf"
-                        if _alt.exists():
-                            _bdf_punct = _alt
-                        else:
-                            _bdf_punct = None
+                    # 标点回退源：优先 configs/{game}/fonts/normal.bdf。
+                    # 2026-11-02 起不再引用仓根 fonts/firefly-bdf-bitmap（已废弃删除）。
+                    _bdf_punct = None
+                    _game_fonts = game_config_dir(self.config.game) / "fonts"
+                    for _cand in ("normal.bdf", "middle.bdf", "small.bdf"):
+                        _p = _game_fonts / _cand
+                        if _p.is_file():
+                            _bdf_punct = _p
+                            break
                     for _bin in sorted(fonts_dir.glob("*.bin")):
                         if "_unshadow" in _bin.name or "Sym" in _bin.name:
                             continue
@@ -1994,12 +2027,24 @@ class TranslationEngine:
         prefix: str,
         bytes_per_glyph: int,
     ) -> None:
-        """Fill still-empty unshadow slots from fusion-pixel (e.g. 祐 not in Meowth BDF)."""
+        """补充缺失字模。
+
+        2026-11-02：仓根 ``fonts/fusion-pixel`` 已废弃删除，本兜底改为从
+        ``configs/{game}/fonts/`` 里除主字体外的另一份 BDF 补（如 middle/small），
+        找不到就静默跳过——主字体才是唯一权威来源。
+        """
         root = Path(__file__).resolve().parents[3]
-        supplement = root / "fonts/fusion-pixel/12px-proportional/fusion-pixel-12px-proportional-zh_hans.bdf"
-        if not supplement.is_file():
-            return
         primary_bdf = self._resolve_bdf_font_path(self.config.bdf_font_path)
+        game_fonts = game_config_dir(self.config.game) / "fonts"
+        supplement = None
+        if game_fonts.is_dir():
+            for name in ("normal.bdf", "middle.bdf", "small.bdf"):
+                p = game_fonts / name
+                if p.is_file() and (primary_bdf is None or p.resolve() != primary_bdf.resolve()):
+                    supplement = p
+                    break
+        if supplement is None or not supplement.is_file():
+            return
         if primary_bdf and primary_bdf.resolve() == supplement.resolve():
             return
         game_work = fonts_dir.parent.parent

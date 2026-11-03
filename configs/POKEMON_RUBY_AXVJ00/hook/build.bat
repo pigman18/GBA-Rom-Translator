@@ -44,13 +44,8 @@ echo === Compiling text_render.c (shared render primitives) ===
 if errorlevel 1 exit /b 1
 
 
-echo === Compiling reference/pokeemerald (vendored GLYPH_COPY) ===
-%CC% %CFLAGS% -Ireference reference\pokeemerald\copy_glyph_to_tiles.c -o %BUILD%\ref_pokeemerald.o
-if errorlevel 1 exit /b 1
-
-echo === Compiling reference/pokeruby (vendored DrawGlyphTile prims) ===
-%CC% %CFLAGS% -Ireference reference\pokeruby\draw_glyph_tile.c -o %BUILD%\ref_pokeruby.o
-if errorlevel 1 exit /b 1
+rem reference/ 已于 2026-11-02 移除：其 5 个 ref* 符号（ref_glyph_copy /
+rem ref_fill_rect4bit / refpr_*）无任何调用者，纯死代码，占用约 8KB。
 
 echo === Assembling map_name_popup\entry.s ===
 %CC% %ASFLAGS% %MAP_POPUP%\entry.s -o %BUILD%\MapNamePopup_entry.o
@@ -58,6 +53,30 @@ if errorlevel 1 exit /b 1
 
 echo === Compiling map_name_popup\MapNamePopup_hook.c ===
 %CC% %CFLAGS% %MAP_POPUP%\MapNamePopup_hook.c -o %BUILD%\MapNamePopup_hook.o
+if errorlevel 1 exit /b 1
+
+echo === Assembling battle\UpdateNickInHealthbox_entry.s ===
+%CC% %ASFLAGS% %BATTLE%\UpdateNickInHealthbox_entry.s -o %BUILD%\UpdateNickInHealthbox_entry.o
+if errorlevel 1 exit /b 1
+
+echo === Compiling battle\UpdateNickInHealthbox_hook.c ===
+%CC% %CFLAGS% %BATTLE%\UpdateNickInHealthbox_hook.c -o %BUILD%\UpdateNickInHealthbox_hook.o
+if errorlevel 1 exit /b 1
+
+echo === Assembling pokedex\UnusedPrintMonName_entry.s ===
+%CC% %ASFLAGS% %POKEDEX%\UnusedPrintMonName_entry.s -o %BUILD%\UnusedPrintMonName_entry.o
+if errorlevel 1 exit /b 1
+
+echo === Compiling pokedex\UnusedPrintMonName_hook.c ===
+%CC% %CFLAGS% %POKEDEX%\UnusedPrintMonName_hook.c -o %BUILD%\UnusedPrintMonName_hook.o
+if errorlevel 1 exit /b 1
+
+echo === Assembling option\DrawOptionMenuChoice_entry.s ===
+%CC% %ASFLAGS% %OPTION%\DrawOptionMenuChoice_entry.s -o %BUILD%\DrawOptionMenuChoice_entry.o
+if errorlevel 1 exit /b 1
+
+echo === Compiling option\DrawOptionMenuChoice_hook.c ===
+%CC% %CFLAGS% %OPTION%\DrawOptionMenuChoice_hook.c -o %BUILD%\DrawOptionMenuChoice_hook.o
 if errorlevel 1 exit /b 1
 
 echo === Linking game.elf ===
@@ -68,8 +87,6 @@ echo === Linking game.elf ===
   %BUILD%/text_translter.o ^
   %BUILD%/text_scene.o ^
   %BUILD%/text_render.o ^
-  %BUILD%/ref_pokeemerald.o ^
-  %BUILD%/ref_pokeruby.o ^
   %BUILD%/MapNamePopup_entry.o ^
   %BUILD%/MapNamePopup_hook.o ^
   %BUILD%/UpdateNickInHealthbox_entry.o ^

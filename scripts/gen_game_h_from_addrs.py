@@ -66,9 +66,15 @@ def render_block(macros: dict[str, str]) -> str:
 
 
 def update_game_h(game_root: Path, macros: dict[str, str], check: bool = False) -> bool:
-    h_path = game_root / "src" / "game.h"
+    # game.h 实际位置是 hook/include/game.h（build.bat 用 -Iinclude）。
+    # 2026-11-02：原先写死 src/game.h（该路径不存在），加了 include/ 回退。
+    h_path = game_root / "include" / "game.h"
     if not h_path.is_file():
-        raise FileNotFoundError(f"missing {h_path}")
+        legacy = game_root / "src" / "game.h"
+        if legacy.is_file():
+            h_path = legacy
+        else:
+            raise FileNotFoundError(f"missing {h_path}")
     text = h_path.read_text(encoding="utf-8")
     if BEGIN not in text or END not in text:
         raise SystemExit(

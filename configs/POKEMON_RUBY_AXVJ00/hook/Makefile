@@ -1,8 +1,9 @@
-﻿# AXVJ hook → out/game.bin (VMA 0x08800000)
-# Windows: build.bat
-# WSL:     scripts/wsl-interop-setup.sh 一次后
-#          PATH="$REPO/tools/wsl-bin:$PATH" make
-#          （tools/wsl-bin 内是 Windows 工具链包装器，含 armips）
+# AXVJ hook → out/game.bin (VMA 0x08800000)
+#
+# Windows 权威构建：build.bat（本 Makefile 与之逐项对齐，2026-11-02 校正）
+# WSL:  scripts/wsl-interop-setup.sh 一次后
+#       PATH="$REPO/tools/wsl-bin:$PATH" make
+#       （tools/wsl-bin 内是 Windows 工具链包装器）
 # 注意: out/game.map 由 Windows ld.exe 写出为 CRLF，game_syms 配方已剥 \r。
 
 PREFIX   ?= arm-none-eabi-
@@ -10,22 +11,26 @@ CC       := $(PREFIX)gcc
 OBJCOPY  := $(PREFIX)objcopy
 
 SRC_ROOT := src
+TEXT     := $(SRC_ROOT)/text
 MAP_POPUP := $(SRC_ROOT)/map_name_popup
 BATTLE   := $(SRC_ROOT)/battle
 POKEDEX  := $(SRC_ROOT)/pokedex
 OPTION   := $(SRC_ROOT)/option
 OUT      := out
 BUILD    := $(OUT)/obj
+REF      := reference
 
 CFLAGS  := -mthumb -mcpu=arm7tdmi -ffreestanding -O2 -fno-builtin -Wall -Iinclude -I$(SRC_ROOT) -nostdlib -c
 ASFLAGS := -mthumb -mcpu=arm7tdmi -ffreestanding -x assembler-with-cpp -c
 LDFLAGS := -mthumb -mcpu=arm7tdmi -nostdlib -T link/game.ld -Wl,-Map=$(OUT)/game.map
 
+# 顺序即链接顺序；text_entry.o（src/text/entry.s 的 EngineEntry）必须排第一。
 OBJS := \
 	$(BUILD)/text_entry.o \
-	$(BUILD)/text.o \
-	$(BUILD)/chinese_text.o \
-	$(BUILD)/text_translate.o \
+	$(BUILD)/PrintNextChar_hook.o \
+	$(BUILD)/text_translter.o \
+	$(BUILD)/text_scene.o \
+	$(BUILD)/text_render.o \
 	$(BUILD)/MapNamePopup_entry.o \
 	$(BUILD)/MapNamePopup_hook.o \
 	$(BUILD)/UpdateNickInHealthbox_entry.o \
@@ -42,20 +47,29 @@ all: $(OUT)/game.bin $(OUT)/game_syms.asm
 $(BUILD):
 	mkdir -p $(BUILD)
 
-# src/entry.s 是引擎入口跳板，链接必须排第一：
+# --- 文本引擎（src/text/）---
+# entry.s 是引擎入口跳板，链接必须排第一：
 # main.asm 的 JP2CHS_Entry 标签 = GameBinAddresses = game.bin 起点（EngineEntry）。
-$(BUILD)/text_entry.o: $(SRC_ROOT)/entry.s | $(BUILD)
+$(BUILD)/text_entry.o: $(TEXT)/entry.s | $(BUILD)
 	$(CC) $(ASFLAGS) $< -o $@
 
-$(BUILD)/text.o: $(SRC_ROOT)/text.c | $(BUILD)
+$(BUILD)/PrintNextChar_hook.o: $(TEXT)/PrintNextChar_hook.c | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@
 
-$(BUILD)/chinese_text.o: $(SRC_ROOT)/chinese_text.c | $(BUILD)
+$(BUILD)/text_translter.o: $(TEXT)/text_translter.c | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@
 
-$(BUILD)/text_translate.o: $(SRC_ROOT)/text_translate.c | $(BUILD)
+$(BUILD)/text_scene.o: $(TEXT)/text_scene.c | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@
 
+$(BUILD)/text_render.o: $(TEXT)/text_render.c | $(BUILD)
+	$(CC) $(CFLAGS) $< -o $@
+
+# --- 官方移植件（reference/）---
+# 2026-11-02 移除：其 5 个 ref* 符号无任何调用者（纯死代码，原占约 8KB）。
+# 相关绘制原语已内联在 src/text/text_render.c。
+
+# --- 域钩（map_name_popup / battle / pokedex / option）---
 $(BUILD)/MapNamePopup_entry.o: $(MAP_POPUP)/entry.s | $(BUILD)
 	$(CC) $(ASFLAGS) $< -o $@
 

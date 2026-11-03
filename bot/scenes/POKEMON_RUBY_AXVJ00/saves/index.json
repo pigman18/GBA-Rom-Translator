@@ -1,0 +1,165 @@
+{
+  "schema": 1,
+  "gameId": "POKEMON_RUBY_AXVJ00",
+  "naming": "{MapName}_{x}-{y}.sav（位置来自 Gen3 SaveBlock1 @ 存档 0x1000）",
+  "note": "两侧必须共用同一份 .sav，且非即时存档；bot 运行时复制到 workdir/run.sav",
+  "entries": [
+    {
+      "src": "roms\\outputs\\POKEMON_RUBY_AXVJ00_translated.sav",
+      "sha256": "befadb7cefe1530ab4ed12e67c32fdfd5739888e5f740286fabc04314dc90c18",
+      "size": 131088,
+      "is_jp": true,
+      "jp_reason": "名字字节 ['0x75', '0x53', '0x57'] 非国际版字母区且 SB2+0x08=0",
+      "position": {
+        "player_name": "???",
+        "mapGroup": 10,
+        "mapNum": 7,
+        "map_name": "MauvilleCity_Mart",
+        "warpId": 0,
+        "x": 3,
+        "y": 3,
+        "continue_mapGroup": 2,
+        "continue_mapNum": 3
+      },
+      "sectors_present": 14,
+      "aliases": [
+        "roms\\saves\\mart.sav",
+        "work\\bot\\rom.sav",
+        "work\\gdbrun2\\POKEMON_RUBY_AXVJ00_translated.sav",
+        "work\\gdbrun2\\test.sav",
+        "work\\gdbrun\\test.sav"
+      ],
+      "dest_name": "MauvilleCity_Mart_3-3.sav",
+      "dest_path": "MauvilleCity_Mart_3-3.sav",
+      "kind": "axvj"
+    },
+    {
+      "src": "work\\warp_center.sav",
+      "sha256": "f1d632379f5b7c1d59286e862f13533b6ad4c9dc09573912cbec216215c884e9",
+      "size": 131088,
+      "is_jp": true,
+      "jp_reason": "名字字节 ['0x75', '0x53', '0x57'] 非国际版字母区且 SB2+0x08=0",
+      "position": {
+        "player_name": "???",
+        "mapGroup": 2,
+        "mapNum": 2,
+        "map_name": "OldaleTown_PokemonCenter_1F",
+        "warpId": -1,
+        "x": 5,
+        "y": 5,
+        "continue_mapGroup": 2,
+        "continue_mapNum": 3
+      },
+      "sectors_present": 14,
+      "aliases": [],
+      "dest_name": "OldaleTown_PokemonCenter_1F_5-5.sav",
+      "dest_path": "OldaleTown_PokemonCenter_1F_5-5.sav",
+      "kind": "axvj"
+    },
+    {
+      "src": "roms\\origin\\POKEMON_RUBY_AXVJ00.sav",
+      "sha256": "d920fb694a1644fa084242e78741959146d794a8a05ece08d9dc0e22ff6b5f76",
+      "size": 131088,
+      "is_jp": true,
+      "jp_reason": "名字字节 ['0x75', '0x53', '0x57'] 非国际版字母区且 SB2+0x08=0",
+      "position": {
+        "player_name": "???",
+        "mapGroup": 0,
+        "mapNum": 33,
+        "map_name": "Route118",
+        "warpId": -1,
+        "x": 68,
+        "y": 7,
+        "continue_mapGroup": 2,
+        "continue_mapNum": 3
+      },
+      "sectors_present": 14,
+      "aliases": [
+        "roms\\saves\\road.sav",
+        "work\\_from_scratch\\bot_old\\rom-1pjs_67i\\run.sav",
+        "work\\_from_scratch\\bot_old\\rom-a41qafp_\\run.sav",
+        "work\\_from_scratch\\bot_old\\rom-q_613aan\\run.sav",
+        "work\\_from_scratch\\bot_old\\rom-uy83c7g_\\run.sav",
+        "work\\_ztest2\\run.sav",
+        "work\\_ztest\\run.sav",
+        "work\\t2_sav\\shared.sav",
+        "work\\warp_test.sav"
+      ],
+      "dest_name": "Route118_68-7.sav",
+      "dest_path": "Route118_68-7.sav",
+      "kind": "axvj"
+    },
+    {
+      "src": "work\\_sav2\\POKEMON_RUBY_AXVJ00.sav",
+      "sha256": "3c28a22b703c601ef1eb2982ab6160d1d4dee8da59a992afe8c8ce79ff72f474",
+      "size": 131072,
+      "is_jp": true,
+      "jp_reason": "名字字节 ['0x75', '0x53', '0x57'] 非国际版字母区且 SB2+0x08=0",
+      "position": {
+        "player_name": "???",
+        "mapGroup": 0,
+        "mapNum": 33,
+        "map_name": "Route118",
+        "warpId": -1,
+        "x": 68,
+        "y": 7,
+        "continue_mapGroup": 2,
+        "continue_mapNum": 3
+      },
+      "sectors_present": 14,
+      "aliases": [
+        "work\\_sav3\\POKEMON_RUBY_AXVJ00.sav",
+        "work\\_savtest\\run.sav"
+      ],
+      "dest_name": "Route118_68-7_2.sav",
+      "dest_path": "Route118_68-7_2.sav",
+      "kind": "axvj"
+    },
+    {
+      "src": "roms\\outputs\\POKEMON_RUBY_AXVJ00_translated_new.sav",
+      "sha256": "62ba1ca81aa61475ae484b10a555cd5f5c02332167d128b4c93d02be0f9538a0",
+      "size": 131088,
+      "is_jp": true,
+      "jp_reason": "名字字节 ['0x75', '0x53', '0x57'] 非国际版字母区且 SB2+0x08=0",
+      "position": {
+        "player_name": "???",
+        "mapGroup": 0,
+        "mapNum": 34,
+        "map_name": "Route119",
+        "warpId": -1,
+        "x": 8,
+        "y": 129,
+        "continue_mapGroup": 2,
+        "continue_mapNum": 3
+      },
+      "sectors_present": 14,
+      "aliases": [],
+      "dest_name": "Route119_8-129.sav",
+      "dest_path": "Route119_8-129.sav",
+      "kind": "axvj"
+    },
+    {
+      "src": "roms\\汉化\\口袋妖怪 - 红宝石[模拟天下](简)(JP)(64Mb).sav",
+      "sha256": "fa05ca011b29c914abdcd800039369ec7efa1c82d29102ae1c6ab67e59be003d",
+      "size": 131088,
+      "is_jp": true,
+      "jp_reason": "名字字节 ['0x51', '0x51', '0x51'] 非国际版字母区且 SB2+0x08=0",
+      "position": {
+        "player_name": "???",
+        "mapGroup": 0,
+        "mapNum": 16,
+        "map_name": "Route101",
+        "warpId": -1,
+        "x": 8,
+        "y": 14,
+        "continue_mapGroup": 0,
+        "continue_mapNum": 0
+      },
+      "sectors_present": 14,
+      "aliases": [],
+      "dest_name": "Route101_8-14.sav",
+      "dest_path": "_foreign/Route101_8-14.sav",
+      "kind": "foreign"
+    }
+  ]
+}

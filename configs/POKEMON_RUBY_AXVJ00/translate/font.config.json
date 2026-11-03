@@ -1,29 +1,70 @@
 {
   "escape": true,
-  "escape_bytes": [249, 0],
-  "ideospace_bytes": [1, 247],
-  "chinese_leads": [[1, 5], [7, 26], [28, 30]],
+  "escape_bytes": [
+    249,
+    0
+  ],
+  "ideospace_bytes": [
+    1,
+    247
+  ],
+  "chinese_leads": [
+    [
+      1,
+      5
+    ],
+    [
+      7,
+      26
+    ],
+    [
+      28,
+      30
+    ]
+  ],
   "shadow": false,
-  "embed_primary": false,
+  "embed_primary": true,
+  "_embed_primary_note": "2026-11-02 起为 true：三套字库均由 BDF 直出，直接嵌入主 bin。原先 embed_primary=false 会嵌入 *_unshadow，而那份是拿旧 12px 参照对形变来的，会把墨迹多撑 1px。",
+  "_fonts_dir": "configs/POKEMON_RUBY_AXVJ00/fonts",
+  "_font_source_note": "流水线只从 configs/<game>/fonts/ 取 BDF；2026-11-02 起不再回退仓根 fonts/。ink 尺寸为实测墨迹 bbox，容器仍是 16x16 槽 / 128B。",
+  "_pad_top_note": "pad_top = 墨迹在 16 高槽里的起始行。必须与旧字库逐字对齐，否则同屏多行会上下互相压盖（队伍小字曾因居中上移 3px 而糊成一片）。旧 Small_unshadow 实测 y=6..14，故 pad_top=6；Normal 实测 y=2..12，故 pad_top=2。",
   "font_slots": [
     {
       "label": "Normal",
       "addr": 150994944,
       "glyph_count": 7168,
-      "bytes_per_glyph": 128
+      "bytes_per_glyph": 128,
+      "bdf": "normal.bdf",
+      "ink": "11x11",
+      "pad_top": 2
+    },
+    {
+      "label": "Middle",
+      "addr": 154271744,
+      "glyph_count": 7168,
+      "bytes_per_glyph": 128,
+      "bdf": "middle.bdf",
+      "ink": "9x11",
+      "pad_top": 2
     },
     {
       "label": "Small",
       "addr": 152043520,
       "glyph_count": 7168,
-      "bytes_per_glyph": 128
+      "bytes_per_glyph": 128,
+      "bdf": "small.bdf",
+      "ink": "9x9",
+      "pad_top": 6
     },
     {
       "label": "Sym",
       "addr": 152961024,
       "glyph_count": 9,
       "bytes_per_glyph": 64,
-      "slot_size": 576
+      "slot_size": 576,
+      "bdf": "normal.bdf",
+      "ink": "11x11",
+      "pad_top": 2
     }
   ]
 }

@@ -26,10 +26,16 @@
 
 顺序（由廉价到昂贵）：
 
-1. **权威符号表**：`tools/Pokemon_GBA_Font_Patch/symbols/pokeruby/pokeruby.sym`
-   （美版红宝石，含函数地址与大小）。先 grep 函数名/地址，再用日版同段锚点求偏移。
-2. **pokeruby 源码**：`tools/pokeruby/src/*.c`。**能读 C 就别读汇编**——本次
-   「MenuPrint 的 left 是格数」就是源码一行 `win->left = 8 * left;` 一锤定音的。
+1. **权威符号表**：`configs/POKEMON_RUBY_AXVJ00/symbols/pokeruby_jp.sym`
+   （**日版**红宝石符号，4.2MB，含函数地址与大小）。先 grep 函数名/地址。
+   > 历史注：早期文档写的 `tools/Pokemon_GBA_Font_Patch/symbols/pokeruby/pokeruby.sym`
+   > （美版 pokeruby）与本仓 `tools/pokeruby/src` **在当前仓库中都不存在**，
+   > 请勿再引用。日版符号表里标 `UNVERIFIED` 的项必须先反汇编验证行为再订址。
+2. **移植件源码**：`configs/POKEMON_RUBY_AXVJ00/hook/reference/`
+   - `pokeruby/draw_glyph_tile.c`、`pokeemerald/copy_glyph_to_tiles.c`（参与 gcc 构建）
+   - `pokeemerald-expansion/text.c`、`chinese_text.c`（参考实现，不参与构建）
+   **能读 C 就别读汇编**——「MenuPrint 的 left 是格数」就是源码一行
+   `win->left = 8 * left;` 一锤定音的。
 3. **日版反汇编**：capstone THUMB 模式。注意：
    - BL 目标符号位是 high halfword 的 **bit10**；
    - 字面量池会让线性反汇编跑飞 → 用递归下降/分段扫；

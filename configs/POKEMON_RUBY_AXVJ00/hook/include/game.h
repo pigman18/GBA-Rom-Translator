@@ -1,4 +1,4 @@
-﻿/* AXVJ patch ??? ? ?? / Win ?? / ?????
+/* AXVJ patch ??? ? ?? / Win ?? / ?????
  * PrintNextChar ≈ pokeruby PrintNextChar
  */
 #ifndef GAME_H
@@ -21,6 +21,7 @@
 #define ADDR_DEX_TEXT_UNKNOWN_POKE         0x083E9688u
 #define ADDR_DRAW_INITIAL_DOWN_ARROW       0x08003F4Cu
 #define ADDR_DRAW_INITIAL_DOWN_ARROW_BODY  0x08003DACu
+#define ADDR_FONT_CHS_MIDDLE               0x09320000u
 #define ADDR_FONT_CHS_NORMAL               0x09000000u
 #define ADDR_FONT_CHS_SMALL                0x09100000u
 #define ADDR_FONT_CHS_SYM                  0x091E0000u
@@ -30,7 +31,9 @@
 #define ADDR_GAME_BIN                      0x08800000u
 #define ADDR_GET_GLYPH_TILE_PTRS           0x08003730u
 #define ADDR_GLYPH_ALLOC_NEXT              0x0203FFF8u
+#define ADDR_GLYPH_PAGE_CURTAB             0x0203FFD2u
 #define ADDR_GMENU                         0x03000618u
+#define ADDR_INIT_WINDOW_TILE_DATA         0x08002A50u
 #define ADDR_MENU_PRINT_TEXT               0x0806F16Cu
 #define ADDR_OPT_FG_COLOR                  0x0203FFD1u
 #define ADDR_OPT_PALETTE_OVERRIDE          0x0203FFD0u
@@ -38,12 +41,10 @@
 #define ADDR_PHRASE_TABLE                  0x08820000u
 #define ADDR_PLAY_BGM                      0x080724ACu
 #define ADDR_PLAY_SE                       0x080724CCu
+#define ADDR_PRINT_GLYPH_TM1_ORIGIN        0x0800360Cu
 #define ADDR_SLOT_TABLE                    0x09EA0000u
 #define ADDR_TEXT_CLEAR_WINDOW             0x08003BA8u
 #define ADDR_UPDATE_TILEMAP                0x080036DCu
-#define ADDR_PRINT_GLYPH_TM1_ORIGIN        0x0800360Cu
-#define ADDR_INIT_WINDOW_TILE_DATA         0x08002A50u
-#define ADDR_GLYPH_PAGE_CURTAB             0x0203FFD2u
 // <<<GEN_ADDR_END>>>
 /*
  * 短语表（PhraseTable）—— 固定长度字段突破字符数限制的方案。
@@ -177,9 +178,22 @@ struct ChsPhase {
  * 旧 12px 双趟 drawGlyph12 说明（历史）：
  * Hardware glyph container stays 8x16 (two 8x8 tiles) / 16x16 slot — do not change.
  * See docs/FONT_12PX_DRAW.md and .cursor/rules/axvj-font-12px-only.mdc. */
+/* 步进 = 12px 是**排版栅格**，与字模墨迹宽度解耦（2026-11-02 修正）。
+ *
+ * 为什么不能把 advance 设成墨迹宽度：draw 的相位按 8px 硬件栅格推进
+ * （st->chs_px += 8 → += pass2_w），且 DrawGlyphTiles_common 会用
+ *   expect = base_tx + ((chs_px + last_adv - 1) >> 3)
+ * 反推游戏游标是否对齐；不对齐就**重置相位并重锚**。
+ * advance=12 时 12%8=4，与 8px 栅格有稳定二相周期（0/4 交替），实测正常；
+ * advance=11 时 11%8=3，相位每字漂移、反复触发重置 → 字与字粘连成一条
+ * （start_menu 实测墨块由 [11,11] 退化为 [28] 连体）。
+ *
+ * 结论：advance 固定 12；字形墨迹 11px 时，多出的 1 列由 gw_end 清成
+ * 背景色，正好成为字间空隙 —— 这正是原设计的工作方式。
+ * 换字库只改墨迹（font.config.json 的 ink），**不要**动 advance。 */
 #define CHS_GLYPH_ADVANCE_PX 12
-#define CHS_CHAR_HEIGHT_PX   12
-#define CHS_LINE_FEED_PX     14
+#define CHS_CHAR_HEIGHT_PX   11
+#define CHS_LINE_FEED_PX     13
 #define CHS_CELL_BYTES       128
 #ifndef CHS_MODE2_PITCH12
 #define CHS_MODE2_PITCH12 0

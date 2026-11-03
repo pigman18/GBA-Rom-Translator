@@ -24,9 +24,9 @@
 │   · 用 `python` 逐字节 diff 定位**到底哪些字节、哪个地址带被改**
 │   · ⛔ 符号表/反汇编在这里是补充，不是替代；先搜字节再谈函数
 │
-├─ 「改游戏内函数/常量地址」类？ ──────→ 第一动作 = 查权威符号表 pokeruby.sym（见 AGENTS.md 定位纪律）
+├─ 「改游戏内函数/常量地址」类？ ──────→ 第一动作 = 查权威符号表 pokeruby_jp.sym（见 AGENTS.md 定位纪律）
 │
-├─ 「文本/UI 行为」类？ ───────────────→ 第一动作 = 读 hook/src + tools/pokeruby/src 源码
+├─ 「文本/UI 行为」类？ ───────────────→ 第一动作 = 读 hook/src + hook/reference/ 源码
 │   ⛔ 禁止上来就 grep 符号表/反汇编
 │
 └─ 其他（打包、构建、测试） ───────────→ 按 AGENTS.md Build Rules
@@ -40,6 +40,22 @@
 - [ ] 数据被写坏类：我是否已做过 origin vs output 逐字节比对？没有就先做这个。
 - [ ] 我是否在死循环同一个点超过 ~15 分钟？是 → 停下来，把已知事实和矛盾点列给用户，
       让用户指方向，而不是继续自转。
+- [ ] **改了 `hook/src/**` 没？** → 必须先 `build.bat` 再打包。流水线只嵌入
+      `hook/out/game.bin` 的**现有文件**，不自动编译 C，且内嵌校验不比对源码
+      （2026-11-02 踩到：旧 bin 被静默打包）。
+- [ ] **打包完跑验收没？** → `C:\Python314\python.exe scripts\verify_output_rom.py`
+      全 PASS 才算可交付。
+
+## 2.5 构建链真相（2026-11-02 实测校正，别再猜）
+
+| 事实 | 含义 |
+|---|---|
+| `build.bat` 是唯一权威构建 | 15 个 obj；曾漏编 battle/pokedex/option 共 6 个，已修 |
+| 流水线**不编译 C** | `font_patch.apply_font_patch()` 只复制 `hook/out/game.bin` 现成文件 |
+| armips 不能在 `hook/` 原地跑 | `./charmap.txt`、`./graphic/fonts.s`、`./gen/translated_slot.asm` 只在流水线 staging 就绪；原地报「does not exist」是**正常现象** |
+| 扩展区在 8MB 原版 ROM 之外 | `0x08800000` 以上全部落空，armips 把 ROM 撑到 32MB |
+| `--modules` 已废弃 | CLI 标注 Ignored，AXVJ 固定全量抽取，注入范围由 `policy.py` 决定 |
+| 权威符号表 | `configs/POKEMON_RUBY_AXVJ00/symbols/pokeruby_jp.sym`（**日版**）；`tools/Pokemon_GBA_Font_Patch` 与 `tools/pokeruby/src` 在本仓**不存在** |
 
 ## 3. 红框 BUG 最终结论（不要再花时间）
 

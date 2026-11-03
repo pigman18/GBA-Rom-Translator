@@ -99,11 +99,12 @@ void UnusedPrintMonName_hook_C(const uint8_t *name,
     i = append_stream(out, i, cat_stream);
     i = append_stream(out, i, poke_stream);
 
-    /* 占位串整体 76px：5问号(40px)+宝可梦(36px)。
+    /* 占位串整体 76px：5问号(40px)+宝可梦(33px@11px步进)。
      * 本串 宝可梦已紧跟分类名，若分类名不足 4 字则盖不满尾部，会露出
-     * 占位串宝可梦的残字（梦）。按缺口追加 8px 空格补齐覆盖。*/
+     * 占位串宝可梦的残字（梦）。按缺口追加 8px 空格补齐覆盖。
+     * 步进随字库走 CHS_GLYPH_ADVANCE_PX（2026-11-02: 12→11），勿写死。 */
     {
-        int pad = 40 - 12 * ncat;
+        int pad = 40 - (int)CHS_GLYPH_ADVANCE_PX * ncat;
         unsigned nsp, k2;
         if (pad < 0)
             pad = 0;

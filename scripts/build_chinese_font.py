@@ -118,15 +118,22 @@ def parse_bdf(path: Path) -> tuple[dict[int, tuple], int, int, int]:
     return glyphs, font_ascent, font_descent, pixel_size
 
 
-def bdf_to_ink12(
+def bdf_to_ink(
     bitmap_rows: list[bytearray],
     bbx_w: int,
     bbx_h: int,
     bbx_x: int,
     bbx_y: int,
     font_ascent: int,
+    ink_w: int = INK_W,
+    ink_h: int = INK_H,
 ) -> bytearray:
-    """Rasterize BDF into 12x12 ink (1=ink)."""
+    """Rasterize BDF into ``ink_w`` x ``ink_h`` ink (1=ink).
+
+    逐字节裁到墨迹 bbox 左上角，再按 ink_w/ink_h 截断——
+    所以 normal(11x11) / middle(9x11) / small(9x9) 用同一函数、
+    只是目标尺寸不同。
+    """
     src_w = max(bbx_w, 1)
     src_h = len(bitmap_rows) if bitmap_rows else bbx_h
     raw = bytearray(src_w * src_h)
@@ -146,26 +153,76 @@ def bdf_to_ink12(
                 min_y = min(min_y, y)
                 max_x = max(max_x, x)
                 max_y = max(max_y, y)
-    out = bytearray(INK_W * INK_H)
+    out = bytearray(ink_w * ink_h)
     if max_x < 0:
         return out
-    for y in range(min_y, min(min_y + INK_H, max_y + 1)):
-        for x in range(min_x, min(min_x + INK_W, max_x + 1)):
+    bw = max_x - min_x + 1
+    bh = max_y - min_y + 1
+
+    # 墨迹比目标框大时的收缩策略（2026-11-03 定稿）
+    #
+    # 背景：Small 槽是 GBA 标准 8x8，步进必须 8px 才能与 tile 网格对齐
+    # （非 8 会让字距 8/16 交替，实测）。而 small.bdf 是 9x9。
+    #
+    # 试过并否决的做法（都实测过）：
+    #   · 直接裁右下角  -> 丢第 9 行，得丢底横（「宝」的王字底、「菇」的底）
+    #   · 面积平均      -> 末格吞掉整条源行，每字底边糊成实心横杠
+    #   · 最近邻按比例  -> 断笔画、丢孤点
+    #   · 丢最空的边线  -> 切碎字形（「香」的横画错位）
+    #   · 从 TTF 重新栅格化 8x8 -> SimHei/宋体在 8px 下笔画互相粘连，认不出
+    #
+    # 采用：**行全保留，只把列从 bw 压到 ink_w——合并最相似的两列（OR）**。
+    # 9 行完整保留，字形结构不塌；少 1 列只是整体略窄，视觉可接受。
+    # 墨迹比目标框大时的收缩（2026-11-03 定稿）
+    #
+    # Small 槽是 GBA 标准 8x8，步进必须 8px 才能与 tile 网格对齐
+    # （非 8 会让字距 8/16 交替，实测）。而 small.bdf 是 9x9。
+    #
+    # 试过并否决：
+    #   · 面积平均      -> 末格吞整条源行，底边糊成实心横杠
+    #   · 最近邻按比例  -> 断笔画、丢孤点
+    #   · 丢最空的边线  -> 切碎字形
+    #   · 合并最相似两列(OR) -> 相邻笔画并在一起，字糊成一团
+    #   · 从 TTF 重栅格化 8x8 -> SimHei/宋体在 8px 下笔画互相粘连
+    #
+    # 采用：**左上角直接裁切**（保留左 ink_w 列、上 ink_h 行）。
+    # 丢的是最右 1 列和最下 1 行，字仍能辨认（实测「宝」宀+王、
+    # 「菇」草头轮廓都在）；这是 8x8 槽下最保结构的做法。
+    if bw > ink_w or bh > ink_h:
+        for ny in range(min(ink_h, bh)):
+            for nx in range(min(ink_w, bw)):
+                if raw[(min_y + ny) * src_w + (min_x + nx)]:
+                    out[ny * ink_w + nx] = 1
+        return out
+
+    for y in range(min_y, min(min_y + ink_h, max_y + 1)):
+        for x in range(min_x, min(min_x + ink_w, max_x + 1)):
             if raw[y * src_w + x]:
                 nx, ny = x - min_x, y - min_y
-                if 0 <= nx < INK_W and 0 <= ny < INK_H:
-                    out[ny * INK_W + nx] = 1
+                if 0 <= nx < ink_w and 0 <= ny < ink_h:
+                    out[ny * ink_w + nx] = 1
     return out
 
 
-def ink12_to_slot16(ink: bytearray, *, shadow: bool) -> bytearray:
-    """Place 12x12 ink into 16x16 slot with top/bottom pad. Values 0/14/15."""
+# 向后兼容旧名（原签名 = 12x12）
+bdf_to_ink12 = bdf_to_ink
+
+
+def ink_to_slot16(
+    ink: bytearray,
+    *,
+    shadow: bool,
+    ink_w: int = INK_W,
+    ink_h: int = INK_H,
+    pad_top: int = PAD_TOP,
+) -> bytearray:
+    """Place ``ink_w`` x ``ink_h`` ink into the 16x16 slot. Values 0/14/15."""
     slot = bytearray(SLOT_W * SLOT_H)
-    for y in range(INK_H):
-        for x in range(INK_W):
-            if not ink[y * INK_W + x]:
+    for y in range(ink_h):
+        for x in range(ink_w):
+            if not ink[y * ink_w + x]:
                 continue
-            sx, sy = x, y + PAD_TOP
+            sx, sy = x, y + pad_top
             if not (0 <= sx < SLOT_W and 0 <= sy < SLOT_H):
                 continue
             slot[sy * SLOT_W + sx] = 15
@@ -178,8 +235,21 @@ def ink12_to_slot16(ink: bytearray, *, shadow: bool) -> bytearray:
     return slot
 
 
-def pack_slot16_4bpp(pixels: bytearray) -> bytes:
-    """16x16 pixels → 128B TL,BL,TR,BR. Left pixel = high nibble."""
+# 向后兼容旧名
+ink12_to_slot16 = ink_to_slot16
+
+
+def pack_slot16_4bpp(pixels: bytearray, *, lo_first: bool = False) -> bytes:
+    """16x16 pixels → 128B TL,BL,TR,BR.
+
+    ``lo_first=False``（默认，= primary 布局）：左像素占**高** 4 位。
+    ``lo_first=True``（= ``*_unshadow`` 布局）：左像素占**低** 4 位。
+
+    ⚠️ 两套布局是**镜像**的，混用会让墨迹整体左右偏移半像素，
+    在 CHS 双趟绘制里表现为重影。hook 的 `DrawGlyphTile_refpr` /
+    `CopyGlyph2bppTo4bpp_Origin` 按 unshadow 布局读，所以
+    **嵌入 ROM 的字库必须 lo_first=True**。
+    """
     if len(pixels) != SLOT_W * SLOT_H:
         raise ValueError("slot must be 16x16")
     glyph = bytearray(BYTES_PER_GLYPH)
@@ -193,7 +263,9 @@ def pack_slot16_4bpp(pixels: bytearray) -> bytes:
                     px = tile_col * 8 + tx * 2
                     left = pixels[py * SLOT_W + px] & 0x0F
                     right = pixels[py * SLOT_W + px + 1] & 0x0F
-                    glyph[off + ty * 4 + tx] = (left << 4) | right
+                    glyph[off + ty * 4 + tx] = (
+                        (left | (right << 4)) if lo_first else ((left << 4) | right)
+                    )
     if len(glyph) != BYTES_PER_GLYPH:
         raise AssertionError(f"pack produced {len(glyph)}, need {BYTES_PER_GLYPH}")
     return bytes(glyph)
@@ -207,21 +279,33 @@ def build_font_bin(
     bytes_per_glyph: int = BYTES_PER_GLYPH,
     *,
     shadow: bool = True,
+    ink_w: int = INK_W,
+    ink_h: int = INK_H,
+    pad_top: int | None = None,
+    lo_first: bool = False,
 ) -> bytearray:
     if bytes_per_glyph != BYTES_PER_GLYPH:
         raise ValueError(
             f"bytes_per_glyph must be {BYTES_PER_GLYPH} (16x16 4bpp slot); got {bytes_per_glyph}"
         )
+    # 默认把墨迹垂直居中在 16 高槽里
+    if pad_top is None:
+        pad_top = max(0, (SLOT_H - ink_h) // 2)
     buf = bytearray(bytes_per_glyph * glyph_count)
     for idx, char in charmap.items():
         encoding = ord(char)
         if encoding in bdf_glyphs:
             bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y = bdf_glyphs[encoding]
-            ink = bdf_to_ink12(bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y, font_ascent)
+            ink = bdf_to_ink(
+                bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y, font_ascent,
+                ink_w=ink_w, ink_h=ink_h,
+            )
         else:
-            ink = bytearray(INK_W * INK_H)
-        slot = ink12_to_slot16(ink, shadow=shadow)
-        packed = pack_slot16_4bpp(slot)
+            ink = bytearray(ink_w * ink_h)
+        slot = ink_to_slot16(
+            ink, shadow=shadow, ink_w=ink_w, ink_h=ink_h, pad_top=pad_top,
+        )
+        packed = pack_slot16_4bpp(slot, lo_first=lo_first)
         off = idx * bytes_per_glyph
         buf[off : off + bytes_per_glyph] = packed
     return buf
@@ -231,7 +315,15 @@ def main() -> None:
     ap = argparse.ArgumentParser(
         description="Build Gen3 Chinese font bins (128B / 16x16 slot, 12px ink)"
     )
-    ap.add_argument("--bdf", required=True, type=Path)
+    ap.add_argument("--bdf", required=True, type=Path,
+                    help="默认 BDF（各 slot 未单独指定时用它）")
+    ap.add_argument("--bdf-map", nargs="*", default=None, metavar="LABEL=PATH",
+                    help="逐 slot 指定 BDF，如 Normal=fonts/normal.bdf Sym=fonts/sym.bdf")
+    ap.add_argument("--ink-map", nargs="*", default=None, metavar="LABEL=WxH",
+                    help="逐 slot 指定墨迹尺寸，如 Normal=11x11 Small=9x9")
+    ap.add_argument("--pad-map", nargs="*", default=None, metavar="LABEL=N",
+                    help="逐 slot 指定墨迹在 16 高槽里的起始行，如 Small=6 "
+                         "（必须与旧字库对齐，否则多行互相压盖）")
     ap.add_argument("--charmap", required=True, type=Path)
     ap.add_argument("--output-dir", required=True, type=Path)
     ap.add_argument("--glyph-count", type=int, default=DEFAULT_GLYPH_COUNT)
@@ -241,6 +333,15 @@ def main() -> None:
     ap.add_argument("--prefix", type=str, default="PokeRSFontChs")
     ap.add_argument("--dilate", action="store_true")
     ap.add_argument("--shadow", action=argparse.BooleanOptionalAction, default=True)
+    ap.add_argument(
+        "--nibble-order",
+        choices=("lo-first", "hi-first"),
+        default="lo-first",
+        help=(
+            "像素半字节布局。hook 的 CHS 绘制按 unshadow 布局读 → lo-first（默认）；"
+            "hi-first 仅用于生成与旧 primary 兼容的 bin（离线比对用）。"
+        ),
+    )
     ap.add_argument("--phrase-map", type=Path, default=None)
     args = ap.parse_args()
 
@@ -251,31 +352,77 @@ def main() -> None:
         )
         sys.exit(1)
 
+    def _kv_map(items) -> dict[str, str]:
+        out: dict[str, str] = {}
+        for it in items or []:
+            if "=" not in it:
+                raise SystemExit(f"error: 需要 LABEL=VALUE 形式，收到 {it!r}")
+            k, _, v = it.partition("=")
+            out[k.strip()] = v.strip()
+        return out
+
+    bdf_map = _kv_map(args.bdf_map)
+    ink_map = _kv_map(args.ink_map)
+    pad_map = _kv_map(args.pad_map)
+
     args.output_dir.mkdir(parents=True, exist_ok=True)
-    print(f"Parsing BDF: {args.bdf}")
-    bdf_glyphs, font_ascent, font_descent, pixel_size = parse_bdf(args.bdf)
+    print(f"Parsing BDF (default): {args.bdf}")
+    default_glyphs, default_ascent, font_descent, pixel_size = parse_bdf(args.bdf)
     print(
-        f"  Loaded {len(bdf_glyphs)} glyphs "
-        f"(ascent={font_ascent}, descent={font_descent}, pixel_size={pixel_size})"
-    )
-    print(
-        f"  Target: {INK_W}x{INK_H} ink in {SLOT_W}x{SLOT_H} slot, "
-        f"{BYTES_PER_GLYPH} B/glyph, pad_top={PAD_TOP}, shadow={args.shadow}"
+        f"  Loaded {len(default_glyphs)} glyphs "
+        f"(ascent={default_ascent}, descent={font_descent}, pixel_size={pixel_size})"
     )
 
     print(f"Parsing charmap: {args.charmap}")
     charmap = parse_charmap(args.charmap)
     print(f"  Found {len(charmap)} Chinese character mappings")
 
-    for i, label in enumerate(args.slot_labels):
+    # 逐 slot 解析 BDF 与 ink 尺寸，同一 BDF 只解析一次
+    bdf_cache: dict[Path, tuple[dict, int]] = {args.bdf.resolve(): (default_glyphs, default_ascent)}
+    plan: list[tuple[str, Path, dict, int, int, int]] = []
+    for label in args.slot_labels:
+        bp = Path(bdf_map[label]) if label in bdf_map else args.bdf
+        key = bp.resolve()
+        if key not in bdf_cache:
+            if not bp.is_file():
+                raise SystemExit(f"error: slot {label} 的 BDF 不存在: {bp}")
+            print(f"Parsing BDF for {label}: {bp}")
+            g, asc, _d, _ps = parse_bdf(bp)
+            bdf_cache[key] = (g, asc)
+            print(f"  Loaded {len(g)} glyphs (ascent={asc})")
+        glyphs, ascent = bdf_cache[key]
+
+        iw, ih = INK_W, INK_H
+        if label in ink_map:
+            try:
+                iw, ih = (int(x) for x in ink_map[label].lower().split("x"))
+            except ValueError:
+                raise SystemExit(f"error: ink 尺寸需 WxH 形式，收到 {ink_map[label]!r}")
+        # pad_top：显式指定优先；否则垂直居中。
+        # ⚠️ 必须与旧字库逐字对齐，否则同屏多行上下互相压盖。
+        if label in pad_map:
+            try:
+                pad = int(pad_map[label])
+            except ValueError:
+                raise SystemExit(f"error: pad_top 需整数，收到 {pad_map[label]!r}")
+        else:
+            pad = max(0, (SLOT_H - ih) // 2)
+        plan.append((label, bp, glyphs, ascent, iw, ih, pad))
+        print(f"  [{label}] bdf={bp.name} ink={iw}x{ih} pad_top={pad}")
+
+    for i, (label, bp, glyphs, ascent, iw, ih, pad) in enumerate(plan):
         print(f"Building {label} font...")
         buf = build_font_bin(
-            bdf_glyphs,
+            glyphs,
             charmap,
-            font_ascent,
+            ascent,
             glyph_count=args.glyph_count,
             bytes_per_glyph=args.bytes_per_glyph,
             shadow=args.shadow,
+            ink_w=iw,
+            ink_h=ih,
+            pad_top=pad,
+            lo_first=(args.nibble_order == "lo-first"),
         )
         if args.slot_sizes and i < len(args.slot_sizes):
             buf = buf[: args.slot_sizes[i]]
@@ -287,7 +434,7 @@ def main() -> None:
         fn = f"{args.prefix}{label}(0x{slot_size:X}).bin"
         out_path = args.output_dir / fn
         out_path.write_bytes(buf)
-        print(f"  Written {len(buf)} bytes -> {out_path}")
+        print(f"  Written {len(buf)} bytes -> {out_path}  (ink {iw}x{ih}, from {bp.name})")
         assert len(buf[0:BYTES_PER_GLYPH]) == 128
 
     print("Done.")

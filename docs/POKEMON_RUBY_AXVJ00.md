@@ -55,7 +55,108 @@ C:\Python314\python.exe src\util\ruby_disasm.py 0x080036DC --count 20
 
 ---
 
-## 1. 结论速览：文本系统的三级分发
+## 0.5 美版权威结构 vs 日版反汇编（联网核对，2026-11-03）
+
+> 来源：`pret/pokeruby` 仓库 `include/text.h`（美版红宝石反编译工程）
+> 抓取：`https://api.github.com/repos/pret/pokeruby/contents/include/text.h?ref=master`
+
+### 0.5.1 `struct WindowTemplate`（美版权威，28 字节）
+
+```c
+struct WindowTemplate
+{
+    u8 bgNum;              // +0x00
+    u8 charBaseBlock;      // +0x01
+    u8 screenBaseBlock;    // +0x02
+    u8 priority;           // +0x03
+    u8 paletteNum;         // +0x04
+    u8 foregroundColor;    // +0x05
+    u8 backgroundColor;    // +0x06
+    u8 shadowColor;        // +0x07
+    u8 fontNum;            // +0x08
+    u8 textMode;           // +0x09
+    u8 spacing;            // +0x0A
+    u8 tilemapLeft;        // +0x0B
+    u8 tilemapTop;         // +0x0C
+    u8 width;              // +0x0D
+    u8 height;             // +0x0E
+    u8 *tileData;          // +0x10（1 字节 padding 后 4 字节对齐）
+    u16 *tilemap;          // +0x14
+    u32 maybeUnused;       // +0x18
+};                         // 总大小 0x1C = 28
+```
+
+### 0.5.2 与日版反汇编逐字段对照（**完全一致**）
+
+日版 `Text_InitWindow @ 0x08002C68` 的读取顺序（见 §2.1 反汇编）与美版字段逐一吻合：
+
+| 日版反汇编 | 读取的模板偏移 | 美版字段 | 结论 |
+|---|---|---|---|
+| `win[0x0A] = tpl[9]` | `+0x09` | `textMode` | ✅ 一致 |
+| `win[0x0B] = tpl[8]` | `+0x08` | `fontNum` | ✅ 一致 |
+| `win[0x0C] = tpl[5]` | `+0x05` | `foregroundColor` | ✅ 一致 |
+| `win[0x0D] = tpl[6]` | `+0x06` | `backgroundColor` | ✅ 一致 |
+| `win[0x0E] = tpl[7]` | `+0x07` | `shadowColor` | ✅ 一致 |
+| `win[0x0F] = tpl[4]` | `+0x04` | `paletteNum` | ✅ 一致 |
+
+**结论【实证】**：日版 `WindowTemplate` 的布局与美版**相同**。这否定了本文件
+§2.2 早前"本作自定义模板"的推断 —— 那就是标准 `WindowTemplate`，
+只是 `Text_InitWindow` 只读了其中 6 个字段。
+
+### 0.5.3 `struct Window`（美版）与日版 `win` 的差异
+
+美版 `struct Window`（`text.h`）：
+
+```c
+struct Window {
+ /*0x00*/ u8 textMode;      /*0x01*/ u8 fontNum;
+ /*0x02*/ u8 language;      /*0x03*/ u8 foregroundColor;
+ /*0x04*/ u8 backgroundColor; /*0x05*/ u8 shadowColor;
+ /*0x06*/ u8 paletteNum;    /*0x07*/ u8 tilemapLeft;
+ /*0x08*/ u8 tilemapTop;    /*0x09*/ u8 width;
+ /*0x0A*/ u8 height;        /*0x0B*/ u8 win_field_B;
+ /*0x0C*/ u8 win_field_C;   /*0x0D*/ u8 delayCounter;
+ /*0x0E*/ u8 spacing;       /*0x0F*/ u8 win_field_F;
+ /*0x10*/ u8 cursorX;       /*0x11*/ u8 cursorY;
+ /*0x12*/ u8 left;          /*0x14*/ u16 top;
+ /*0x16*/ u16 state;        /*0x18*/ u16 downArrowCounter;
+ /*0x1A*/ u16 tileDataStartOffset; /*0x1C*/ u16 tileDataOffset;
+ /*0x1E*/ u16 textIndex;    /*0x20*/ const u8 *text;
+ /*0x24*/ u8 *tileData;     /*0x28*/ u16 *tilemap;
+ /*0x2C*/ const struct WindowTemplate *template;
+};
+```
+
+**日版实测（§2.1 反汇编）与美版的关键差异【实证】**：
+
+| 项 | 美版 | 日版实测 | 差异 |
+|---|---|---|---|
+| `win[0x00]` | `textMode` | **`template` 指针**（`ldr r5,[r0]`） | **布局不同** |
+| `win[0x0A]` | `height` | **`textMode`** | 偏移不同 |
+| `win[0x0B]` | `win_field_B` | **`fontNum`** | 偏移不同 |
+| `win[0x04]` | `backgroundColor` | **`state`**（u16） | 偏移不同 |
+| 模板位置 | `win[0x2C]` | `win[0x00]` | 偏移不同 |
+
+> **⚠️ 重要**：日版 `struct Window` 与美版**不是同一套布局**。
+> 日版把 `template` 放在 `+0x00`，`textMode`/`fontNum` 放在 `+0x0A`/`+0x0B`。
+> 移植美版代码到日版时**不能直接套用 `win` 偏移**，必须按 §2.1 的日版实测表。
+
+### 0.5.4 `SaveBlock1` 队伍字段（顺带确认）
+
+美版 `include/global.h`：
+
+```c
+struct SaveBlock1 {
+    /*0x234*/ u8 playerPartyCount;
+    /*0x238*/ struct Pokemon playerParty[6];
+    ...
+};
+```
+
+这解释了此前诊断火红存档时的现象：`SaveBlock1` 缺失 → `+0x234` 读不到队伍数量。
+（注：此处为**红宝石**的布局，与火绿的偏移不同，不可混用。）
+
+---
 
 ```
 RunTextPrinter (0x08002DE8)
@@ -143,9 +244,15 @@ Text_InitWindow(win=r0, textPtr=r1, lineWidth=r2, cursorX=r3, [sp+0x18]=cursorY)
 | `+0x08` | **fontNum** | `win[0x0B]` |
 | `+0x09` | **textMode** | `win[0x0A]` |
 
-> ⚠️ **注意**：这是本作自定义的文本模板，**不是** pokeruby 的标准 `WindowTemplate`
-> （后者的 `+0x08` 是 tilemap 指针）。`+0x00`–`+0x03` 的含义本文件未确认 →
-> 标【待动态】，因为 `Text_InitWindow` 不读这几个字节。
+> **⚠️ 注意**：`Text_InitWindow` 只读 `+0x04`–`+0x09` 六个字节，
+> `+0x00`–`+0x03` 与 `+0x0A` 以后**它不读**。
+>
+> 与美版 `include/text.h` 的 `struct WindowTemplate` 对照（见 §0.5.1）：
+> `+0x04`–`+0x09` 六个字段名与顺序**与美版完全一致**
+> （paletteNum / foregroundColor / backgroundColor / shadowColor / fontNum / textMode）。
+>
+> 但 `tilemap` 的偏移日版是 `+0x10`、美版是 `+0x14`（见 §2.3.1），
+> 说明日版模板在后半段做了压缩。因此**前半段可套美版，后半段不可**。
 
 ### 2.3 win[0x00] 指向的模板（tilemap 来源）
 
@@ -175,6 +282,26 @@ tileY = win[0x1D] + win[0x1C]
 index = tileY * 32 + tileX          ← 32 是硬编码的 tilemap 宽度
 address = *(u32*)(win[0x00] + 0x10) + index * 2
 ```
+
+### 2.3.1 ⚠️ 日版模板 `tilemap` 偏移与美版**不同**
+
+逐条核对了 `0x0800371A` / `0x08003722` 的机器码：
+
+```asm
+0x0800371A  6800   ldr r0, [r0, #0x0]    ; r0 = win[0x00]（模板指针本身）
+0x08003722  6900   ldr r0, [r0, #0x10]   ; r0 = 模板 + 0x10  ← ★
+```
+
+| | 美版 `text.h` | 日版实测 |
+|---|---|---|
+| `tilemap` 字段偏移 | `+0x14` | **`+0x10`** |
+
+这说明**日版模板不是美版 `WindowTemplate` 的原样**：日版在 `+0x10` 直接放 `tilemap`
+（美版 `+0x10` 是 `tileData`、`+0x14` 才是 `tilemap`）。
+
+【推断】日版模板可能是更紧凑的变体（省掉 `tileData` 指针，或 `tileData` 与
+`tilemap` 合并）。**因此：`+0x00`–`+0x03` 与 `+0x0F`–`+0x18` 的日版含义
+不能按美版套用**，需另做实证 → 标【待动态】。
 
 `lsrs r1, r1, #0x13` 等价于 `(v << 8) >> 19 == v * 32 / 256` 的位运算技巧，
 展开后正是 `tileY * 32`。**tilemap 宽度 32 tile = 256 像素**。
@@ -548,15 +675,105 @@ C 层已实现的 FC 处理与上表一致（`FC_FOREGROUNDCOLOR`/`FC_BACKGROUND
 
 ### 7.1 为什么这份文件没有「53 个窗口」的清单
 
-用户曾提到"窗口有 53 个"，但经实测：
+用户曾提到"窗口有 53 个"，但经实测**无法证实**，且找到了更准确的替代答案：
 
 1. 符号表里 `gWindowTemplate_81E6C3C` ～ `gWindowTemplate_81E7294` 共 54 个"连续模板"，
-   **实测原始字节为图块数据**（`00 ef 00 00 f0 ff fe 0e …`，`0xEF/0xEE` 反复出现），
-   按模板结构读出的 `paletteNum=240`、`textMode=239` 均为非法值。
-2. 用「字段合法性 + 被字面量引用」两个条件扫全 ROM，得到 3046 个候选 ——
-   说明仅凭数据特征无法区分模板与普通数据。
+   **实测 `0x081B76E4`（首个）被代码字面量引用 0 次** —— 它不是真模板。
+2. 按美版权威 `WindowTemplate` 结构（§0.5.1）+「被引用」+「tilemap 指向 EWRAM/VRAM」
+   三重约束扫全 ROM，只剩 22 个候选，且全部是**重复模式数据**
+   （`tmap=0x06010601`、`0x02020202`），显然不是模板。
+3. 结论：**日版把窗口模板内联在代码里**，由 `Text_InitWindowWithTemplate` 在栈上
+   临时构造（见 §7.2.1 的反汇编），ROM 中没有 53 个静态模板数组。
 
-**因此 53 这个数字来源不可靠，本文件不预设窗口数量。**
+**因此 53 这个数字来源不可靠，本文件改用「窗口实例 = 初始化调用点」来枚举。**
+
+### 7.2 全部窗口实例：37 个函数 / 45 处初始化【实证】
+
+**依据**：`scripts/analyze_text_callers.py` 思路 + `find_callers(0x080030A8)`
+
+`0x080030A8` = `Text_InitWindowWithTemplate`（实测函数头 `push {r4,lr}`），
+它做「在栈上建 2 字节临时模板 → `Text_InitWindow` → `PrintNextChar`」。
+
+| # | 函数 | 调用点 | 场景【推断】 |
+|---|---|---|---|
+| 1 | `CB2_EggHatch_1+0x220` | `0x08040918` | **蛋孵化**提示 |
+| 2 | `sub_8049E9C+0x12` | `0x0804759A` | 交换场景（1/N）|
+| 3 | `sub_8049ED4+0x14` | `0x080475D4` | 交换场景（2/N）|
+| 4 | `sub_8049ED4+0x32` | `0x080475F2` | 交换场景（3/N）|
+| 5 | `sub_8049ED4+0x29C` | `0x0804785C` | 交换场景（4/N）|
+| 6 | `sub_804A51C+0x1A4` | `0x08047DAC` | 交换场景（5/N）|
+| 7 | `SetTradeSceneStrings+0xC4` | `0x08049958` | **交换场景文字** |
+| 8 | `sub_804C29C+0x6C` | `0x080499F4` | 交换子流程 a |
+| 9 | `sub_804C29C+0xCBC` | `0x0804A644` | 交换子流程 b |
+| 10 | `sub_804C29C+0xD34` | `0x0804A6BC` | 交换子流程 c |
+| 11 | `_CreateInGameTradePokemon+0x152` | `0x0804B186` | **游戏内交换宝可梦** |
+| 12 | `sub_805123C+0xB8` | `0x0804E9E0` | 未知场景（1）【待动态】|
+| 13 | `sub_805123C+0xFC` | `0x0804EA24` | 未知场景（2）【待动态】|
+| 14 | **`Menu_PrintText`** | `0x0806F16C` | **菜单文本打印**（通用）|
+| 15 | `RemoveBagItem+0xA0` | `0x080A5B4C`（3 处）| **背包移除道具** |
+| 16 | `CheckPCHasItem+0x34` | `0x080A5CC0`（2 处）| **PC 道具检查** |
+| 17 | `RemovePCItem+0x18` | `0x080A5D80` | PC 移除道具 |
+| 18 | `CompactPCItems+0x28` | `0x080A5DC8` | PC 道具整理 |
+| 19 | `SwapRegisteredBike+0x18` | `0x080A5E10` | 注册自行车交换 |
+| 20 | `ItemId_GetName+0x10` | `0x080A5E58` | **道具名** |
+| 21 | `ItemId_GetPrice+0x14` | `0x080A5EA0` | 道具价格 |
+| 22 | `ItemId_GetHoldEffectParam+0x14` | `0x080A5EE8` | 持有效果参数 |
+| 23 | `ItemId_CopyDescription+0x14` | `0x080A5F30`（2 处）| **道具说明** |
+| 24 | `ItemId_GetType+0x10` | `0x080A5FF8` | 道具类型 |
+| 25 | `ItemId_GetFieldFunc+0x18` | `0x080A6024` | 野外使用函数 |
+| 26 | `ItemId_GetBattleUsage+0x20` | `0x080A6050` | 战斗使用方式 |
+| 27 | `sub_80AA4F0+0x60` | `0x080A6AC4` | 未知场景（3）【待动态】|
+| 28 | `CB2_CrashIdle+0x10` | `0x080A7708`（2 处）| 崩溃/异常画面 |
+| 29 | `InitContestResources+0x34` | `0x080A78F8` | **华丽大赛初始化** |
+| 30 | `Task_ReadyUpdateHeartSliders+0x8` | `0x080A9F98` | 大赛心跳条 |
+| 31 | `Task_UpdateHeartSliders+0x68` | `0x080AA028` | 大赛心跳条更新 |
+| 32 | `Task_EndCommunicateFinalStandings+0x2C` | `0x080AA538`（2 处）| 大赛最终名次 |
+| 33 | `PrintContestantTrainerName` | `0x080AAB30` | **大赛选手训练家名** |
+| 34 | `PrintContestMoveDescription+0x40` | `0x080AB1A0` | **大赛招式说明** |
+| 35 | `unref_sub_80B011C+0x2C` | `0x080AC6BC`（2 处）| 未知场景（4）【待动态】|
+| 36 | `ContestDebugDoPrint+0x20` | `0x080AD310` | 大赛调试打印 |
+| 37 | `DoTVShowTodaysSmartShopper+0x128` | `0x080BD49C`（2 处）| **TV 节目：今日精明买家** |
+
+### 7.2.1 窗口模板的真实构造方式【实证】
+
+**依据**：`0x080030A8` 反汇编
+
+```asm
+; Text_InitWindowWithTemplate(win=r0, 模板首字节=r1, lineWidth=r2, cursorX=r3, [sp+0x0C]=cursorY)
+0x080030A8  push {r4, lr}
+0x080030AA  sub  sp, #4
+0x080030AC  adds r4, r0, #0
+0x080030AE  ldr  r0, [sp, #0xc]    ; cursorY
+0x080030B0  lsls r2, r2, #0x10
+0x080030B2  lsrs r2, r2, #0x10     ; lineWidth 截断 u16
+0x080030B4  lsls r3, r3, #0x18
+0x080030B6  lsrs r3, r3, #0x18     ; cursorX 截断 u8
+0x080030B8  lsls r0, r0, #0x18
+0x080030BA  lsrs r0, r0, #0x18
+0x080030BC  str  r0, [sp]          ; 参数就位
+0x080030BE  adds r0, r4, #0
+0x080030C0  bl   #0x08002CFC      ; Text_InitWindow8002E4C —— 真正的窗口初始化
+0x080030C4  adds r0, r4, #0
+0x080030C6  bl   #0x08002DE8      ; RunTextPrinter
+```
+
+而 `0x08002CFC` 内部（见 §3 前）在**栈上构造 2 字节模板**：
+
+```asm
+0x080030EC  add  r0, sp, #4        ; tpl = &sp[4]
+0x080030EE  strb r1, [r0]          ; tpl[0] = 参数1
+0x080030F2  movs r0, #0xff
+0x080030F4  strb r0, [r1, #1]      ; tpl[1] = 0xFF
+```
+
+**结论【实证】**：日版的"窗口配置"不来自 ROM 常量表，而是**调用时用一个字节**
+（`r1`，通常是 `fontNum` 或 `textMode` 编码值）在栈上拼出来。
+
+> ⚠️ 因此 `tpl[4..9]`（palette/fg/bg/shadow/fontNum/textMode）在这些栈模板里
+> 是**未初始化**的 —— `Text_InitWindow` 会把它们从栈上读到 `win[0x0A..0x0F]`。
+> 实际生效值取决于调用者之前栈上的残留 → **必须动态确认**（§8.2）。
+
+---
 
 ### 7.2 全部 40 个 RunTextPrinter 调用点（逐个反汇编 + 文本解码）
 
@@ -706,11 +923,25 @@ C 层已实现的 FC 处理与上表一致（`FC_FOREGROUNDCOLOR`/`FC_BACKGROUND
 
 | 想确认的事 | 动态做法 |
 |---|---|
-| 某个窗口的 textMode/fontNum 实际值 | 在 `PrintNextChar @ 0x080032F8` 下断点，读 `win[0x0A]`/`win[0x0B]` |
+| **栈模板的实际字段值** | 在 `Text_InitWindow @ 0x08002C68` 的 `0x08002C8A`（读 `tpl[8]`=fontNum）下断点，读 `win[0x00]` 指向的栈地址内容 |
+| 某个窗口的 textMode/fontNum | 在 `PrintNextChar @ 0x080032F8` 下断点，读 `win[0x0A]`/`win[0x0B]` |
 | 窗口的 tilemap 落址 | 在 `UpdateTilemap @ 0x080036DC` 下断点，看返回值与写入地址 |
 | `win[0x20]` 缓冲生命周期 | 在 textMode==2 路径下断点，观察分配/释放 |
 | state 8/9 的推进 | 在 `RunTextPrinter` 循环内断点，记录 `win[0x04]` 序列 |
-| FC 子处理器分支 | 在 `0x08003110` 下断点，记录 `win[textIndex]` 的 FC 子类型 |
+| FC 子处理器分支 | 在 `0x08003110` 下断点，记录子类型字节 |
+| 各窗口的坐标/尺寸 | 在 `GetCursorTilemapPointer` 断点，反算 `(tileX,tileY)` 与窗口边界 |
+
+### 8.3 与美版的差异汇总（移植时必读）
+
+| 项 | 美版 | 日版 | 依据 |
+|---|---|---|---|
+| `WindowTemplate` `+0x04`–`+0x09` | pal/fg/bg/shadow/fontNum/textMode | **相同** | §0.5.2 |
+| `WindowTemplate` `tilemap` | `+0x14` | **`+0x10`** | §2.3.1 |
+| `struct Window` `+0x00` | `textMode` | **`template` 指针** | §0.5.3 |
+| `struct Window` `textMode` | `+0x00` | **`+0x0A`** | §0.5.3 |
+| `struct Window` `fontNum` | `+0x01` | **`+0x0B`** | §0.5.3 |
+| `struct Window` `state` | `+0x16` | **`+0x04`** | §0.5.3 |
+| `SaveBlock1` 队伍数 | `+0x234` | 需另测（红宝石与火绿不同）| §0.5.4 |
 
 ---
 
@@ -738,3 +969,5 @@ C:\Python314\python.exe scripts\scan_window_templates.py
 | 2026-11-03 | 补：FC 子处理器 16 种控制码全部解出（含字段写入映射）|
 | 2026-11-03 | 补：全部 40 个 RunTextPrinter 调用点，26 个宿主函数，逐个解码窗口文本 |
 | 2026-11-03 | 修：符号表 5 处错位实证（`TextMode0/1`、`GetCursorTilemapPointer`、`Text_PrintWindowSimple`、54 个假模板）|
+| 2026-11-03 | 联网核对美版 `pokeruby/include/text.h`：确认 `WindowTemplate` 前 6 字段与日版一致；发现 `tilemap` 偏移日版 `+0x10` vs 美版 `+0x14`；发现 `struct Window` 日美布局不同（§0.5）|
+| 2026-11-03 | 补：窗口实例真实枚举 —— 37 个函数 / 45 处 `Text_InitWindowWithTemplate` 调用（§7.2）；证实日版无静态模板数组（§7.2.1）|

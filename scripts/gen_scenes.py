@@ -42,7 +42,7 @@ SCENE_DEFS = {
     "mart_slateport":   ("9:12", 8, 8,  "Slateport 商店", "counter"),
     "contest_lilycove": ("13:5", 10, 12, "Lilycove 华丽大赛会场", "interior"),
     "contest_slateport": ("9:3", 10, 12, "Slateport 华丽大赛会场", "interior"),
-    "gamecorner_mauville": ("10:3", 8, 10, "Mauville 游戏厅", "counter"),
+    "gamecorner_mauville": ("10:3", 8, 10, "Mauville 游戏厅", "counter_left"),
     "bikeshop_mauville": ("10:1", 6, 8,  "Mauville 自行车店", "counter"),
 }
 
@@ -126,6 +126,11 @@ BODY_COUNTER = '''
 --    ⚠ 教训（bikeshop/gamecorner 实测）：走到 (6,5) 面朝 UP 时 talk 超时，
 --      但截图显示**店主在右上方**（不在正上方）。柜台位置的规律不可靠，
 --      所以这里四方向**各试一次 talk（soft）**，只要有一个开框就继续。
+--    ⚠ 顺序很重要（实测对照）：
+--      · **先直接 UP** —— 对商店/宝可梦中心是对的（走到柜台前）
+--      · 若四方向 talk 全打空，再**侧移后重试** —— 对紧贴老虎机的游戏厅有用
+--      固定加侧移会让商店/PC 离开柜台（实测 bikeshop 139→1、
+--      center 164→1）；固定不侧移则 gamecorner 只有 1。所以两段都要。
 api.roam{{ seq = {{ "UP", "UP", "UP", "UP" }}, steps = 4 }}
 api.shot("{prefix}_at_counter")
 
@@ -195,7 +200,45 @@ end
 api.shot("{prefix}_end")
 '''
 
-BODIES = {"gym": BODY_GYM, "counter": BODY_COUNTER, "interior": BODY_INTERIOR}
+BODY_COUNTER_LEFT = '''
+-- ③ 柜台在侧面：先侧移再上行，然后四方向 talk
+--
+--    ⚠ 实测（bikeshop_mauville）：
+--      · 先 UP 4 格 → 四方向 talk   ⇒ **1 帧**（打空）
+--      · 先 RIGHT 2 格 → UP 4 格   ⇒ **139 帧** ✅
+--      截图显示店主在主角**右上方**，所以必须先侧移。
+--    （商店/PC 相反：它们要先直上，固定侧移会离开柜台。）
+api.roam{{ seq = {{ "RIGHT", "RIGHT" }}, steps = 2 }}
+api.shot("{prefix}_side")
+api.roam{{ seq = {{ "UP", "UP", "UP", "UP" }}, steps = 4 }}
+api.shot("{prefix}_at_counter")
+
+local probe = {{ "UP", "RIGHT", "LEFT", "DOWN" }}
+for _, d in ipairs(probe) do
+    api.tap(d, 5, 22)
+    api.talk{{ timeout = 200, soft = true }}
+    api.burst(string.format("{prefix}_dlg_%s_f", d), 10, 5)
+    api.shot(string.format("{prefix}_dlg_%s", d))
+    for i = 1, 4 do
+        api.tap("A", 5, 42)
+        api.shot(string.format("{prefix}_dlg_%s_%d", d, i))
+    end
+    api.tap("B", 4, 30)
+end
+
+-- 退出后试菜单（选车/看车列表）
+api.tap("A", 6, 60)
+api.burst("{prefix}_menu_f", 12, 8)
+api.shot("{prefix}_menu")
+for i = 1, 6 do
+    api.tap("DOWN", 4, 28)
+    api.shot(string.format("{prefix}_item%d", i))
+end
+api.tap("B", 4, 45)
+api.shot("{prefix}_end")
+'''
+
+BODIES = {"gym": BODY_GYM, "counter": BODY_COUNTER, "counter_left": BODY_COUNTER_LEFT, "interior": BODY_INTERIOR}
 
 
 def gen(name: str) -> str:

@@ -28,44 +28,37 @@ api.wait(60)
 api.shot("game_mauv_inside")
 api.burst("game_mauv_enter_f", 14, 8)
 
--- ③ 柜台/店员对话
+-- ③ 柜台在侧面：先侧移再上行，然后四方向 talk
 --
---    ⚠ 教训（bikeshop/gamecorner 实测）：走到 (6,5) 面朝 UP 时 talk 超时，
---      但截图显示**店主在右上方**（不在正上方）。柜台位置的规律不可靠，
---      所以这里四方向**各试一次 talk（soft）**，只要有一个开框就继续。
+--    ⚠ 实测（bikeshop_mauville）：
+--      · 先 UP 4 格 → 四方向 talk   ⇒ **1 帧**（打空）
+--      · 先 RIGHT 2 格 → UP 4 格   ⇒ **139 帧** ✅
+--      截图显示店主在主角**右上方**，所以必须先侧移。
+--    （商店/PC 相反：它们要先直上，固定侧移会离开柜台。）
+api.roam{ seq = { "RIGHT", "RIGHT" }, steps = 2 }
+api.shot("game_mauv_side")
 api.roam{ seq = { "UP", "UP", "UP", "UP" }, steps = 4 }
 api.shot("game_mauv_at_counter")
 
 local probe = { "UP", "RIGHT", "LEFT", "DOWN" }
 for _, d in ipairs(probe) do
     api.tap(d, 5, 22)
-    api.talk{ timeout = 150, soft = true }
+    api.talk{ timeout = 200, soft = true }
     api.burst(string.format("game_mauv_dlg_%s_f", d), 10, 5)
     api.shot(string.format("game_mauv_dlg_%s", d))
-    -- 若真开了框，多推两句（把这段对话采完整）
-    for i = 1, 3 do
-        api.tap("A", 5, 40)
+    for i = 1, 4 do
+        api.tap("A", 5, 42)
         api.shot(string.format("game_mauv_dlg_%s_%d", d, i))
     end
     api.tap("B", 4, 30)
 end
 
--- 逐句推进（每句连帧，覆盖逐字打印与换句重绘）
-for i = 1, 8 do
-    api.tap("A", 5, 45)
-    api.burst(string.format("game_mauv_dlg%d_f", i + 1), 6, 6)
-    api.shot(string.format("game_mauv_dlg%d", i + 1))
-end
-
--- ④ 退出后试菜单（商店/PC 都有列表）
-api.tap("B", 4, 40)
-api.shot("game_mauv_menu_try")
-api.tap("A", 6, 55)
+-- 退出后试菜单（选车/看车列表）
+api.tap("A", 6, 60)
 api.burst("game_mauv_menu_f", 12, 8)
 api.shot("game_mauv_menu")
 for i = 1, 6 do
-    api.tap("DOWN", 4, 26)
-    api.burst(string.format("game_mauv_item%d_f", i), 5, 6)
+    api.tap("DOWN", 4, 28)
     api.shot(string.format("game_mauv_item%d", i))
 end
 api.tap("B", 4, 45)

@@ -33,6 +33,11 @@ api.burst("mart_olda_enter_f", 14, 8)
 --    ⚠ 教训（bikeshop/gamecorner 实测）：走到 (6,5) 面朝 UP 时 talk 超时，
 --      但截图显示**店主在右上方**（不在正上方）。柜台位置的规律不可靠，
 --      所以这里四方向**各试一次 talk（soft）**，只要有一个开框就继续。
+--    ⚠ 顺序很重要（实测对照）：
+--      · **先直接 UP** —— 对商店/宝可梦中心是对的（走到柜台前）
+--      · 若四方向 talk 全打空，再**侧移后重试** —— 对紧贴老虎机的游戏厅有用
+--      固定加侧移会让商店/PC 离开柜台（实测 bikeshop 139→1、
+--      center 164→1）；固定不侧移则 gamecorner 只有 1。所以两段都要。
 api.roam{ seq = { "UP", "UP", "UP", "UP" }, steps = 4 }
 api.shot("mart_olda_at_counter")
 

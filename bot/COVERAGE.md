@@ -93,6 +93,53 @@ schema 2 的旧批次仍是旧布局，靠 `manifest.schema` 区分。
 | `_probe_talk` | MauvilleCity_Mart | 四方向各按一次 A | **诊断**：找哪一面有可对话 NPC | 无（故意打空） |
 | `_probe_use` | Route118 | 背包「学习装置 → 使用 → A/B 各推几下」 | **诊断**：确认说明框几页、退回到哪一层 | 无 |
 | `_probe_hunt` `_probe_hunt2` | Route118 | 遇敌搜捕可行性 | **诊断**：验证 hunt / 钉RNG | 无 |
+| **`gym_mauville`** | Route118 | **Mauville 道馆 `10:0`**：进馆 → 训练家对话 | 道馆训练家台词、室内多 NPC | `poke`+`warp`+`talk` |
+| **`contest_hall`** | Route118 | **华丽大赛大厅 `5:1`**（Fallarbor） | 大赛报名/柜台文本、会场 NPC | `poke`+`warp` |
+
+---
+
+## 2.2 ★ 精确跳图（2026-11-03 跑通）—— 跳场景就用它
+
+```lua
+api.warp{ map = "10:0", x = 5, y = 8, mon = 1 }
+```
+
+原理：写 `SaveBlock1.lastHealLocation`（`+0x1C`）+ 用传送术，
+走 `Overworld_ResetStateAfterTeleport → WarpIntoMap` 那条路。
+实测 `(23,17) map=0:2` → `(68,7) map=0:33`，**坐标一字不差**。
+
+**前置**：存档里要有会传送术的宝可梦，用
+`python scripts/warp_tool.py --apply --out work/teleport.sav` 植入一次。
+
+### 已验证可直达的地图 ID
+
+日版 group 顺序与美版**在 0 / 2 / 10 / 5 组上完全一致**（用实测点校准过，
+见 `scripts/map_ids.py`）：
+
+| 地图 | ID | 用途 | 实测 |
+|---|---|---|---|
+| MauvilleCity_Gym | **10:0** | 道馆 | ✅ `warp` 命中，截图确认是道馆内部 |
+| MauvilleCity_Mart | 10:7 | 商店（原存档点） | ✅ 读档即在此 |
+| FallarborTown_ContestLobby | **5:1** | 华丽大赛大厅 | ✅ `warp` 命中，截图见到柜台/接待 |
+| FallarborTown_ContestHall | 5:2 | 大赛会场 | 未试 |
+| SlateportCity_ContestLobby | 9:2 | 大赛大厅（另一城） | 未试 |
+| LilycoveCity_ContestLobby | 13:4 | 大赛大厅（最大会场） | 未试 |
+| MauvilleCity | 0:2 | 该市户外 | ✅ |
+| Route118 / Route119 | 0:33 / 0:34 | 野外 | ✅ |
+
+### ⚠ 两个使用注意
+
+1. **一个场景只做一次 warp**。连续第二次会 TIMEOUT（菜单状态未归位）。
+   要多次跳图请拆成多个 scene —— 这也正是用户建议的做法。
+2. **落点要选地图内可走区域**。华丽大赛 Lobby 用 `(10,10)` 会落在地图外的黑屏里，
+   改 `(8,5)` 才正常。落点不对时看 `ct_lobby` 截图再调。
+
+### 朝向错了会白按 A
+
+道馆场景一开始从 `(5,3)` 朝 UP 按 A，`talk` 闸门直接报「没打到对话」。
+换成 **LEFT** 才成功——这个方向是**实测出来的**：四方向逐点试 A，
+事后按 VRAM tilemap 差异排序，差异最大那帧（diff=102562 vs 其他 <98000）
+对应的动作就是 `gn2_a_LEFT`，画面确实是训练家对话。
 
 ---
 

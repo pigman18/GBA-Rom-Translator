@@ -136,6 +136,25 @@ uint8_t GetChineseFontWidthFunc(uint16_t ChineseChar, uint8_t fontId)
 
 ---
 
+### 同时暴露的第二个问题：句子被截断
+
+同一句译文在道馆里显示为：
+
+```
+年轻人[畸形]要更加更加努▼
+```
+
+原文（日版）是「わはははは！ わかものよ もっともっと がんばるのじゃ」。
+译文末尾的「力」**没有画出来**，句子在中途就结束了。
+
+- 复现帧：`work/.../gym_mauville/<stamp>/translated/034.png`、`061.png`
+- 放大图：`work/_probe/gym_dlg_zoom.png`
+- 可能原因：**行宽溢出被截断**（译文比原文长，超出该窗口的 lineWidth），
+  或者译文本身缺字。**未确认，需进一步查**。
+- 这一条与 B09 是**两个独立问题**：B09 是标点画宽，这条是内容丢失。
+
+---
+
 ## 复现与验收约定
 
 - 采一帧：`python bot/run.py POKEMON_RUBY_AXVJ00 battle_full --no-verify`

@@ -1,73 +1,55 @@
 -- ============================================================================
--- gym_dewford.lua — Dewford 道馆（格斗）（map=3:3）
+-- gym_dewford.lua — Dewford 道馆（map=3:3，格斗系）
 --
--- 【地图 ID 依据】scripts/map_ids_full.py
---   日版实测校准了 group 0/2/10 与美版完全一致，其余组按美版顺序换算。
+-- 【为什么之前采不到】（已解，2026-11-03）
+--   这张图是**溜冰迷宫**：盲走到 (2,7) 后左侧是虚空，NPC 在墙的另一侧，
+--   逐格四方向试 A 共 40+ 次全部超时（123 帧里仅 1 帧有窗口）。
 --
--- 【到达方式】warp（精确跳图，2026-11-03 跑通）
---   写 SaveBlock1.lastHealLocation(+0x1C) → 用传送术 → 精确落点。
---   ⚠ 一个场景只做一次 warp（连续第二次会 TIMEOUT，实测）。
---   ⚠ 落点必须在地图内可走区域，否则落在黑屏（见 COVERAGE 2.2）。
+-- 【解法】读 ObjectEventTemplate 拿到「带 script 的可交互对象」坐标，
+--   直接 warp 到它旁边。日版布局是实测反推出来的：
+--     SaveBlock1 + 0x0C0C 起，每项 0x18：
+--       +0x00 s16 x   +0x02 s16 y   +0x0C u32 script
+--   （与 pokeruby 的 /*0xC20*/ 差 0x14，字段顺序也不同 —— 日版就是不一样）
+--   本图实测 5 个可交互对象：
+--     [1](14,4) [2](2,17) [3](1,10) [4](12,24) [5](5,24)
+--   脚本校验：读 ROM 得到 `0f 00 ... 09 02`（loadword+callstd+end），
+--   是真脚本，不是随机数据。
 --
--- 【采集套路】连帧 + talk 闸门（打空当场失败，不产出假对照）
+-- 【本场景】落到最近的 [2](2,17) 下方 (2,18)，朝 UP 对话。
+--   ⚠ 一个场景只 warp 一次，其余对象留给后续单独场景。
 -- ============================================================================
 local L = dofile((os.getenv("BOT_ROOT") or "."):gsub("\\", "/"):gsub("/+$", "")
                  .. "/scenes/" .. os.getenv("BOT_GAME_ID") .. "/_lib.lua")
 local api = L.new()
 
 L.preamble(api)
-api.shot("gym_dewf_start")
+api.shot("gd_start")
 
--- ① 出门到城市（warp 需要先能自由行动；传送术在室内不可用）
+-- 出门到城市（warp 需要先能自由行动）
 api.roam{ seq = { "DOWN", "DOWN" }, steps = 8 }
-api.shot("gym_dewf_outside")
+api.shot("gd_outside")
 
--- ② 跳进目标地图
-api.warp{ map = "3:3", x = 8, y = 15, mon = 1 }
+-- 直接跳到目标 NPC [2](2,17) 的下方
+api.warp{ map = "3:3", x = 2, y = 18, mon = 1 }
 api.wait(60)
-api.shot("gym_dewf_inside")
-api.burst("gym_dewf_enter_f", 14, 8)
+api.shot("gd_at_npc")
+api.burst("gd_enter_f", 12, 8)
 
--- ③ 道馆：两段式扫（先竖扫，再蛇形），每格四方向试 A
---
---    ⚠ 教训（实测 4 轮，很重要）：
---      · gym_lavaridge 用「向上走 6 格 + 每格四方向 A」能采到 **31 个窗口**；
---        换成显式蛇形路径后掉到 1 个 ⇒ **竖扫对这个道馆更有效**。
---      · gym_dewford 反过来：竖扫 1 个，蛇形也 1 个（NPC 在并列走道，
---        隔墙打不到）—— 这是地图结构限制，不是路径问题。
---      · 所以模板走**两段**：先竖扫，再蛇形，两种布局都照顾到。
-local dirs = { "UP", "LEFT", "RIGHT", "DOWN" }
+-- 朝 UP 对话（闸门：打空会当场失败）
+api.tap("UP", 5, 25)
+api.shot("gd_facing")
+api.talk{ timeout = 300 }
+api.burst("gd_dlg_open", 16, 6)
+api.shot("gd_dlg1")
 
--- 第一段：竖扫（对 Lavaridge 这类「一路向上」的道馆有效）
-for step = 1, 6 do
-    api.roam{ seq = { "UP" }, steps = 1 }
-    api.shot(string.format("gym_dewf_v%d", step))
-    for _, d in ipairs(dirs) do
-        api.tap(d, 5, 16)
-        api.tap("A", 6, 38)
-        api.shot(string.format("gym_dewf_v%d_%s", step, d))
-        api.tap("B", 4, 20)
-    end
+-- 逐句推进
+for i = 1, 10 do
+    api.tap("A", 5, 45)
+    api.burst(string.format("gd_dlg%d_f", i + 1), 6, 6)
+    api.shot(string.format("gd_dlg%d", i + 1))
 end
-api.shot("gym_dewf_vs_end")
 
--- 第二段：蛇形（覆盖侧翼 NPC）
-local path = {
-    "LEFT", "LEFT", "LEFT", "DOWN", "DOWN", "DOWN",
-    "RIGHT", "RIGHT", "RIGHT", "UP", "UP",
-}
-local n = 0
-for _, d in ipairs(path) do
-    api.roam{ seq = { d }, steps = 1 }
-    n = n + 1
-    api.shot(string.format("gym_dewf_p%02d_%s", n, d))
-    for _, dd in ipairs(dirs) do
-        api.tap(dd, 5, 16)
-        api.tap("A", 6, 38)
-        api.shot(string.format("gym_dewf_p%02d_%s_%s", n, d, dd))
-        api.tap("B", 4, 20)
-    end
-end
-api.shot("gym_dewf_end")
-
+-- 若触发战斗，把战斗界面也采一段
+api.burst("gd_after_dlg", 10, 8)
+api.shot("gd_end")
 return api.S

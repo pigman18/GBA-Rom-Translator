@@ -83,15 +83,19 @@ def encrypt_block(raw: bytes, key: int) -> bytes:
 
 
 def checkword(m: bytes, subs_by_slot: bytes) -> int:
-    """按 pokeruby 算法重算 checkword：四个 12 字节块分别 u16 求和后异或。"""
-    w = 0
+    """日版校验子算法（6/6 实测命中，见 verify_checkword_algo.py）：
+       checkword = (sum(四个 slot 的 u16 和)) & 0xFFFF
+    写在 +0x1C（u16），+0x1E 固定 0。
+    ⚠ pokeruby 说是「异或」且 4 个 u16 同值 —— **日版不是**：
+      +0x1C 只有一个 u16，且算法是累加。照抄美版会写坏。"""
+    total = 0
     for slot in range(4):
         seg = subs_by_slot[slot * 12:(slot + 1) * 12]
         s = 0
         for k in range(0, 12, 2):
             s = (s + u16(seg, k)) & 0xFFFF
-        w ^= s
-    return w & 0xFFFF
+        total = (total + s) & 0xFFFF
+    return total & 0xFFFF
 
 
 def main() -> int:
@@ -135,9 +139,9 @@ def main() -> int:
     enc = encrypt_block(bytes(raw), key)
     new_m = bytearray(m)
     new_m[0x20:0x50] = enc
-    # pokeruby: 4 个 u16 都写同一个值
-    for k in range(4):
-        new_m[0x1C + k * 2:0x1C + k * 2 + 2] = cw.to_bytes(2, "little")
+    # 日版：checkword 是**一个** u16 在 +0x1C，+0x1E 固定 0
+    new_m[0x1C:0x1E] = cw.to_bytes(2, "little")
+    new_m[0x1E:0x20] = b"\x00\x00"
 
     # 回读校验：重新解密应能看到传送术
     chk_pid, _, _, chk_raw = decrypt_block(bytes(new_m))

@@ -27,12 +27,23 @@ ROOT = Path(__file__).resolve().parent.parent
 SCENES = ROOT / "bot" / "scenes" / "POKEMON_RUBY_AXVJ00"
 
 # ── 场景定义：名字 -> (mapId, x, y, 说明, 模式) ─────────────────────────
+#   ★ 落点怎么定（2026-11-03 起有工具了，别再用猜的）：
+#       python scripts/list_interactables.py --sav <存档>
+#     它会解出 ObjectEventTemplate（日版布局 SaveBlock1+0x0C0C，每项 0x18，
+#     +0x00 s16 x / +0x02 s16 y / +0x0C u32 script），
+#     直接给出「warp 到哪个相邻格、朝哪个方向」。
+#     ⚠ 存档必须在目标地图上；想查某张图就先让 bot 跳过去采一帧 ram.bin。
+#
+#   ⚠⚠ gym_dewford.lua 与 contest_lilycove.lua 是**手工写的**（不走生成器）：
+#      落点来自 list_interactables 的实际输出，且带「为什么之前采不到」的注释。
+#      **不要用 --emit --only 这两个名覆盖**，否则会丢注释和定制逻辑。
+#      SCENE_DEFS 里保留它们只为记录落点。
 #   模式：
 #     "interior"  普通室内：连帧 + 走位 + 四方向试 A
 #     "counter"   有柜台：走到中间往上，面朝 UP 与柜台对话
 #     "gym"       道馆：进图 + 走位 + 试对话（方向未定，四方向都试）
 SCENE_DEFS = {
-    "gym_dewford":      ("3:3",  8, 15, "Dewford 道馆（格斗）", "gym"),
+    "gym_dewford":      ("3:3",  2, 18, "Dewford 道馆（格斗）", "gym"),
     "gym_rustboro":     ("11:3", 8, 12, "Rustboro 道馆（岩石）", "gym"),
     "gym_lavaridge":    ("4:1",  8, 12, "Lavaridge 道馆（火）1F", "gym"),
     "center_mauville":  ("10:5", 7, 8,  "Mauville 宝可梦中心 1F", "counter"),
@@ -40,7 +51,7 @@ SCENE_DEFS = {
     "center_slateport": ("9:10", 7, 8,  "Slateport 宝可梦中心 1F", "counter"),
     "mart_oldale":      ("2:4",  7, 8,  "Oldale 商店", "counter"),
     "mart_slateport":   ("9:12", 8, 8,  "Slateport 商店", "counter"),
-    "contest_lilycove": ("13:5", 10, 12, "Lilycove 华丽大赛会场", "interior"),
+    "contest_lilycove": ("13:5", 11, 8, "Lilycove 华丽大赛会场", "interior"),
     "contest_slateport": ("9:3", 10, 12, "Slateport 华丽大赛会场", "interior"),
     "gamecorner_mauville": ("10:3", 8, 10, "Mauville 游戏厅", "counter_left"),
     "bikeshop_mauville": ("10:1", 6, 8,  "Mauville 自行车店", "counter"),

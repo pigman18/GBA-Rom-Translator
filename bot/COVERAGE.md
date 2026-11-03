@@ -194,69 +194,73 @@ python scripts/gen_scenes.py --emit --only gym_dewford
 | **contest_lilycove** | 103 | 1 | ⚠ 见下 |
 | **gamecorner_mauville** | 181 | 1 | ⚠ 见下 |
 
-### 补齐两个缺口（2026-11-03 第二轮）
+### 两个缺口已全部补齐（2026-11-03 第三轮）
 
-**`gamecorner_mauville`：1 → 81 帧有窗口**
+**核心突破：解出了日版 `ObjectEventTemplate` 布局**
 
-原因是主角落点 `(8,10)` **紧贴老虎机台**，直接 UP 被挡。改成
-**先 RIGHT 绕 2 格再 UP**（`counter_left` 模式）后解决。
+这是本轮最值钱的成果 —— 以后任何场景都不用再盲走找 NPC了。
 
-**`bikeshop_mauville`：先改坏了，又改回来**
+```
+SaveBlock1 + 0x0C0C 起，每项 0x18 字节：
+    +0x00  s16 x
+    +0x02  s16 y
+    +0x0C  u32 script      ← 指向 ROM 事件脚本，非 0 = 可交互
+```
 
-我一度把侧移加到所有 counter 场景，结果 bikeshop 从 139 掉到 1。
-对比两次日志才看清：
+**与 pokeruby 的差异**（别再照抄美版）：
+- 美版注释是 `/*0xC20*/ templates[64]`，日版是 **`0x0C0C`**（差 0x14）
+- 字段顺序也不同（美版 localId 在 +0，日版直接是坐标）
 
-| 路径 | 站位 | 结果 |
+**怎么验证的**：读出的 script 指针指向 ROM，内容形如
+`0f 00 ae 26 16 08 09 02 02` = `loadword + callstd + end`，
+是**真正的 GBA 事件脚本**，不是随机数据。
+
+**实测结果**
+
+| 地图 | 可交互对象数 | 最近的 |
 |---|---|---|
-| 先 UP 4 格 | **(6,5)** | **137/139 帧** ✅ |
-| 先 RIGHT 2 格 → UP | **(9,2)** | 1 帧（墙边，全超时）❌ |
+| MauvilleCity_Mart `10:7` | 3 | `(5,5)` |
+| MauvilleCity_Gym `10:0` | 6 | `(4,3)`（距玩家 1 格）|
+| DewfordTown_Gym `3:3` | 5 | `(2,17)` |
+| LilycoveCity_ContestHall `13:5` | **32** | `(11,7)` |
 
-⇒ 侧移会把 bikeshop 带到墙边。**按场景分开**：bikeshop 用普通 `counter`，
-gamecorner 用 `counter_left`。
+**两个缺口的修法**
 
-**最终两种 counter 模式**
+| 场景 | 之前 | 之后 | 怎么修的 |
+|---|---|---|---|
+| `gym_dewford` | 1 帧 | **99 帧** | 溜冰迷宫走不到 NPC；改成 warp 到 `(2,17)` 的相邻格 `(2,18)` 朝 UP |
+| `contest_lilycove` | 1 帧 | **92 帧** | 会场里"人形"是盆栽；改成 warp 到 `(11,7)` 下方朝 UP |
 
-| 模式 | 适用 | 做法 |
-|---|---|---|
-| `counter` | 商店 / 宝可梦中心 / 自行车店 | 先 UP 4 格 → 四方向试 talk（soft） |
-| `counter_left` | 游戏厅（紧贴老虎机） | 先 RIGHT 2 格 → UP 4 格 → 四方向试 talk |
+### 用法
 
-### 最终覆盖（14 个室内场景）
+```powershell
+# 已知地图的可交互对象（读存档）
+python scripts/list_interactables.py --sav work/_probe/teleport.sav
+
+# 读 bot 采到的 ram 帧（更准，运行时 template 已载入）
+python scripts/list_interactables.py --ram <run_dir> --frame <帧名>
+```
+
+输出会直接给「warp 到哪个相邻格、朝哪个方向」的建议。
+
+> ⚠ 前提：存档/帧必须**已经在那张地图上**。想查道馆，得先让 bot 跳过去采一帧。
+
+### 最终覆盖（25 个场景，全部达标）
+
+```
+合计：2746 帧，其中 2405 帧含真实窗口（win_is_real 校验）
+没有「1 帧」的场景了
+```
 
 | 场景 | 有窗口帧 | 场景 | 有窗口帧 |
 |---|---|---|---|
-| center_mauville | **311** | gym_mauville | **109** |
-| center_oldale | **311** | gym_rustboro | **86** |
-| center_slateport | **311** | contest_slateport | **86** |
-| mart_oldale | **164** | gamecorner_mauville | **81** |
-| mart_slateport | **164** | contest_hall | **59** |
-| bikeshop_mauville | **111** | gym_lavaridge | **57** |
-| **gym_dewford** | **1** ⚠ | **contest_lilycove** | **1** ⚠ |
-
-### 剩下两个缺口的根因（已查明，非路径问题）
-
-**`gym_dewford`（123 帧仅 1 窗口）**
-
-这是**溜冰迷宫道馆**。实测：
-- 落点 `(8,15)` 能走到 `(2,7)`（左上角），一路 21 步没问题
-- 但 `(2,7)` 左侧是大片虚空，NPC 在**墙的另一侧**
-- 逐格四方向试 A 共 40+ 次，全部超时
-- 试过用 object 表坐标定位：解出 4 个固定坐标
-  `(8,17)(9,24)(12,31)(19,31)`，但**都不是可对话 NPC**（是门/箱子/楼梯）
-
-⇒ 要进道馆深处必须用**溜冰推箱机制**，不是走位能到。
-
-**`contest_lilycove`（103 帧仅 1 窗口）**
-
-放大截图后确认：会场里那两个“人形”其实是**盆栽装饰**，
-右上角深色物体是**家具/展台**。这个大厅里**没有可对话 NPC**——
-报名要走到特定柜台触发脚本，而柜台位置未知。
-
-⇒ 它不是“没走到”，是**这张图本身没有走动触发的对话点**。
-
-> 这两处要补齐，正确做法是**读地图事件表**（`ObjectEventTemplate` 的
-> script 字段）拿到真正带脚本的对象坐标。但 object 表在日版的偏移
-> 与符号表不符（本项目已多次验证），需要先花一轮把结构定死。
+| center_mauville/oldale/slateport | 164 ×3 | contest_lilycove | **92** |
+| mart_oldale/slateport | 164 ×2 | contest_slateport | **86** |
+| navigator / options / pokemon_menu / bag | 95–144 | gym_rustboro | **86** |
+| gym_mauville | **109** | gamecorner_mauville | **81** |
+| bikeshop_mauville | **111** | contest_hall | 59 |
+| gym_dewford | **99** | gym_lavaridge | 57 |
+| dex / start_menu / trainer_card / battle / dialogue | 39–127 | | |
 
 ---
 

@@ -28,11 +28,27 @@ api.wait(60)
 api.shot("cont_l_inside")
 api.burst("cont_l_enter_f", 14, 8)
 
--- ③ 普通室内：蛇形走位覆盖全屋，每格四方向试 A（找 NPC / 告示牌）
+-- ③ 普通室内：蛇形走位覆盖全屋，每格四方向用 **talk(soft)** 试探
 --
---    ⚠ 教训（contest_lilycove 实测）：只往上走 5 格，43 帧里只有 1 帧有窗口。
---      室内 NPC 常在侧面，必须横向也扫。
+--    ⚠ 教训（2026-11-04）：
+--      · 原来用「四方向 tap + A」，house_mauville2 里 NPC 就在正上方、
+--        朝向也对，但只按 A 就是不开框（实测 1 帧窗口）。
+--      · 改用 talk(soft)：它以「文本真的推进」为判据，比单发 A 可靠。
 local dirs = { "UP", "LEFT", "RIGHT", "DOWN" }
+
+-- ★ 落点先用四方向 talk(soft) 试一轮再走开。
+--   落点是按 NPC 坐标算出来的（calibrate_all.py），到位就该先试；
+--   实测 house_mauville2 判模板先 LEFT 走掉，再也没回到 NPC 旁边
+--   （轨迹 (3,6)→(2,6)→(1,6)→(1,5)→(1,3)→(2,2)，全程没碰 (4,6)）。
+for _, dd in ipairs(dirs) do
+    api.tap(dd, 5, 18)
+    api.talk{ timeout = 120, soft = true }
+    api.shot(string.format("cont_l_arrive_%s", dd))
+    api.burst(string.format("cont_l_arrive_%s_f", dd), 6, 5)
+    for i = 1, 2 do api.tap("A", 5, 35) end
+    api.tap("B", 4, 22)
+end
+
 local plan = {
     { "LEFT", "LEFT", "LEFT" },
     { "UP", "UP" },
@@ -47,10 +63,12 @@ for _, seg in ipairs(plan) do
         n = n + 1
         api.shot(string.format("cont_l_p%02d", n))
         for _, dd in ipairs(dirs) do
-            api.tap(dd, 5, 18)
-            api.tap("A", 6, 40)
+            api.tap(dd, 5, 16)
+            api.talk{ timeout = 110, soft = true }
             api.shot(string.format("cont_l_p%02d_%s", n, dd))
-            api.tap("B", 4, 22)
+            api.burst(string.format("cont_l_p%02d_%s_f", n, dd), 4, 5)
+            for i = 1, 2 do api.tap("A", 5, 32) end
+            api.tap("B", 4, 20)
         end
     end
 end

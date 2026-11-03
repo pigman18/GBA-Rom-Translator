@@ -86,6 +86,65 @@ SCENE_DEFS = {
     "gym_sootopolis": ('15:0', 8, 12, 'Sootopolis 道馆（水）1F', 'gym'),
     "center_sootopolis": ('15:2', 7, 8, 'Sootopolis 宝可梦中心 1F', 'counter'),
     "mart_sootopolis": ('15:4', 7, 8, 'Sootopolis 商店', 'counter'),
+    "house_oldale1": ("2:0", 8, 8, "Oldale 民家 1", "interior"),
+    "house_oldale2": ("2:1", 8, 8, "Oldale 民家 2", "interior"),
+    "center_oldale_2f": ("2:3", 8, 8, "Oldale 宝可梦中心 2F", "interior"),
+    "house_dewford1": ("3:0", 8, 8, "Dewford 民家 1", "interior"),
+    "center_dewford_2f": ("3:2", 8, 8, "Dewford 宝可梦中心 2F", "interior"),
+    "hall_dewford": ("3:4", 8, 8, "Dewford 会馆", "interior"),
+    "house_dewford2": ("3:5", 8, 8, "Dewford 民家 2", "interior"),
+    "gym_lavaridge_b1f": ("4:2", 8, 8, "Lavaridge 道馆 B1F", "gym"),
+    "house_lavaridge": ("4:3", 8, 8, "Lavaridge 民家", "interior"),
+    "center_lavaridge_2f": ("4:6", 8, 8, "Lavaridge 宝可梦中心 2F", "interior"),
+    "center_fallarbor_2f": ("5:4", 8, 8, "Fallarbor 宝可梦中心 2F", "interior"),
+    "house_fallarbor1": ("5:5", 8, 8, "Fallarbor 民家 1", "interior"),
+    "house_fallarbor2": ("5:6", 4, 5, "Fallarbor 民家 2", "interior"),
+    "center_verdanturf_2f": ("6:4", 8, 8, "Verdanturf 宝可梦中心 2F", "interior"),
+    "house_wanda": ("6:5", 8, 8, "Verdanturf 瓦妮达家", "interior"),
+    "house_friendship": ("6:6", 4, 5, "Verdanturf 鉴定之家", "interior"),
+    "house_verdanturf": ("6:7", 8, 8, "Verdanturf 民家", "interior"),
+    "center_pacifidlog_2f": ("7:1", 8, 8, "Pacifidlog 宝可梦中心 2F", "interior"),
+    "house_pacifidlog1": ("7:2", 8, 8, "Pacifidlog 民家 1", "interior"),
+    "house_pacifidlog2": ("7:3", 8, 8, "Pacifidlog 民家 2", "interior"),
+    "house_pacifidlog3": ("7:4", 8, 8, "Pacifidlog 民家 3", "interior"),
+    "house_pacifidlog4": ("7:5", 8, 8, "Pacifidlog 民家 4", "interior"),
+    "house_pacifidlog5": ("7:6", 8, 8, "Pacifidlog 民家 5", "interior"),
+    "house_wally": ("8:0", 7, 6, "Petalburg 小胜家", "interior"),
+    "house_petalburg1": ("8:2", 8, 8, "Petalburg 民家 1", "interior"),
+    "house_petalburg2": ("8:3", 8, 8, "Petalburg 民家 2", "interior"),
+    "center_petalburg_2f": ("8:5", 8, 8, "Petalburg 宝可梦中心 2F", "interior"),
+    "shipyard_slateport_1f": ("9:0", 8, 8, "Slateport 船厂 1F", "interior"),
+    "shipyard_slateport_2f": ("9:1", 8, 8, "Slateport 船厂 2F", "interior"),
+    "house_slateport1": ("9:4", 8, 8, "Slateport 民家 1", "interior"),
+    "museum_slateport_2f": ("9:7", 9, 7, "Slateport 海洋博物馆 2F", "interior"),
+    "harbor_slateport": ("9:8", 8, 11, "Slateport 港口", "interior"),
+    "house_slateport2": ("9:9", 8, 8, "Slateport 民家 2", "interior"),
+    "center_slateport_2f": ("9:11", 8, 8, "Slateport 宝可梦中心 2F", "interior"),
+    "house_mauville1": ("10:2", 4, 5, "Mauville 民家 1", "interior"),
+    "house_mauville2": ("10:4", 4, 6, "Mauville 民家 2", "interior"),
+    "center_mauville_2f": ("10:6", 8, 8, "Mauville 宝可梦中心 2F", "interior"),
+    "devon_1f": ("11:0", 8, 8, "Rustboro Devon 公司 1F", "interior"),
+    "devon_2f": ("11:1", 1, 6, "Rustboro Devon 公司 2F", "interior"),
+    "devon_3f": ("11:2", 3, 6, "Rustboro Devon 公司 3F", "interior"),
+    "school_rustboro": ("11:4", 8, 8, "Rustboro 宝可梦学校", "interior"),
+    "center_rustboro_2f": ("11:6", 8, 8, "Rustboro 宝可梦中心 2F", "interior"),
+    "house_fortree1": ("12:0", 7, 5, "Fortree 民家 1", "interior"),
+    "center_fortree_2f": ("12:3", 8, 8, "Fortree 宝可梦中心 2F", "interior"),
+    "house_fortree2": ("12:5", 2, 4, "Fortree 民家 2", "interior"),
+    "house_fortree3": ("12:6", 5, 5, "Fortree 民家 3", "interior"),
+    "house_fortree4": ("12:7", 6, 5, "Fortree 民家 4", "interior"),
+    "house_fortree5": ("12:8", 6, 5, "Fortree 民家 5", "interior"),
+    "decor_fortree": ("12:9", 6, 6, "Fortree 装饰店", "counter"),
+    "motel_lilycove_1f": ("13:0", 8, 8, "Lilycove 旅馆 1F", "interior"),
+    "motel_lilycove_2f": ("13:1", 4, 7, "Lilycove 旅馆 2F", "interior"),
+    "museum_lilycove_1f": ("13:2", 8, 8, "Lilycove 美术馆 1F", "interior"),
+    "museum_lilycove_2f": ("13:3", 8, 8, "Lilycove 美术馆 2F", "interior"),
+    "center_lilycove_2f": ("13:7", 8, 8, "Lilycove 宝可梦中心 2F", "interior"),
+    "house_mossdeep1": ("14:1", 8, 8, "Mossdeep 民家 1", "interior"),
+    "house_mossdeep2": ("14:2", 8, 8, "Mossdeep 民家 2", "interior"),
+    "center_mossdeep_2f": ("14:4", 8, 8, "Mossdeep 宝可梦中心 2F", "interior"),
+    "gym_sootopolis_b1f": ("15:1", 8, 8, "Sootopolis 道馆 B1F", "gym"),
+    "center_sootopolis_2f": ("15:3", 8, 8, "Sootopolis 宝可梦中心 2F", "interior"),
 }
 
 HEADER = '''-- ============================================================================
@@ -213,11 +272,27 @@ api.shot("{prefix}_end")
 '''
 
 BODY_INTERIOR = '''
--- ③ 普通室内：蛇形走位覆盖全屋，每格四方向试 A（找 NPC / 告示牌）
+-- ③ 普通室内：蛇形走位覆盖全屋，每格四方向用 **talk(soft)** 试探
 --
---    ⚠ 教训（contest_lilycove 实测）：只往上走 5 格，43 帧里只有 1 帧有窗口。
---      室内 NPC 常在侧面，必须横向也扫。
+--    ⚠ 教训（2026-11-04）：
+--      · 原来用「四方向 tap + A」，house_mauville2 里 NPC 就在正上方、
+--        朝向也对，但只按 A 就是不开框（实测 1 帧窗口）。
+--      · 改用 talk(soft)：它以「文本真的推进」为判据，比单发 A 可靠。
 local dirs = {{ "UP", "LEFT", "RIGHT", "DOWN" }}
+
+-- ★ 落点先用四方向 talk(soft) 试一轮再走开。
+--   落点是按 NPC 坐标算出来的（calibrate_all.py），到位就该先试；
+--   实测 house_mauville2 判模板先 LEFT 走掉，再也没回到 NPC 旁边
+--   （轨迹 (3,6)→(2,6)→(1,6)→(1,5)→(1,3)→(2,2)，全程没碰 (4,6)）。
+for _, dd in ipairs(dirs) do
+    api.tap(dd, 5, 18)
+    api.talk{{ timeout = 120, soft = true }}
+    api.shot(string.format("{prefix}_arrive_%s", dd))
+    api.burst(string.format("{prefix}_arrive_%s_f", dd), 6, 5)
+    for i = 1, 2 do api.tap("A", 5, 35) end
+    api.tap("B", 4, 22)
+end
+
 local plan = {{
     {{ "LEFT", "LEFT", "LEFT" }},
     {{ "UP", "UP" }},
@@ -232,16 +307,17 @@ for _, seg in ipairs(plan) do
         n = n + 1
         api.shot(string.format("{prefix}_p%02d", n))
         for _, dd in ipairs(dirs) do
-            api.tap(dd, 5, 18)
-            api.tap("A", 6, 40)
+            api.tap(dd, 5, 16)
+            api.talk{{ timeout = 110, soft = true }}
             api.shot(string.format("{prefix}_p%02d_%s", n, dd))
-            api.tap("B", 4, 22)
+            api.burst(string.format("{prefix}_p%02d_%s_f", n, dd), 4, 5)
+            for i = 1, 2 do api.tap("A", 5, 32) end
+            api.tap("B", 4, 20)
         end
     end
 end
 api.shot("{prefix}_end")
 '''
-
 BODY_COUNTER_LEFT = '''
 -- ③ 柜台在侧面：先侧移再上行，然后四方向 talk
 --

@@ -55,6 +55,37 @@ SCENE_DEFS = {
     "contest_slateport": ("9:3", 10, 12, "Slateport 华丽大赛会场", "interior"),
     "gamecorner_mauville": ("10:3", 8, 10, "Mauville 游戏厅", "counter_left"),
     "bikeshop_mauville": ("10:1", 6, 8,  "Mauville 自行车店", "counter"),
+    "center_dewford": ('3:1', 7, 8, 'Dewford 宝可梦中心 1F', 'counter'),
+    "herbshop_lavaridge": ('4:0', 7, 6, 'Lavaridge 药草店', 'counter_left'),
+    "mart_lavaridge": ('4:4', 7, 8, 'Lavaridge 商店', 'counter'),
+    "center_lavaridge": ('4:5', 7, 8, 'Lavaridge 宝可梦中心 1F', 'counter'),
+    "mart_fallarbor": ('5:0', 7, 8, 'Fallarbor 商店', 'counter'),
+    "contest_fallarbor": ('5:2', 5, 8, 'Fallarbor 华丽大赛会场', 'interior'),
+    "center_fallarbor": ('5:3', 7, 8, 'Fallarbor 宝可梦中心 1F', 'counter'),
+    "contest_verdanturf_l": ('6:0', 7, 6, 'Verdanturf 大赛大厅', 'interior'),
+    "contest_verdanturf": ('6:1', 10, 12, 'Verdanturf 华丽大赛会场', 'interior'),
+    "mart_verdanturf": ('6:2', 7, 8, 'Verdanturf 商店', 'counter'),
+    "center_verdanturf": ('6:3', 7, 8, 'Verdanturf 宝可梦中心 1F', 'counter'),
+    "center_pacifidlog": ('7:0', 7, 8, 'Pacifidlog 宝可梦中心 1F', 'counter'),
+    "gym_petalburg": ('8:1', 4, 17, 'Petalburg 道馆（普通）', 'gym'),
+    "center_petalburg": ('8:4', 7, 8, 'Petalburg 宝可梦中心 1F', 'counter'),
+    "mart_petalburg": ('8:6', 7, 8, 'Petalburg 商店', 'counter'),
+    "contest_slateport_l": ('9:2', 9, 7, 'Slateport 大赛大厅', 'interior'),
+    "fanclub_slateport": ('9:5', 8, 10, 'Slateport 宝可梦发烧友俱乐部', 'interior'),
+    "museum_slateport": ('9:6', 7, 8, 'Slateport 海洋博物馆 1F', 'interior'),
+    "center_rustboro": ('11:5', 7, 8, 'Rustboro 宝可梦中心 1F', 'counter'),
+    "mart_rustboro": ('11:7', 7, 8, 'Rustboro 商店', 'counter'),
+    "gym_fortree": ('12:1', 8, 12, 'Fortree 道馆（飞行）', 'gym'),
+    "center_fortree": ('12:2', 7, 8, 'Fortree 宝可梦中心 1F', 'counter'),
+    "mart_fortree": ('12:4', 7, 8, 'Fortree 商店', 'counter'),
+    "contest_lilycove_l": ('13:4', 8, 8, 'Lilycove 大赛大厅', 'interior'),
+    "center_lilycove": ('13:6', 7, 8, 'Lilycove 宝可梦中心 1F', 'counter'),
+    "gym_mossdeep": ('14:0', 8, 12, 'Mossdeep 道馆（超能）', 'gym'),
+    "center_mossdeep": ('14:3', 7, 8, 'Mossdeep 宝可梦中心 1F', 'counter'),
+    "mart_mossdeep": ('14:5', 7, 8, 'Mossdeep 商店', 'counter'),
+    "gym_sootopolis": ('15:0', 8, 12, 'Sootopolis 道馆（水）1F', 'gym'),
+    "center_sootopolis": ('15:2', 7, 8, 'Sootopolis 宝可梦中心 1F', 'counter'),
+    "mart_sootopolis": ('15:4', 7, 8, 'Sootopolis 商店', 'counter'),
 }
 
 HEADER = '''-- ============================================================================
@@ -284,13 +315,24 @@ def main() -> int:
         return 0
 
     names = [a.only] if a.only else list(SCENE_DEFS)
+    # ★ 手工维护的场景：不要被 --emit 覆盖。
+    #   它们的落点来自 list_interactables 的实际输出，且带「为什么之前采不到」
+    #   的详细注释。实测踩过：全量 --emit 把这俩文件的定制注释冲掉了。
+    MANUAL = {"gym_dewford", "contest_lilycove"}
+    skipped = []
     for n in names:
         if n not in SCENE_DEFS:
             print(f"[ERR] 未知场景 {n}")
             return 1
+        if n in MANUAL and not a.only:
+            skipped.append(n)
+            continue
         p = SCENES / f"{n}.lua"
         p.write_text(gen(n), encoding="utf-8")
         print(f"[OK] {p.name}")
+    if skipped:
+        print(f"[skip] 手工场景未覆盖: {', '.join(skipped)}"
+              f"（强制重生成请用 --only <名字>）")
     return 0
 
 

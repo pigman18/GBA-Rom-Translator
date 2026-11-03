@@ -291,6 +291,67 @@ python scripts/list_interactables.py --ram <run_dir> --frame <帧名>
 2. **图鉴列表要选「已捕获」的那只**。先按 DOWN 到 `No.004`（只见过未捕获），
    按 A 打不开详细页（画面仍是列表）。用 UP 回到 `No.003 妙蛙花` 才行。
 
+### 全城市场景铺开（2026-11-04 第五轮）
+
+把**所有城市**的室内场景都铺了。用 `scripts/list_all_city_maps.py` 算出
+46 个候选，新增 31 个场景。
+
+**总规模：59 个场景，8754 帧，其中 6827 帧含真实窗口。**
+
+#### 地图 ID 表（全部实测 warp 命中）
+
+group 0/2/3/5/10/13 已用实测验证与美版顺序一致，其余组按同规则换算：
+
+| 城市 | PC | 商店 | 道馆 | 大会/其他 |
+|---|---|---|---|---|
+| Oldale | 2:2 ✅ | 2:4 ✅ | — | — |
+| Dewford | **3:1** | — | 3:3 ✅ | — |
+| Lavaridge | **4:5** | **4:4** | 4:1 ✅ | 药草店 **4:0** |
+| Fallarbor | **5:3** | **5:0** | — | Hall **5:2** / Lobby 5:1 ✅ |
+| Verdanturf | **6:3** | **6:2** | — | Hall **6:1** / Lobby **6:0** |
+| Pacifidlog | **7:0** | — | — | — |
+| Petalburg | **8:4** | **8:6** | **8:1** | — |
+| Slateport | 9:10 ✅ | 9:12 ✅ | — | Hall 9:3 ✅ / Lobby **9:2** / 俱乐部 **9:5** / 博物馆 **9:6** |
+| Mauville | 10:5 ✅ | 10:7 ✅ | 10:0 ✅ | 游戏厅 10:3 ✅ / 车店 10:1 ✅ |
+| Rustboro | **11:5** | **11:7** | 11:3 ✅ | — |
+| Fortree | **12:2** | **12:4** | **12:1** | — |
+| Lilycove | **13:6** | — | — | Hall 13:5 ✅ / Lobby **13:4** |
+| Mossdeep | **14:3** | **14:5** | **14:0** | — |
+| Sootopolis | **15:2** | **15:4** | **15:0** | — |
+
+（粗体 = 本轮新增，✅ = 之前已跑通）
+
+#### 批量铺开后的落点校准
+
+第一次跑完后有 **6 个场景只有 1 帧**（落点离 NPC 太远）：
+
+| 场景 | 修前 | 修后 | NPC 坐标 |
+|---|---|---|---|
+| `herbshop_lavaridge` | 1 | **81** | (7,5) → 落 (7,6) |
+| `contest_fallarbor` | 1 | **84** | (5,7) → 落 (5,8) |
+| `contest_verdanturf_l` | 1 | **134** | (7,5) → 落 (7,6) |
+| `gym_petalburg` | 1 | **60** | (4,16) → 落 (4,17) |
+| `contest_slateport_l` | 1 | **83** | (9,6) → 落 (9,7) |
+| `museum_slateport` | 1 | **69** | (7,7) → 落 (7,8) |
+
+修法：`scripts/calibrate_scenes.py` 读每个场景最后一帧的 ram.bin，
+用 `ObjectEventTemplate` 解出最近的带 script 对象，落点自动定到它下方一格。
+
+```powershell
+python scripts/calibrate_scenes.py          # 只打印建议
+python scripts/calibrate_scenes.py --write  # 写回 gen_scenes.py
+python scripts/gen_scenes.py --emit         # 重新生成场景文件
+```
+
+#### ⚠ 生成器会覆盖手工场景（踩过一次）
+
+`gen_scenes.py --emit` 是全量重生成，会**冲掉手工写的**
+`gym_dewford.lua` 和 `contest_lilycove.lua`（它们的落点和注释都是
+`list_interactables` 的实测产物）。已加 `MANUAL` 保护集，
+这两个文件默认跳过；要强制重生成需显式 `--only <名字>`。
+
+文档 §7.2 B 类的 13 个调用点分两个函数：
+
 ### B 类有 6/13 个调用点单机到不了
 
 文档 §7.2 B 类的 13 个调用点分两个函数：

@@ -837,9 +837,26 @@ def apply_font_patch(
 
     _verify_game_bin_embedded(patched, game_bin)
     # Keep patch/out/game.bin in sync with what was just burned into the ROM.
+    # On Windows the dest may still have a user-mapped section open (Cursor /
+    # indexer / mGBA) → CopyFile2 WinError 1224 / open errno 22. Rename the
+    # locked inode aside, then write a fresh file; sync failure must not abort
+    # packing (armips output is already verified).
     src_out = src_dir / "out" / "game.bin"
     src_out.parent.mkdir(parents=True, exist_ok=True)
-    shutil.copy2(game_bin, src_out)
+    payload = game_bin.read_bytes()
+    try:
+        src_out.write_bytes(payload)
+    except OSError as exc:
+        stale = src_out.with_suffix(src_out.suffix + ".stale")
+        try:
+            if src_out.exists():
+                if stale.exists():
+                    stale.unlink(missing_ok=True)
+                src_out.rename(stale)
+            src_out.write_bytes(payload)
+            print(f"[font] synced game.bin via rename-aside ({exc})")
+        except OSError as exc2:
+            print(f"[font] warn: skip hook/out/game.bin sync ({exc2})")
 
-    shutil.copy2(patched, output_path)
+    output_path.write_bytes(patched.read_bytes())
     return output_path

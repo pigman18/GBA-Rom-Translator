@@ -746,6 +746,7 @@ def build_write_plan(
 
         # S2：正文目标必须是真 PCS。WindowTemplate 等「xx 00 yy 00 FF」会被
         # looks_like_jp_text 误收成「み お 」；改指针 → 领航员训练家信息爆错。
+        # 列对齐 UI（write.space_pad）放宽 00 密度，仍拒 is_struct_like_pcs。
         addr = _entry_file_off(entry)
         if addr is not None:
             from .jp_pcs import looks_like_jp_text
@@ -756,7 +757,10 @@ def build_write_plan(
                 skip.append({"id": eid, "module": module, "reason": "bad_text_target"})
                 continue
             raw = bytes(rom[addr : end + 1])
-            if is_struct_like_pcs(raw) or not looks_like_jp_text(raw):
+            space_pad = bool((mod.get("write") or {}).get("space_pad"))
+            if is_struct_like_pcs(raw) or not looks_like_jp_text(
+                raw, allow_space_pad=space_pad
+            ):
                 skip.append({"id": eid, "module": module, "reason": "bad_text_target"})
                 continue
 

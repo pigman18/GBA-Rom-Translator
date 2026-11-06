@@ -52,6 +52,18 @@
         "stride": 4
       }
     },
+    "UI-训练卡": {
+      "label": "UI·训练家卡片",
+      "group": "界面",
+      "default": true,
+      "description": "训练卡正/背面标签池 file 0x389D6C–0x389E0B（总线 0x08389D6C…）。连续 FF 串簇，含 0x00 列对齐垫片（电缆/塔战绩栏），不是 WindowTemplate；旧 looks_like_jp_text 00 密度会 bad_text_target，故独立模块 + write.space_pad。勿塞进剧情/泛 UI界面。垃圾单字（：/こ/ダぐ）不归本组。",
+      "start": "0x389D6C",
+      "end": "0x389E0B",
+      "type": "scan",
+      "write": {
+        "space_pad": true
+      }
+    },
     "特性名": {
       "label": "词条·特性",
       "group": "词条",
@@ -292,7 +304,7 @@
     },
     "UI界面": {
       "label": "UI界面",
-      "group": "文本",
+      "group": "界面",
       "default": true,
       "description": "全 ROM；execute_filter（Menu/Text 打印函数，排除故事已消费）",
       "start": "0x14C000",
@@ -47656,7 +47668,7 @@
       "byte_length": 31,
       "original": "ここまでの かつやくを\nポケモンレポートに かきこみますか？",
       "original_hex": "0a 0a 1f 44 19 00 06 12 24 08 2d fe 9f 59 73 7e 7a 9f ae 64 16 00 06 07 0a 20 1f 0d 06 ac ff",
-      "translated": "",
+      "translated": "要把至今为止的活跃表现\n记录到宝可梦报告里吗?",
       "is_pointer_based": true,
       "pointer_sources": [
         "0x0806EAE8"
@@ -48541,12 +48553,12 @@
     },
     {
       "id": "axvj_ac1dbbeb7382",
-      "module": "UI界面",
+      "module": "UI-训练卡",
       "address": "0x08389DE0",
       "byte_length": 4,
       "original": "おとこ",
       "original_hex": "05 14 0a ff",
-      "translated": "",
+      "translated": "男孩",
       "is_pointer_based": true,
       "pointer_sources": [
         "0x08090EC0"
@@ -48557,12 +48569,12 @@
     },
     {
       "id": "axvj_9b1dcac0b6fb",
-      "module": "UI界面",
+      "module": "UI-训练卡",
       "address": "0x08389DE4",
       "byte_length": 4,
       "original": "おんな",
       "original_hex": "05 2e 15 ff",
-      "translated": "",
+      "translated": "女孩",
       "is_pointer_based": true,
       "pointer_sources": [
         "0x08090EC4"
@@ -48573,12 +48585,12 @@
     },
     {
       "id": "axvj_ff42cba3b947",
-      "module": "UI界面",
+      "module": "UI-训练卡",
       "address": "0x08389DEA",
       "byte_length": 7,
       "original": "しゅじんこう",
       "original_hex": "0c 35 3d 2e 0a 03 ff",
-      "translated": "",
+      "translated": "玩家",
       "is_pointer_based": true,
       "pointer_sources": [
         "0x08091358"
@@ -48589,12 +48601,12 @@
     },
     {
       "id": "axvj_d3808d6c57cd",
-      "module": "UI界面",
+      "module": "UI-训练卡",
       "address": "0x08389DF1",
       "byte_length": 9,
       "original": "もっているバッジ",
       "original_hex": "23 50 13 02 29 96 a0 8d ff",
-      "translated": "",
+      "translated": "徽章",
       "is_pointer_based": true,
       "pointer_sources": [
         "0x08091400"
@@ -48605,12 +48617,12 @@
     },
     {
       "id": "axvj_9c41de83c5e7",
-      "module": "UI界面",
+      "module": "UI-训练卡",
       "address": "0x08389DFC",
       "byte_length": 8,
       "original": "ポケモンずかん",
       "original_hex": "9f 59 73 7e 3e 06 2e ff",
-      "translated": "",
+      "translated": "图鉴",
       "is_pointer_based": true,
       "pointer_sources": [
         "0x08091450"
@@ -48621,12 +48633,12 @@
     },
     {
       "id": "axvj_19ad4310339f",
-      "module": "UI界面",
+      "module": "UI-训练卡",
       "address": "0x08389E04",
       "byte_length": 7,
       "original": "プレイじかん",
       "original_hex": "9d 7a 52 3d 06 2e ff",
-      "translated": "",
+      "translated": "时间",
       "is_pointer_based": true,
       "pointer_sources": [
         "0x0809149C"
@@ -123841,12 +123853,12 @@
     },
     {
       "id": "axvj_5ec8198edbe1",
-      "module": "剧情",
+      "module": "UI-训练卡",
       "address": "0x08389D6C",
       "byte_length": 10,
       "original": "のトレーナーカード",
       "original_hex": "19 64 7a ae 65 ae 56 ae 95 ff",
-      "translated": "",
+      "translated": "的训练家卡片",
       "is_pointer_based": true,
       "pointer_sources": [
         "0x08090B50"
@@ -123857,12 +123869,12 @@
     },
     {
       "id": "axvj_77a3cba13ba2",
-      "module": "剧情",
+      "module": "UI-训练卡",
       "address": "0x08389D76",
       "byte_length": 13,
       "original": "はじめての でんどういり",
       "original_hex": "1a 3d 22 13 19 00 44 2e 45 03 02 28 ff",
-      "translated": "",
+      "translated": "首次登入名人堂",
       "is_pointer_based": true,
       "pointer_sources": [
         "0x08090B80"
@@ -123873,12 +123885,12 @@
     },
     {
       "id": "axvj_ee8589fd7091",
-      "module": "剧情",
+      "module": "UI-训练卡",
       "address": "0x08389D85",
       "byte_length": 20,
       "original": "ケーブルたいせん かち      まけ",
       "original_hex": "59 ae 98 79 10 02 0e 2e 00 06 11 00 00 00 00 00 00 1f 09 ff",
-      "translated": "",
+      "translated": "连接对战 胜      负",
       "is_pointer_based": true,
       "pointer_sources": [
         "0x08090C4C"
@@ -123889,12 +123901,12 @@
     },
     {
       "id": "axvj_8d389a3cd815",
-      "module": "剧情",
+      "module": "UI-训练卡",
       "address": "0x08389D99",
       "byte_length": 20,
       "original": "バトルタワー かち      かちぬき",
       "original_hex": "96 64 79 60 7c ae 00 06 11 00 00 00 00 00 00 06 11 17 07 ff",
-      "translated": "",
+      "translated": "对战塔 胜      连胜",
       "is_pointer_based": true,
       "pointer_sources": [
         "0x08090CD8"
@@ -123905,12 +123917,12 @@
     },
     {
       "id": "axvj_4ee8dddefb13",
-      "module": "剧情",
+      "module": "UI-训练卡",
       "address": "0x08389DAD",
       "byte_length": 17,
       "original": "ともだちとコンテスト ゆうしょう",
       "original_hex": "14 23 41 11 14 5a 7e 63 5d 64 00 25 03 0c 36 03 ff",
-      "translated": "",
+      "translated": "和朋友华丽大赛优胜",
       "is_pointer_based": true,
       "pointer_sources": [
         "0x08090D5C"
@@ -123921,12 +123933,12 @@
     },
     {
       "id": "axvj_b0f3414620e2",
-      "module": "剧情",
+      "module": "UI-训练卡",
       "address": "0x08389DBE",
       "byte_length": 23,
       "original": "ともだちと つくった ポロック      こ",
       "original_hex": "14 23 41 11 14 00 12 08 50 10 00 9f 7b a0 58 00 00 00 00 00 00 0a ff",
-      "translated": "",
+      "translated": "和朋友一起做的宝可方块      个",
       "is_pointer_based": true,
       "pointer_sources": [
         "0x08090DBC"
@@ -123937,12 +123949,12 @@
     },
     {
       "id": "axvj_7b9c094b0a96",
-      "module": "剧情",
+      "module": "UI-训练卡",
       "address": "0x08389DD5",
       "byte_length": 11,
       "original": "ポケモンを こうかん",
       "original_hex": "9f 59 73 7e 2d 00 0a 03 06 2e ff",
-      "translated": "",
+      "translated": "交换宝可梦",
       "is_pointer_based": true,
       "pointer_sources": [
         "0x08090E24"

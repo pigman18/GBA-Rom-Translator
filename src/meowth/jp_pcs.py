@@ -122,11 +122,15 @@ def decode_pcs(data: bytes) -> str:
     return "".join(out)
 
 
-def looks_like_jp_text(s: bytes) -> bool:
+def looks_like_jp_text(s: bytes, *, allow_space_pad: bool = False) -> bool:
     """True if ``s`` is a plausible FF-terminated JP dialogue/UI string.
 
     Strict enough to reject Thumb/code blobs that decode to mojibake kana.
     Allows mid-string 0xFA (▼ prompt) used by real AXVJ multi-box dialogue.
+
+    ``allow_space_pad``：训练卡背面等列对齐标签池用 0x00 作栏间垫片
+    （如「かち······まけ」），旧 00 密度规则会误杀；由模块
+    ``write.space_pad`` 打开，仍靠后面 kana 比例 + ``is_struct_like_pcs`` 挡窗模板。
     """
     if not s or s[-1] != 0xFF:
         return False
@@ -134,9 +138,10 @@ def looks_like_jp_text(s: bytes) -> bool:
     if not (2 <= len(body) <= 512):
         return False
     # 首尾 0x00 是空格/垫片（指针常落在正文前的 00 上）；只看内部 00 密度。
-    interior = body.strip(b"\x00")
-    if interior.count(0) > max(2, len(interior) // 3 if interior else 0):
-        return False
+    if not allow_space_pad:
+        interior = body.strip(b"\x00")
+        if interior.count(0) > max(2, len(interior) // 3 if interior else 0):
+            return False
 
     # Walk body; allow FE/FA/FB and FD xx / FC xx… as controls only.
     # 尾部完整 FC（如 おぼえられない！\\CC09 FF）与句中 FC 同样放行。

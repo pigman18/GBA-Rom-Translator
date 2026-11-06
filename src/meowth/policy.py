@@ -580,6 +580,46 @@ def collect_entry_text_spans(entries: Iterable[dict]) -> list[tuple[int, int]]:
     return spans
 
 
+def is_script_inline_ptr(
+    rom: bytes | bytearray, ptr_off: int, string_off: int
+) -> bool:
+    """脚本内联指针：``0f 00 <ptr32>``（2026-11-05 新增，对齐 SCRIPT_INLINE 容器）
+
+    ## 存在的理由
+
+    日版 ruby 的剧情文本有大量**非 4 字节对齐**的引用点，形如：
+
+        ... 09 fe 09 0b ...  0f 00  92 5d 14 08  09 02 02 13 ...
+                              ^^^^^  ^^^^^^^^^^^
+                              指令   指向正文的 u32
+
+    ``0f 00`` 是脚本 message 指令（后跟 4 字节正文指针），指针因此落在
+    奇数/半字偏移上。旧实现无条件丢弃所有非对齐站点：
+
+        if ptr_addr & 3:
+            continue
+
+    实测后果：`剧情` 模块 5,040 条 keep 里，**2,043 条的唯一起点就是这种
+    0f 00 内联**，全部落到「无可用指针且放不下原槽」。这正是
+    `docs/ALGO_AUTO_LAYOUT.md` §二 定义的 ``SCRIPT_INLINE`` 容器，
+    代码里一直没实现。
+
+    ## 判据（必须双重，缺一不可）
+
+    1. 站点处的 u32 确实等于正文的总线地址（调用方已校验，这里复核）；
+    2. 站点前两字节恰为 ``0f 00`` ——
+       只有这一种已知指令会把指针放在非对齐位置。少了这条，正文里
+       偶然拼出总线地址的假指针会被放行，改写了就踩坏相邻数据（黑屏）。
+    """
+    off = _file(ptr_off)
+    if off < 2 or off + 4 > len(rom):
+        return False
+    if bytes(rom[off - 2 : off]) != b"\x0f\x00":
+        return False
+    cur = struct.unpack_from("<I", rom, off)[0]
+    return _bus(cur) == _bus(string_off)
+
+
 def ptr_site_in_text_body(
     ptr_off: int, text_spans: Iterable[tuple[int, int]] | None
 ) -> bool:
@@ -591,6 +631,28 @@ def ptr_site_in_text_body(
         if lo <= off < hi:
             return True
     return False
+
+
+def site_is_covered_by_entry(
+    ptr_off: int,
+    text_address: int,
+    original_hex: str,
+) -> bool:
+    """该站点是否落在**本条正文自己**的字节区间内。
+
+    ``0f 00 <ptr>`` 若紧跟在某条正文之后，站点会落在正文里；
+    但反过来说，正文内部也常常凑巧出现 ``0f 00`` + 总线地址的字节组合。
+    只有「站点落在本条正文里、且它指向的正是这条正文的开头」才是真内联引用
+    （自指）。指向别处的、或落在别的条目正文里的，一律不认。
+    """
+    off = _file(ptr_off)
+    if off < text_address or off + 4 > text_address + 4:
+        return False
+    try:
+        raw = bytes.fromhex((original_hex or "").replace(" ", ""))
+    except ValueError:
+        return False
+    return off >= text_address and off < text_address + max(len(raw), 4)
 
 
 def is_live_aligned_text_ptr(
@@ -768,11 +830,27 @@ def ptr_source_ok(
 
 
 def is_struct_like_pcs(s: bytes) -> bool:
+    """Reject FF-terminated blobs that are window/bg coords, not dialogue PCS.
+
+    Classic false positive: ``20 00 05 00 FF`` (tilemap/baseBlock u16 pairs) which
+    ``looks_like_jp_text`` decodes as mojibake like 「み お 」. Relocating those
+    pointer slots (e.g. PokeNav trainer-info templates) hangs the emulator.
+    """
     if not s or s[-1] != 0xFF:
         return False
     body = s[:-1]
     if len(body) <= 8:
         if body.count(0x00) >= 2 and body.count(0xFE) >= 1:
+            return True
+        # u16 窗/BG 模板：奇数位全是 00（如 ``20 00 05 00``）。
+        # 不把「真 PCS + 尾部空格 00」（如 せいかく``0e 02 06 08 00 00``）当结构体。
+        if (
+            len(body) <= 6
+            and len(body) >= 2
+            and len(body) % 2 == 0
+            and body[1::2] == b"\x00" * (len(body) // 2)
+            and body.count(0x00) >= 2
+        ):
             return True
         if body in (
             b"\x04\x00\x01\x00\xfe",
@@ -1080,13 +1158,17 @@ def filter_pointer_sources(
         ptr_addr = _file(ptr_addr)
         if ptr_addr + 4 > len(rom):
             continue
-        # GBA 指针槽必须是 4 字节对齐（.word / ldr rX,=literal）。
-        # 非对齐的"指针源"是正文 PCS 里恰好拼成总线地址的假指针
-        # （剧情/图鉴说明 relocate 期间大量出现），改写了会踩坏相邻
-        # 数据/技能 → 黑屏。这里无条件过滤掉。
+        # 指针站过滤（PCS 巧合 vs 真引用）：
+        # - SCRIPT_INLINE（0f 00 <ptr>）：常非对齐，且常落在邻近正文 span
+        #   误吞的脚本缝里 → 不得被 text_body 一刀切。
+        # - 其它非对齐：仍丢弃（半字对齐指针表候选曾放行 → 背包软锁，收回）。
+        # - 对齐 + in_body：正文 PCS 拼出的总线地址，丢弃。
+        inline = is_script_inline_ptr(rom, ptr_addr, text_address)
+        in_body = ptr_site_in_text_body(ptr_addr, text_spans)
         if ptr_addr & 3:
-            continue
-        if ptr_site_in_text_body(ptr_addr, text_spans):
+            if not inline:
+                continue
+        elif in_body and not inline:
             continue
         if ptr_addr in title_gfx_ptr_deny():
             continue
@@ -1099,9 +1181,12 @@ def filter_pointer_sources(
         class_ptr = is_class_text_ptr(rom, ptr_addr, text_address)
         local_pool = is_local_pool_ptr(ptr_addr, text_address)
         script_like = entry_is_script_like(_tag_entry)
-        if ptr_addr in BIRCH_PTR_ALLOW:
+        # class_ptr / local_pool：已知文本指针类（含中段 ROM 菜单表）。
+        # 假 LZ 常盖住领航员等指针表；LZ 分支已豁免 class_ptr，script_like
+        # 不得再以 ptr_source_ok 把同类站点打成 unresolved。
+        if ptr_addr in BIRCH_PTR_ALLOW or class_ptr or local_pool:
             pass
-        elif ptr_in_trusted_lz(ptr_addr, spans) and not class_ptr and not local_pool:
+        elif ptr_in_trusted_lz(ptr_addr, spans):
             if not ptr_source_ok(
                 rom, ptr_addr, text_address, lz_spans=spans, strict=False
             ):
@@ -1110,7 +1195,9 @@ def filter_pointer_sources(
             if not ptr_source_ok(
                 rom, ptr_addr, text_address, lz_spans=spans, strict=False
             ):
-                continue
+                # 脚本内联（0f 00 <ptr>）不经 C 字面量池语义，单独放行。
+                if not inline:
+                    continue
         # Brand literals: site/string class, not module id.
         if compact in brand_compact_skip() and ptr_addr >= 0x100000:
             continue

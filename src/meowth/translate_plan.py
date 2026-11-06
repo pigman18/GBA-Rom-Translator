@@ -32,14 +32,17 @@ NO_RELOCATE_TYPES = frozenset({"stride", "struct", "ptr_stride", "stride_ptr"})
 POINTER_OFFSET = 0x08000000
 
 # 同 id 多 type 冲突时保留优先级更高者（注入去重 / 载入 build 用）
+#
+# ⚠️ 2026-11-05：f980 从优先级表移除。火红零运行时查表，ruby 的
+#    PhraseTable hook 已删除，任何残留 f980 条目写进 ROM 都不会显示。
+#    旧 build.json 里若还有 f980，会因 rank=0 被 relocate/replace 顶掉。
 PLAN_TYPE_RANK: dict[str, int] = {
     "relocate": 50,
     "replace": 30,
-    # legacy aliases (read-only compat with old translate.build.json)
-    "upgrade": 30,
-    "f980": 30,
-    "slot": 20,
-    "keep": 10,
+    # legacy alias：upgrade 是 relocate 的旧名，仍按 relocate 对待
+    "upgrade": 50,
+    "slot": 10,
+    "keep": 5,
 }
 
 
@@ -695,7 +698,16 @@ def plan_entry(
             "pointer_sources": list(usable_ptrs),
         })
 
-    # --- 通路 2: replace（原地写入 F900 / F980）--- 放不下则后缀升 F9 80，占位前缀保留
+    # --- 通路 2: replace（原地写入 F900 整串）---
+    #
+    # ⚠️ 2026-11-05：F980 短语引用通道已**彻底移除**（对齐火红协议）。
+    #    火红全 ROM 只有 F7 一种中文编码、零运行时查表；ruby 这边同理，
+    #    hook 侧 PhraseTable 查表代码已删除（text_translter.c）。
+    #    所以放不下时**不能再退化成 F9 80 短语引用** —— 那会写出游戏
+    #    完全不认识的字节（实测产物里 7,551 条 F9 80 全部不显示）。
+    #
+    #    正确退路：交给通路 1 之外的 relocate。若本条没有可用指针，
+    #    就一路落到 keep（保留原文），由归属分析把它改造成指针重定向。
     if allow_replace:
         if len(encoded) <= slot_cap:
             plan = {
@@ -705,34 +717,23 @@ def plan_entry(
             if slot_cap != byte_length:
                 plan["byte_length"] = slot_cap
             return _with_write_meta(plan)
-        # 运行时占位 + 短语引用：AC… + F9 80 xx xx FF（须 ≥ prefix+5）
-        if slot_cap >= len(ph_prefix) + 5:
-            code = _ensure_phrase_code(phrase_codes, to_encode)
-            combined = ph_prefix + _encode_phrase_ref(code, channel)
-            plan = {
-                "type": "replace",
-                "target_hex": pad_inplace_to_slot(combined, slot_cap).hex(" "),
-                "phrase_code": code,
-            }
-            if slot_cap != byte_length:
-                plan["byte_length"] = slot_cap
-            return _with_write_meta(plan)
+        # 放不下：不再走 F980，继续往后面的通路/keep 落
 
-    # --- 通路 3: slot（运行时查表拦截，兜底）---
-    if allow_slot:
-        return _with_write_meta({
-            "type": "slot",
-            "target_hex": encoded.hex(" "),
-            "original_hex": original_hex,
-        })
+    # --- 通路 3: slot（已废除）---
+    #
+    # ⚠️ 2026-11-05：SLT2 运行时查表通道彻底移除。
+    #    hook 侧 slot_lookup_v2/legacy 已从 text_translter.c 删除，
+    #    translated_slot.asm 也不再 include（main.asm）。
+    #    再产出 type=slot 的条目等于写死数据，游戏读不到。
+    #    这里保留分支只为兼容旧 build.json 的读取，实际不再产出。
 
-    # 所有通路均被禁止 → keep
-    if not allow_reloc and not allow_replace and not allow_slot:
-        reason = "模块禁止 relocate/replace/slot 全部通路"
+    # 所有通路均走不通 → keep（保留原文；归属分析会把它改造成指针重定向）
+    if not allow_reloc and not allow_replace:
+        reason = "模块禁止 relocate/replace 全部通路"
     elif not usable_ptrs:
-        reason = "无可用指针且禁止 replace/slot"
+        reason = "无可用指针且放不下原槽（需指针重定向）"
     else:
-        reason = "无可用注入路径（模块禁路径）"
+        reason = "无可用注入路径"
     return _keep(original_hex, reason)
 
 

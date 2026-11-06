@@ -1002,15 +1002,13 @@ class TranslationEngine:
         return output_path
 
     def _write_translate_build(self, data: dict) -> None:
-        """决策每条目的注入 type 并编码 target_hex，写 translate.build.json。
+        """生成 ``write.plan.json``（注入唯一依据），并写调试用 translate.build 镜像。
 
-        短语码（词典 + 自动 upgrade 预分配）在此阶段确定并写入 phrases，
-        build 阶段据此生成 PhraseTable 并按 type 注入。
-
-        勾选了模块时（``_axvj_active_modules``）只写入勾选模块条目，
-        避免未勾选模块（如高风险混杂）出现在 build 里误导验收。
+        勾选了模块时只纳入勾选模块条目。
         """
-        from ..translate_plan import dedupe_entries_by_id, plan_entries
+        from ..config_loader import texts_json_path
+        from ..translate_plan import dedupe_entries_by_id
+        from ..write_plan import build_write_plan, plan_to_translate_build_mirror
 
         flat = dedupe_entries_by_id(data.get("entries") or [])
         if not flat:
@@ -1034,10 +1032,10 @@ class TranslationEngine:
                     f"（去掉未勾选 {dropped}）[modules={active_list}]",
                 )
             if not flat:
-                self._log("warning", "[翻译通路] 勾选模块下无条目，跳过 translate.build.json")
+                self._log("warning", "[翻译通路] 勾选模块下无条目，跳过 write.plan")
                 return
 
-        # 分配词典短语码（build 阶段不再重新分配，共享同一码表）
+        # 短语码仍供 PhraseTable / 调试；写入决策不再走 plan_entry keep/replace
         self.charmap._phrase_codes = {}
         if self._custom_translations:
             phrases = sorted(
@@ -1052,7 +1050,10 @@ class TranslationEngine:
                 self.charmap._phrase_codes[s] = code
 
         phrase_codes = self.charmap._phrase_codes
-        # 编排期用原盘校验指针；build.json 直入，不再在 inject 时改路径
+        phrases_by_code = [None] * len(phrase_codes)
+        for s, code in phrase_codes.items():
+            phrases_by_code[code] = s
+
         rom_bytes = None
         rom_path = getattr(self.config, "rom_path", None)
         if rom_path:
@@ -1063,83 +1064,54 @@ class TranslationEngine:
             except OSError as exc:
                 self._log(
                     "warning",
-                    f"[翻译通路] 无法读取 ROM 做指针校验 ({rom_path}): {exc}",
+                    f"[write.plan] 无法读取 ROM ({rom_path}): {exc}",
                 )
         if rom_bytes is None:
-            self._log(
-                "warning",
-                "[翻译通路] 无 ROM，跳过指针校验（relocate/hook 仅用登记指针）",
-            )
-        plans = plan_entries(
-            flat,
-            self.charmap,
-            phrase_codes,
-            game_id=self.config.game,
-            rom=rom_bytes,
-        )
+            self._log("warning", "[write.plan] 无 ROM，表/指针站点会偏少")
+            rom_bytes = b""
 
-        phrases_by_code = [None] * len(phrase_codes)
-        for s, code in phrase_codes.items():
-            phrases_by_code[code] = s
-
-        from ..translate_plan import module_write_build_meta
-
-        game_id = self.config.game or ""
-        entry_rows = []
-        for e, p in zip(flat, plans):
-            mid = e.get("module") or e.get("_axvj_module") or ""
-            row = {
-                "id": e.get("id", ""),
-                "type": p["type"],
-                "address": p.get("address") or e.get("address", ""),
-                "byte_length": p.get("byte_length", e.get("byte_length", 0)),
-                "module": mid,
-                "original": e.get("original", ""),
-                "translated": e.get("translated", ""),
-                "original_hex": e.get("original_hex", ""),
-                "target_hex": p.get("target_hex", ""),
-                "_reject": bool(e.get("_reject")),
-            }
-            if p.get("fd_rebased"):
-                row["fd_rebased"] = True
-            ptrs = p.get("pointer_sources") or []
-            if ptrs:
-                row["pointer_sources"] = ptrs
-            if p.get("phrase_code") is not None:
-                row["phrase_code"] = p["phrase_code"]
-            if p.get("reason"):
-                row["reason"] = p["reason"]
-            if e.get("check_score") is not None:
-                row["check_score"] = e.get("check_score")
-            hits = list(e.get("check_hits") or [])
-            if hits:
-                row["check_hits"] = hits
-            wmeta = module_write_build_meta(game_id, mid)
-            if wmeta is not None:
-                row["write"] = wmeta
-            entry_rows.append(row)
-
-        payload = {
-            "game_id": self.config.game,
-            "modules": list(self.config.modules or []) if self.config.modules else active_list,
-            "active_modules": active_list,
-            "count": len(flat),
-            "phrases": phrases_by_code,
-            "entries": entry_rows,
-        }
         build_dir = Path(self.config.work_dir) / self.config.game
         build_dir.mkdir(parents=True, exist_ok=True)
-        build_path = build_dir / "translate.build.json"
-        build_path.write_text(
-            json.dumps(payload, ensure_ascii=False, indent=2), encoding="utf-8"
-        )
-        from collections import Counter as _C
+        plan_path = build_dir / "write.plan.json"
 
-        _types = _C(row["type"] for row in entry_rows)
+        def _enc(text: str) -> bytes:
+            return self.charmap.encode(text)
+
+        try:
+            texts_path = texts_json_path(self.config.game)
+        except Exception:
+            texts_path = build_dir / "texts.json"
+
+        plan = build_write_plan(
+            rom_bytes,
+            texts_path,
+            flat,
+            encoder=_enc,
+            game_id=self.config.game or "",
+            out_path=plan_path,
+        )
+        summ = plan.get("summary") or {}
         self._log(
             "info",
-            "[翻译通路] translate.build.json → "
-            + ", ".join(f"{t}={n}" for t, n in _types.most_common()),
+            "[write.plan] "
+            f"tables={summ.get('tables', 0)} rows={summ.get('rows', 0)} "
+            f"redirects={summ.get('redirects', 0)} skip={summ.get('skip', 0)} "
+            f"unresolved={summ.get('skip_unresolved', 0)} → {plan_path.name}",
+        )
+
+        mirror = plan_to_translate_build_mirror(plan, flat)
+        mirror["phrases"] = phrases_by_code
+        mirror["modules"] = (
+            list(self.config.modules or []) if self.config.modules else active_list
+        )
+        mirror["active_modules"] = active_list
+        build_path = build_dir / "translate.build.json"
+        build_path.write_text(
+            json.dumps(mirror, ensure_ascii=False, indent=2), encoding="utf-8"
+        )
+        self._log(
+            "info",
+            f"[write.plan] translate.build.json 镜像 {mirror.get('count', 0)} 条",
         )
 
     def _translate_table(self, table: dict):
@@ -2519,46 +2491,72 @@ class TranslationEngine:
         if self._feature("name_tables"):
             writer.axvj_name_tables = True
 
-        # --- 翻译通路：读 translate.build.json，把 plan（type/target_hex）附加到条目 ---
-        # rom_writer 据此按 type 注入；无 plan 的条目回退原逻辑。
-        try:
-            build_plan_path = (game_work or Path(self.config.work_dir) / self.config.game) / "translate.build.json"
-            if build_plan_path.exists():
-                from ..translate_plan import build_plan_map_by_id, dedupe_entries_by_id
+        # --- 写入计划：rows_writer 只落盘（表已由 armips patch_table 写入）---
+        work_root = game_work or Path(self.config.work_dir) / self.config.game
+        write_plan_path = work_root / "write.plan.json"
+        if write_plan_path.is_file():
+            from ..rows_writer import apply_rows, load_plan
 
-                _bp = json.loads(build_plan_path.read_text(encoding="utf-8"))
-                _plan_map = build_plan_map_by_id(_bp.get("entries") or [])
-                all_entries = dedupe_entries_by_id(all_entries)
-                for _entry in all_entries:
-                    _p = _plan_map.get(_entry.get("id") or "")
-                    if _p:
-                        _entry["_plan"] = _p
-                self._log(
-                    "info",
-                    f"[翻译通路] 载入 translate.build.json: {len(_plan_map)} 条决策"
-                    f"（条目去重后 {len(all_entries)}）",
-                )
-        except Exception as e:  # pragma: no cover
-            self._log("warning", f"[翻译通路] 载入 translate.build.json 失败: {e}")
-
-        rom, stats = writer.inject_texts(
-            rom, all_entries, on_progress=_inject_progress
-        )
+            plan = load_plan(write_plan_path)
+            self._log(
+                "info",
+                f"[rows_writer] 载入 {write_plan_path.name}: "
+                f"tables={len(plan.get('tables') or [])} "
+                f"rows={len(plan.get('rows') or [])} "
+                f"redirects={len(plan.get('redirects') or [])}",
+            )
+            font_end = writer._font_slots_end_offset()
+            floor = max(writer.EXPANSION_START, font_end, 0x01400000)
+            print(
+                f"Expansion region start: 0x{floor:08X} "
+                f"(write.plan rows/redirects)"
+            )
+            _inject_progress(0, max(1, len(plan.get("rows") or [])))
+            rom, row_stats = apply_rows(rom, plan, write_offset=floor)
+            writer.write_offset = row_stats.get("write_end", floor)
+            # 加宽表说明指针同步（道具名等）
+            if getattr(writer, "_is_armips", False):
+                try:
+                    baseline = Path(
+                        getattr(self.config, "rom_path", None) or ""
+                    ).read_bytes()
+                except Exception:
+                    baseline = b""
+                if baseline:
+                    writer._sync_widened_desc_pointers(rom, baseline)
+            stats = {
+                "replace": 0,
+                "relocated": row_stats.get("relocated", 0),
+                "redirected": row_stats.get("redirected", 0),
+                "errors": row_stats.get("errors", 0),
+                "name_tables": {},
+            }
+            _inject_progress(
+                len(plan.get("rows") or []),
+                max(1, len(plan.get("rows") or [])),
+            )
+            self._log(
+                "info",
+                f"[rows_writer] relocated={stats['relocated']} "
+                f"redirected={stats.get('redirected', 0)} "
+                f"ptr_writes={row_stats.get('ptr_writes', 0)} "
+                f"errors={stats['errors']}",
+            )
+        else:
+            self._log(
+                "warning",
+                f"[rows_writer] 缺少 {write_plan_path}，回退 inject_texts",
+            )
+            rom, stats = writer.inject_texts(
+                rom, all_entries, on_progress=_inject_progress
+            )
         self._log("info", Messages.INJECTION_STATS.format(
-            replace=stats['replace'],
-            relocated=stats['relocated'],
+            replace=stats.get('replace', 0),
+            relocated=stats.get('relocated', 0),
             skipped=0,
             partial_ptr=stats.get('skipped_partial_ptrs', 0),
             unsafe_ptr=0
         ))
-        if self._feature("name_tables"):
-            table_stats = stats.get("name_tables") or {}
-            if table_stats:
-                parts = []
-                for key, tbl in table_stats.items():
-                    parts.append(f"{key}: ptr={tbl.get('ptr_patched', 0)} mul={tbl.get('mul_patched', 0)}")
-                if parts:
-                    self._log("info", "AXVJ name tables: " + " | ".join(parts))
 
         # Save (if emulator locks the file, write sibling *_new.gba)
         # NOTE: do NOT pad to a power of two here. The tiles stage allocates

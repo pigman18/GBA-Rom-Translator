@@ -133,7 +133,9 @@ def looks_like_jp_text(s: bytes) -> bool:
     body = s[:-1]
     if not (2 <= len(body) <= 512):
         return False
-    if body.count(0) > max(2, len(body) // 3):
+    # 首尾 0x00 是空格/垫片（指针常落在正文前的 00 上）；只看内部 00 密度。
+    interior = body.strip(b"\x00")
+    if interior.count(0) > max(2, len(interior) // 3 if interior else 0):
         return False
 
     # Walk body; allow FE/FA/FB and FD xx / FC xx… as controls only.

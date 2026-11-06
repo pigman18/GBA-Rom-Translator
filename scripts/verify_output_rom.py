@@ -9,7 +9,7 @@
   1. game.bin @0x08800000 与 hook/out/game.bin 一致；EngineEntry 跳板
   2. P01/P04/P07/P08 订址桩的 bx 目标 == out/game_syms.asm 回填地址 |1
   3. P03 三处血条池 == 0x04000006（原版 0x04000008）
-  4. PhraseOffsets u32 单调 / PhraseTable 为 F9 00 流 / SlotTable 'SLT2'
+  4. PhraseOffsets u32 单调 / PhraseTable 为 F9 00 流；SLT2 已废弃（仅提示）
   5. 字库 Normal/Small/Sym 非空
 
 退出码 0 = 全通过，1 = 有失败项。
@@ -22,6 +22,8 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parent.parent
 DEFAULT_ROM = ROOT / "roms" / "outputs" / "POKEMON_RUBY_AXVJ00_translated.gba"
+# 主文件被 mGBA 锁住时流水线会改写 *_translated_new.gba
+ALT_ROM = ROOT / "roms" / "outputs" / "POKEMON_RUBY_AXVJ00_translated_new.gba"
 GAME_BIN = ROOT / "configs" / "POKEMON_RUBY_AXVJ00" / "hook" / "out" / "game.bin"
 GAME_SYMS = ROOT / "configs" / "POKEMON_RUBY_AXVJ00" / "hook" / "out" / "game_syms.asm"
 
@@ -97,8 +99,16 @@ def ldr_literal(rom: bytes, addr: int) -> int | None:
     return None
 
 
+def _pick_default_rom() -> Path:
+    """优先较新的交付物；主盘被模拟器锁住时用 *_translated_new.gba。"""
+    cands = [p for p in (DEFAULT_ROM, ALT_ROM) if p.is_file()]
+    if not cands:
+        return DEFAULT_ROM
+    return max(cands, key=lambda p: p.stat().st_mtime)
+
+
 def main(argv: list[str]) -> int:
-    rom_path = Path(argv[1]) if len(argv) > 1 else DEFAULT_ROM
+    rom_path = Path(argv[1]) if len(argv) > 1 else _pick_default_rom()
     if not rom_path.is_file():
         print(f"ROM 不存在: {rom_path}")
         return 1
@@ -154,7 +164,15 @@ def main(argv: list[str]) -> int:
     chk("  u32 单调", all(offs[i] <= offs[i + 1] for i in range(1999)))
     pt = at(0x08820000, 8)
     chk("PhraseTable F9 00 流", pt[0] == 0xF9 and pt[1] == 0x00, pt.hex(" "))
-    chk("SlotTable SLT2", at(0x09EA0000, 4) == b"SLT2")
+    # SLT2 于 2026-11-05 彻底移除；缺席不算失败（旧验收口径作废）
+    slt2 = at(0x09EA0000, 4)
+    results.append(
+        (
+            "SlotTable SLT2(已废)",
+            True,
+            "absent(ok)" if slt2 != b"SLT2" else "present(legacy)",
+        )
+    )
 
     # 5. 字库（四个槽位；2026-11-02 起 Middle 为独立第 4 套）
     for label, addr, size in [

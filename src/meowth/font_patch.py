@@ -717,11 +717,11 @@ def apply_font_patch(
     # translate.build.json → phrase_data.asm（armips 数据，不编进 game.bin）
     build_json = work_dir / "translate.build.json"
     fonts_src.mkdir(parents=True, exist_ok=True)
+    encode_fn = None
     if build_json.is_file():
         from .build_rom_data import emit_data_asms_from_build_json
         from .charmap import Charmap
 
-        encode_fn = None
         try:
             cm_path = get_charmap_path(game_id)
             cm = Charmap(charmap_path=cm_path, target_lang="zh-Hans")
@@ -756,6 +756,45 @@ def apply_font_patch(
     )
     if n_slot:
         print(f"[slot] translated_slot.asm: {n_slot} type=slot entries")
+
+    # 唯一补丁表：消费 write.plan.json（由 write_plan 生成）
+    from .rows_writer import load_plan, write_asm_from_plan
+
+    plan_path = work_dir / "write.plan.json"
+    asm_path = build_dir / "gen" / "patch_table.asm"
+    if plan_path.is_file():
+        plan = load_plan(plan_path)
+        pt_stats = write_asm_from_plan(plan, asm_path)
+        print(
+            f"[patch-table] {pt_stats.get('tables', 0)} tables from write.plan.json, "
+            f"insns={pt_stats.get('insns', 0)} literals={pt_stats.get('literals', 0)}"
+        )
+        for table in plan.get("tables") or []:
+            print(
+                f"  {table.get('module')}: stride "
+                f"{table.get('old_stride')}→{table.get('new_stride')} "
+                f"{table.get('count')} @ 0x{int(str(table.get('new_base')), 16) + 0x08000000:08X}  "
+                f"insns {len(table.get('insns') or [])} "
+                f"literals {len(table.get('literals') or [])}"
+                + (f"  note={table.get('note')}" if table.get("note") else "")
+            )
+    else:
+        # 兼容旧路径：无 write.plan 时仍用 patch_table 扫描
+        from .config_loader import texts_json_path
+        from .patch_table import write_patch_table
+
+        pt_stats = write_patch_table(
+            build_dir / "baserom.gba",
+            texts_json_path(game_id),
+            build_json,
+            asm_path,
+            encoder=encode_fn,
+        )
+        emitted = pt_stats.get("emitted") or []
+        print(
+            f"[patch-table] fallback {len(emitted)} tables, "
+            f"skipped {len(pt_stats.get('skipped') or [])}"
+        )
 
     # game.bin：仅当 out/ 缺失时提示；pack 不强制重编（改 phrase 只走 asm）
     game_bin = build_dir / "out" / "game.bin"

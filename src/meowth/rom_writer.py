@@ -447,6 +447,10 @@ class RomWriter:
             stats["gfx_ptrs_restored"] = n_rest
             if n_rest:
                 print(f"Restored {n_rest} false gfx/LZ pointer rewrites")
+            # 加宽后的结构表是注入前的指针快照。说明 relocate 只改了原表槽，
+            # 游戏读的是新表里的那份副本，这里按原表最终指针回写。
+            n_sync = self._sync_widened_desc_pointers(rom, baseline)
+            stats["desc_ptrs_synced"] = n_sync
 
         if stats.get("skipped_dup_id") or stats.get("skipped_ptr_clobber"):
             print(
@@ -455,6 +459,125 @@ class RomWriter:
             )
 
         return rom, stats
+
+    def _sync_widened_desc_pointers(self, rom: bytearray, baseline: bytes) -> int:
+        """把已重定位的说明指针抄进加宽结构表。
+
+        说明字符串 relocate 时改的是原表 ``desc_ptr`` 槽。加宽表在注入之前
+        就按原指针生成，游戏读的是那份副本。检测只扫原表槽，看不到这份副本，
+        所以背包说明会停在日文。这里用「原表槽前后不一致」的指针，在扩展区
+        里找出仍等于旧指针、且间距成固定 stride 的副本，再写上新指针。
+        """
+        from .tables import iter_table_cfgs
+
+        total = 0
+        for key, cfg in iter_table_cfgs(self.game):
+            if cfg.get("desc_ptr_offset") is None or cfg.get("offset") is None:
+                continue
+            n, stride, slot0 = self._sync_one_desc_table(rom, baseline, cfg)
+            if n:
+                print(
+                    f"Synced {n} description pointers for {key} "
+                    f"(stride {stride}, first slot 0x{slot0:07X})"
+                )
+                total += n
+        return total
+
+    def _sync_one_desc_table(
+        self, rom: bytearray, baseline: bytes, cfg: dict
+    ) -> tuple[int, int, int]:
+        old_base = int(cfg["offset"])
+        old_stride = int(cfg["entry_size"])
+        desc_off = int(cfg["desc_ptr_offset"])
+        count = int(cfg["count"])
+        if old_stride <= 0 or count <= 0:
+            return 0, 0, 0
+
+        changed: list[tuple[int, bytes, bytes]] = []
+        for i in range(count):
+            slot = old_base + i * old_stride + desc_off
+            if slot < 0 or slot + 4 > len(baseline) or slot + 4 > len(rom):
+                continue
+            exp = baseline[slot : slot + 4]
+            now = bytes(rom[slot : slot + 4])
+            if exp != now:
+                changed.append((i, exp, now))
+        if len(changed) < 3:
+            return 0, 0, 0
+
+        limit = min(len(rom), len(baseline))
+
+        def hits(needle: bytes) -> list[int]:
+            out: list[int] = []
+            pos = 0x800000
+            while pos < limit:
+                j = rom.find(needle, pos, limit)
+                if j < 0:
+                    break
+                if (j & 3) == 0 and baseline[j : j + 4] == needle:
+                    out.append(j)
+                pos = j + 1
+            return out
+
+        slot0 = 0
+        stride = 0
+        sample = changed[:6]
+        found = False
+        for a in range(len(sample)):
+            for b in range(a + 1, len(sample)):
+                ia, ea, _na = sample[a]
+                ib, eb, _nb = sample[b]
+                span = ib - ia
+                if span == 0:
+                    continue
+                for pa in hits(ea):
+                    for pb in hits(eb):
+                        if (pb - pa) % span:
+                            continue
+                        cand = (pb - pa) // span
+                        if not (32 <= cand <= 128):
+                            continue
+                        base_slot = pa - ia * cand
+                        if base_slot < 0x800000 or (base_slot & 3):
+                            continue
+                        confirmed = False
+                        for ic, ec, _nc in sample:
+                            if ic in (ia, ib):
+                                continue
+                            dst = base_slot + ic * cand
+                            if (
+                                dst >= 0x800000
+                                and dst + 4 <= limit
+                                and bytes(rom[dst : dst + 4]) == ec
+                                and baseline[dst : dst + 4] == ec
+                            ):
+                                confirmed = True
+                                break
+                        if not confirmed:
+                            continue
+                        slot0 = base_slot
+                        stride = cand
+                        found = True
+                        break
+                    if found:
+                        break
+                if found:
+                    break
+            if found:
+                break
+        if not found:
+            return 0, 0, 0
+
+        n = 0
+        for i, exp, now in changed:
+            dst = slot0 + i * stride
+            if dst < 0x800000 or dst + 4 > len(rom) or dst + 4 > len(baseline):
+                continue
+            if bytes(rom[dst : dst + 4]) != exp or baseline[dst : dst + 4] != exp:
+                continue
+            rom[dst : dst + 4] = now
+            n += 1
+        return n, stride, slot0
 
     def _collect_relocate_pointer_slots(self, entries: list[dict]) -> set[int]:
         """收集 relocate 计划的 pointer_sources（ROM 文件偏移），供 in_place 避让。

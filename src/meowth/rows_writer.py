@@ -64,10 +64,15 @@ def write_asm_from_plan(plan: dict, out_asm: Path) -> dict:
             stats["insns"] += 1
         for lit in table.get("literals") or []:
             off = _off(lit["off"])
-            word = struct.pack("<I", new_gba)
+            add = int(lit.get("add") or 0)
+            target = new_gba + add
+            word = struct.pack("<I", target)
             body = ", ".join(f"0x{b:02X}" for b in word)
             lines.append(f".org 0x{GBA_BASE + off:08X}")
-            lines.append(f"    .byte {body}    ; {name} 基址 → 0x{new_gba:08X}")
+            lines.append(
+                f"    .byte {body}    ; {name} 基址 → 0x{target:08X}"
+                + (f" (new+{add})" if add else "")
+            )
             lines.append("")
             stats["literals"] += 1
         lines.append(f".org 0x{new_gba:08X}")
@@ -224,6 +229,7 @@ def _apply_tables_python(rom: bytearray, plan: dict) -> tuple[bytearray, dict]:
             rom[off:off + len(raw)] = raw
         for lit in table.get("literals") or []:
             off = _off(lit["off"])
-            rom[off:off + 4] = struct.pack("<I", new_gba)
+            add = int(lit.get("add") or 0)
+            rom[off:off + 4] = struct.pack("<I", new_gba + add)
         stats["tables"] += 1
     return rom, stats

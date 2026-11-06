@@ -621,14 +621,14 @@ def build_write_plan(
                 plan_struct_trampoline,
             )
 
-            # 整块按子值重定向：有读点 → trampoline；否则同 stride 克隆；
-            # 再不行才回落逐条 redirect
-            table, cursor, err = plan_struct_trampoline(
+            # 主路径：整块克隆（嵌名字子值 + 改结构体基址字面量）。
+            # trampoline「子值旁路」仅当克隆失败（无字面量 / 译文全超槽等）时回落。
+            table, cursor, err = plan_struct_same_stride_clone(
                 rom, name, mod, mod_entries, encoder, cursor,
             )
             if table is None:
-                trampoline_err = err
-                table2, cursor2, err2 = plan_struct_same_stride_clone(
+                clone_err = err
+                table2, cursor2, err2 = plan_struct_trampoline(
                     rom, name, mod, mod_entries, encoder, cursor,
                 )
                 if table2 is not None:
@@ -636,15 +636,15 @@ def build_write_plan(
                     table_notes.append(
                         (
                             name,
-                            f"读点未定，同stride克隆（原：{trampoline_err}）",
+                            f"整块克隆未成，回落 trampoline（原：{clone_err}）",
                         )
                     )
                 else:
                     table_notes.append(
                         (
                             name,
-                            f"读点未定且无法克隆（{trampoline_err}; {err2}），"
-                            f"回落逐条",
+                            f"整块克隆与 trampoline 均失败"
+                            f"（{clone_err}; {err2}），回落逐条",
                         )
                     )
                     for e in mod_entries:

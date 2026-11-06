@@ -1,10 +1,11 @@
-"""结构体名字：整块按子值重定向（start_menu 式读点钩）。
+"""结构体名字：整块克隆为主，trampoline 子值旁路为回落。
 
-与 ``hook/patches/start_menu.asm`` 同构：新区放每条子值正文 + 旁路
-``name_ptrs[i]``；原读点改 ``ldr+bx → stub``（无传统「指向该名字」的
-``.word`` 时也能汉化）。原结构体表一字不动。
+主路径 ``plan_struct_same_stride_clone``：读整块 → 名字槽嵌中文、字段原样
+→ 同 stride 写新区 → 改结构体基址字面量（stride≈名字后全 00 的 struct 特例
+也可走表扩步长，见 ``table_stride``）。
 
-读点未定时由 ``write_plan`` 回落逐条 ``redirects[]``，本模块不整表判死。
+回落 ``plan_struct_trampoline``：旁路 ``name_ptrs`` + 读点 ``ldr+bx`` 钩
+（旧「子值重定向」）。仅当整块克隆失败（无基址字面量 / 译文全超槽）时使用。
 """
 from __future__ import annotations
 
@@ -564,6 +565,7 @@ def plan_struct_same_stride_clone(
     blob = bytearray()
     n_tr = 0
     n_keep = 0
+    n_overflow = 0
     for i in range(count):
         src = base + i * entry_size
         entry = bytearray(rom[src:src + entry_size])
@@ -580,20 +582,28 @@ def plan_struct_same_stride_clone(
             entry[name_off:name_off + old_cap] = raw + pad
             n_tr += 1
         else:
+            if raw:
+                n_overflow += 1
             n_keep += 1
         blob += entry
 
     if n_tr == 0:
         return None, cursor, "没有能塞进原名字槽的译文"
+    # 有译文却超槽：让 write_plan 回落 trampoline（可旁路长名），避免半吊子整块
+    if n_overflow > 0:
+        return (
+            None,
+            cursor,
+            f"{n_overflow} 条译文超名槽({old_cap}B)，回落 trampoline",
+        )
 
     if cursor + len(blob) > TABLE_AREA_END:
         return None, cursor, "补丁表区域满了"
     new_base = cursor
     cursor = (cursor + len(blob) + 3) & ~3
     safe = re.sub(r"[^\w\-]+", "_", name)
-    # rows_writer 把 literals 一律写成 new_gba=new_base；若字面量原值是
-    # base+name_off，需要写成 new_base+name_off。此处只收「等于 code_base/base」
-    # 的字面量；name_off 形另计。
+    # rows_writer：默认 lit → new_base；带 add 的 lit → new_base+add
+    # （名字嵌槽的「base+name_off」字面量必须写成 new+name_off，否则仍读旧表）
     lit_out: list[dict] = []
     for lit in literals:
         off = int(str(lit["off"]), 16)
@@ -601,8 +611,7 @@ def plan_struct_same_stride_clone(
         if cur == GBA_BASE + base or cur == GBA_BASE + (base & ~3):
             lit_out.append({"off": f"0x{off:X}"})
         elif name_off and cur == GBA_BASE + base + name_off:
-            # 暂时跳过：writer 不支持 per-lit 目标偏移；靠 base 形覆盖
-            continue
+            lit_out.append({"off": f"0x{off:X}", "add": name_off})
         elif cur == GBA_BASE + code_base:
             lit_out.append({"off": f"0x{off:X}"})
     if not lit_out:

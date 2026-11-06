@@ -124,12 +124,13 @@
       "label": "词条·训练家个人名",
       "group": "词条",
       "default": true,
-      "description": "训练家个人名：代码基址 0x1C4C98（含 index0 空槽），步长 32，名字在条目首；字段访问走 0x1C4C94 原表不动，本模块按 stride 平行名表重定向仅挂 0x1C4C98 字面量",
-      "start": "0x1c4c98",
-      "end": "0x1ca357",
-      "type": "stride",
+      "description": "gTrainers 整块（基址 0x1C4C94，entry=32，name@+4）。整块克隆嵌中文名并改结构体基址字面量，不是纯名字 stride。",
+      "start": "0x1c4c94",
+      "end": "0x1ca353",
+      "type": "struct",
       "read": {
-        "stride": 32
+        "entry_size": 32,
+        "name_offset": 4
       }
     },
     "地点名": {

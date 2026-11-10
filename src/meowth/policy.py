@@ -1136,6 +1136,7 @@ def filter_pointer_sources(
     pointer_sources: Iterable,
     text_address: int,
     *,
+    trust_unaligned: bool = False,
     category: str = "",
     original: str = "",
     expected_pointer: int,
@@ -1186,7 +1187,11 @@ def filter_pointer_sources(
             or _ptr_array_element_ok(rom, ptr_addr)
         )
         if ptr_addr & 3:
-            if not inline_hdr:
+            # trust_unaligned 只由「锚点回溯」路径传 true：那条路径已经逐条
+            # 校验过文本链（looks_like_jp_text），且站点值精确等于锚点地址，
+            # 非对齐站点就是脚本字节流里的 ``<opcode+args> <ptr>``。
+            # 逐条/直接解析路径仍然只认已知命令头，防止误改别处。
+            if not inline_hdr and not trust_unaligned:
                 continue
         elif in_body and not inline_hdr:
             continue

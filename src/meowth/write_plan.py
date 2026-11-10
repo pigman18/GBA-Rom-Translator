@@ -1133,6 +1133,7 @@ def build_write_plan(
                                 rom,
                                 [f"0x{GBA_BASE + x:08X}" for x in sites0],
                                 s0,
+                                trust_unaligned=True,
                                 category=module,
                                 original=original,
                                 expected_pointer=GBA_BASE + s0,

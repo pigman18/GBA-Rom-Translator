@@ -101,8 +101,20 @@ def main() -> int:
         return None
 
     def find_stride(gba: int) -> int | None:
+        """定长表成员：槽里有**填充**（串的 FF 早于槽尾），不是紧邻拼接。
+
+        只看「addr±s 也是串首」会命中对话 bank —— 那里串与串紧挨着，
+        ``addr+s`` 天然是下一条串首，会把「无指针的死对话」误报成定长表。
+        真定长表的特征是**槽内留白**：``start + 串长 < start + s``。
+        """
+        o = gba - GBA
+        if o <= 0 or o >= len(rom):
+            return None
         for s in (4, 5, 6, 7, 8, 10, 11, 12, 14, 16, 20, 24, 28, 32, 40, 48, 56, 64):
-            if is_start(gba - s) and is_start(gba + s):
+            end = rom.find(b"\xff", o, min(o + s + 1, len(rom)))
+            if end < 0 or end - o + 1 >= s:
+                continue
+            if is_start(gba + s) and is_start(gba - s):
                 return s
         return None
 

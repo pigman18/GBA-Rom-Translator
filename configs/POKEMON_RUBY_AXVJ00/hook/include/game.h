@@ -282,7 +282,8 @@ struct ChsPhase {
 #define CHS_BATTLE_TEXT_BASE_HI 0x1C0 /* exclusive; covers 0x190 and 0x1B8 */
 #define CHS_BATTLE_FIXED_BASE   0x280
 #define CHS_FONT_GLYPH_MAX      7168
-#define CHS_ESCAPE              0xF9
+#define CHS_ESCAPE              0xF9   /* F9 op hi lo：短语引用 */
+#define CHS_GLYPH_F7            0xF7u  /* F7 hi lo：单汉字内联，3 字节/字 */
 #define CHS_PHRASE_DEFAULT      0x80
 #define PCS_CTRL_BASE           0xFAu   /* FA~FE 控制码基（text.c/text_translate.c 共用） */
 

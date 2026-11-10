@@ -136,7 +136,12 @@ def build_item_entry(rom: bytes, index: int, name: bytes) -> bytes:
     if fitted is None:
         body = name[:-1] if name.endswith(b"\xFF") else name
         while len(body) + 1 > NAME_CAP and body:
-            body = body[:-4] if body[:1] == b"\xf9" else body[:-1]
+            if body[:1] == b"\xf7":      # F7 hi lo = 3 字节一组
+                body = body[:-3]
+            elif body[:1] == b"\xf9":    # F9 op hi lo = 4 字节一组
+                body = body[:-4]
+            else:
+                body = body[:-1]
         fitted = _fit(body + b"\xFF", NAME_CAP)
     if fitted is None:
         fitted = bytes(rom[src:src + OLD_NAME_CAP])

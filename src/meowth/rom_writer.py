@@ -11,7 +11,8 @@ from .config_loader import parse_int_addr
 def _safe_truncate_encoded(encoded: bytes, maxlen: int) -> bytes:
     """Truncate an encoded stream at whole-unit boundaries.
 
-    A CJK/phrase reference is a 4-byte F9 XX hi lo group. Cutting the raw
+    A CJK glyph is a 3-byte F7 hi lo group; a phrase ref is a 4-byte F9 op hi lo.
+    Cutting the raw
     stream mid-group leaves a dangling F9 whose following byte (often the
     slot terminator 0xFF) is then read as a bogus phrase code, making
     PrintNextChar redirect the PhraseTable offsets out of bounds (花屏/红字).
@@ -20,6 +21,14 @@ def _safe_truncate_encoded(encoded: bytes, maxlen: int) -> bytes:
     i = 0
     n = len(encoded)
     while i < n:
+        if encoded[i] == 0xF7:
+            # F7 hi lo —— 单汉字内联，3 字节一组
+            if i + 2 < n and len(out) + 3 <= maxlen:
+                out += encoded[i:i + 3]
+                i += 3
+            else:
+                break
+            continue
         if encoded[i] == 0xF9:
             if i + 3 < n and len(out) + 4 <= maxlen:
                 out += encoded[i:i + 4]

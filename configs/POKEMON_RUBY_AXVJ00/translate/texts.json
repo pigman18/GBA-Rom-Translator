@@ -125249,7 +125249,7 @@
       "byte_length": 6,
       "original": "ザクマちん",
       "original_hex": "8c 58 6f 11 2e ff",
-      "translated": "扎克",
+      "translated": "扎克马君",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125261,7 +125261,7 @@
       "byte_length": 5,
       "original": "ドックン",
       "original_hex": "95 a0 58 7e ff",
-      "translated": "多库",
+      "translated": "多库恩",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125285,7 +125285,7 @@
       "byte_length": 5,
       "original": "すばろう",
       "original_hex": "0d 46 2b 03 ff",
-      "translated": "斯巴",
+      "translated": "斯巴罗",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125309,7 +125309,7 @@
       "byte_length": 6,
       "original": "キャモくん",
       "original_hex": "57 84 73 08 2e ff",
-      "translated": "卡莫",
+      "translated": "卡莫君",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125321,7 +125321,7 @@
       "byte_length": 6,
       "original": "ケロタロウ",
       "original_hex": "59 7b 60 7b 53 ff",
-      "translated": "凯罗",
+      "translated": "凯罗太郎",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125333,7 +125333,7 @@
       "byte_length": 5,
       "original": "ニョニョ",
       "original_hex": "66 86 66 86 ff",
-      "translated": "尼欧",
+      "translated": "尼欧尼欧",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125345,7 +125345,7 @@
       "byte_length": 5,
       "original": "プンプン",
       "original_hex": "9d 7e 9d 7e ff",
-      "translated": "普普",
+      "translated": "普恩普恩",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125369,7 +125369,7 @@
       "byte_length": 6,
       "original": "ドラちゃん",
       "original_hex": "95 77 11 34 2e ff",
-      "translated": "多拉",
+      "translated": "多拉酱",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125417,7 +125417,7 @@
       "byte_length": 5,
       "original": "ラビビン",
       "original_hex": "77 97 97 7e ff",
-      "translated": "拉宾",
+      "translated": "拉比宾",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125429,7 +125429,7 @@
       "byte_length": 5,
       "original": "ドードン",
       "original_hex": "95 ae 95 7e ff",
-      "translated": "多恩",
+      "translated": "多多恩",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125477,7 +125477,7 @@
       "byte_length": 5,
       "original": "ヤジロー",
       "original_hex": "74 8d 7b ae ff",
-      "translated": "弥次",
+      "translated": "弥次郎",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125489,7 +125489,7 @@
       "byte_length": 5,
       "original": "メルメル",
       "original_hex": "72 79 72 79 ff",
-      "translated": "梅露",
+      "translated": "梅露梅露",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125537,7 +125537,7 @@
       "byte_length": 5,
       "original": "マッスグ",
       "original_hex": "6f a0 5d 89 ff",
-      "translated": "玛斯",
+      "translated": "玛斯古",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125669,7 +125669,7 @@
       "byte_length": 5,
       "original": "グラスケ",
       "original_hex": "89 77 5d 59 ff",
-      "translated": "古拉",
+      "translated": "古拉助",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125681,7 +125681,7 @@
       "byte_length": 6,
       "original": "マオウくん",
       "original_hex": "6f 55 53 08 2e ff",
-      "translated": "魔王",
+      "translated": "魔王君",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125717,7 +125717,7 @@
       "byte_length": 6,
       "original": "ブレロタン",
       "original_hex": "98 7a 7b 60 7e ff",
-      "translated": "布雷",
+      "translated": "布雷洛坦",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125729,7 +125729,7 @@
       "byte_length": 6,
       "original": "スネーキー",
       "original_hex": "5d 68 ae 57 ae ff",
-      "translated": "史尼",
+      "translated": "史尼奇",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125753,7 +125753,7 @@
       "byte_length": 6,
       "original": "ホエルコン",
       "original_hex": "6e 54 79 5a 7e ff",
-      "translated": "霍尔",
+      "translated": "霍尔孔",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125765,7 +125765,7 @@
       "byte_length": 5,
       "original": "ミカリン",
       "original_hex": "70 56 78 7e ff",
-      "translated": "米卡",
+      "translated": "米卡琳",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125873,7 +125873,7 @@
       "byte_length": 5,
       "original": "サメハー",
       "original_hex": "5b 72 6a ae ff",
-      "translated": "萨梅",
+      "translated": "萨梅哈",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125897,7 +125897,7 @@
       "byte_length": 5,
       "original": "ラブリン",
       "original_hex": "77 98 78 7e ff",
-      "translated": "拉布",
+      "translated": "拉布琳",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125909,7 +125909,7 @@
       "byte_length": 5,
       "original": "ヘラスケ",
       "original_hex": "6d 77 5d 59 ff",
-      "translated": "赫拉",
+      "translated": "赫拉斯克",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125921,7 +125921,7 @@
       "byte_length": 5,
       "original": "ピタロウ",
       "original_hex": "9c 60 7b 53 ff",
-      "translated": "皮太",
+      "translated": "皮太郎",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -125933,7 +125933,7 @@
       "byte_length": 6,
       "original": "ナンチッチ",
       "original_hex": "65 7e 61 a0 61 ff",
-      "translated": "南奇",
+      "translated": "南奇奇",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -198942,7 +198942,7 @@
       "byte_length": 4,
       "original": "ズババ",
       "original_hex": "8e 96 96 ff",
-      "translated": "兹巴",
+      "translated": "兹巴巴",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -198954,7 +198954,7 @@
       "byte_length": 4,
       "original": "クララ",
       "original_hex": "58 77 77 ff",
-      "translated": "库拉",
+      "translated": "库拉拉",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -199002,7 +199002,7 @@
       "byte_length": 4,
       "original": "バメコ",
       "original_hex": "96 72 5a ff",
-      "translated": "梅子",
+      "translated": "巴梅子",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -199050,7 +199050,7 @@
       "byte_length": 4,
       "original": "コロロ",
       "original_hex": "5a 7b 7b ff",
-      "translated": "科罗",
+      "translated": "科罗罗",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []

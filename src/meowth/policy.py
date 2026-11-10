@@ -782,6 +782,17 @@ def ptr_source_ok(
         return False
     if is_local_pool_ptr(ptr_off, string_off):
         return True
+    # 指针数组元素：脚本事件表/消息表把文本指针存成 u32 数组，代码用
+    # `base + idx*4` 取用 —— 单个元素不是 ldr 字面量，is_loadword 判不出来。
+    # 这类数组经常被 LZ/GFX 探测误判成「压缩数据/图像」，如果放到下面那些
+    # 早退之后再判断，整张表都会被拒（实测 107 条剧情卡死在这一步）。
+    # 判据收紧到：4 对齐 + 邻元素也是指向 ROM 的指针 + 目标串在脚本文本区。
+    if (
+        (ptr_off & 3) == 0
+        and 0x100000 <= string_off < 0x200000
+        and _ptr_array_element_ok(rom, ptr_off)
+    ):
+        return True
     ui_body = string_in_ui_text_bank(string_off) or string_in_option_band(string_off)
     if in_ranges(ptr_off, GFX_PTR_SOURCE_DENY()) and not ui_body:
         return False

@@ -1184,7 +1184,13 @@ def build_write_plan(
                 skip.append({"id": eid, "module": module, "reason": "bad_text_target"})
                 continue
             raw = bytes(rom[addr : end + 1])
-            space_pad = bool((mod.get("write") or {}).get("space_pad"))
+            # 列对齐文本（栏间用 00 垫片）默认按「00 密度」拒掉。模块级
+            # ``write.space_pad`` 是整模块放宽，风险大；这里允许**单条**声明
+            # ``space_pad``，只对确认是列对齐 UI 的那几条打开。
+            # 实测：0x18896E「ふつふつと…フエン おんせん」、0x3D3F71「かち まけ ひきわけ」。
+            space_pad = bool((mod.get("write") or {}).get("space_pad")) or bool(
+                entry.get("space_pad")
+            )
             if is_struct_like_pcs(raw) or not looks_like_jp_text(
                 raw, allow_space_pad=space_pad
             ):

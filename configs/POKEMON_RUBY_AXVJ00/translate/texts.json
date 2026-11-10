@@ -100223,7 +100223,8 @@
       "translated": "",
       "is_pointer_based": false,
       "pointer_sources": [],
-      "pointer_addresses": []
+      "pointer_addresses": [],
+      "space_pad": true
     },
     {
       "id": "axvj_28c990298827",
@@ -146155,7 +146156,8 @@
       ],
       "pointer_addresses": [
         "0x0810B3A4"
-      ]
+      ],
+      "space_pad": true
     },
     {
       "id": "axvj_dd0fbb5aca86",

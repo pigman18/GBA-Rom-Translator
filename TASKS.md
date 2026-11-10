@@ -893,6 +893,25 @@ unresolved 316 → 279（-37）
 改成 ≥3 后，假链 `0x174C34`（段内 6.5%）仍被拦，而「紧邻在有指针串之后的
 正文段」能接上锚点：`redirects 722→737`、`unresolved 276→261`。
 
+### 2.20.1 按条放行列对齐文本（space_pad）
+
+`looks_like_jp_text` 会按「内部 00 密度」拒掉列对齐 UI 文本。原来只有模块级
+`write.space_pad` 能放宽，那是整模块开放，风险太大。现在支持**单条**声明：
+
+```json
+{"address": "0x0818896E", "space_pad": true, ...}
+```
+
+已标 2 条（都实测有寻址、能写）：
+
+| 地址 | 内容 | 写入方式 |
+|---|---|---|
+| `0x0818896E` | `ふつふつと わきあがる…フエン おんせん`（温泉宣传语，列对齐） | cluster（锚点 0x18881D，blob 703B） |
+| `0x083D3F71` | `かち まけ ひきわけ`（战绩表头） | row（指针 0x10B3A4，25B） |
+
+`rows 6920→6921`、`redirects 737→738`。battle 12 / bag 263 / trainer_card 39 /
+start_menu 56 / pokemon_menu 95 帧正常。
+
 ### 2.20 texts.json 归档机制：dropped.json
 
 `bad_text_target` 那 209 条里有 161 条根本不是「文本」，删掉能让人看清真实工作量。

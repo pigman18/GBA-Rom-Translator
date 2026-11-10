@@ -637,10 +637,9 @@ def _find_anchor(
     照着搬会把数据区一起重编码 → 破坏索引。**路径断裂即放弃**，
     宁可这条不翻，也不能搬错。
     """
-    from .jp_pcs import is_printable_pcs, looks_like_jp_text
+    from .jp_pcs import looks_like_jp_text
 
     cur = addr
-    tiny_run = 0
     for _ in range(max_back):
         # 距离上限：一条 message 的串是连续存放的，块头指针不会挂在几百
         # 字节之外。放宽后实测出现过向后 1406 字节才「找到」指针的例子，
@@ -656,18 +655,12 @@ def _find_anchor(
         if e < 0:
             return None
         body = rom[s:e + 1]
+        # ⚠️ 2026-11-10 试过放行「极短串」（≤3 字节正文，`おー‥` / ` ？` 这类
+        # 被语种比例判据拒掉的行）来续上链条：unresolved 398→334，但
+        # trainer_card 场景直接卡死 —— 极短串的形态（`xx 00 FF`）在数据表里
+        # 到处都是，链条照样会穿进数据区抓到假锚点。别再加宽这里。
         if not looks_like_jp_text(body):
-            # 极短串会被语种比例判据拒掉：``おー‥``、`` ？`` 这类只有
-            # 1 个假名 + 标点的行。它们夹在真文本中间，是链条的合法一环，
-            # 砍掉就把整条链截断了（实测 107 条卡在这里）。
-            # ⚠️ 只放行「正文 ≤3 字节且全可印」，且不允许连续两次 ——
-            # 全量放宽（任意长度、任意可印）实测会让回溯穿过数据区，
-            # 抓到假锚点后战斗直接卡死。
-            if tiny_run >= 1 or len(body) > 4 or not is_printable_pcs(body):
-                return None
-            tiny_run += 1
-        else:
-            tiny_run = 0
+            return None
         sites = ptr_idx.get(s)
         if sites:
             return s, sites

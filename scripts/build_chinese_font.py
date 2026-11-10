@@ -127,12 +127,25 @@ def bdf_to_ink(
     font_ascent: int,
     ink_w: int = INK_W,
     ink_h: int = INK_H,
+    *,
+    pad_top: int = 0,
+    center_x: bool = False,
 ) -> bytearray:
     """Rasterize BDF into ``ink_w`` x ``ink_h`` ink (1=ink).
 
-    逐字节裁到墨迹 bbox 左上角，再按 ink_w/ink_h 截断——
-    所以 normal(11x11) / middle(9x11) / small(9x9) 用同一函数、
-    只是目标尺寸不同。
+    **基线对齐**（2026-11-11 修）：之前把墨迹 bbox 的左上角贴到 ink(0,0)，
+    ``font_ascent`` / ``bbx_y`` 全被忽略 —— 等于所有字「按墨迹顶对齐」。
+    单横线字「一」（BDF 里墨迹在第 8 行）因此被抬到第 3 行，看起来没居中；
+    「二」「三」两横还会挤到一起。
+
+    正确做法：把 BDF 的行号先换成字身框行号，再减掉 ink 区在槽内的起始行
+    （``pad_top``）::
+
+        em_top = font_ascent - (bbx_y + bbx_h)   # bbox 顶在字身框里的行号
+        shift  = em_top - pad_top                # ink 第 0 行对应的字身框行
+
+    只有墨迹超出 ink 框（小字 9x9 → 8x8）时才把 shift 钳到 0 再裁右下，
+    否则会连顶部笔画一起丢掉。
     """
     src_w = max(bbx_w, 1)
     src_h = len(bitmap_rows) if bitmap_rows else bbx_h
@@ -158,6 +171,15 @@ def bdf_to_ink(
         return out
     bw = max_x - min_x + 1
     bh = max_y - min_y + 1
+
+    em_top = font_ascent - (bbx_y + bbx_h) if font_ascent else 0
+    shift = em_top - pad_top
+    if bw > ink_w or bh > ink_h:
+        shift = max(0, shift)
+
+    ox = 0
+    if center_x and bw < ink_w:
+        ox = (ink_w - bw) // 2
 
     # 墨迹比目标框大时的收缩策略（2026-11-03 定稿）
     #
@@ -195,12 +217,16 @@ def bdf_to_ink(
                     out[ny * ink_w + nx] = 1
         return out
 
-    for y in range(min_y, min(min_y + ink_h, max_y + 1)):
-        for x in range(min_x, min(min_x + ink_w, max_x + 1)):
-            if raw[y * src_w + x]:
-                nx, ny = x - min_x, y - min_y
-                if 0 <= nx < ink_w and 0 <= ny < ink_h:
-                    out[ny * ink_w + nx] = 1
+    for y in range(min_y, max_y + 1):
+        ny = y + shift
+        if not (0 <= ny < ink_h):
+            continue
+        for x in range(min_x, max_x + 1):
+            if not raw[y * src_w + x]:
+                continue
+            nx = x - min_x + ox
+            if 0 <= nx < ink_w:
+                out[ny * ink_w + nx] = 1
     return out
 
 
@@ -298,7 +324,7 @@ def build_font_bin(
             bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y = bdf_glyphs[encoding]
             ink = bdf_to_ink(
                 bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y, font_ascent,
-                ink_w=ink_w, ink_h=ink_h,
+                ink_w=ink_w, ink_h=ink_h, pad_top=pad_top,
             )
         else:
             ink = bytearray(ink_w * ink_h)
@@ -311,10 +337,64 @@ def build_font_bin(
     return buf
 
 
+SYM_BYTES_PER_GLYPH = 64  # 8x8 上 + 8x8 下，4bpp
+
+
+def pack_8x16_4bpp(px: bytearray) -> bytes:
+    """8x16 像素（0..15）→ 64B：上半 8x8 4bpp + 下半 8x8 4bpp，左像素占低半字节。"""
+    out = bytearray(64)
+    for ty in range(16):
+        for tx4 in range(4):
+            left = px[ty * 8 + tx4 * 2]
+            right = px[ty * 8 + tx4 * 2 + 1]
+            out[ty * 4 + tx4] = (left & 0x0F) | ((right & 0x0F) << 4)
+    return bytes(out)
+
+
+def build_sym_bank(
+    bdf_glyphs: dict,
+    font_ascent: int,
+    chars: list[str],
+    *,
+    ink_w: int = 8,
+    ink_h: int = 12,
+    pad_top: int = 2,
+) -> bytearray:
+    """句读标点小库：8x16 4bpp，64B/字。
+
+    hook 侧 ``text_translter.c:37-49`` 对 ``0x36..0x3E`` 按 **64B/字** 取址、
+    只画 8px 宽。之前这个槽复用「整张 charmap 从第 0 字起」的 16x16 缓冲、
+    再硬截 576B，里面其实是「啊/阿/埃/挨」的前半 —— 所有句读标点于是都变成
+    汉字残片（`！` 画成「挨」左半，看着像 `]`）。
+    """
+    buf = bytearray(SYM_BYTES_PER_GLYPH * len(chars))
+    top = max(0, (16 - ink_h) // 2)
+    for i, ch in enumerate(chars):
+        enc = ord(ch)
+        if enc not in bdf_glyphs:
+            print(f"  [sym] 缺字 {ch!r}，留空槽")
+            continue
+        bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y = bdf_glyphs[enc]
+        ink = bdf_to_ink(
+            bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y, font_ascent,
+            ink_w=ink_w, ink_h=ink_h, pad_top=pad_top, center_x=True,
+        )
+        px = bytearray(ink_w * 16)
+        for y in range(ink_h):
+            for x in range(ink_w):
+                if ink[y * ink_w + x]:
+                    px[(y + top) * ink_w + x] = 15
+        buf[i * SYM_BYTES_PER_GLYPH:(i + 1) * SYM_BYTES_PER_GLYPH] = pack_8x16_4bpp(px)
+    return buf
+
+
 def main() -> None:
     ap = argparse.ArgumentParser(
         description="Build Gen3 Chinese font bins (128B / 16x16 slot, 12px ink)"
     )
+    ap.add_argument("--slot-chars", nargs="*", default=None, metavar="LABEL=c1,c2,...",
+                    help="该 slot 按显式字符列表生成 8x16 小库（64B/字），"
+                         "用于 Sym 句读标点槽")
     ap.add_argument("--bdf", required=True, type=Path,
                     help="默认 BDF（各 slot 未单独指定时用它）")
     ap.add_argument("--bdf-map", nargs="*", default=None, metavar="LABEL=PATH",
@@ -364,6 +444,12 @@ def main() -> None:
     bdf_map = _kv_map(args.bdf_map)
     ink_map = _kv_map(args.ink_map)
     pad_map = _kv_map(args.pad_map)
+    slot_chars: dict[str, list[str]] = {}
+    for item in args.slot_chars or []:
+        if "=" not in item:
+            raise SystemExit(f"error: --slot-chars 需要 LABEL=c1,c2 形式，收到 {item!r}")
+        lbl, raw = item.split("=", 1)
+        slot_chars[lbl.strip()] = [c for c in raw.split(",") if c]
 
     args.output_dir.mkdir(parents=True, exist_ok=True)
     print(f"Parsing BDF (default): {args.bdf}")
@@ -412,6 +498,21 @@ def main() -> None:
 
     for i, (label, bp, glyphs, ascent, iw, ih, pad) in enumerate(plan):
         print(f"Building {label} font...")
+        if label in slot_chars:
+            buf = build_sym_bank(glyphs, ascent, slot_chars[label])
+            size = (
+                args.slot_sizes[i]
+                if args.slot_sizes and i < len(args.slot_sizes)
+                else len(buf)
+            )
+            fn = f"{args.prefix}{label}(0x{size:X}).bin"
+            out_path = args.output_dir / fn
+            out_path.write_bytes(buf)
+            print(
+                f"  Written {len(buf)} bytes -> {out_path}  "
+                f"(8x16 sym bank, chars={' '.join(slot_chars[label])})"
+            )
+            continue
         buf = build_font_bin(
             glyphs,
             charmap,

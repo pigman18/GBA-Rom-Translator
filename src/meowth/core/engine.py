@@ -1863,6 +1863,7 @@ class TranslationEngine:
             bdf_map_args: list[str] = []
             ink_map_args: list[str] = []
             pad_map_args: list[str] = []
+            slot_chars_args: list[str] = []
             for s in slots:
                 lbl = s.get("label", "Unknown")
                 pb = self._resolve_slot_bdf(s, bdf_path)
@@ -1872,6 +1873,12 @@ class TranslationEngine:
                     ink_map_args.append(f"{lbl}={s['ink']}")
                 if s.get("pad_top") is not None:
                     pad_map_args.append(f"{lbl}={int(s['pad_top'])}")
+                # 显式字符槽（Sym 句读标点）：按 64B/字 8x16 单独生成，
+                # 不能沿用「整张 charmap 从第 0 字起」的 16x16 缓冲。
+                if s.get("slot_chars"):
+                    slot_chars_args.append(
+                        f"{lbl}=" + ",".join(str(c) for c in s["slot_chars"])
+                    )
 
             _scripts_dir = Path(__file__).resolve().parents[3] / "scripts"
             args = [
@@ -1893,6 +1900,8 @@ class TranslationEngine:
             ]
             if bdf_map_args:
                 args += ["--bdf-map", *bdf_map_args]
+            if slot_chars_args:
+                args += ["--slot-chars", *slot_chars_args]
             if ink_map_args:
                 args += ["--ink-map", *ink_map_args]
             if pad_map_args:

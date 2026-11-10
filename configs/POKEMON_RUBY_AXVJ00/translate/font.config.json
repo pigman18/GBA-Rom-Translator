@@ -67,8 +67,10 @@
       "bytes_per_glyph": 64,
       "slot_size": 576,
       "bdf": "normal.bdf",
-      "ink": "11x11",
-      "pad_top": 2
+      "ink": "8x12",
+      "pad_top": 2,
+      "_slot_chars_note": "0x36..0x3E 句读标点，按 64B/字 8x16 单独生成；不再复用整张 charmap 的前 9 个汉字（那会让所有标点变成汉字残片）",
+      "slot_chars": [";", "。", "－", "~", "、", "，", "！", "？", "："]
     }
   ]
 }

@@ -935,6 +935,7 @@ def build_write_plan(
 
         if is_struct:
             from .struct_trampoline import (
+                plan_struct_name_ptr,
                 plan_struct_same_stride_clone,
                 plan_struct_trampoline,
             )
@@ -949,6 +950,7 @@ def build_write_plan(
             errs: list[str] = []
             for label, fn in (
                 ("trampoline", plan_struct_trampoline),
+                ("name_ptr", plan_struct_name_ptr),
                 ("clone", plan_struct_same_stride_clone),
             ):
                 t, c, e = fn(

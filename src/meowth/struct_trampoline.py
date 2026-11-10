@@ -633,6 +633,162 @@ def _stride_patches_by_literals(
     return out
 
 
+def plan_struct_name_ptr(
+    rom: bytes,
+    name: str,
+    mod: dict,
+    entries: list[dict],
+    encoder: Encoder | None,
+    cursor: int,
+) -> tuple[dict | None, int, str | None]:
+    """名字槽改存 u32 指针，译文放新区（stride / 字段 offset 全不变）。
+
+    为什么不用扩 stride：Thumb 的立即数放不下。实测训练家个人名
+    ``entry=32 / name@4 / 名槽 5B``，字段在 9..32，名字加长后
+    ``adds Rd,Rn,#imm3`` 只能 0–7、``ldrb`` 的 imm5 只能 ≤31 ——
+    名字偏移要 +32、字段 offset 要 +16，两条都编不出来。
+    重排布局（字段前移）同样卡在 ldrb 的 31。
+
+    指针旁路不受这个限制：名字槽 4..8 放 u32 指针，字段 9..32 原样，
+    读点 ``adds r1, r4, #4`` 换成 ``ldr r1, [r4, #4]``（同样 2 字节，
+    总长不变，后面的 ``movs r2, #0`` 填充参数也保住了）。
+
+    只改「主读取点」：``0x0800CC98`` 那种先扫名字算长度的循环不改
+    （它按字节扫 FF，读到指针字节会算错），那些界面继续读旧区日文。
+
+    当前只实现 ``name_off == 4`` 且读点已确认的情形（训练家个人名）。
+    """
+    try:
+        base, entry_size, count, name_off, _decl = _struct_geom(mod)
+    except ValueError as exc:
+        return None, cursor, str(exc)
+    if name_off != 4:
+        return None, cursor, f"name_off={name_off} 未实现指针旁路"
+    if name_off + 4 > entry_size:
+        return None, cursor, "名字槽不足 4 字节"
+    if base != 0x1C4C94 or entry_size != 32:
+        return None, cursor, "仅对训练家个人名启用（其余读点未逐个确认）"
+
+    # 逐条编码
+    enc_by_idx: dict[int, bytes] = {}
+    for e in entries:
+        if e.get("_reject"):
+            continue
+        a = e.get("address")
+        if a in (None, ""):
+            continue
+        try:
+            off = _off(a)
+        except (TypeError, ValueError):
+            continue
+        delta = off - base - name_off
+        if delta % entry_size:
+            continue
+        idx = delta // entry_size
+        if not (0 <= idx < count):
+            continue
+        text = e.get("translated") or ""
+        if not text or text == (e.get("original") or ""):
+            continue
+        raw = _encode_body(text, encoder)
+        if raw:
+            enc_by_idx[idx] = raw
+    if not enc_by_idx:
+        return None, cursor, "无可用译文"
+
+    # 布局：blob(count*entry_size) 紧跟名字串区（entry_size 是 4 的倍数）
+    blob_len = count * entry_size
+    name_area = cursor + blob_len
+    ptrs: dict[int, int] = {}
+    na = name_area
+    for idx in sorted(enc_by_idx):
+        raw = enc_by_idx[idx]
+        ptrs[idx] = GBA_BASE + na
+        na = (na + len(raw) + 3) & ~3
+    total = na - cursor
+    if cursor + total > TABLE_AREA_END:
+        return None, cursor, "补丁表区域满了"
+
+    # 名字串区
+    names = bytearray(total - blob_len)
+    for idx, ptr in ptrs.items():
+        rel = ptr - GBA_BASE - name_area
+        raw = enc_by_idx[idx]
+        names[rel:rel + len(raw)] = raw
+
+    # 克隆：名字槽 4..8 写指针，第 8 字节强制 FF，9.. 原样。
+    # 第 8 字节必须是 FF：还有别的读点在按字节扫名字（0x0800CC98 那种累加
+    # 长度的循环），它们现在看到的是指针字节；不截断就会一路扫进字段区。
+    blob = bytearray()
+    for i in range(count):
+        src = base + i * entry_size
+        entry = bytes(rom[src:src + entry_size])
+        if i in ptrs:
+            entry = (
+                entry[:name_off]
+                + struct.pack("<I", ptrs[i])
+                + b"\xFF"
+                + entry[name_off + 5:]
+            )
+        blob += entry[:entry_size]
+
+    new_base = cursor
+    next_cursor = (cursor + total + 3) & ~3
+
+    # 基址字面量
+    safe = re.sub(r"[^\w\-]+", "_", name)
+    lit_out: list[dict] = []
+    for lit in find_literal_sites(rom, GBA_BASE + base):
+        cur_v = struct.unpack_from("<I", rom, lit)[0]
+        if cur_v in (GBA_BASE + base, GBA_BASE + (base & ~3)):
+            lit_out.append({"off": f"0x{lit:X}"})
+        elif cur_v == GBA_BASE + base + name_off:
+            lit_out.append({"off": f"0x{lit:X}", "add": name_off})
+    if not lit_out:
+        return None, cursor, "无表基字面量"
+
+    # 读点补丁：adds r1, r4, #4 → ldr r1, [r4, #4]；movs r3, #5 → #最长
+    max_len = max(len(v) for v in enc_by_idx.values())
+    insns = [
+        {
+            "off": "0xF22CA",
+            "bytes": "68 61",
+            "label": "adds r1,r4,#4 → ldr r1,[r4,#4]（名字槽存指针）",
+        },
+        {
+            "off": "0xF22CE",
+            "bytes": f"23 {max_len:02X}",
+            "label": f"movs r3,#5→#{max_len}（StringCopy 长度跟最长译文）",
+        },
+    ]
+
+    table = {
+        "module": name,
+        "mode": "struct_name_ptr",
+        "old_base": f"0x{base:X}",
+        "old_stride": entry_size,
+        "new_base": f"0x{new_base:X}",
+        "new_stride": entry_size,
+        "count": count,
+        "name_offset": name_off,
+        "old_name_cap": 5,
+        "new_name_cap": max_len,
+        "blob": f"gen/plan_table_{safe}.bin",
+        "blob_name": f"plan_table_{safe}.bin",
+        "blob_hex": (bytes(blob) + bytes(names)).hex(),
+        "insns": insns,
+        "literals": lit_out,
+        "field_map": {},
+        "note": (
+            f"名字指针旁路 base=0x{base:X} stride {entry_size}"
+            f"（名槽 {name_off}..{name_off + 4} 存 u32）；"
+            f"translated={len(enc_by_idx)} 最长 {max_len}B "
+            f"lits={len(lit_out)} insns={len(insns)}"
+        ),
+    }
+    return table, next_cursor, None
+
+
 def plan_struct_same_stride_clone(
     rom: bytes,
     name: str,

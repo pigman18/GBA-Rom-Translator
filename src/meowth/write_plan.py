@@ -668,6 +668,25 @@ def _find_anchor(
     return None
 
 
+def _chain_has_rom_ptr(rom: bytes, start: int, end: int) -> bool:
+    """锚点到目标之间是否**没有** FF 分隔（= 目标不是独立 message 段）。
+
+    用来区分两种截然不同的「块」：
+
+    * **message print 流** —— FF 分隔的多条串，整块搬走是安全的；
+    * **指针表 + 尾随文本** —— 例如训练卡标题 0x389D50：7 个 u32 指针
+      紧跟一条 ``のトレーナーカード``，中间没有 FF。这种块被 draw 代码按
+      「表内固定偏移取文本」读取，且那条绘制路径不解 PCS（不认 F7），
+      整块搬走只会让后缀变成空白，比保留日文更糟。
+
+    为什么用 FF 而不是「段内是否有 u32 指针」：日文 PCS 的字节全在
+    0x00–0xF9，第 4 字节恰为 0x08/0x09 的位置遍地都是（0x08 本身就常作
+    控制码），实测 624 字节的正常对话块里也「含指针」，判据不成立。
+    而 FF 是 message 的唯一段分隔符，语义上就是「这里能独立成串」。
+    """
+    return b"\xff" not in rom[start:end]
+
+
 def _looks_like_ptr_array(rom: bytes, site: int) -> bool:
     """站点是否处在指针数组里（相邻 4 字节也是指向 ROM 的 GBA 指针）。
 
@@ -1115,31 +1134,54 @@ def build_write_plan(
             cluster = None
             if addr is not None:
                 anc = _find_anchor(rom, ptr_idx, addr)
+                # 锚点到目标的这一段里若夹着 u32 ROM 指针，说明这个「块」
+                # 不是 message print 流，而是「指针表 + 尾随文本」的混合
+                # 结构（训练卡标题 0x389D50 = 7 个指针 + のトレーナーカード）。
+                # 整块搬走 + 改块头指针后，那条绘制路径仍按「表内 +0x1C 取
+                # 文本」的方式读，但它的绘制不走 PCS 解码（不认 F7），于是
+                # 标题只剩玩家名、后缀一片空白 —— 比保留日文更糟。
+                # 正常 message 块是纯文本 + 控制码，不会出现 u32 指针。
+                if anc and _chain_has_rom_ptr(rom, anc[0], addr):
+                    anc = None
                 if anc:
                     s0, sites0 = anc
                     end_t = rom.find(0xFF, addr, min(addr + 512, len(rom)))
                     if end_t > addr:
+                        # 切点 = 锚点 ∪ 区间内所有**已知译文地址**。
+                        # 只按 FF 切段会出事：0x389D50「7 个指针 + 日文」之间
+                        # 没有 FF，整段被当成一段、查不到译文 → 原样复制，
+                        # 于是训练卡标题永远是日文（而读点已改到新区，页面上
+                        # 表现为标题只剩玩家名、后面一片空白）。
+                        # 已知译文地址才是真正的「串起点」，比 FF 更可靠。
+                        cuts = [s0]
+                        cuts += sorted(
+                            a for a in tr_by_addr if s0 < a <= end_t
+                        )
+                        cuts.append(end_t + 1)
                         blob = bytearray()
-                        p = s0
                         ok = True
-                        while p <= end_t:
-                            e = rom.find(0xFF, p, end_t + 1)
-                            if e < 0:
-                                ok = False
-                                break
-                            tr = tr_by_addr.get(p)
+                        for i in range(len(cuts) - 1):
+                            a, b = cuts[i], cuts[i + 1]
+                            tr = tr_by_addr.get(a)
                             if tr:
                                 enc = _encode(
                                     tr, encoder, game_id=game_id, module=module
                                 )
                                 if not enc:
-                                    enc = bytes(rom[p:e + 1])
+                                    enc = bytes(rom[a:b])
                                 elif not enc.endswith(b"\xFF"):
                                     enc += b"\xFF"
                                 blob += enc
-                            else:
+                                continue
+                            # 无译文的区间：内部再按 FF 切，逐串原样复制。
+                            p = a
+                            while p < b:
+                                e = rom.find(0xFF, p, b)
+                                if e < 0:
+                                    blob += rom[p:b]
+                                    break
                                 blob += rom[p:e + 1]
-                            p = e + 1
+                                p = e + 1
                         if ok and blob:
                             from .policy import filter_pointer_sources as _fps
 

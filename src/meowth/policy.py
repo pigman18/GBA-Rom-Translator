@@ -1113,6 +1113,24 @@ def _script_inline_hdr_ok(rom: bytes | bytearray, ptr_addr: int) -> bool:
     return False
 
 
+def _ptr_array_element_ok(rom: bytes | bytearray, ptr_addr: int) -> bool:
+    """站点是否处在「逐条指针数组」里（相邻 4 字节也是指向 ROM 的指针）。
+
+    剧情区有大量 u32 数组，每个元素指向一条 message，元素位置不一定 4 对齐；
+    它们既不是 ``0f 00`` 也不是 ``6a 5a 67`` 内联，但确实是合法引用点。
+    """
+    if ptr_addr < 4 or ptr_addr + 8 > len(rom):
+        return False
+    v = struct.unpack_from("<I", rom, ptr_addr)[0]
+    for q in (ptr_addr - 4, ptr_addr + 4):
+        if q < 0 or q + 4 > len(rom):
+            continue
+        w = struct.unpack_from("<I", rom, q)[0]
+        if 0x08000000 <= w < 0x0A000000 and w != v:
+            return True
+    return False
+
+
 def filter_pointer_sources(
     rom: bytes | bytearray,
     pointer_sources: Iterable,
@@ -1162,7 +1180,11 @@ def filter_pointer_sources(
         # 游戏走没改的那条，画面照旧是日文。
         # ⚠️ 不能放宽成「非对齐一律接受」：实测会改坏别处、模拟器直接卡死。
         # 只认**已验证的命令头**，其它非对齐一律拒绝。
-        inline_hdr = inline or _script_inline_hdr_ok(rom, ptr_addr)
+        inline_hdr = (
+            inline
+            or _script_inline_hdr_ok(rom, ptr_addr)
+            or _ptr_array_element_ok(rom, ptr_addr)
+        )
         if ptr_addr & 3:
             if not inline_hdr:
                 continue

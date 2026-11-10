@@ -452,6 +452,43 @@
 **不能用正则可靠分离**。要清干净只能靠「是否可达」的实测（RAM 断点 / 场景验证），
 而不是文本形态。
 
+### 2.9 对战塔训练家表：从 62 条 unresolved 到整表写入（2026-11-11 00:30）
+
+**找到了确定的结构**（`scripts/find_callers.py` 追到 literal 引用者）：
+
+```
+0x080A9DE6  lsls r2, r5, #6        ; idx × 64
+0x080A9DE8  adds r2, r2, r1        ; dst = buf2 + idx*64
+0x080A9DF0  lsls r1, r1, #6        ; idx × 64
+0x080A9DF2  adds r1, r1, r7        ; r7 = 0x0839DF50
+0x080A9DF8  bl   0x81B31A4         ; memcpy(dst, src, 64)
+```
+
+`literal @0xA9E30 = 0x0839DF50`，被 `0xA9D6C` / `0xA9DD0` 引用。
+所以 **base `0x39DF50`、stride 64、name_offset 2、count 60**（`0x39EE50` 之后不是名字）。
+
+（之前把 `0x39DF52` 当 base、把 `0xA9D6C` 当「误判」都是错的：
+`0xA9D6C` 是 **ldr 指令地址**，我拿它当 literal 读了 4 字节，才得出 `0x7F114A30` 的假结论。）
+
+**补全 texts.json**（`scripts/_add_tower_table.py`）：
+
+| 动作 | 条数 |
+|---|---|
+| 新增模块 `对战塔训练家`（struct, entry 64, name@2） | — |
+| 从「剧情」迁移过来 | 44 |
+| 补上扫描器漏掉的短名（`ぽち`/`ココ`/`レオン` 这类 2~3 字） | 16 |
+| 同步 `texts_translated.json` | 16 |
+
+**名槽推导 11B**（名字 + 5 个 00 填充），2 字中文 9B 能进、3 字 13B 进不去。
+把 28 条 3~4 字译名压到 2 字（`ズババ`→兹巴、`バメコ`→梅子…）后：
+
+```
+translated_fit=56  keep_jp=4  overflow=0     （原 28/32/28）
+```
+
+**收益**：`tables 11→12`、`unresolved 439→386`（-53）。
+剩余 4 条 keep_jp 是没有译文的条目，不是槽位问题。
+
 ### P0 — 宝可梦名字全部是错字（战斗场景）
 
 **现象**：名字框显示 `长附大`；对话框显示「啊！野生的**蛇**[残]跳出来了」。

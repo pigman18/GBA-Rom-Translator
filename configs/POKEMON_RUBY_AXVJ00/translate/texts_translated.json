@@ -23616,7 +23616,7 @@
   {
     "status": 200,
     "original": "すばろう",
-    "translated": "斯巴罗"
+    "translated": "斯巴"
   },
   {
     "status": 200,
@@ -36179,6 +36179,11 @@
   },
   {
     "status": 200,
+    "original": "ぽち",
+    "translated": "波奇"
+  },
+  {
+    "status": 200,
     "original": "まぁ そんな ときも あるよね！",
     "translated": "嘛,也有那种时候呢!"
   },
@@ -42733,6 +42738,11 @@
   },
   {
     "status": 200,
+    "original": "アゲハ",
+    "translated": "扬羽"
+  },
+  {
+    "status": 200,
     "original": "アゲハント",
     "translated": "狩猎凤蝶"
   },
@@ -43395,6 +43405,11 @@
     "status": 200,
     "original": "アーリーレッド",
     "translated": "红洋葱"
+  },
+  {
+    "status": 200,
+    "original": "アール",
+    "translated": "阿尔"
   },
   {
     "status": 200,
@@ -46903,7 +46918,7 @@
   {
     "status": 200,
     "original": "キャモくん",
-    "translated": "卡莫君"
+    "translated": "卡莫"
   },
   {
     "status": 200,
@@ -47298,6 +47313,11 @@
     "status": 200,
     "original": "キンちゃん",
     "translated": "小金"
+  },
+  {
+    "status": 200,
+    "original": "キング",
+    "translated": "金格"
   },
   {
     "status": 200,
@@ -47833,6 +47853,11 @@
   },
   {
     "status": 200,
+    "original": "クララ",
+    "translated": "库拉"
+  },
+  {
+    "status": 200,
     "original": "クリア しています\nおまち ください",
     "translated": "正在清除\n请稍候"
   },
@@ -48108,7 +48133,7 @@
   {
     "status": 200,
     "original": "グラスケ",
-    "translated": "古拉助"
+    "translated": "古拉"
   },
   {
     "status": 200,
@@ -48346,7 +48371,7 @@
   {
     "status": 200,
     "original": "ケロタロウ",
-    "translated": "凯罗太郎"
+    "translated": "凯罗"
   },
   {
     "status": 200,
@@ -48822,6 +48847,11 @@
   },
   {
     "status": 200,
+    "original": "ココ",
+    "translated": "可可"
+  },
+  {
+    "status": 200,
     "original": "ココガラ",
     "translated": "稚山雀"
   },
@@ -49054,6 +49084,11 @@
     "status": 200,
     "original": "コロモリ",
     "translated": "滚滚蝙蝠"
+  },
+  {
+    "status": 200,
+    "original": "コロロ",
+    "translated": "科罗"
   },
   {
     "status": 200,
@@ -50024,7 +50059,7 @@
   {
     "status": 200,
     "original": "サメハー",
-    "translated": "萨梅哈"
+    "translated": "萨梅"
   },
   {
     "status": 200,
@@ -50201,7 +50236,7 @@
   {
     "status": 200,
     "original": "ザクマちん",
-    "translated": "扎克马君"
+    "translated": "扎克"
   },
   {
     "status": 200,
@@ -51633,7 +51668,7 @@
   {
     "status": 200,
     "original": "スネーキー",
-    "translated": "史尼奇"
+    "translated": "史尼"
   },
   {
     "status": 200,
@@ -51963,6 +51998,11 @@
     "status": 200,
     "original": "ズバット",
     "translated": "超音蝠"
+  },
+  {
+    "status": 200,
+    "original": "ズババ",
+    "translated": "兹巴"
   },
   {
     "status": 200,
@@ -55578,7 +55618,7 @@
   {
     "status": 200,
     "original": "ドックン",
-    "translated": "多库恩"
+    "translated": "多库"
   },
   {
     "status": 200,
@@ -55608,7 +55648,7 @@
   {
     "status": 200,
     "original": "ドラちゃん",
-    "translated": "多拉酱"
+    "translated": "多拉"
   },
   {
     "status": 200,
@@ -55742,6 +55782,11 @@
   },
   {
     "status": 200,
+    "original": "ドラー",
+    "translated": "德拉"
+  },
+  {
+    "status": 200,
     "original": "ドリ",
     "translated": "金枕果"
   },
@@ -55848,7 +55893,7 @@
   {
     "status": 200,
     "original": "ドードン",
-    "translated": "多多恩"
+    "translated": "多恩"
   },
   {
     "status": 200,
@@ -56233,7 +56278,7 @@
   {
     "status": 200,
     "original": "ナンチッチ",
-    "translated": "南奇奇"
+    "translated": "南奇"
   },
   {
     "status": 200,
@@ -56373,7 +56418,7 @@
   {
     "status": 200,
     "original": "ニョニョ",
-    "translated": "尼欧尼欧"
+    "translated": "尼欧"
   },
   {
     "status": 200,
@@ -56503,6 +56548,11 @@
   {
     "status": 404,
     "original": "ネ く "
+  },
+  {
+    "status": 200,
+    "original": "ネイ",
+    "translated": "奈伊"
   },
   {
     "status": 200,
@@ -57766,6 +57816,11 @@
   },
   {
     "status": 200,
+    "original": "バクー",
+    "translated": "巴克"
+  },
+  {
+    "status": 200,
     "original": "バクーダ",
     "translated": "喷火驼"
   },
@@ -58138,6 +58193,11 @@
     "status": 200,
     "original": "バブルこうせん",
     "translated": "泡沫光线"
+  },
+  {
+    "status": 200,
+    "original": "バメコ",
+    "translated": "梅子"
   },
   {
     "status": 200,
@@ -59407,7 +59467,7 @@
   {
     "status": 200,
     "original": "ピタロウ",
-    "translated": "皮太郎"
+    "translated": "皮太"
   },
   {
     "status": 200,
@@ -60536,7 +60596,7 @@
   {
     "status": 200,
     "original": "ブレロタン",
-    "translated": "布雷洛坦"
+    "translated": "布雷"
   },
   {
     "status": 200,
@@ -60796,7 +60856,7 @@
   {
     "status": 200,
     "original": "プンプン",
-    "translated": "普恩普恩"
+    "translated": "普普"
   },
   {
     "status": 200,
@@ -60891,7 +60951,7 @@
   {
     "status": 200,
     "original": "ヘラスケ",
-    "translated": "赫拉斯克"
+    "translated": "赫拉"
   },
   {
     "status": 200,
@@ -61231,7 +61291,7 @@
   {
     "status": 200,
     "original": "ホエルコン",
-    "translated": "霍尔孔"
+    "translated": "霍尔"
   },
   {
     "status": 200,
@@ -63427,8 +63487,13 @@
   },
   {
     "status": 200,
+    "original": "マイン",
+    "translated": "玛茵"
+  },
+  {
+    "status": 200,
     "original": "マオウくん",
-    "translated": "魔王君"
+    "translated": "魔王"
   },
   {
     "status": 200,
@@ -63823,7 +63888,7 @@
   {
     "status": 200,
     "original": "マッスグ",
-    "translated": "玛斯古"
+    "translated": "玛斯"
   },
   {
     "status": 200,
@@ -64694,7 +64759,7 @@
   {
     "status": 200,
     "original": "ミカリン",
-    "translated": "米卡琳"
+    "translated": "米卡"
   },
   {
     "status": 200,
@@ -65490,6 +65555,11 @@
   },
   {
     "status": 200,
+    "original": "ムドー",
+    "translated": "穆德"
+  },
+  {
+    "status": 200,
     "original": "ムムムッ！\nきみの \\02‥‥",
     "translated": "唔唔唔!\\n你的\\02……"
   },
@@ -65890,7 +65960,7 @@
   {
     "status": 200,
     "original": "メルメル",
-    "translated": "梅露梅露"
+    "translated": "梅露"
   },
   {
     "status": 200,
@@ -66291,7 +66361,7 @@
   {
     "status": 200,
     "original": "ヤジロー",
-    "translated": "弥次郎"
+    "translated": "弥次"
   },
   {
     "status": 200,
@@ -67203,7 +67273,7 @@
   {
     "status": 200,
     "original": "ラビビン",
-    "translated": "拉比宾"
+    "translated": "拉宾"
   },
   {
     "status": 200,
@@ -67268,7 +67338,7 @@
   {
     "status": 200,
     "original": "ラブリン",
-    "translated": "拉布琳"
+    "translated": "拉布"
   },
   {
     "status": 200,
@@ -68094,6 +68164,11 @@
   },
   {
     "status": 200,
+    "original": "レオン",
+    "translated": "雷恩"
+  },
+  {
+    "status": 200,
     "original": "レコードを まぜています",
     "translated": "正在混合记录"
   },
@@ -68780,6 +68855,11 @@
     "status": 200,
     "original": "ワークアウトの海",
     "translated": "健身之海"
+  },
+  {
+    "status": 200,
+    "original": "ワール",
+    "translated": "瓦尔"
   },
   {
     "status": 200,

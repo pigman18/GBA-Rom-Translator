@@ -617,42 +617,44 @@ def _text_ptr_index(rom: bytes) -> dict[int, list[int]]:
     return idx
 
 
-# 锚点回溯的字节距离上限（见 _find_anchor 里的说明）。
-MAX_CHAIN_BYTES = 512
-
-
 def _find_anchor(
     rom: bytes,
     ptr_idx: dict[int, list[int]],
     addr: int,
-    max_back: int = 96,
 ) -> tuple[int, list[int]] | None:
     """从一条无指针的串向前回溯，找到第一个**有引用**的串（锚点）。
 
     日版脚本的 message 是一条条 FF 分隔的串，代码只在块头挂一个指针，
     之后顺序读到底。所以「目标串 + 块头」共享同一份数据，搬块头即可。
 
-    ⚠️ 回溯路径上每一条都必须像文本。ROM 里大量索引表/偏移表的字节也
-    恰好以 FF 分隔（实测 0x154E89 是 u16 索引，被误当串、还查到假站点），
-    照着搬会把数据区一起重编码 → 破坏索引。**路径断裂即放弃**，
-    宁可这条不翻，也不能搬错。
+    两条护栏，都不涉及「走了多少字节」：
+
+    1. **紧邻**：上一条串的 FF 必须正好落在 ``cur - 1``。这是「同一块」
+       的充分证据 —— 中间夹了任何别的东西就断链。正是这条取代了以前的
+       512 字节距离上限：0x14ab56 的块头在 0x14a8e6（624 字节外），
+       中间 7 条串严丝合缝，是**合法**长块，而旧上限把它一刀切掉了。
+    2. **像文本**：路径上每一条都要过 ``looks_like_jp_text``。ROM 里大量
+       索引表/偏移表的字节也恰好以 FF 分隔（实测 0x154E89 是 u16 索引，
+       被误当串、还查到假站点），照着搬会把数据区一起重编码 → 破坏索引。
+
+    紧邻判据保证 ``s < cur`` 严格递减，所以不需要步数或距离上限。
     """
     from .jp_pcs import looks_like_jp_text
 
+    # 单条串的搜索窗口：AXVJ 有 220~284 字节的长对话块，留 1024 足够。
+    window = 1024
     cur = addr
-    for _ in range(max_back):
-        # 距离上限：一条 message 的串是连续存放的，块头指针不会挂在几百
-        # 字节之外。放宽后实测出现过向后 1406 字节才「找到」指针的例子，
-        # 而那个"锚点"是乱码数据（`うＦばぬく えッくえＥ`）——
-        # 搬它等于把数据块整段重编码、还要改一个假指针。
-        if addr - cur > MAX_CHAIN_BYTES:
-            return None
-        p = rom.rfind(bytes([0xFF]), max(0, cur - 400), cur - 1)
+    while True:
+        p = rom.rfind(b"\xff", max(0, cur - window), cur - 1)
         if p < 0:
             return None
         s = p + 1
-        e = rom.find(bytes([0xFF]), s, min(s + 400, len(rom)))
+        e = rom.find(b"\xff", s, min(s + window, len(rom)))
         if e < 0:
+            return None
+        # 紧邻：这条串必须正好结束在目标起点前一个字节。
+        # 不紧邻说明中间夹着别的东西（数据区/另一块），立刻放弃。
+        if e != cur - 1:
             return None
         body = rom[s:e + 1]
         # ⚠️ 2026-11-10 试过放行「极短串」（≤3 字节正文，`おー‥` / ` ？` 这类
@@ -661,30 +663,63 @@ def _find_anchor(
         # 到处都是，链条照样会穿进数据区抓到假锚点。别再加宽这里。
         if not looks_like_jp_text(body):
             return None
+        # 脚本指令流（指针 + 命令 + 少量日文）的字节同样能解成日文，
+        # 整块重编码会把指令拆碎 —— 逐段拦，见 _segment_is_script。
+        if _segment_is_script(rom, s, e):
+            return None
         sites = ptr_idx.get(s)
         if sites:
             return s, sites
         cur = s
-    return None
 
 
 def _chain_has_rom_ptr(rom: bytes, start: int, end: int) -> bool:
-    """锚点到目标之间是否**没有** FF 分隔（= 目标不是独立 message 段）。
+    """锚点到目标这一整段是否**不是**纯 message 流。
 
-    用来区分两种截然不同的「块」：
+    两条判据，任一命中就拒绝整块搬迁：
 
-    * **message print 流** —— FF 分隔的多条串，整块搬走是安全的；
-    * **指针表 + 尾随文本** —— 例如训练卡标题 0x389D50：7 个 u32 指针
-      紧跟一条 ``のトレーナーカード``，中间没有 FF。这种块被 draw 代码按
-      「表内固定偏移取文本」读取，且那条绘制路径不解 PCS（不认 F7），
-      整块搬走只会让后缀变成空白，比保留日文更糟。
+    1. **目标不是独立段**：``[start, end)`` 里一个 FF 都没有，说明目标串
+       没被任何 FF 隔出来 —— 例如训练卡标题 0x389D50 是「7 个 u32 指针 +
+       のトレーナーカード」，那条绘制路径按表内固定偏移取文本、不解 PCS，
+       整块搬走只会把后缀变成空白。
+    2. **是脚本指令流**：非对齐 u32 ROM 指针密度 > 3%。0x174xxx 那一片
+       全是「指针 + 命令 + 少量文本」的脚本块，``looks_like_jp_text``
+       会把它们一律放行（字节都在可解范围），但整块重编码会把指令流拆碎。
+       实测密度：脚本块 4.4%~9%，纯文本块 0.8%~1.5%，分界很清楚。
 
-    为什么用 FF 而不是「段内是否有 u32 指针」：日文 PCS 的字节全在
-    0x00–0xF9，第 4 字节恰为 0x08/0x09 的位置遍地都是（0x08 本身就常作
-    控制码），实测 624 字节的正常对话块里也「含指针」，判据不成立。
-    而 FF 是 message 的唯一段分隔符，语义上就是「这里能独立成串」。
+    为什么不用「4 对齐处有连续两个指针」：脚本块里的指针是**非对齐**的
+    （``0x1746BD: c0 46 17 08``），对齐扫描一个都抓不到。
+    为什么不用「含 u32 指针」：日文 PCS 字节全在 0x00–0xF9，第 4 字节恰为
+    0x08/0x09 的位置遍地都是，624 字节的正常对话块也会中招。
     """
     return b"\xff" not in rom[start:end]
+
+
+def _segment_is_script(rom: bytes, s: int, e: int) -> bool:
+    """``rom[s:e+1]`` 这一段是否其实是**脚本指令流**而不是 message 正文。
+
+    0x174xxx 那一片是「u32 指针 + 命令字节 + 少量日文」的混合块，
+    ``looks_like_jp_text`` 会把它们一律放行（字节全在可解范围），于是
+    回溯链会穿过它们抓到假锚点，整块重编码会把指令流拆碎。
+
+    判据是**非对齐 u32 ROM 指针密度**（脚本块里的指针不是 4 对齐的，
+    ``0x1746BD: c0 46 17 08``）：脚本段实测 6.5%~9%，纯文本段 0.8%~1.5%。
+    取 3% 为界、并要求至少 2 个命中 —— 单个命中在日文正文里太常见
+    （0x08/0x09 本身就是常用控制码）。
+
+    逐段判、而不是整条链判：短词条池（0x3B2A72 那批 8 字节特性名）
+    每段都不含指针，按整链判会误伤 129 条。
+    """
+    span = e + 1 - s
+    if span < 16:
+        return False
+    n = 0
+    rom_hi = GBA_BASE + len(rom)
+    for q in range(s, min(e - 2, len(rom) - 3)):
+        w = int.from_bytes(rom[q:q + 4], "little")
+        if GBA_BASE <= w < rom_hi:
+            n += 1
+    return n >= 2 and n * 100 > span * 3
 
 
 def _looks_like_ptr_array(rom: bytes, site: int) -> bool:

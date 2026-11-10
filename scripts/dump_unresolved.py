@@ -24,23 +24,26 @@ from collections import Counter
 from pathlib import Path
 
 from meowth.jp_pcs import decode_pcs, looks_like_jp_text
-from meowth.write_plan import MAX_CHAIN_BYTES, _text_ptr_index
+from meowth.write_plan import _text_ptr_index
 
 GBA_BASE = 0x08000000
 
 
-def trace_anchor(rom: bytes, idx: dict, addr: int, max_back: int = 96) -> str:
-    """复刻 ``_find_anchor`` 并记录逐步过程，返回一句话结论。"""
+def trace_anchor(rom: bytes, idx: dict, addr: int) -> str:
+    """复刻 ``_find_anchor`` 并记录逐步过程，返回一句话结论。
+
+    与线上实现的判据保持一致：**紧邻**（上一条 FF 必须落在 cur-1）+
+    每条都过 ``looks_like_jp_text``，无距离/步数上限。
+    """
+    window = 1024
     cur = addr
     steps: list[str] = []
-    for i in range(max_back):
-        if addr - cur > MAX_CHAIN_BYTES:
-            return f"FAIL dist>{MAX_CHAIN_BYTES} after {i}step | " + " <- ".join(steps[-3:])
-        p = rom.rfind(b"\xff", max(0, cur - 400), cur - 1)
+    for i in range(4096):
+        p = rom.rfind(b"\xff", max(0, cur - window), cur - 1)
         if p < 0:
-            return f"FAIL no_ff within 400B after {i}step"
+            return f"FAIL no_ff within {window}B after {i}step"
         s = p + 1
-        e = rom.find(b"\xff", s, min(s + 400, len(rom)))
+        e = rom.find(b"\xff", s, min(s + window, len(rom)))
         if e < 0:
             return f"FAIL no_end after {i}step"
         body = rom[s:e + 1]
@@ -52,12 +55,14 @@ def trace_anchor(rom: bytes, idx: dict, addr: int, max_back: int = 96) -> str:
         sites = idx.get(s) or []
         steps.append(f"{s:#x}({len(body)}B,{'jp' if ok else 'NO'},"
                      f"{len(sites)}site,{txt[:14]!r})")
+        if e != cur - 1:
+            return f"STOP gap(e={e:#x} != cur-1={cur - 1:#x}) after {i}step | " + " <- ".join(steps[-4:])
         if not ok:
             return f"STOP not_jp @{s:#x} after {i}step | " + " <- ".join(steps[-4:])
         if sites:
             return f"OK @{s:#x} sites={len(sites)} after {i}step"
         cur = s
-    return f"FAIL max_back {max_back} | " + " <- ".join(steps[-3:])
+    return "FAIL max_steps 4096 | " + " <- ".join(steps[-3:])
 
 
 def u16_offset_hits(rom: bytes, off: int, limit: int = 6) -> list[int]:

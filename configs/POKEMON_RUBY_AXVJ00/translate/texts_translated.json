@@ -4555,6 +4555,11 @@
   },
   {
     "status": 200,
+    "original": "‥‥ ‥‥ ‥‥\n‥‥ ‥‥ ‥‥",
+    "translated": "…… …… ……\n…… …… ……"
+  },
+  {
+    "status": 200,
     "original": "‥‥ ‥‥ ‥‥\n‥‥ ‥‥ ‥‥\\lがんばろう‥‥",
     "translated": "‥‥ ‥‥ ‥‥\\n‥‥ ‥‥ ‥‥加油‥‥"
   },
@@ -52746,8 +52751,9 @@
     "translated": "辰彦"
   },
   {
-    "status": 404,
-    "original": "タツヒロ"
+    "status": 200,
+    "original": "タツヒロ",
+    "translated": "达宏"
   },
   {
     "status": 200,
@@ -68958,18 +68964,6 @@
   {
     "status": 404,
     "original": "ーーー"
-  },
-  {
-    "status": 404,
-    "original": "ーーーー"
-  },
-  {
-    "status": 404,
-    "original": "ーーーーー"
-  },
-  {
-    "status": 404,
-    "original": "ーーーーーーー"
   },
   {
     "status": 200,

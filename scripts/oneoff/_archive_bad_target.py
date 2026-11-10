@@ -46,16 +46,34 @@ def _norm(addr: str) -> str:
     return f"0x{v:08X}"
 
 
-def classify(text: str) -> str | None:
+def classify(text: str, *, strict: bool = False) -> str | None:
+    """``strict=True`` 用于 ``no_translation``：只认「结构表/调试串」这两类。
+
+    为什么更保守：``no_translation`` 里的条目只是「还没翻」，不能因为长得不像
+    对话就删。只归档两种**确定不是文本**的：
+
+    * ``seq_ids``  —— 连续字形 id（``bb bc bd be …`` / ``ＡＢＣＤ…``），是
+      名字输入界面的字符表，翻了会破坏输入。
+    * ``B_debug``  —— 纯全角 ASCII 的调试串（``ＰＲＯＧＲＥＳＳ‥``）。
+    """
     core = text.replace("\n", "")
-    if not core.strip("？?　 "):
+    if not strict and not core.strip("？?　 "):
         return "C_question"
-    # A：xx 00 yy 00 —— 非空格字符之间全部隔一个空格（尾部空格要容忍）
-    a = core.rstrip(" ")
-    body = [c for c in a if c != " "]
-    if len(body) >= 2 and len(a) == len(body) * 2 - 1:
-        if all(a[i] == " " for i in range(1, len(a), 2)):
-            return "A_u16data"
+    if strict:
+        b = [ord(c) for c in core]
+        if len(b) >= 12:
+            seq = sum(
+                1 for i in range(len(b) - 1) if b[i + 1] == b[i] + 1 and 0xBB <= b[i] <= 0xF6
+            )
+            if seq * 100 >= len(b) * 80:
+                return "seq_ids"
+    if not strict:
+        # A：xx 00 yy 00 —— 非空格字符之间全部隔一个空格（尾部空格要容忍）
+        a = core.rstrip(" ")
+        body = [c for c in a if c != " "]
+        if len(body) >= 2 and len(a) == len(body) * 2 - 1:
+            if all(a[i] == " " for i in range(1, len(a), 2)):
+                return "A_u16data"
     fw = sum(1 for c in core if 0xFF01 <= ord(c) <= 0xFF5E)
     kana = sum(1 for c in core if _kana_only(c))
     # 只要含一点假名就放行：``１００００ぽ`` 这类「点数」是真 UI，
@@ -76,9 +94,13 @@ def main() -> int:
     )
     by_id = {e["id"]: e for e in build["entries"] if e.get("id")}
 
+    # 两种来源：
+    #   bad_text_target —— 已判「目标不像文本」，用完整判据（A/B/C）
+    #   no_translation  —— 只是「还没翻」，只用保守判据（结构表 / 调试串）
     targets: dict[str, tuple[str, str]] = {}
     for s in plan["skip"]:
-        if s.get("reason") != "bad_text_target":
+        why = s.get("reason")
+        if why not in ("bad_text_target", "no_translation"):
             continue
         e = by_id.get(s["id"]) or {}
         addr = e.get("address")
@@ -89,7 +111,12 @@ def main() -> int:
             off -= 0x08000000
         end = rom.find(0xFF, off, min(off + 600, len(rom)))
         txt = decode_pcs(rom[off : end + 1]) if end > off else ""
-        reason = classify(txt)
+        if why == "no_translation":
+            # 只动 0x3Axxxx 那片调试参数表（ＶＯＬＵＭＥ‥ / ＫＡＣＨＩ２２ 这类）
+            # 与字符表。放宽到全 ROM 会误删「２Ｐｏｋ」这种联机提示。
+            reason = classify(txt, strict=True) if 0x3A0000 <= off < 0x3C0000 else None
+        else:
+            reason = classify(txt)
         if reason:
             targets[_norm(addr)] = (e.get("original") or "", reason)
 

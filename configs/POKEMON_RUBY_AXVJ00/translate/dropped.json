@@ -1126,8 +1126,2241 @@
       "original": "？？？",
       "translated": "",
       "reason": "C_question"
+    },
+    {
+      "address": "0x083A33DC",
+      "module": "剧情",
+      "original": "ＡＢＣＤＥＦＧＨＩＪＫＬＭＮＯＰＱＲＳ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A33F0",
+      "module": "剧情",
+      "original": "ＴＵＶＷＸＹＺ ０１２３４５６７８９ ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A3404",
+      "module": "剧情",
+      "original": "ａｂｃｄｅｆｇｈｉｊｋｌｍｎｏｐｑｒｓ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A57BA",
+      "module": "剧情",
+      "original": "Ｌ‥ＵＰ Ｒ‥ＤＯＷＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5805",
+      "module": "剧情",
+      "original": "ＶＯＬＵＭＥ‥‥‥",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A580F",
+      "module": "剧情",
+      "original": "ＰＡＮＰＯＴ‥‥‥",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5823",
+      "module": "剧情",
+      "original": "ＬＥＮＧＴＨ‥‥‥",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A582D",
+      "module": "剧情",
+      "original": "ＲＥＬＥＡＳＥ‥‥",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5837",
+      "module": "剧情",
+      "original": "ＰＲＯＧＲＥＳＳ‥",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5841",
+      "module": "剧情",
+      "original": "ＣＨＯＲＵＳ‥‥‥",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A584B",
+      "module": "剧情",
+      "original": "ＰＲＩＯＲＩＴＹ‥",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A58E2",
+      "module": "剧情",
+      "original": "ＳＴＯＰ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A58E7",
+      "module": "剧情",
+      "original": "ＴＥＴＳＵＪＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A58EF",
+      "module": "剧情",
+      "original": "ＦＩＥＬＤ１３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A58F7",
+      "module": "剧情",
+      "original": "ＫＡＣＨＩ２２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A58FF",
+      "module": "剧情",
+      "original": "ＫＡＣＨＩ２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5906",
+      "module": "剧情",
+      "original": "ＫＡＣＨＩ３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A590D",
+      "module": "剧情",
+      "original": "ＫＡＣＨＩ５",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5918",
+      "module": "剧情",
+      "original": "ＮＩＢＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A591D",
+      "module": "剧情",
+      "original": "ＳＵＩＫＵＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5924",
+      "module": "剧情",
+      "original": "ＤＯＯＲＯ１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5953",
+      "module": "剧情",
+      "original": "ＮＡＭＩＮＯＲＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A595C",
+      "module": "剧情",
+      "original": "ＤＡＮ０１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5962",
+      "module": "剧情",
+      "original": "ＦＡＮＦＡ１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5979",
+      "module": "剧情",
+      "original": "ＦＡＮＦＡ４",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5980",
+      "module": "剧情",
+      "original": "ＦＡＮＦＡ５",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A598F",
+      "module": "剧情",
+      "original": "ＢＩＪＹＵＴＵ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A59B3",
+      "module": "剧情",
+      "original": "ＳＨＩＮＫＡ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A59C4",
+      "module": "剧情",
+      "original": "ＳＹＯＵＪＯＥＹＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A59CE",
+      "module": "剧情",
+      "original": "ＢＯＹＥＹＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A59D5",
+      "module": "剧情",
+      "original": "ＤＡＮ０２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A59E4",
+      "module": "剧情",
+      "original": "ＯＤＡＭＡＫＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A59F4",
+      "module": "剧情",
+      "original": "ＳＷＩＭＥＹＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A59FC",
+      "module": "剧情",
+      "original": "ＤＡＮ０３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5A3A",
+      "module": "剧情",
+      "original": "ＴＥＳＴ１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5A40",
+      "module": "剧情",
+      "original": "ＴＥＳＴ２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5A46",
+      "module": "剧情",
+      "original": "ＴＥＳＴ３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5A4C",
+      "module": "剧情",
+      "original": "ＴＥＳＴ４",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5A52",
+      "module": "剧情",
+      "original": "ＴＥＳＴ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5A57",
+      "module": "剧情",
+      "original": "ＧＯＭＡＣＨＩ０",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5A60",
+      "module": "剧情",
+      "original": "ＧＯＴＯＷＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5A67",
+      "module": "剧情",
+      "original": "ＰＯＫＥＣＥＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5A6F",
+      "module": "剧情",
+      "original": "ＮＥＸＴＲＯＡＤ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5A78",
+      "module": "剧情",
+      "original": "ＧＲＡＮＲＯＡＤ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5A81",
+      "module": "剧情",
+      "original": "ＣＹＣＬＩＮＧ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5A89",
+      "module": "剧情",
+      "original": "ＦＲＩＥＮＤＬＹ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5A92",
+      "module": "剧情",
+      "original": "ＭＩＳＨＩＲＯ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5A9A",
+      "module": "剧情",
+      "original": "ＴＯＺＡＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5AA0",
+      "module": "剧情",
+      "original": "ＧＩＲＬＥＹＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5AA8",
+      "module": "剧情",
+      "original": "ＭＩＮＡＭＯ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5AAF",
+      "module": "剧情",
+      "original": "ＡＳＨＲＯＡＤ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5AB7",
+      "module": "剧情",
+      "original": "ＥＶＥＮＴ０",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5ABE",
+      "module": "剧情",
+      "original": "ＤＥＥＰＤＥＥＰ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5AC7",
+      "module": "剧情",
+      "original": "ＫＡＣＨＩ１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5ACE",
+      "module": "剧情",
+      "original": "ＴＩＴＬＥ３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5AD5",
+      "module": "剧情",
+      "original": "ＤＥＭＯ１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5AE4",
+      "module": "剧情",
+      "original": "ＨＡＧＥＳＨＩＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5AED",
+      "module": "剧情",
+      "original": "ＫＡＫＫＯＩＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5AF5",
+      "module": "剧情",
+      "original": "ＫＡＺＡＮＢＡＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5B04",
+      "module": "剧情",
+      "original": "ＴＳＵＲＥＴＥＫ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5B15",
+      "module": "剧情",
+      "original": "ＲＡＩＮＢＯＷ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5B1D",
+      "module": "剧情",
+      "original": "ＡＹＡＳＩＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5B24",
+      "module": "剧情",
+      "original": "ＫＡＣＨＩ４",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5B2B",
+      "module": "剧情",
+      "original": "ＲＯＰＥＷＡＹ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5B33",
+      "module": "剧情",
+      "original": "ＣＡＳＩＮＯ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5B3A",
+      "module": "剧情",
+      "original": "ＨＩＧＨＴＯＷＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5B43",
+      "module": "剧情",
+      "original": "ＳＡＦＡＲＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5B51",
+      "module": "剧情",
+      "original": "ＡＪＩＴＯ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5B67",
+      "module": "剧情",
+      "original": "ＦＩＮＥＣＩＴＹ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5B70",
+      "module": "剧情",
+      "original": "ＭＡＣＨＵＰＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5B81",
+      "module": "剧情",
+      "original": "ＤＥＮＤＯＵ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5B88",
+      "module": "剧情",
+      "original": "ＴＯＮＥＫＵＳＡ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5B91",
+      "module": "剧情",
+      "original": "ＭＡＢＯＲＯＳＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5BA2",
+      "module": "剧情",
+      "original": "ＣＯＮＴＥＳＴ０",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5BAB",
+      "module": "剧情",
+      "original": "ＭＧＭ０",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5BB9",
+      "module": "剧情",
+      "original": "ＯＯＡＭＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5BBF",
+      "module": "剧情",
+      "original": "ＨＩＤＥＲＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5BC6",
+      "module": "剧情",
+      "original": "ＲＵＮＥＣＩＴＹ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5BDD",
+      "module": "剧情",
+      "original": "ＫＡＲＡＫＵＲＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5BE6",
+      "module": "剧情",
+      "original": "ＨＵＴＡＧＯ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5BED",
+      "module": "剧情",
+      "original": "ＳＩＴＥＮＮＯＵ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5BFF",
+      "module": "剧情",
+      "original": "ＣＯＮＬＯＢＢＹ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5C10",
+      "module": "剧情",
+      "original": "ＤＡＩＧＯ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5C16",
+      "module": "剧情",
+      "original": "ＴＨＡＮＫＦＯＲ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5C23",
+      "module": "剧情",
+      "original": "ＢＡＴＴＬＥ２７",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5C2C",
+      "module": "剧情",
+      "original": "ＢＡＴＴＬＥ３１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5C35",
+      "module": "剧情",
+      "original": "ＢＡＴＴＬＥ２０",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5C3E",
+      "module": "剧情",
+      "original": "ＢＡＴＴＬＥ３２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5C47",
+      "module": "剧情",
+      "original": "ＢＡＴＴＬＥ３３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5C50",
+      "module": "剧情",
+      "original": "ＢＡＴＴＬＥ３６",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5C59",
+      "module": "剧情",
+      "original": "ＢＡＴＴＬＥ３４",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5C62",
+      "module": "剧情",
+      "original": "ＢＡＴＴＬＥ３５",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5C6B",
+      "module": "剧情",
+      "original": "ＢＡＴＴＬＥ３８",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5C74",
+      "module": "剧情",
+      "original": "ＢＡＴＴＬＥ３０",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5E58",
+      "module": "剧情",
+      "original": "ＳＴＯＰ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5E5D",
+      "module": "剧情",
+      "original": "ＫＡＩＦＵＫＵ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5E7B",
+      "module": "剧情",
+      "original": "ＳＥＬＥＣＴ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5E94",
+      "module": "剧情",
+      "original": "ＤＯＯＲ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5E99",
+      "module": "剧情",
+      "original": "ＫＡＩＤＡＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5EA0",
+      "module": "剧情",
+      "original": "ＤＡＮＳＡ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5EA6",
+      "module": "剧情",
+      "original": "ＪＩＴＥＮＳＹＡ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5EC7",
+      "module": "剧情",
+      "original": "ＢＯＷＡ２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5ED7",
+      "module": "剧情",
+      "original": "ＮＩＧＥＲＵ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5EE7",
+      "module": "剧情",
+      "original": "ＮＡＭＩＮＯＲＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5EFC",
+      "module": "剧情",
+      "original": "ＢＯＷＡ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F01",
+      "module": "剧情",
+      "original": "ＪＹＵＮＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F13",
+      "module": "剧情",
+      "original": "ＳＥＩＫＡＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F1A",
+      "module": "剧情",
+      "original": "ＨＡＺＵＲＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F79",
+      "module": "剧情",
+      "original": "ＲＵーＨＹＵＵ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5FA0",
+      "module": "剧情",
+      "original": "ＴＵーＳＡＡ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5FA7",
+      "module": "剧情",
+      "original": "ＨＩーＴＵＲＵＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5FDC",
+      "module": "剧情",
+      "original": "ＭＯＴＥＲ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5FE2",
+      "module": "剧情",
+      "original": "ＣＡＲＤ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5FE7",
+      "module": "剧情",
+      "original": "ＳＡＶＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5FF0",
+      "module": "剧情",
+      "original": "ＫＯＮ２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5FF5",
+      "module": "剧情",
+      "original": "ＫＯＮ３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5FFA",
+      "module": "剧情",
+      "original": "ＫＯＮ４",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5FFF",
+      "module": "剧情",
+      "original": "ＳＵＩＫＯＭＵ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6007",
+      "module": "剧情",
+      "original": "ＮＡＧＥＲＵ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A600E",
+      "module": "剧情",
+      "original": "ＴＯＹーＣ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6014",
+      "module": "剧情",
+      "original": "ＴＯＹーＤ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A601A",
+      "module": "剧情",
+      "original": "ＴＯＹーＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6020",
+      "module": "剧情",
+      "original": "ＴＯＹーＦ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6026",
+      "module": "剧情",
+      "original": "ＴＯＹーＧ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A602C",
+      "module": "剧情",
+      "original": "ＴＯＹーＡ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6032",
+      "module": "剧情",
+      "original": "ＴＯＹーＢ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6038",
+      "module": "剧情",
+      "original": "ＴＯＹーＣ１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A603F",
+      "module": "剧情",
+      "original": "ＭＩＺＵ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6044",
+      "module": "剧情",
+      "original": "ＨＡＳＨＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A604A",
+      "module": "剧情",
+      "original": "ＤＡＵＧＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6050",
+      "module": "剧情",
+      "original": "ＰＩＮＰＯＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6057",
+      "module": "剧情",
+      "original": "ＦＵＵＳＥＮ１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A605F",
+      "module": "剧情",
+      "original": "ＦＵＵＳＥＮ２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6067",
+      "module": "剧情",
+      "original": "ＦＵＵＳＥＮ３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A606F",
+      "module": "剧情",
+      "original": "ＴＯＹーＫＡＢＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6082",
+      "module": "剧情",
+      "original": "ＤＯＫＵ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6087",
+      "module": "剧情",
+      "original": "ＥＳＵＫＡ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A608D",
+      "module": "剧情",
+      "original": "ＴーＡＭＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6093",
+      "module": "剧情",
+      "original": "ＴーＡＭＥーＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A609B",
+      "module": "剧情",
+      "original": "ＴーＯＯＡＭＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A60AD",
+      "module": "剧情",
+      "original": "ＴーＫＯＡＭＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A60BF",
+      "module": "剧情",
+      "original": "ＴーＫＡＭＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A60C6",
+      "module": "剧情",
+      "original": "ＴーＫＡＭＩ２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A60CE",
+      "module": "剧情",
+      "original": "ＥＬＥＢＥＴＡ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A60D6",
+      "module": "剧情",
+      "original": "ＨＩＮＳＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A60DC",
+      "module": "剧情",
+      "original": "ＥＸＰＭＡＸ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A60E3",
+      "module": "剧情",
+      "original": "ＴＡＭＡＫＯＲＯ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A60F7",
+      "module": "剧情",
+      "original": "ＢＡＳＡＢＡＳＡ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6100",
+      "module": "剧情",
+      "original": "ＲＥＧＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6105",
+      "module": "剧情",
+      "original": "ＣーＧＡＪＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A610C",
+      "module": "剧情",
+      "original": "ＣーＭＡＫＵーＵ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6115",
+      "module": "剧情",
+      "original": "ＣーＭＡＫＵーＤ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A611E",
+      "module": "剧情",
+      "original": "ＣーＰＡＳＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6125",
+      "module": "剧情",
+      "original": "ＣーＳＹＵ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A612B",
+      "module": "剧情",
+      "original": "ＣーＰＩＫＯＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6133",
+      "module": "剧情",
+      "original": "ＲＥＡＰＯＫＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A613B",
+      "module": "剧情",
+      "original": "ＯＰーＢＡＳＹＵ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6144",
+      "module": "剧情",
+      "original": "ＢＴーＳＴＡＲＴ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A614D",
+      "module": "剧情",
+      "original": "ＤＥＮＤＯＵ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6154",
+      "module": "剧情",
+      "original": "ＪＩＨＡＮＫＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A615C",
+      "module": "剧情",
+      "original": "ＴＡＭＡ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6161",
+      "module": "剧情",
+      "original": "ＺーＳＣＲＯＬＬ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A616A",
+      "module": "剧情",
+      "original": "ＺーＰＡＧＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6171",
+      "module": "剧情",
+      "original": "ＰＮーＯＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6177",
+      "module": "剧情",
+      "original": "ＰＮーＯＦＦ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6187",
+      "module": "剧情",
+      "original": "ＴＡＭＡＧＯ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A61A6",
+      "module": "剧情",
+      "original": "ＢＩＤＯＲＯ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A61AD",
+      "module": "剧情",
+      "original": "Ｗ０８５",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A61B2",
+      "module": "剧情",
+      "original": "Ｗ０８５Ｂ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A61B8",
+      "module": "剧情",
+      "original": "Ｗ２３１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A61BD",
+      "module": "剧情",
+      "original": "Ｗ１７１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A61C2",
+      "module": "剧情",
+      "original": "Ｗ２３３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A61C7",
+      "module": "剧情",
+      "original": "Ｗ２３３Ｂ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A61CD",
+      "module": "剧情",
+      "original": "Ｗ１４５",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A61D2",
+      "module": "剧情",
+      "original": "Ｗ１４５Ｂ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A61D8",
+      "module": "剧情",
+      "original": "Ｗ１４５Ｃ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A61DE",
+      "module": "剧情",
+      "original": "Ｗ２４０",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A61E3",
+      "module": "剧情",
+      "original": "Ｗ０１５",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A61E8",
+      "module": "剧情",
+      "original": "Ｗ０８１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A61ED",
+      "module": "剧情",
+      "original": "Ｗ０８１Ｂ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A61F3",
+      "module": "剧情",
+      "original": "Ｗ０８８",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A61F8",
+      "module": "剧情",
+      "original": "Ｗ０１６",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A61FD",
+      "module": "剧情",
+      "original": "Ｗ０１６Ｂ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6203",
+      "module": "剧情",
+      "original": "Ｗ００３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6208",
+      "module": "剧情",
+      "original": "Ｗ１０４",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A620D",
+      "module": "剧情",
+      "original": "Ｗ０１３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6212",
+      "module": "剧情",
+      "original": "Ｗ１９６",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6217",
+      "module": "剧情",
+      "original": "Ｗ０８６",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A621C",
+      "module": "剧情",
+      "original": "Ｗ００４",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6221",
+      "module": "剧情",
+      "original": "Ｗ０２５",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6226",
+      "module": "剧情",
+      "original": "Ｗ０２５Ｂ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A622C",
+      "module": "剧情",
+      "original": "Ｗ１５２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6231",
+      "module": "剧情",
+      "original": "Ｗ０２６",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6236",
+      "module": "剧情",
+      "original": "Ｗ１７２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A623B",
+      "module": "剧情",
+      "original": "Ｗ１７２Ｂ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6241",
+      "module": "剧情",
+      "original": "Ｗ０５３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6246",
+      "module": "剧情",
+      "original": "Ｗ００７",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A624B",
+      "module": "剧情",
+      "original": "Ｗ０９２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6250",
+      "module": "剧情",
+      "original": "Ｗ２２１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6255",
+      "module": "剧情",
+      "original": "Ｗ２２１Ｂ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A625B",
+      "module": "剧情",
+      "original": "Ｗ０５２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6260",
+      "module": "剧情",
+      "original": "Ｗ０３６",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6265",
+      "module": "剧情",
+      "original": "Ｗ０５９",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A626A",
+      "module": "剧情",
+      "original": "Ｗ０５９Ｂ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6270",
+      "module": "剧情",
+      "original": "Ｗ０１０",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6275",
+      "module": "剧情",
+      "original": "Ｗ０１１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A627A",
+      "module": "剧情",
+      "original": "Ｗ０１７",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A627F",
+      "module": "剧情",
+      "original": "Ｗ０１９",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6284",
+      "module": "剧情",
+      "original": "Ｗ０２８",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6289",
+      "module": "剧情",
+      "original": "Ｗ０１３Ｂ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A628F",
+      "module": "剧情",
+      "original": "Ｗ０４４",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6294",
+      "module": "剧情",
+      "original": "Ｗ０２９",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6299",
+      "module": "剧情",
+      "original": "Ｗ０５７",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A629E",
+      "module": "剧情",
+      "original": "Ｗ０５６",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A62A3",
+      "module": "剧情",
+      "original": "Ｗ２５０",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A62A8",
+      "module": "剧情",
+      "original": "Ｗ０３０",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A62AD",
+      "module": "剧情",
+      "original": "Ｗ０３９",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A62B2",
+      "module": "剧情",
+      "original": "Ｗ０５４",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A62B7",
+      "module": "剧情",
+      "original": "Ｗ０７７",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A62BC",
+      "module": "剧情",
+      "original": "Ｗ０２０",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A62C1",
+      "module": "剧情",
+      "original": "Ｗ０８２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A62C6",
+      "module": "剧情",
+      "original": "Ｗ０４７",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A62CB",
+      "module": "剧情",
+      "original": "Ｗ１９５",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A62D0",
+      "module": "剧情",
+      "original": "Ｗ００６",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A62D5",
+      "module": "剧情",
+      "original": "Ｗ０９１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A62DA",
+      "module": "剧情",
+      "original": "Ｗ１４６",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A62DF",
+      "module": "剧情",
+      "original": "Ｗ１２０",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A62E4",
+      "module": "剧情",
+      "original": "Ｗ１５３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A62E9",
+      "module": "剧情",
+      "original": "Ｗ０７１Ｂ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A62EF",
+      "module": "剧情",
+      "original": "Ｗ０７１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A62F4",
+      "module": "剧情",
+      "original": "Ｗ１０３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A62F9",
+      "module": "剧情",
+      "original": "Ｗ０６２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A62FE",
+      "module": "剧情",
+      "original": "Ｗ０６２Ｂ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6304",
+      "module": "剧情",
+      "original": "Ｗ０４８",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6309",
+      "module": "剧情",
+      "original": "Ｗ１８７",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A630E",
+      "module": "剧情",
+      "original": "Ｗ１１８",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6313",
+      "module": "剧情",
+      "original": "Ｗ１５５",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6318",
+      "module": "剧情",
+      "original": "Ｗ１２２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A631D",
+      "module": "剧情",
+      "original": "Ｗ０６０",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6322",
+      "module": "剧情",
+      "original": "Ｗ１８５",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6327",
+      "module": "剧情",
+      "original": "Ｗ０１４",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A632C",
+      "module": "剧情",
+      "original": "Ｗ０４３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6331",
+      "module": "剧情",
+      "original": "Ｗ２０７",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6336",
+      "module": "剧情",
+      "original": "Ｗ２０７Ｂ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A633C",
+      "module": "剧情",
+      "original": "Ｗ２１５",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6341",
+      "module": "剧情",
+      "original": "Ｗ１０９",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6346",
+      "module": "剧情",
+      "original": "Ｗ１７３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A634B",
+      "module": "剧情",
+      "original": "Ｗ２８０",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6350",
+      "module": "剧情",
+      "original": "Ｗ２０２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6355",
+      "module": "剧情",
+      "original": "Ｗ０６０Ｂ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A635B",
+      "module": "剧情",
+      "original": "Ｗ０７６",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6360",
+      "module": "剧情",
+      "original": "Ｗ０８０",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6365",
+      "module": "剧情",
+      "original": "Ｗ１００",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A636A",
+      "module": "剧情",
+      "original": "Ｗ１０７",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A636F",
+      "module": "剧情",
+      "original": "Ｗ１６６",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6374",
+      "module": "剧情",
+      "original": "Ｗ１２９",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6379",
+      "module": "剧情",
+      "original": "Ｗ１１５",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A637E",
+      "module": "剧情",
+      "original": "Ｗ１１２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6383",
+      "module": "剧情",
+      "original": "Ｗ１９７",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6388",
+      "module": "剧情",
+      "original": "Ｗ１９９",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A638D",
+      "module": "剧情",
+      "original": "Ｗ２３６",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6392",
+      "module": "剧情",
+      "original": "Ｗ２０４",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6397",
+      "module": "剧情",
+      "original": "Ｗ２６８",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A639C",
+      "module": "剧情",
+      "original": "Ｗ０７０",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A63A1",
+      "module": "剧情",
+      "original": "Ｗ０６３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A63A6",
+      "module": "剧情",
+      "original": "Ｗ１２７",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A63AB",
+      "module": "剧情",
+      "original": "Ｗ１７９",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A63B0",
+      "module": "剧情",
+      "original": "Ｗ１５１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A63B5",
+      "module": "剧情",
+      "original": "Ｗ２０１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A63BA",
+      "module": "剧情",
+      "original": "Ｗ１６１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A63BF",
+      "module": "剧情",
+      "original": "Ｗ１６１Ｂ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A63C5",
+      "module": "剧情",
+      "original": "Ｗ２２７",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A63CA",
+      "module": "剧情",
+      "original": "Ｗ２２７Ｂ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A63D0",
+      "module": "剧情",
+      "original": "Ｗ２２６",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A63D5",
+      "module": "剧情",
+      "original": "Ｗ２０８",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A63DA",
+      "module": "剧情",
+      "original": "Ｗ２１３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A63DF",
+      "module": "剧情",
+      "original": "Ｗ２１３Ｂ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A63E5",
+      "module": "剧情",
+      "original": "Ｗ２３４",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A63EA",
+      "module": "剧情",
+      "original": "Ｗ２６０",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A63EF",
+      "module": "剧情",
+      "original": "Ｗ３２８",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A63F4",
+      "module": "剧情",
+      "original": "Ｗ３２０",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A63F9",
+      "module": "剧情",
+      "original": "Ｗ２５５",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A63FE",
+      "module": "剧情",
+      "original": "Ｗ２９１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6403",
+      "module": "剧情",
+      "original": "Ｗ０８９",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6408",
+      "module": "剧情",
+      "original": "Ｗ２３９",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A640D",
+      "module": "剧情",
+      "original": "Ｗ２３０",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6412",
+      "module": "剧情",
+      "original": "Ｗ２８１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6417",
+      "module": "剧情",
+      "original": "Ｗ３２７",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A641C",
+      "module": "剧情",
+      "original": "Ｗ２８７",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6421",
+      "module": "剧情",
+      "original": "Ｗ２５７",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6426",
+      "module": "剧情",
+      "original": "Ｗ２５３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A642B",
+      "module": "剧情",
+      "original": "Ｗ２５８",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6430",
+      "module": "剧情",
+      "original": "Ｗ３２２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6435",
+      "module": "剧情",
+      "original": "Ｗ２９８",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A643A",
+      "module": "剧情",
+      "original": "Ｗ２８７Ｂ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6440",
+      "module": "剧情",
+      "original": "Ｗ１１４",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6445",
+      "module": "剧情",
+      "original": "Ｗ０６３Ｂ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083B3BBA",
+      "module": "剧情",
+      "original": "４６４９",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A07CA",
+      "module": "补漏剧情",
+      "original": "／",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A57A5",
+      "module": "补漏剧情",
+      "original": "ＢＧＭ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A57A9",
+      "module": "补漏剧情",
+      "original": "ＳＥ ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A58D4",
+      "module": "补漏剧情",
+      "original": "ＰＡＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5914",
+      "module": "补漏剧情",
+      "original": "ＰＣＣ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A594F",
+      "module": "补漏剧情",
+      "original": "ＧＩＭ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5C1F",
+      "module": "补漏剧情",
+      "original": "ＥＮＤ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5EF0",
+      "module": "补漏剧情",
+      "original": "ＢＡＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5EF4",
+      "module": "补漏剧情",
+      "original": "ＰＩＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5EF8",
+      "module": "补漏剧情",
+      "original": "ＢＯＯ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F07",
+      "module": "补漏剧情",
+      "original": "Ａ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F09",
+      "module": "补漏剧情",
+      "original": "Ｉ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F0B",
+      "module": "补漏剧情",
+      "original": "Ｕ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F0D",
+      "module": "补漏剧情",
+      "original": "Ｅ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F0F",
+      "module": "补漏剧情",
+      "original": "Ｏ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F11",
+      "module": "补漏剧情",
+      "original": "Ｎ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F21",
+      "module": "补漏剧情",
+      "original": "ＥＸＰ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5FEC",
+      "module": "补漏剧情",
+      "original": "ＫＯＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6E09",
+      "module": "补漏剧情",
+      "original": "／",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6EB8",
+      "module": "补漏剧情",
+      "original": "．",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083B2DEC",
+      "module": "补漏剧情",
+      "original": "！",
+      "translated": "",
+      "reason": "B_debug"
     }
   ],
   "note": "从 texts.json 移出的「非玩家可见文本」：调试串（ＤＯＯＲＯーＸ１ 这类）、u16 数据表被误切的 xx 00 yy 00、纯？占位。保留证据，可随时捞回。",
-  "count": 161
+  "count": 480
 }

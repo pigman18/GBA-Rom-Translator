@@ -704,8 +704,16 @@ def _segment_is_script(rom: bytes, s: int, e: int) -> bool:
 
     判据是**非对齐 u32 ROM 指针密度**（脚本块里的指针不是 4 对齐的，
     ``0x1746BD: c0 46 17 08``）：脚本段实测 6.5%~9%，纯文本段 0.8%~1.5%。
-    取 3% 为界、并要求至少 2 个命中 —— 单个命中在日文正文里太常见
-    （0x08/0x09 本身就是常用控制码）。
+    取 3% 为界、并要求至少 3 个命中。
+
+    为什么从 2 改成 3：**短段（40~50 字节）里 2 个命中就是 4%~5% 密度**，
+    正好落进脚本区间，于是正常 message 被误杀。实测两类 46 字节段：
+
+        正文 0x16A72B  命中 2  值 0x08020016 / 0x08051350（指到 1.3MB 外）
+        脚本 0x1746B6  命中 3  值 0x081746C0 / 0x0817FDA0（都指到自身附近）
+
+    要求 3 个命中后，0x174C34 那条假链（段内 6.5%）仍然被拦，而
+    「紧邻在有指针串之后的正文段」能正常接上锚点了。
 
     逐段判、而不是整条链判：短词条池（0x3B2A72 那批 8 字节特性名）
     每段都不含指针，按整链判会误伤 129 条。
@@ -719,7 +727,7 @@ def _segment_is_script(rom: bytes, s: int, e: int) -> bool:
         w = int.from_bytes(rom[q:q + 4], "little")
         if GBA_BASE <= w < rom_hi:
             n += 1
-    return n >= 2 and n * 100 > span * 3
+    return n >= 3 and n * 100 > span * 3
 
 
 def _looks_like_ptr_array(rom: bytes, site: int) -> bool:

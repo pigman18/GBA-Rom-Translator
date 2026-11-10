@@ -1287,8 +1287,18 @@ def filter_pointer_sources(
                 # 脚本命令指针（u16 命令字 + 参数 + u32 文本指针，见
                 # _script_cmd_ptr_ok）。额外要求站点不在已登记正文内 ——
                 # 非对齐站点原本不做 in_body 检查，这里补上。
+                #
+                # 还有一种更短的形态：**单字节操作码 + 指针**。AXVJ 的
+                # msgbox 就是 ``67 <ptr>``（0x67 = 103 已在
+                # SCRIPT_TEXT_PTR_OPCODES 里），``is_loadword_text_ptr``
+                # 早就认得它，但这里是另一条分支，之前只查 3 字节命令头
+                # ``6a 5a 67``，于是 ``… 09 04 67 <ptr>`` 这类全被丢掉
+                # （实测剧情 4 条卡在这里：178273/178849/180DF3…）。
                 if not (
-                    _script_cmd_ptr_ok(rom, ptr_addr)
+                    (
+                        _script_cmd_ptr_ok(rom, ptr_addr)
+                        or is_loadword_text_ptr(rom, ptr_addr)
+                    )
                     and not in_body
                 ):
                     continue

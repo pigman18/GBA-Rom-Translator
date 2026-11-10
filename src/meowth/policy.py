@@ -910,7 +910,7 @@ def text_target_ok(
         if is_struct_like_pcs(check):
             return False
     else:
-        end = rom.find(0xFF, address, address + 201)
+        end = rom.find(0xFF, address, address + 513)
         if end < 0:
             return False
         expected = bytes(rom[address : end + 1])

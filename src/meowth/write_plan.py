@@ -1021,7 +1021,7 @@ def build_write_plan(
             from .jp_pcs import looks_like_jp_text
             from .policy import is_struct_like_pcs
 
-            end = rom.find(0xFF, addr, addr + 201)
+            end = rom.find(0xFF, addr, addr + 513)
             if end < 0:
                 skip.append({"id": eid, "module": module, "reason": "bad_text_target"})
                 continue

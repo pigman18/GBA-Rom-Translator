@@ -1,33 +1,30 @@
 /* UnusedPrintMonName_hook — 图鉴分类名行。
  *
- * 不再打印 F9 80 短语引用（连续短语之间会多出空隙），而是把
- * 「分类名」和「宝可梦」的 PhraseTable 展开流都取出来，拼成一条
- * 连续的 F9 00 单字侧载流打印。每个汉字 12px 紧密推进，无空格，
- * 也不走短语重定向的状态机。
+ * ⚠️ 2026-11-04 重写（移除 F980 依赖）
+ *
+ * 原实现：把「分类名」和「宝可梦」的 PhraseTable 展开流取出来，
+ * 拼成一条连续 F9 00 单字流，再调 MenuPrintText 打印。
+ * 它依赖 PhraseTable 查表（F980 通道），火红没有等价物，必须去掉。
+ *
+ * 现在：F980 已移除，图鉴分类名和宝可梦名的文本改为**直接搬运 + 改指针**，
+ * 内存里的字符串本身就是 F9 00 单字流。所以这个 hook 不再需要
+ * 展开任何短语表 —— 把分类名原样打印，宝可梦名由原版流程负责。
+ *
+ * 保留下来的唯一职责：把「分类名 + 宝可梦」拼成一条并补齐尾部，
+ * 因为原版占位串是固定 76px，分类名变长后会露出残字。
+ * 拼装逻辑不变，只是不再查 PhraseTable。
  */
 #include "game.h"
 
 typedef void (*menu_print_t)(const uint8_t *str, uint32_t left, uint32_t top);
 
-#define NAME_MAX_BYTES  16u
-#define OUT_MAX         64u
-
-static const uint8_t *phrase_stream_lookup(uint16_t code)
-{
-    const uint32_t *offsets = (const uint32_t *)ADDR_PHRASE_OFFSETS;
-    const uint8_t *table = (const uint8_t *)ADDR_PHRASE_TABLE;
-    uint32_t off = offsets[code];
-
-    if (off >= 0x01000000u)
-        return 0;
-    return table + off;
-}
+#define OUT_MAX         96u
 
 /* 把一条 PCS 流展开追加到 out：
  *   F9 00 xx xx     → 原样拷贝 4 字节
  *   其它字节         → 原样拷贝
  *   遇 0xFF 结束；遇 0x00（日文空格）结束。
- * 返回是否追加了内容。 */
+ * 返回新的写入位置。 */
 static unsigned append_stream(uint8_t *out, unsigned i,
                               const uint8_t *stream)
 {
@@ -51,60 +48,57 @@ static unsigned append_stream(uint8_t *out, unsigned i,
     return i;
 }
 
+/* 统计一条流里的汉字数（每 F9 00 = 1 字）。 */
+static unsigned count_cjk(const uint8_t *stream)
+{
+    const uint8_t *q = stream;
+    unsigned n = 0;
+
+    while (q && *q != 0xFF && *q != 0x00) {
+        if (*q == 0xF9u) {
+            n++;
+            q += 4;
+        } else {
+            q++;
+        }
+    }
+    return n;
+}
+
 void UnusedPrintMonName_hook_C(const uint8_t *name,
                                uint32_t left, uint32_t top)
 {
-    const uint8_t *cat_stream = 0;
-    const uint8_t *poke_stream = 0;
     const uint8_t *ref = (const uint8_t *)ADDR_DEX_TEXT_UNKNOWN_POKE;
     uint8_t out[OUT_MAX];
     unsigned i = 0;
-    unsigned ncat = 0;
+    unsigned ncat;
 
-    /* 分类名：优先当作 F9 80 短语引用展开；否则当作原文字节流。 */
-    if (name[0] == 0xF9u && name[1] == 0x80u) {
-        uint16_t code = (uint16_t)((name[2] << 8) | name[3]);
-        cat_stream = phrase_stream_lookup(code);
-    } else {
-        cat_stream = name;
-    }
+    /* 分类名直接就是 F9 00 单字流（F980 已移除，不再有短语引用）。
+     * 若上游仍传入 F9 80 形态，跳过这 4 字节引用——但正常路径不会出现。 */
+    if (name[0] == 0xF9u && name[1] != 0x00u)
+        name += 4;
 
-    /* 宝可梦：ref 问号之后的 F9 80 03 fa。 */
+    /* 占位串 ref 里，问号占位（0xAC）之后就是宝可梦名字节流。 */
     {
         unsigned j = 0;
         while (ref[j] == 0xACu)
             j++;
-        if (ref[j] == 0xF9u && ref[j + 1u] == 0x80u) {
-            uint16_t code = (uint16_t)((ref[j + 2u] << 8) | ref[j + 3u]);
-            poke_stream = phrase_stream_lookup(code);
-        } else {
-            poke_stream = ref + j;
-        }
+        if (ref[j] == 0xF9u && ref[j + 1u] != 0x00u)
+            j += 4;
+        ref += j;
     }
 
-    /* 统计分类名汉字数（每 F9 00 = 1 字）用于补尾空格。 */
-    {
-        const uint8_t *q = cat_stream;
-        ncat = 0;
-        while (q && *q != 0xFF && *q != 0x00) {
-            if (*q == 0xF9u) {
-                ncat++;
-                q += 4;
-            } else {
-                q++;
-            }
-        }
-    }
+    ncat = count_cjk(name);
 
-    i = append_stream(out, i, cat_stream);
-    i = append_stream(out, i, poke_stream);
+    i = append_stream(out, i, name);
+    i = append_stream(out, i, ref);
 
     /* 占位串整体 76px：5问号(40px)+宝可梦(33px@11px步进)。
      * 本串 宝可梦已紧跟分类名，若分类名不足 4 字则盖不满尾部，会露出
      * 占位串宝可梦的残字（梦）。按缺口追加 8px 空格补齐覆盖。
-     * 步进随字库走 CHS_GLYPH_ADVANCE_PX（2026-11-02: 12→11），勿写死。 */
+     * 步进随字库走 CHS_GLYPH_ADVANCE_PX，勿写死。 */
     {
-        int pad = 40 - (int)CHS_GLYPH_ADVANCE_PX * ncat;
+        int pad = 40 - (int)CHS_GLYPH_ADVANCE_PX * (int)ncat;
         unsigned nsp, k2;
         if (pad < 0)
             pad = 0;

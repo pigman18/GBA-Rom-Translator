@@ -343,6 +343,7 @@ def glyph_analysis(o_arr, t_arr):
         "added_px": int(added.sum()),
         "removed_px": int(removed.sum()),
         "retext_px": int(retext.sum()),
+        "origin_ink_px": int(o_ink.sum()),
         "added_blocks": len(blocks),
         "kinds": dict(kinds),
         "suspicious": items,
@@ -358,7 +359,39 @@ def similarity(o_arr, t_arr) -> float:
     return 1.0 - float((o_arr != t_arr).any(axis=2).sum()) / float(o_arr.shape[0] * o_arr.shape[1])
 
 
-def verdict_pair(o_png: Path, t_png: Path) -> dict:
+# ═══════════════════════════════════════════════════════════════════════════
+# 硬判据：全黑 / 软复位 / 崩溃（2026-11-05 新增）
+#
+# 为什么必须单独判：旧判据只有「相似度 + 字形解剖」，一条整帧全黑的截图
+# 会因为「没有新增块」而落到 suspect（"两侧像素完全相同，看不出汉化"），
+# 被淹没在几十条同类噪声里。实测 pokemon_menu 第 50/51 帧整帧全黑
+# （均值 < 8，仅 192 字节），在旧判据下只是两条 suspect —— 这正是用户
+# 「随便一跑都是空白和模拟器闪退」却没人拦下来的原因。
+# ═══════════════════════════════════════════════════════════════════════════
+
+BLACK_MEAN   = 8      # 整帧平均亮度低于此值 ⇒ 全黑
+BLACK_COLORS = 2      # 唯一色数 ≤ 此值 ⇒ 无内容（纯色帧）
+
+
+def is_blank_frame(arr) -> tuple[bool, str]:
+    """判定整帧是否为空（全黑 / 纯色）。
+
+    返回 (是否空, 证据说明)。空帧在汉化验收里没有任何意义，
+    必须直接 fail —— 它代表崩溃、软复位或渲染完全失效。
+    """
+    if arr is None:
+        return True, "缺图"
+    mean = float(arr.mean())
+    flat = arr.reshape(-1, 3)
+    ncolors = len(np.unique(flat[::7], axis=0))      # 采样加速
+    if mean < BLACK_MEAN:
+        return True, f"整帧全黑（均值 {mean:.1f} < {BLACK_MEAN}）"
+    if ncolors <= BLACK_COLORS:
+        return True, f"整帧纯色（唯一色 {ncolors} ≤ {BLACK_COLORS}）"
+    return False, ""
+
+
+def verdict_pair(o_png: Path, t_png: Path, *, scene_step: str = "") -> dict:
     """单帧判定。返回 {verdict, confidence, reasons, notes, metrics}。"""
     reasons = []
     notes_ok = []          # 正向证据，不参与 verdict 计算
@@ -379,6 +412,25 @@ def verdict_pair(o_png: Path, t_png: Path) -> dict:
     ga = glyph_analysis(o, t)
     metrics = {"scene_similarity": round(sim, 6), **ga}
     k = ga["kinds"]
+
+    # ⓪ ★ 硬判据：整帧空白（全黑 / 纯色）
+    #    必须先于所有其它判据 —— 空白帧没有字形可分析，
+    #    后面的「无新增块 ⇒ suspect」会把它误降级成可疑。
+    o_blank, o_why = is_blank_frame(o)
+    t_blank, t_why = is_blank_frame(t)
+    metrics["origin_blank"] = o_blank
+    metrics["translated_blank"] = t_blank
+    if t_blank and not o_blank:
+        reasons.append({"dim": "g_black", "level": "fail",
+                        "msg": f"translated {t_why}，origin 正常 ⇒ 渲染失效/崩溃/软复位"})
+        return {"verdict": "fail", "confidence": 0.95, "reasons": reasons,
+                "notes": notes_ok, "metrics": metrics}
+    if t_blank and o_blank:
+        # 两侧都空 ⇒ 这一帧本就没有画面内容，不能作为验收依据
+        reasons.append({"dim": "g_black", "level": "suspect",
+                        "msg": f"两侧均空白（{t_why}），本帧无画面可比"})
+        return {"verdict": "suspect", "confidence": 0.55, "reasons": reasons,
+                "notes": notes_ok, "metrics": metrics}
 
     # ① 两侧画面差异过大 ⇒ 不是同一画面（用户契约第 4 条的前提）
     #    ⚠ 阈值不能定太高：汉化本来就会重写整片文字区，
@@ -415,20 +467,53 @@ def verdict_pair(o_png: Path, t_png: Path) -> dict:
                         "msg": f"{k['fragment']} 个字形碎片"})
 
     # ⑤ 撞 UI（用户口径第 4 条）
-    if k.get("collision", 0) > 2:
+    #    中文换掉日文时新增块常与 origin 旧墨接壤；有明显换字量时降为 suspect。
+    retext_px = int(ga.get("retext_px") or 0)
+    text_delta = int(ga["added_px"]) + int(ga["removed_px"]) + retext_px
+    collide_n = int(k.get("collision", 0) or 0)
+    if collide_n > 2 and text_delta < 400:
         reasons.append({"dim": "g_collide", "level": "fail",
-                        "msg": f"{k['collision']} 个新增块压在 origin 已有图形上（撞 UI）"})
-    elif k.get("collision", 0) > 0:
-        reasons.append({"dim": "g_collide", "level": "suspect",
-                        "msg": f"{k['collision']} 个新增块与 origin 图形重叠"})
+                        "msg": f"{collide_n} 个新增块压在 origin 已有图形上（撞 UI）"})
+    elif collide_n > 0:
+        msg = f"{collide_n} 个新增块与 origin 图形重叠"
+        if text_delta >= 400:
+            msg += f"（本帧换字约 {text_delta}px，降为提示）"
+        reasons.append({"dim": "g_collide", "level": "suspect", "msg": msg})
 
     # ⑥ 汉化是否真的生效（用户契约的核心正向判据）
-    changed_px = ga["added_px"] + ga["removed_px"] + ga["retext_px"]
+    #    origin 有明显墨迹却 0 像素变化 → 应译仍日 FAIL；
+    #    无墨/几乎无墨帧保持 suspect（可能本就无文字）。
+    changed_px = text_delta
+    origin_ink = int(ga.get("origin_ink_px") or ga.get("o_ink_px") or 0)
     if changed_px == 0:
-        reasons.append({"dim": "a_translated", "level": "suspect",
-                        "msg": "两侧像素完全相同，本帧看不出汉化（可能本就无文字）"})
-    elif ga["retext_px"] > 0:
-        notes_ok.append(f"{ga['retext_px']} 像素为同位置换字（汉化生效）")
+        # 仅对「应有可译 UI 文案」的步骤升 FAIL；过场/大地图墨迹多但未必有文案。
+        step = str(scene_step or "").lower()
+        expect_text = any(
+            k in step
+            for k in (
+                "trainer", "bag", "menu", "name", "summary", "party",
+                "dex", "mart", "shop", "battle", "talk", "msg", "dialog",
+                "card", "option", "nav_item", "nav_on", "nav_home",
+                "pokenav", "list", "desc",
+            )
+        )
+        if origin_ink >= 200 and expect_text:
+            reasons.append({
+                "dim": "a_translated",
+                "level": "fail",
+                "msg": (
+                    f"origin 有墨约 {origin_ink}px 但 translated 完全未变"
+                    f"（应译仍日 step={step or '?'}）"
+                ),
+            })
+        else:
+            reasons.append({
+                "dim": "a_translated",
+                "level": "suspect",
+                "msg": "两侧像素完全相同，本帧看不出汉化（可能本就无文字）",
+            })
+    elif retext_px > 0:
+        notes_ok.append(f"{retext_px} 像素为同位置换字（汉化生效）")
 
     levels = {r["level"] for r in reasons}
     v = "fail" if "fail" in levels else ("suspect" if "suspect" in levels else "pass")
@@ -441,12 +526,111 @@ def verdict_pair(o_png: Path, t_png: Path) -> dict:
 # 场景级
 # ═══════════════════════════════════════════════════════════════════════════
 
+def _frame_arr(run_dir: Path, rel: str):
+    return load_rgb(run_dir / rel)
+
+
+def _detect_reset_and_crash(frames: list, manifest: dict) -> list:
+    """跨帧判据：软复位 / 崩溃。
+
+    必须在帧循环之后做 —— 单帧看不出「回到开场」或「之后永远黑」。
+
+    判据：
+      s_reset  translated 某一帧与 **同 run 的 origin 首帧** 高度相似，
+               而它与自己的 origin 对应帧差异很大 ⇒ 汉化侧掉回开场/标题。
+      s_crash  translated 从某帧起直到结束全部空白，而 origin 后续仍有内容
+               ⇒ 模拟器崩溃或死循环（游戏没再推进）。
+    """
+    out = []
+    pairs = manifest.get("pairs") or []
+    if len(frames) < 2 or not pairs:
+        return out
+    base = Path(manifest.get("_run_dir") or ".")
+    by_num = {p["number"]: p for p in pairs}
+
+    first_o = _frame_arr(base, pairs[0]["origin"])
+    if first_o is None:
+        return out
+    first_num = frames[0]["number"]
+
+    # ── 软复位：某帧的 translated 与「开场首帧」几乎一样 ──────────────────
+    RESET_SIM = 0.97
+    for f in frames:
+        pair = by_num.get(f["number"])
+        if pair is None or f["number"] == first_num:
+            continue
+        t = _frame_arr(base, pair["translated"])
+        o = _frame_arr(base, pair["origin"])
+        if t is None or o is None or is_blank_frame(t)[0]:
+            continue                      # 空白帧交给 s_crash / g_black
+        sim_first = similarity(first_o, t)
+        sim_own = similarity(o, t)
+        if sim_first >= RESET_SIM and sim_own < 0.80:
+            out.append({
+                "frame": f["number"], "dim": "s_reset", "level": "fail",
+                "msg": f"translated 与开场首帧相似度 {sim_first:.3f}（与本帧 origin 仅 "
+                       f"{sim_own:.3f}）⇒ 疑似软复位回到开场/标题",
+            })
+            break
+
+    # ── 崩溃：从某帧起永远空白 ────────────────────────────────────────────
+    blanks = []
+    for f in frames:
+        pair = by_num.get(f["number"])
+        t = _frame_arr(base, pair["translated"]) if pair else None
+        blanks.append(bool(t is not None and is_blank_frame(t)[0]))
+    if any(blanks):
+        tail_start = None
+        for i in range(len(blanks)):
+            if blanks[i] and all(blanks[i:]):
+                tail_start = i
+                break
+        if tail_start is not None:
+            num = frames[tail_start]["number"]
+            out.append({
+                "frame": num, "dim": "s_crash", "level": "fail",
+                "msg": f"translated 从第 {num} 帧起直到结束全部空白"
+                       f"（连续 {len(blanks) - tail_start} 帧）⇒ 模拟器崩溃或死循环",
+            })
+
+    # ── 永久偏离：从某帧起相似度一直塌到 <0.50 ────────────────────────────
+    #    实测 pokemon_menu：摘要页第 50/51 帧全黑，第 52 帧起回到野外，
+    #    origin 仍停在摘要页 ⇒ 之后每一帧相似度都是 0.0。
+    #    这不是「截图没对齐」，是游戏状态真的分叉了（软复位/崩溃/走错分支），
+    #    旧判据只报「非同一场景」，容易被误读成采集问题。
+    sims = []
+    for f in frames:
+        pair = by_num.get(f["number"])
+        if pair is None:
+            sims.append(None)
+            continue
+        o = _frame_arr(base, pair["origin"])
+        t = _frame_arr(base, pair["translated"])
+        sims.append(None if (o is None or t is None) else similarity(o, t))
+
+    tail = None
+    for i in range(len(sims)):
+        rest = [s for s in sims[i:] if s is not None]
+        if rest and all(s < 0.50 for s in rest) and len(rest) >= 2:
+            tail = i
+            break
+    if tail is not None and tail > 0:
+        num = frames[tail]["number"]
+        out.append({
+            "frame": num, "dim": "s_diverged", "level": "fail",
+            "msg": f"画面从第 {num} 帧起永久偏离 origin（其后 {len(sims) - tail} 帧"
+                   f"相似度全部 <0.50）⇒ 崩溃/软复位/走错分支，不是采集误差",
+        })
+    return out
+
+
 def verify_run(run_dir: Path) -> dict:
     run_dir = Path(run_dir)
     manifest = {}
     mp = run_dir / "manifest.json"
     if mp.is_file():
         manifest = json.loads(mp.read_text(encoding="utf-8"))
+    manifest["_run_dir"] = str(run_dir)
 
     roms = manifest.get("roms") or {}
     o_sha = (roms.get("origin") or {}).get("save_sha256")
@@ -454,10 +638,22 @@ def verify_run(run_dir: Path) -> dict:
 
     frames = []
     for p in manifest.get("pairs", []):
-        res = verdict_pair(run_dir / p["origin"], run_dir / p["translated"])
+        res = verdict_pair(
+            run_dir / p["origin"],
+            run_dir / p["translated"],
+            scene_step=str(p.get("scene_step") or ""),
+        )
         res["number"] = p["number"]
         res["scene_step"] = p.get("scene_step")
         frames.append(res)
+
+    scene_reasons = _detect_reset_and_crash(frames, manifest)
+    if scene_reasons:
+        for f in frames:
+            hit = next((r for r in scene_reasons if r.get("frame") == f["number"]), None)
+            if hit:
+                f["reasons"].append({k: hit[k] for k in ("dim", "level", "msg")})
+                f["verdict"] = "fail"
 
     verdicts = [f["verdict"] for f in frames]
     if not frames:
@@ -469,7 +665,6 @@ def verify_run(run_dir: Path) -> dict:
     else:
         scene = "pass"
 
-    scene_reasons = []
     if o_sha is not None and t_sha is not None and o_sha != t_sha:
         scene = "fail"
         scene_reasons.append({"dim": "s_scene", "level": "fail",

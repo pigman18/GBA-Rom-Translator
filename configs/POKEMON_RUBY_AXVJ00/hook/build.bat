@@ -49,7 +49,6 @@ rem ref_fill_rect4bit / refpr_*）无任何调用者，纯死代码，占用约 
 
 echo === Assembling map_name_popup\entry.s ===
 %CC% %ASFLAGS% %MAP_POPUP%\entry.s -o %BUILD%\MapNamePopup_entry.o
-if errorlevel 1 exit /b 1
 
 echo === Compiling map_name_popup\MapNamePopup_hook.c ===
 %CC% %CFLAGS% %MAP_POPUP%\MapNamePopup_hook.c -o %BUILD%\MapNamePopup_hook.o

@@ -754,27 +754,6 @@ def ptr_in_known_ui_band(ptr_off: int, string_off: int) -> bool:
     return False
 
 
-def is_save_power_prompt(text: str, game_id: str = "") -> bool:
-    """Save / battery / RTC prompts — rules from ``content_classes.存档与电源``."""
-    if not text:
-        return False
-    return matches_content_class(text, "存档与电源", game_id)
-
-
-def is_save_power_prompt_at(rom: bytes | bytearray, string_off: int) -> bool:
-    """Decode PCS at ``string_off`` and test :func:`is_save_power_prompt`."""
-    from .extract import read_pcs
-    from .jp_pcs import decode_pcs
-
-    raw = read_pcs(bytes(rom), string_off, 512)
-    if not raw:
-        return False
-    try:
-        return is_save_power_prompt(decode_pcs(raw))
-    except Exception:
-        return False
-
-
 def ptr_source_ok(
     rom: bytes | bytearray,
     ptr_off: int,
@@ -790,8 +769,7 @@ def ptr_source_ok(
 
     UI chrome bodies (config UI banks ∪ dump high-UI geo) may be referenced
     from tables inside ``GFX_PTR_SOURCE_DENY`` or low-ROM menus; aligned
-    sites are allowed for that body class. Save/power prompts share that
-    low-ROM table pattern (dialogue-bank duplicates of UI pool strings).
+    sites are allowed for that body class.
     """
     from .extract import ptr_in_trusted_lz, trusted_lz_spans
 
@@ -805,20 +783,18 @@ def ptr_source_ok(
     if is_local_pool_ptr(ptr_off, string_off):
         return True
     ui_body = string_in_ui_text_bank(string_off) or string_in_option_band(string_off)
-    save_body = (not ui_body) and is_save_power_prompt_at(rom, string_off)
-    chrome_body = ui_body or save_body
-    if in_ranges(ptr_off, GFX_PTR_SOURCE_DENY()) and not chrome_body:
+    if in_ranges(ptr_off, GFX_PTR_SOURCE_DENY()) and not ui_body:
         return False
     spans = lz_spans if lz_spans is not None else trusted_lz_spans(rom)
     # False LZ streams often cover real UI chrome pointer tables.
-    if ptr_in_trusted_lz(ptr_off, spans) and not chrome_body:
+    if ptr_in_trusted_lz(ptr_off, spans) and not ui_body:
         return False
     if is_loadword_text_ptr(rom, ptr_off):
         return True
     if strict:
         return False
-    if chrome_body and (ptr_off & 3) == 0 and ptr_off >= 0x6000:
-        # UI / save-power chrome: trust aligned ptr tables (incl. low ROM).
+    if ui_body and (ptr_off & 3) == 0 and ptr_off >= 0x6000:
+        # UI chrome: trust aligned ptr tables (incl. low ROM).
         return True
     if (
         (ptr_off & 3) == 0

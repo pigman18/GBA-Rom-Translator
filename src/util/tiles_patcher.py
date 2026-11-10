@@ -1907,13 +1907,22 @@ def cmd_import(args):
         if len(compressed) <= original_compressed_size:
             # 新数据比原来小（或相同），原地写入
             write_offset = offset
-            # 如果比原来小，用 00 填充剩余
+            # ★ 2026-11-05 修正：尾部**不能补 0x00**。
+            #
+            # 旧行为：`rom[end:] = b"\x00" * remaining`。
+            # 实测后果（bag 场景左侧背包图变成竖条）：
+            #   `0x0836D268` 的标题 LOGO 新数据只有 4,464B，原版 6,658B，
+            #   中间 2,194B 被清零。但这段在原版里并**不是**填充 ——
+            #   其中 2,070B 是紧邻的背包图集数据（两个图块之间没有空隙，
+            #   `_inplace_slot_bytes` 的注释也写明「标题 Logo 与横幅原盘
+            #   仅隔 2B」）。清零 = 直接抹掉别的图形 ⇒ 画面上出现竖条。
+            #
+            # 正确做法：保留原字节。压缩流自带长度头（0x10 <size24>），
+            # 解码器读到声明长度就停，后面的旧字节不会被当成这张图的数据；
+            # 而它们对**别的**图仍然有效。这样既不多占空间，也不破坏邻居。
             rom[write_offset:write_offset + len(compressed)] = compressed
-            if len(compressed) < original_compressed_size:
-                rom[write_offset + len(compressed):
-                    write_offset + original_compressed_size] = \
-                    b"\x00" * (original_compressed_size - len(compressed))
-            print(f"原地写入: offset=0x{write_offset:08X}")
+            print(f"原地写入: offset=0x{write_offset:08X}"
+                  f"（尾部 {original_compressed_size - len(compressed)}B 保留原字节）")
 
             # ── 恢复指针到原地址 ──
             # 若此前曾因数据放不下被搬迁过，指针还指向搬迁位置 (游戏读不到 ->

@@ -49,6 +49,10 @@ DIM_LABEL = {
     "a_translated": "未见汉化",
     "a_prove": "读档证明",
     "s_scene": "非同一场景(对照失效)",
+    "g_black": "整帧空白(崩溃/软复位)",
+    "s_reset": "软复位回开场",
+    "s_crash": "崩溃/死循环",
+    "s_diverged": "永久偏离(状态分叉)",
 }
 
 

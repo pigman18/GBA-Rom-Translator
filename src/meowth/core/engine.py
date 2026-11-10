@@ -1874,6 +1874,12 @@ class TranslationEngine:
                 "--slot-sizes", *(str(s) for s in sizes),
                 "--prefix", prefix,
                 "--bytes-per-glyph", str(bpg),
+                # 低半字节 = 左像素（GBA 4bpp 硬件定义，ROM 原生
+                # CopyGlyph1bppTo4bpp 也按此输出）。不传这个参数时
+                # build_chinese_font 用 lo_first=False（左像素占高半字节），
+                # 而 hook 的 blit_run 按低半字节取像素 → 每个 8px 块内
+                # 两两像素交换，点阵看起来断笔/糊成一片（BDF 却是好的）。
+                "--nibble-order", "lo-first",
             ]
             if bdf_map_args:
                 args += ["--bdf-map", *bdf_map_args]

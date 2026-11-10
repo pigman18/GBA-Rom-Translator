@@ -1,6 +1,0 @@
-
-out/game.bin:     file format binary
-
-arm-none-eabi-objdump.exe: can't use supplied machine thumb
-arm-none-eabi-objdump.exe: can't disassemble for architecture UNKNOWN!
-

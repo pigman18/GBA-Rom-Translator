@@ -48,6 +48,103 @@ def _verify_game_bin_embedded(rom_path: Path, game_bin: Path, vma: int = _GAME_B
         )
 
 
+def _burn_plan_table_blobs(rom_path: Path, work_dir: Path, build_dir: Path) -> None:
+    """Write write.plan table blobs into ROM at new_base (armips high-.org 常丢)."""
+    import json
+
+    plan_path = work_dir / "write.plan.json"
+    if not plan_path.is_file():
+        return
+    try:
+        plan = json.loads(plan_path.read_text(encoding="utf-8"))
+    except (OSError, json.JSONDecodeError):
+        return
+    tables = plan.get("tables") or []
+    if not tables:
+        return
+    rom = bytearray(rom_path.read_bytes())
+    burned = 0
+    for table in tables:
+        blob_rel = table.get("blob") or table.get("blob_name")
+        new_base = table.get("new_base")
+        if not blob_rel or new_base is None:
+            continue
+        blob_path = build_dir / str(blob_rel)
+        if not blob_path.is_file():
+            blob_path = build_dir / "gen" / Path(str(blob_rel)).name
+        if not blob_path.is_file():
+            print(f"[patch-table] skip missing blob {blob_rel}")
+            continue
+        off = int(str(new_base), 16)
+        if off >= _ROM_LOAD_ADDR:
+            off -= _ROM_LOAD_ADDR
+        data = blob_path.read_bytes()
+        end = off + len(data)
+        if end > len(rom):
+            rom.extend(b"\xff" * (end - len(rom)))
+        rom[off:end] = data
+        burned += 1
+        name = table.get("name") or blob_path.name
+        print(f"[patch-table] burned {name} -> file+0x{off:X} ({len(data)}B)")
+    if burned:
+        rom_path.write_bytes(rom)
+        print(f"[patch-table] burned {burned} table blob(s) after armips")
+    _burn_patch_table_redirects(rom_path, build_dir)
+
+
+def _burn_patch_table_redirects(rom_path: Path, build_dir: Path) -> None:
+    """Apply low-.org .byte patches from patch_table.asm (armips 也可能丢)."""
+    import re
+
+    asm_path = build_dir / "gen" / "patch_table.asm"
+    if not asm_path.is_file():
+        return
+    text = asm_path.read_text(encoding="utf-8", errors="replace")
+    rom = bytearray(rom_path.read_bytes())
+    patches = 0
+    lines = text.splitlines()
+    i = 0
+    while i < len(lines):
+        m = re.match(r"\.org\s+(0x[0-9A-Fa-f]+)", lines[i].strip())
+        if not m:
+            i += 1
+            continue
+        addr = int(m.group(1), 16)
+        i += 1
+        if addr >= 0x09000000:
+            continue
+        data = bytearray()
+        while i < len(lines):
+            s = lines[i].strip()
+            if s.startswith(".org") or s.startswith(".incbin"):
+                break
+            if s.startswith(".byte"):
+                payload = s.split(";", 1)[0].replace(".byte", "")
+                for part in payload.split(","):
+                    part = part.strip()
+                    if not part:
+                        continue
+                    data.append(int(part, 16))
+                i += 1
+                continue
+            if not s or s.startswith(";"):
+                if data:
+                    break
+                i += 1
+                continue
+            break
+        if not data:
+            continue
+        off = addr - _ROM_LOAD_ADDR if addr >= _ROM_LOAD_ADDR else addr
+        if off < 0 or off + len(data) > len(rom):
+            continue
+        rom[off : off + len(data)] = data
+        patches += 1
+    if patches:
+        rom_path.write_bytes(rom)
+        print(f"[patch-table] burned {patches} redirect/insn patch(es) after armips")
+
+
 # AXVJ: Sym punct bank lives after Small (0x09100000+0xE0000). Must match
 # ADDR_FONT_CHS_SYM in patch/src/game.h — never overlay JP Font3 @ 0x081B7AAC.
 _AXVJ_SYM_VMA = 0x091E0000
@@ -713,6 +810,14 @@ def apply_font_patch(
         )
 
     shutil.copy2(rom_path, build_dir / "baserom.gba")
+    # patch_table .org 落在 ~0x09EB0000（文件偏 0x01EB0000）。8MB 底盘
+    # 不够长时 armips 静默写丢表（道具名指针全 FF → 背包列表空白）。
+    _baserom = build_dir / "baserom.gba"
+    _need = 0x01F00000
+    _sz = _baserom.stat().st_size
+    if _sz < _need:
+        with _baserom.open("ab") as _bf:
+            _bf.write(b"\xff" * (_need - _sz))
 
     # translate.build.json → phrase_data.asm（armips 数据，不编进 game.bin）
     build_json = work_dir / "translate.build.json"
@@ -834,6 +939,10 @@ def apply_font_patch(
             patched = [f for f in gba_files if f.stem != "baserom"][0]
     if not patched.exists():
         raise RuntimeError(f"Font patch output not found: {patched}")
+
+    # armips 对高址 .org 0x09EBxxxx 的 .incbin 常写丢（文件已 pad 仍全 FF）。
+    # 按 write.plan.json 把 plan_table_*.bin 直接烙进 output。
+    _burn_plan_table_blobs(patched, work_dir, build_dir)
 
     _verify_game_bin_embedded(patched, game_bin)
     # Keep patch/out/game.bin in sync with what was just burned into the ROM.

@@ -16,6 +16,8 @@
 #define ADDR_CALL_VIA_R2                   0x081B12DCu
 #define ADDR_CHS_PITCH_CTRL                0x0203FF80u
 #define ADDR_CHS_PITCH_SLOTS               0x0203FF90u
+#define ADDR_CHS_BAG_LINEAR_OFF            0x0203FFD0u
+#define ADDR_CHS_BAG_LINEAR_BASE           0x0203FFD2u
 #define ADDR_COPY_GLYPH_1BPP_4BPP          0x08003830u
 #define ADDR_COPY_GLYPH_2BPP_4BPP          0x080038A0u
 #define ADDR_DEX_TEXT_UNKNOWN_POKE         0x083E9688u
@@ -155,46 +157,46 @@ struct ChsPhase {
                        * → 至 0x0203FFCF，实证安全区（0x0203FF80-FFCF）之内 */
                       /* gen 字节 @ ADDR_CHS_PITCH_CTRL(0x0203FF80)，LRU 驱逐 */
 
-/*
- * GBA 硬件以 8×8 tile 为单位（4bpp / tile 32B）。中文字模存储为 16×16
- * 标准 4-tile（TL/BL/TR/BR 各 32B 共 128B），但渲染时光标每次只推进
- * CHS_GLYPH_ADVANCE_PX（12px），而非 16px。原理：drawGlyph12 分两趟写
- * VRAM——左 8px（TL+BL）→ 右 4px（TR+BR 的左边 4px），两趟共进 12px。
- * 右 4px 跨入下一 tile 列形成 spill；下一字模的 startPixel 为 4（累积
- * px & 7），其左 4px 覆盖上一字的溢出像素。由于汉字笔画集中在字模
- * 中部，外缘空白区域被覆盖不影响视觉。字模保持 16px 宽可复用原生 tilemap
- * 寻址逻辑（每列 2 tile，index +0/+1），兼容所有 Gen3 文本窗口。
+/* =====================================================================
+ * 字体度量（2026-11-10 方案B 重写定案）
+ * ---------------------------------------------------------------------
+ * 硬件容器不变：16×16 槽 / 128B / 4bpp，顺序 TL(0) BL(32) TR(64) BR(96)。
+ * 半字节序 **低半字节=左像素**（标准 GBA 4bpp）。实测取证：
+ *   解码 work/.../PokeRSFontChsNormal.bin 第 99 号（「宝」）低半字节才是
+ *   宀+王；按高半字节读会得到整体横移半像素的糊影 —— 旧 text_render.c
+ *   的 tile_get_px/put_px 正是按高半字节读，是重影/粘连的直接根因。
  *
- * 相位载体（2026-08-25 反汇编定案）：行相位表 struct ChsPhase（见上）。
- * 原生引擎不维护像素相位——tm1 writer 只推 win[0x1B]（0x0800360C 实证），
- * win[0x1A] 为窗口属性位域非游标，不可作相位。
+ * 三档字形（与 translate/font.config.json 的 ink/pad_top 必须逐项一致）：
+ *   Normal 12×13 @pad2   advance 12   ← 常规对话/菜单/说明
+ *   Middle  9×11 @pad2   advance 12   ← fc 06 05 中号
+ *   Small   9×9  @pad6   advance 8    ← 队伍/战斗顶栏等小字（绘制裁到 8 列 = 8×9）
+ *   Native  8×16 @pad0   advance 8    ← 原版假名/数字/符号（1bpp→4bpp）
  *
- * 12px = ink / advance / line metrics (product).
- * Hardware glyph container stays 8x16 (two 8x8 tiles) / 16x16 slot — do not change.
- * See docs/FONT_12PX_DRAW.md and .cursor/rules/axvj-font-12px-only.mdc.
- */
-/* 全局 8px 小字（2026-08-24）：汉字切 FontChsSmall(0x09100000) 8px 点阵，
- * 与 font4 半角小字同节奏；12px FontChsNormal 保留在 ROM 可随时切回。
- * 旧 12px 双趟 drawGlyph12 说明（历史）：
- * Hardware glyph container stays 8x16 (two 8x8 tiles) / 16x16 slot — do not change.
- * See docs/FONT_12PX_DRAW.md and .cursor/rules/axvj-font-12px-only.mdc. */
-/* 步进 = 12px 是**排版栅格**，与字模墨迹宽度解耦（2026-11-02 修正）。
- *
- * 为什么不能把 advance 设成墨迹宽度：draw 的相位按 8px 硬件栅格推进
- * （st->chs_px += 8 → += pass2_w），且 DrawGlyphTiles_common 会用
- *   expect = base_tx + ((chs_px + last_adv - 1) >> 3)
- * 反推游戏游标是否对齐；不对齐就**重置相位并重锚**。
- * advance=12 时 12%8=4，与 8px 栅格有稳定二相周期（0/4 交替），实测正常；
- * advance=11 时 11%8=3，相位每字漂移、反复触发重置 → 字与字粘连成一条
- * （start_menu 实测墨块由 [11,11] 退化为 [28] 连体）。
- *
- * 结论：advance 固定 12；字形墨迹 11px 时，多出的 1 列由 gw_end 清成
- * 背景色，正好成为字间空隙 —— 这正是原设计的工作方式。
- * 换字库只改墨迹（font.config.json 的 ink），**不要**动 advance。 */
+ * 步进与墨迹解耦：Small 取 8 而不是 9，是为了落在 8px 硬件栅格上（原生
+ * font4 同窗混排时零相位漂移、且不撑破队伍窗定宽字段）；代价是第 9 列不绘，
+ * 视觉上是「8×9」，与 docs/GBA_12px字体渲染方案.md 的允许范围一致。
+ * Normal 12 % 8 = 4，存在 0/4 二相周期 —— 由 text_render.c 的像素游标
+ * （行内 px）显式承担，不再靠 tile 列反推。
+ * ===================================================================== */
 #define CHS_GLYPH_ADVANCE_PX 12
-#define CHS_CHAR_HEIGHT_PX   11
-#define CHS_LINE_FEED_PX     13
+#define CHS_GLYPH_ADVANCE_SMALL 8
+#define CHS_CHAR_HEIGHT_PX   12
+#define CHS_LINE_FEED_PX     16
 #define CHS_CELL_BYTES       128
+
+/* 墨迹盒（相对于 16 高槽）：宽高 + 起始行 */
+#define CHS_INK_NORMAL_W     12
+#define CHS_INK_NORMAL_H     12
+#define CHS_INK_NORMAL_TOP   3
+#define CHS_INK_MIDDLE_W     9
+#define CHS_INK_MIDDLE_H     11
+#define CHS_INK_MIDDLE_TOP   2
+#define CHS_INK_SMALL_W      8
+#define CHS_INK_SMALL_H      8
+#define CHS_INK_SMALL_TOP    6
+#define CHS_INK_NATIVE_W     8
+#define CHS_INK_NATIVE_H     16
+#define CHS_INK_NATIVE_TOP   0
 #ifndef CHS_MODE2_PITCH12
 #define CHS_MODE2_PITCH12 0
 #endif
@@ -238,10 +240,13 @@ struct ChsPhase {
  * （gdb 2026-08-27 UTM l=0x0168/0x0169）。改到 0x3E6（图标 ALT 0x3E8 前两格）。
  * 能力页本身跳过本 remap（0x1E0 是其 Mode2 字模，不是 ▶）。
  */
-#define CHS_MENU_CURSOR_TILE        0x1E0u
-#define CHS_MENU_CURSOR_TILE_HI     0x1E1u
+#define CHS_MENU_CURSOR_TILE        0x1F0u
+#define CHS_MENU_CURSOR_TILE_HI     0x1F1u
 #define CHS_MENU_CURSOR_TILE_ALT    0x3E6u
 
+/* ---- 场景布局常量（曾被 game.h 生成块整段覆盖丢失，从 3ccda5f 恢复）----
+ * 消费方：src/text/text_scene.c（认窗 / Mode2 栅格 / 线性地板）。
+ * 改动前先确认对应 gdb 实证，勿凭猜。 */
 #define CHS_TILE_GRID_W         30
 #define CHS_TILE_POOL_END            0x180
 #define CHS_LINEAR_STICKY_END        0x60
@@ -268,17 +273,10 @@ struct ChsPhase {
 #define CHS_PARTY_MENU_TOP           13
 #define CHS_PARTY_FOOTER_TOP_TILE    17
 #define CHS_PARTY_FOOTER_TOP_PX      (17 * 8)
+
 /* PSS 能力/详情数值窗（tm1+font3+cb2,tilemap=0x0600F000；gdb 081BB5BC） */
 #define CHS_SUMMARY_TEMPLATE         0x081BB5BCu
-/*
- * Battle BG text (not healthbox textMode==2) uses MULTIPLE tile bases:
- *   dialogue/招式台词 TILE_BASE=0x90 (AXVJ 0x0802D766, left=2 top=15)
- *   dialogue/command TILE_BASE=0x190 / 0x1B8 (AXVJ 0x0802D812 / 0x0802D852)
- * All must force Linear. If 0x90 is not recognised as battle text,
- * DrawGlyph_ShouldUseLinear falls through to scene_menu_wants_mode2 (charBase
- * 0 → Mode2), whose tile = CURSOR_Y*30 + x + TILE_BASE = 15*30+0x90 = 0x254
- * → charblock 1 (MoveBattlerSpriteToBG 区) → 招式描述变黑块。
- */
+/* Battle BG text tile bases — remap 禁区识别（勿踩 0x1E8 图标） */
 #define CHS_BATTLE_DIALOG_BASE_LO 0x90
 #define CHS_BATTLE_TEXT_BASE_LO 0x190
 #define CHS_BATTLE_TEXT_BASE_HI 0x1C0 /* exclusive; covers 0x190 and 0x1B8 */
@@ -320,7 +318,8 @@ static inline void win_set_u32(TextPrinter *w, unsigned off, uint32_t v)
 }
 static inline uint8_t *win_template(TextPrinter *w)
 {
-    return (uint8_t *)(uintptr_t)win_u32(w, WIN_TEMPLATE);
+    /* ROM 模板偶为 |1；读字段前必须清 Thumb 位 */
+    return (uint8_t *)(uintptr_t)(win_u32(w, WIN_TEMPLATE) & ~1u);
 }
 
 typedef void (*chs_fn3)(void *a0, uint32_t a1, uint32_t a2);

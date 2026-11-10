@@ -19,6 +19,7 @@ import argparse
 import hashlib
 import json
 import os
+import re
 import shutil
 import subprocess
 import sys
@@ -233,9 +234,39 @@ def run_side(side, source, output_dir, scene, game, mgba,
 
     log = output_dir / "scene.log"
     text = log.read_text(encoding="utf-8", errors="replace") if log.is_file() else ""
+
+    # ── Lua 脚本失败识别（2026-11-05 新增）───────────────────────────────
+    # 存在理由：`emu_run.py` 那套三层校验是给研究脚本用的，bot 这边只查
+    # "done f="。实测踩过的坑：
+    #   · mGBA 的 emu:exit/stop/pause 在这个版本里是 nil，脚本报错后**进程
+    #     不会自己退出**，只能靠外部超时终止 —— 于是「跑到超时」和「正常
+    #     跑完」在返回码上分不出来；
+    #   · 脚本 xpcall 捕获到错误后仍可能写出部分截图，目录非空 ⇒ 不能只看
+    #     「有没有 png」。
+    # 所以这里做三重显式判据，任一命中就报错退出，不静默继续。
+    lua_err = [l.strip() for l in text.splitlines()
+               if re.search(r"\[ERR\]|\[LUA-ERROR\]|xpcall|attempt to (call|index)",
+                            l, re.I)]
+    if lua_err:
+        raise SystemExit(
+            f"[ERR] {side} Lua 脚本报错（{len(lua_err)} 行）：\n      "
+            + "\n      ".join(lua_err[:5]))
+
     if "done f=" not in text:
         tail = "\n".join(text.splitlines()[-6:])
         raise SystemExit(f"[ERR] {side} did not finish (rc={rc})\n{tail}")
+
+    # 截图数校验：manifest 尚未生成，这里先按 index.csv 行数比
+    idx = output_dir / "index.csv"
+    n_shots = len([p for p in output_dir.glob("*.png")])
+    n_index = 0
+    if idx.is_file():
+        n_index = sum(1 for l in idx.read_text(encoding="utf-8", errors="replace")
+                      .splitlines() if l.split(",")[0:1] and l.split(",")[0].isdigit())
+    if n_index and n_shots < n_index:
+        raise SystemExit(
+            f"[ERR] {side} 截图缺失：index.csv 记了 {n_index} 步，"
+            f"目录里只有 {n_shots} 张 png（脚本中途失败）")
 
     # ── 读档证明：没有它，这一侧的每一张截图都是可疑的 ──────────────────
     if ident_hex:
@@ -295,8 +326,15 @@ def main() -> int:
             raise SystemExit(f"[ERR] 非法标识符: {v}")
 
     original = Path(args.origin) if args.origin else ROOT / "roms" / "origin" / f"{game}.gba"
-    translated = (Path(args.translated) if args.translated
-                  else ROOT / "roms" / "outputs" / f"{game}_translated.gba")
+    if args.translated:
+        translated = Path(args.translated)
+    else:
+        primary = ROOT / "roms" / "outputs" / f"{game}_translated.gba"
+        alt = ROOT / "roms" / "outputs" / f"{game}_translated_new.gba"
+        cands = [p for p in (primary, alt) if p.is_file()]
+        translated = (
+            max(cands, key=lambda p: p.stat().st_mtime) if cands else primary
+        )
     scene_script = BOT / "scenes" / game / f"{scene}.lua"
     entry = BOT / "scenes" / game / "main.lua"
     mgba = Path(args.mgba) if args.mgba else find_mgba()

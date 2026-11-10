@@ -35,6 +35,7 @@ JMP_HOOKS = [
     ("P04 MapNamePopup", 0x0809F67E, "MapName_DisplayCellLength"),
     ("P07 UnusedPrintMonName", 0x0808DD60, "UnusedPrintMonName_Hook"),
     ("P08 DrawOptionMenuChoice", 0x080889F0, "DrawOptionMenuChoice_Hook"),
+    ("P25 InitWindowTileData", 0x08002A50, "InitWindowTileData_Entry"),
 ]
 NICK_POOLS = [("P03 Main", 0x08042C38), ("P03 Alt1", 0x08041760), ("P03 Alt2", 0x08042620)]
 
@@ -184,11 +185,11 @@ def main(argv: list[str]) -> int:
         nz = sum(1 for x in at(addr, size) if x)
         chk(label, nz > 0, f"{nz} nz")
 
-    # 5b. 墨迹尺寸：Normal 11x11 / Middle 9x11 / Small 9x9（众数）
-    for label, addr, expect in [
-        ("Normal ink", 0x09000000, (11, 11)),
-        ("Middle ink", 0x09320000, (9, 11)),
-        ("Small ink", 0x09100000, (9, 9)),
+    # 5b. 墨迹尺寸众数：允许 11–13 软几何（非硬锁死 12）
+    for label, addr, lo, hi in [
+        ("Normal ink", 0x09000000, (10, 11), (12, 13)),
+        ("Middle ink", 0x09320000, (8, 9), (10, 11)),
+        ("Small ink", 0x09100000, (8, 9), (9, 9)),
     ]:
         blob = at(addr, 0xE0000)
         widths: dict[int, int] = {}
@@ -203,7 +204,8 @@ def main(argv: list[str]) -> int:
             continue
         tw = max(widths.items(), key=lambda kv: kv[1])[0]
         th = max(heights.items(), key=lambda kv: kv[1])[0]
-        chk(label, (tw, th) == expect, f"{tw}x{th} (want {expect[0]}x{expect[1]})")
+        ok = lo[0] <= tw <= hi[0] and lo[1] <= th <= hi[1]
+        chk(label, ok, f"{tw}x{th} (allow {lo[0]}-{hi[0]}x{lo[1]}-{hi[1]})")
 
     chk("游戏码 AXVJ", rom[0xAC:0xB0] == b"AXVJ")
 

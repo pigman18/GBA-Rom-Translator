@@ -177,7 +177,7 @@ PrintNextChar_C(win, cur_char)
                                       取址展开后 CHS 同池 8px 步进）
 ```
 
-要点：汉化引擎是**在 P01 单点截获全部常规字形**，textMode 只用来识别并放行两类缓冲型打印机；fontNum 决定日文字模的取址/展开方式与部分场景的 tile 编号公式；中文一律走自绘 CHS 引擎（12px 双趟 8+4 spill），原版函数仅在回落与重定位副本中被复用。
+要点：汉化引擎是**在 P01 单点截获全部常规字形**，textMode 只用来识别并放行两类缓冲型打印机；fontNum 决定日文字模的取址/展开方式与部分场景的 tile 编号公式；中文一律走自绘 CHS 引擎（FireRed-like advance=12 **单趟** blit，见 `FIRERED_GLYPH_GEOMETRY.md` T2），原版函数仅在回落与重定位副本中被复用。
 
 ---
 

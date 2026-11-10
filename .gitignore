@@ -173,3 +173,13 @@ tools
 /work/
 /src/util/work/
 roms
+
+# 临时备份文件（不进版本库）
+*.bak
+*.bak_*
+
+# 字体快照备份 / 火红参照残留（不作为构建输入）
+configs/*/fonts/bak/
+configs/*/fonts/bak_*/
+configs/*/fonts/*_firered*.bdf
+configs/*/fonts/*_firered*.csv

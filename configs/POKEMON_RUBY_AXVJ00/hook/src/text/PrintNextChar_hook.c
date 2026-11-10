@@ -85,15 +85,27 @@ static int  DrawMenuCursorEF(TextPrinter *win);
 typedef void (*PcsPrintFunc)(TextPrinter *win, uint32_t glyph);
 
 /* 自绘：GetGlyph 取字模 → 既有 sPrintGlyphFuncs[textMode]（原逻辑不动；
- * CHS/SYM 亦经此）。 */
+ * CHS/SYM 亦经此）。原版假名/数字/符号是 8×16 容器、8px 步进。 */
+/* 取不到字模时不要「静默消费」：那样游标不推进，该列永远停在窗口清屏时的
+ * 空白 tile 号上，而池里那一格可能是上一个窗口留下的脏数据 → 屏幕上是
+ * 一整列杂点（背包「×N」列实证）。这里改用全透明字形走正常绘制：
+ * 该列被 mask 写成 0、表项指向本窗口自己的格子、游标照常推进。 */
+static void pcs_zero(uint8_t *p, unsigned n)
+{
+    while (n-- != 0u)
+        *p++ = 0u;
+}
+
 static void PcsPrint_Custom(TextPrinter *win, uint32_t cur_char)
 {
     uint8_t buf[128];
     uint8_t width = 8;
     struct ChsGlyphTiles t;
 
-    if (!GetGlyph(win, cur_char, buf, &width))
-        return;                         /* 引擎零回落：不可印位直接消费 */
+    if (!GetGlyph(win, cur_char, buf, &width)) {
+        pcs_zero(buf, sizeof buf);
+        width = 8u;
+    }
     {
         /* 缓存键基底：JP/SYM/空白 = (fontNum<<8)|code（钳制与 GetGlyph 一致） */
         uint8_t fn = win_u8(win, WIN_FONTNUM_REAL);
@@ -105,6 +117,9 @@ static void PcsPrint_Custom(TextPrinter *win, uint32_t cur_char)
     t.bl = buf + 0x20;
     t.tr = buf + 0x40;
     t.br = buf + 0x60;
+    t.ink_w = CHS_INK_NATIVE_W;
+    t.ink_h = CHS_INK_NATIVE_H;
+    t.pad_top = CHS_INK_NATIVE_TOP;
     DrawGlyphTiles(win, &t, width);
 }
 
@@ -122,7 +137,8 @@ static const PcsPrintFunc sPcsTm1FontFuncs[8] = {
     PcsPrint_Custom,       /* font1：无实证，默认自绘 */
     PcsPrint_Custom,       /* font2 */
     PcsPrint_Custom,       /* font3：线性区与 scratch 带重叠 */
-    PrintGlyph_TextMode1_Origin,    /* font4：FontType1Map 区在 scratch 带下方 */
+    PcsPrint_Custom,       /* font4：改走自绘 —— 原生委托按 TB+2×字形码 画日文
+                            * 字库，与中文叠在同一条 tilemap 上会出现「并排两份」 */
     PcsPrint_Custom,       /* font5 */
     PcsPrint_Custom,       /* font6 */
     PcsPrint_Custom,       /* font7 */
@@ -172,7 +188,7 @@ void PrintGlyph(TextPrinter *win, uint32_t gidx, unsigned glyphWidth)
 {
     struct TextGlyph glyph;
     struct ChsGlyphTiles t;
-    unsigned width;
+    unsigned advance;
     uint8_t fn;
 
     (void)glyphWidth;
@@ -183,13 +199,14 @@ void PrintGlyph(TextPrinter *win, uint32_t gidx, unsigned glyphWidth)
     if (win_u8(win, WIN_TEXTMODE) == 2u)
         fn = 4u;
     DecompressGlyph_Chinese(&glyph, (uint16_t)(gidx & 0xFFFFu), fn);
-    width = glyph.width;
+    advance = glyph.width;
     t.glyph_id = (uint16_t)(0x8000u | (gidx & 0x1FFFu));
-    t.tl = (uint8_t *)&glyph.gfxBufferTop[0];
-    t.tr = (uint8_t *)&glyph.gfxBufferTop[8];
-    t.bl = (uint8_t *)&glyph.gfxBufferBottom[0];
-    t.br = (uint8_t *)&glyph.gfxBufferBottom[8];
-    DrawGlyphTiles(win, &t, width);
+    t.tl = (const uint8_t *)&glyph.gfxBufferTop[0];
+    t.tr = (const uint8_t *)&glyph.gfxBufferTop[8];
+    t.bl = (const uint8_t *)&glyph.gfxBufferBottom[0];
+    t.br = (const uint8_t *)&glyph.gfxBufferBottom[8];
+    ChsGlyphMetrics(fn, &t);
+    DrawGlyphTiles(win, &t, advance);
 }
 
 
@@ -387,9 +404,6 @@ static int DrawMenuCursorEF(TextPrinter *win)
 {
     uint8_t buf[128];
     uint8_t width = 8;
-    struct GlyphTileInfo info;
-    uint8_t *du;
-    uint8_t *dl;
 
     if (!win)
         return 0;
@@ -399,14 +413,9 @@ static int DrawMenuCursorEF(TextPrinter *win)
     if (!GetGlyph(win, PCS_MENU_CURSOR, buf, &width))
         return 0;
 
-    du = vram_tile(win, CHS_MENU_CURSOR_TILE);
-    dl = vram_tile(win, CHS_MENU_CURSOR_TILE_HI);
-    info.textMode = 0;
-    info.colors = 0;
-    info.startPixel = 0;
-    info.width = 8;
-    DrawGlyphTile_refpr(win, &info, buf + 0x00, du, 0);
-    DrawGlyphTile_refpr(win, &info, buf + 0x20, dl, 0);
+    /* ▶ 固定落在 0x1E0/0x1E1 两格（同字库内的常驻图标），整块 32B 直写 */
+    ChsBlitTileDirect(win, buf + 0x00, CHS_MENU_CURSOR_TILE);
+    ChsBlitTileDirect(win, buf + 0x20, CHS_MENU_CURSOR_TILE_HI);
     UpdateTilemap_PreserveCursorX(win, CHS_MENU_CURSOR_TILE, CHS_MENU_CURSOR_TILE_HI);
     win_set_u8(win, WIN_CURSOR_TILE_X,
                (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));

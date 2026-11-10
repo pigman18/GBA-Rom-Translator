@@ -35,9 +35,10 @@
       "glyph_count": 7168,
       "bytes_per_glyph": 128,
       "bdf": "normal.bdf",
-      "ink": "12x13",
-      "pad_top": 2,
-      "_ink_note": "2026-11-06 FireRed CN dump（去阴影）；原 11x11 见 fonts/bak/normal.*.bdf"
+      "ink": "12x12",
+      "pad_top": 3,
+      "_ink_note": "2026-11-10 12px 宋体内嵌点阵（EBDT），非缩放",
+      "advance": 12
     },
     {
       "label": "Middle",
@@ -54,8 +55,10 @@
       "glyph_count": 7168,
       "bytes_per_glyph": 128,
       "bdf": "small.bdf",
-      "ink": "9x9",
-      "pad_top": 6
+      "ink": "8x8",
+      "pad_top": 6,
+      "advance": 8,
+      "_ink_note": "2026-11-10 小字改 8x8：墨迹必须 <= 步进 8px，否则相邻字互压（商店金额标签糊成一团实证）"
     },
     {
       "label": "Sym",

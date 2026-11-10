@@ -1,12 +1,24 @@
 #!/usr/bin/env python3
 """Generate AXVJ normal/middle/small BDF from texts_translated.json.
 
-Raster path (2026-11-06 修正 — 禁止再走「大号抗锯齿 + LANCZOS + 阈值」):
-  FreeType ``FT_LOAD_TARGET_MONO`` 在 **ink 高度附近** 直接出 1bpp，
-  裁 bbox → 过大才 NEAREST 压进 ink WxH → 放入 16×16（pad_top）。
+Raster path（2026-11-10 定案 — **点阵优先，矢量只兜底**）:
 
-底字优先级（无衬线、小字 hint 更好；宋体/衬线会在 12px 断笔糊成渣）:
-  Noto Sans SC → 微软雅黑 → 黑体 → 等线 → （最后）宋体兜底缺字
+  1. ``ft_bitmap_glyph``  取字体**内嵌点阵**（EBDT/EBLC strike）。宋体在
+     12/13/14/15/16/17px 带手工设计的点阵字形，笔画都在整数像素上，这是
+     唯一能叫「点阵字体」的东西。命中即采用，不再参与打分。
+  2. ``ft_mono_glyph``    ``FT_LOAD_TARGET_MONO`` 在 ink 高度附近直接出 1bpp。
+  3. ``ft_aa_glyph``      灰度超采样(4x) → BOX 面积平均 → 覆盖率阈值。
+     给没有点阵的字体兜底，能保住细笔画。
+
+  ★ 判定「有没有点阵」必须查 ``face.available_sizes``（bitmap strike 列表），
+    不能只看 ``bitmap.pixel_mode == MONO`` —— 矢量字体在
+    ``FT_LOAD_MONOCHROME`` 下同样返回 MONO（那是灰度阈值的结果）。
+    曾因此一直把 Noto 的 12px 二值化当成点阵用，BDF 里 COMMENT 写着
+    ``NotoSansSC@bmp11`` 却全然不知，出来的字糊成一片。
+  ★ freetype-py 的 ``y_ppem`` 单位是 1/64 点（12px → 768），不是像素。
+
+底字优先级（点阵命中优先于字体顺序）:
+  SimSun(宋体，内嵌点阵) → Noto Sans SC → 微软雅黑 → 黑体 → 等线
 
 尺寸仍只取 FireRed metrics（font.config.json），不导出 FR 字形。
 
@@ -75,6 +87,8 @@ def load_slots_from_font_config(path: Path) -> dict[str, dict]:
             slots[label]["ink_h"] = h
         if "pad_top" in fs:
             slots[label]["pad_top"] = int(fs["pad_top"])
+        if "advance" in fs:
+            slots[label]["dwidth"] = int(fs["advance"])
         if fs.get("bdf"):
             slots[label]["file"] = Path(fs["bdf"]).name
     return slots
@@ -180,6 +194,84 @@ def ft_mono_glyph(face: freetype.Face, ch: str, px: int) -> Image.Image | None:
     return img
 
 
+def has_bitmap_strike(face: freetype.Face, px: int) -> bool:
+    """该 face 是否内嵌了 px 这一档点阵（EBDT/EBLC strike）。"""
+    try:
+        # freetype-py 的 y_ppem 单位是 1/64 点（12px → 768）
+        return any(int(s.height) == int(px) or int(s.y_ppem) == int(px) * 64
+                   for s in face.available_sizes)
+    except Exception:
+        return False
+
+
+def ft_bitmap_glyph(face: freetype.Face, ch: str, px: int) -> Image.Image | None:
+    """只在该字体**自带这一号点阵**时返回（pixel_mode == MONO）。
+
+    这才是真正的点阵字体：宋体在 12/13/14/15/16/17px 内嵌了手工设计的
+    点阵字形（EBDT/EBLC 表），FreeType 直接取出来，不经过任何缩放。
+    从 TTF 曲线缩放到 10px 得到的是「10 个采样点二值化」，笔画落在半像素、
+    偏旁糊成一团 —— 那不是点阵字。
+
+    判定方式必须看 **face.available_sizes（bitmap strike 列表）**：
+    矢量字体在 FT_LOAD_MONOCHROME 下同样返回 pixel_mode == MONO（那是
+    「灰度→阈值」的结果，不是内嵌点阵），只凭 pixel_mode 判断会把 Noto/雅黑
+    当成点阵字体选走 —— 这正是之前「12px 仍然是糊字」的原因（BDF 里
+    COMMENT 一直是 `NotoSansSC@bmp11`，宋体从未被选中）。
+    """
+    if not has_bitmap_strike(face, px):
+        return None
+    try:
+        face.set_char_size(0, px * 64, 72, 72)
+        face.load_char(ch, freetype.FT_LOAD_RENDER | freetype.FT_LOAD_MONOCHROME)
+    except Exception:
+        return None
+    bmp = face.glyph.bitmap
+    if bmp.width <= 0 or bmp.rows <= 0:
+        return None
+    if getattr(bmp, "pixel_mode", None) != freetype.FT_PIXEL_MODE_MONO:
+        return None
+    img = Image.new("L", (bmp.width, bmp.rows), 255)
+    px_ = img.load()
+    buf = bytes(bmp.buffer)
+    for y in range(bmp.rows):
+        row = buf[y * bmp.pitch:(y + 1) * bmp.pitch]
+        for x in range(bmp.width):
+            if x >> 3 < len(row) and row[x >> 3] & (0x80 >> (x & 7)):
+                px_[x, y] = 0
+    return img
+
+
+def ft_aa_glyph(
+    face: freetype.Face, ch: str, px: int, *, ss: int = 4, cov_min: float = 0.30
+) -> Image.Image | None:
+    """Gray supersample (px*ss) → BOX area-average → threshold.
+
+    为什么不用 FT_LOAD_TARGET_MONO：它在 10px 这一档会**直接按 50% 覆盖率
+    二值化**，汉字里的撇/捺/点只有 1px 且覆盖率常常 30%~45%，于是整条被丢掉，
+    屏幕上就是断笔、缺偏旁（「烧」丢火旁、「片」丢左半）。
+
+    这里改成：在 4 倍尺寸上要灰度覆盖率 → BOX 面积平均缩回目标尺寸 →
+    按 cov_min 阈值二值化。BOX 是面积平均，不产生 LANCZOS 那种振铃，
+    所以细笔画能保住，又不会长出伪横。
+    """
+    try:
+        face.set_pixel_sizes(0, px * ss)
+        face.load_char(ch, freetype.FT_LOAD_RENDER)
+    except Exception:
+        return None
+    bmp = face.glyph.bitmap
+    if bmp.width <= 0 or bmp.rows <= 0:
+        return None
+    if getattr(bmp, "pixel_mode", None) != freetype.FT_PIXEL_MODE_GRAY:
+        return None
+    cov = Image.frombytes("L", (bmp.width, bmp.rows), bytes(bmp.buffer))
+    w = max(1, int(round(bmp.width / ss)))
+    h = max(1, int(round(bmp.rows / ss)))
+    cov = cov.resize((w, h), Image.Resampling.BOX)
+    t = int(round(255.0 * cov_min))
+    return cov.point(lambda v: 0 if v >= t else 255)
+
+
 def place_ink(
     bw: Image.Image,
     *,
@@ -254,6 +346,19 @@ def score_cell(
     return sc
 
 
+def cell_to_rows(cell: Image.Image) -> list[str]:
+    """16×16 槽 → BDF BITMAP 行（每行 2 字节 = 16 bit）。"""
+    px = cell.load()
+    rows: list[str] = []
+    for y in range(SLOT):
+        buf = bytearray(2)
+        for x in range(SLOT):
+            if px[x, y] < 128:
+                buf[x // 8] |= 0x80 >> (x % 8)
+        rows.append(buf.hex().upper())
+    return rows
+
+
 def rasterize_glyph(
     ch: str,
     faces: list[tuple[str, freetype.Face]],
@@ -267,31 +372,53 @@ def rasterize_glyph(
     # 绝不试 ink_h+1：Noto 在 +1 时常挤出底边满宽伪横（「宝」@mono14）
     sizes = sorted({ink_h, max(8, ink_h - 1)})
     best: tuple[float, Image.Image, str] | None = None
+
+    # 第一轮：只找「自带该尺寸点阵」的字体（宋体 12/13/14/15/16/17px）。
+    # 必须跑在矢量字体之前 —— 否则 Noto/雅黑 的缩放结果会先占住 local，
+    # 宋体永远轮不到，出来的还是缩放糊字。
     for tag, face in faces:
-        local: tuple[float, Image.Image, str] | None = None
         for px_size in sizes:
-            raw = ft_mono_glyph(face, ch, px_size)
+            raw = ft_bitmap_glyph(face, ch, px_size)
             if raw is None:
                 continue
             cell = place_ink(raw, ink_w=ink_w, ink_h=ink_h, pad_top=pad_top)
             if cell is None:
                 continue
-            ink_n = sum(
-                1
-                for y in range(SLOT)
-                for x in range(SLOT)
-                if cell.getpixel((x, y)) < 128
-            )
+            ink_n = sum(1 for y in range(SLOT) for x in range(SLOT)
+                        if cell.getpixel((x, y)) < 128)
             if ink_n < min_ink:
                 continue
-            sc = score_cell(cell, ink_w, ink_h, pad_top, px_size=px_size)
-            label = f"{tag}@mono{px_size}"
-            if local is None or sc > local[0]:
-                local = (sc, cell, label)
+            return cell_to_rows(cell), f"{tag}@bmp{px_size}"
+
+    for tag, face in faces:
+        local: tuple[float, Image.Image, str] | None = None
+        for px_size in sizes:
+            for variant, raw in (
+                ("bmp", ft_bitmap_glyph(face, ch, px_size)),
+                ("mono", ft_mono_glyph(face, ch, px_size)),
+                ("aa", ft_aa_glyph(face, ch, px_size)),
+            ):
+                if raw is None:
+                    continue
+                cell = place_ink(raw, ink_w=ink_w, ink_h=ink_h, pad_top=pad_top)
+                if cell is None:
+                    continue
+                ink_n = sum(
+                    1
+                    for y in range(SLOT)
+                    for x in range(SLOT)
+                    if cell.getpixel((x, y)) < 128
+                )
+                if ink_n < min_ink:
+                    continue
+                sc = score_cell(cell, ink_w, ink_h, pad_top, px_size=px_size)
+                label = f"{tag}@{variant}{px_size}"
+                if local is None or sc > local[0]:
+                    local = (sc, cell, label)
         # Face order = priority (Noto → … → 宋体). First OK face wins.
         if local is not None:
             best = local
-            if local[0] >= 18.0:
+            if "@bmp" in local[2] or local[0] >= 18.0:
                 break
 
     if best is None:
@@ -343,8 +470,8 @@ def write_bdf(
         f"FONT_DESCENT {max(0, SLOT - pad_top - ink_h)}",
         "DEFAULT_CHAR 0",
         "PIXEL_SIZE 16",
-        f'COMMENT "gen_chs_bdfs.py: FT_LOAD_TARGET_MONO → {ink_w}x{ink_h} ink, '
-        f'pad_top={pad_top}; base=NotoSansSC>YaHei>SimHei; no FR export"',
+        f'COMMENT "gen_chs_bdfs.py: bitmap-strike(SimSun EBDT) > mono > aa; '
+        f'{ink_w}x{ink_h} ink, pad_top={pad_top}"',
         "ENDPROPERTIES",
         f"CHARS {len(glyphs)}",
         "",

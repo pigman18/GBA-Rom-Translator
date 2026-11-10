@@ -943,6 +943,17 @@ def build_write_plan(
     entries = dedupe_entries_by_id(list(entries))
     lz_spans = trusted_lz_spans(rom)
     text_spans = collect_entry_text_spans(entries)
+    # 非文本数据（人工/算法标记 noise:true 的条目）：不写、也不算「缺译文」。
+    # 例如 0x1D4xxx 是「u16 递增序列 + FF FF」的坐标数据，扫描器把 FF FF
+    # 当串终止符，切出一堆解码后是乱码的假文本。
+    noise_addrs: set[int] = set()
+    for _e in texts.get("entries") or []:
+        if not isinstance(_e, dict) or not _e.get("noise"):
+            continue
+        try:
+            noise_addrs.add(_off(_e["address"]))
+        except (KeyError, TypeError, ValueError):
+            continue
     # 整表/打包池基址字面量：禁止当单条 pointer/redirect 改写
     protected_bases = _struct_table_base_bus(modules) | _packed_scan_pool_heads(
         rom, modules, entries
@@ -1121,6 +1132,9 @@ def build_write_plan(
             continue
         if entry.get("_reject"):
             skip.append({"id": eid, "module": module, "reason": "reject"})
+            continue
+        if noise_addrs and _entry_file_off(entry) in noise_addrs:
+            skip.append({"id": eid, "module": module, "reason": "noise"})
             continue
         translated = entry.get("translated") or ""
         original = entry.get("original") or ""

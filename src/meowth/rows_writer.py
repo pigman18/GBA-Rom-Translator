@@ -158,6 +158,21 @@ def apply_rows(
     for row in plan.get("redirects") or []:
         try:
             body = bytes.fromhex(str(row.get("body_hex") or "").replace(" ", ""))
+            # 第③类 A：整块搬迁（块头有指针，块内串没有）。
+            # body 是已经拼好的连续串流，**不能**做 FF 修剪/尾部填充 ——
+            # 那会把块内第二条及以后的串吃掉。
+            if row.get("kind") == "cluster":
+                if not body:
+                    stats["errors"] += 1
+                    continue
+                new_ptr = _place(body)
+                for site in row.get("sites") or []:
+                    off = _off(site["off"])
+                    if off + 4 <= len(rom):
+                        rom[off:off + 4] = new_ptr.to_bytes(4, "little")
+                        stats["ptr_writes"] += 1
+                stats["clustered"] = stats.get("clustered", 0) + 1
+                continue
             # 第③类兜底：原地覆写（定不出指针站点的串，译文不超原槽）
             if row.get("kind") == "inplace":
                 at = _off(row["at"])

@@ -580,6 +580,67 @@ def _name_window_patches(
     return out
 
 
+def _text_ptr_index(rom: bytes) -> dict[int, list[int]]:
+    """一次性建立「文本地址 -> 所有指向它的 u32 站点」反查表。
+
+    全 ROM 逐字节滑动窗口，包含**非 4 对齐**站点 —— 日版脚本的内联指针
+    大量落在 +3 位置，只扫对齐位置会漏掉一半以上。
+    numpy 可用时向量化（~0.3s），否则退化为纯 Python（慢但结果一致）。
+    """
+    n = len(rom)
+    idx: dict[int, list[int]] = {}
+    try:
+        import numpy as np
+
+        a = np.frombuffer(rom, dtype=np.uint8)
+        w = (
+            a[:-3].astype(np.uint32)
+            | (a[1:-2].astype(np.uint32) << 8)
+            | (a[2:-1].astype(np.uint32) << 16)
+            | (a[3:].astype(np.uint32) << 24)
+        )
+        mask = (w >= GBA_BASE) & (w < GBA_BASE + 0x08000000)
+        offs = np.nonzero(mask)[0]
+        vals = (w[offs] - GBA_BASE).tolist()
+        for v, o in zip(vals, offs.tolist()):
+            idx.setdefault(int(v), []).append(int(o))
+        return idx
+    except ImportError:
+        pass
+
+    import struct as _st
+
+    for o in range(0, n - 3):
+        v = _st.unpack_from("<I", rom, o)[0]
+        if v >= GBA_BASE:
+            idx.setdefault(v - GBA_BASE, []).append(o)
+    return idx
+
+
+def _find_anchor(
+    rom: bytes,
+    ptr_idx: dict[int, list[int]],
+    addr: int,
+    max_back: int = 96,
+) -> tuple[int, list[int]] | None:
+    """从一条无指针的串向前回溯，找到第一个**有引用**的串（锚点）。
+
+    日版脚本的 message 是一条条 FF 分隔的串，代码只在块头挂一个指针，
+    之后顺序读到底。所以「目标串 + 块头」共享同一份数据，搬块头即可。
+    """
+    cur = addr
+    for _ in range(max_back):
+        p = rom.rfind(bytes([0xFF]), max(0, cur - 400), cur - 1)
+        if p < 0:
+            return None
+        s = p + 1
+        sites = ptr_idx.get(s)
+        if sites:
+            return s, sites
+        cur = s
+    return None
+
+
 def _looks_like_ptr_array(rom: bytes, site: int) -> bool:
     """站点是否处在指针数组里（相邻 4 字节也是指向 ROM 的 GBA 指针）。
 
@@ -742,6 +803,16 @@ def build_write_plan(
     protected_bases = _struct_table_base_bus(modules) | _packed_scan_pool_heads(
         rom, modules, entries
     )
+
+    # 文本地址 → 全部 u32 站点（含非对齐）反查表；以及 地址 → 译文。
+    # 供「向前找锚点、整块搬」用：块内串虽然没有自己的指针，但地址能查到译文。
+    ptr_idx = _text_ptr_index(rom)
+    tr_by_addr: dict[int, str] = {}
+    for e in entries:
+        a0 = _entry_file_off(e)
+        t0 = e.get("translated") or ""
+        if a0 is not None and t0:
+            tr_by_addr.setdefault(a0, t0)
 
     tables: list[dict] = []
     rows: list[dict] = []
@@ -990,7 +1061,70 @@ def build_write_plan(
                 ],
             })
         else:
-            # 第③类兜底：定不出任何可改指针站点时，若译文放得进原槽
+            # 第③类 A：向前找锚点、整块搬迁。
+            # 日版脚本的 message 是一条条 FF 分隔的串，代码常在**块头**挂一个
+            # 指针，之后顺着 FF 顺序读到底。所以目标串虽然没有自己的指针，
+            # 但和块头共享同一份数据 —— 把 [块头, 目标串尾] 整段重编码搬走、
+            # 改块头的全部站点，效果等同于「整块搬」。
+            cluster = None
+            if addr is not None:
+                anc = _find_anchor(rom, ptr_idx, addr)
+                if anc:
+                    s0, sites0 = anc
+                    end_t = rom.find(0xFF, addr, min(addr + 512, len(rom)))
+                    if end_t > addr:
+                        blob = bytearray()
+                        p = s0
+                        ok = True
+                        while p <= end_t:
+                            e = rom.find(0xFF, p, end_t + 1)
+                            if e < 0:
+                                ok = False
+                                break
+                            tr = tr_by_addr.get(p)
+                            if tr:
+                                enc = _encode(
+                                    tr, encoder, game_id=game_id, module=module
+                                )
+                                if not enc:
+                                    enc = bytes(rom[p:e + 1])
+                                elif not enc.endswith(b"\xFF"):
+                                    enc += b"\xFF"
+                                blob += enc
+                            else:
+                                blob += rom[p:e + 1]
+                            p = e + 1
+                        if ok and blob:
+                            from .policy import filter_pointer_sources as _fps
+
+                            fsites = _fps(
+                                rom,
+                                [f"0x{GBA_BASE + x:08X}" for x in sites0],
+                                s0,
+                                category=module,
+                                original=original,
+                                expected_pointer=GBA_BASE + s0,
+                                lz_spans=lz_spans,
+                                text_spans=text_spans,
+                            )
+                            if fsites:
+                                cluster = {
+                                    "id": eid,
+                                    "module": module,
+                                    "kind": "cluster",
+                                    "address": entry.get("address"),
+                                    "anchor": f"0x{s0:X}",
+                                    "body_hex": blob.hex(" "),
+                                    "sites": [
+                                        {"off": f"0x{x:X}", "mode": "literal"}
+                                        for x in fsites
+                                    ],
+                                }
+                if cluster:
+                    redirects.append(cluster)
+                    continue
+
+            # 第③类 B：定不出任何可改指针站点时，若译文放得进原槽
             # （等长或更短），直接原地覆写。这是唯一不需要改指针的写法，
             # 适用于被「基址+偏移」「代码内联」等方式引用、静态找不到站点的串。
             raw_len = 0

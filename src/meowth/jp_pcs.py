@@ -122,6 +122,39 @@ def decode_pcs(data: bytes) -> str:
     return "".join(out)
 
 
+def is_printable_pcs(s: bytes) -> bool:
+    """整串字节是否全部是「可印 PCS」——不含 >0xF6 的字形码、不含未定义码位。
+
+    与 :func:`looks_like_jp_text` 的区别：**不判语种比例**。
+    用于「这条已经有译文、且字节流本身合法」的场合：
+    全角数字扎堆的行（``わざマシン３２  １５００まい``）会被
+    ``looks_like_jp_text`` 的 latinish 上限误杀，但它确实是游戏正文。
+    """
+    from .pcs_codes import fc_arg_count
+
+    n = len(s) - 1 if s.endswith(bytes([0xFF])) else len(s)
+    i = 0
+    while i < n:
+        b = s[i]
+        if b in (0xFE, 0xFA, 0xFB):
+            i += 1
+            continue
+        if b == 0xFD:
+            i += 2
+            continue
+        if b == 0xFC:
+            if i + 1 >= n:
+                return False
+            i += 2 + fc_arg_count(s[i + 1])
+            continue
+        if b >= 0xF7:
+            return False
+        if b not in BYTE_TO_CHAR:
+            return False
+        i += 1
+    return True
+
+
 def looks_like_jp_text(s: bytes, *, allow_space_pad: bool = False) -> bool:
     """True if ``s`` is a plausible FF-terminated JP dialogue/UI string.
 

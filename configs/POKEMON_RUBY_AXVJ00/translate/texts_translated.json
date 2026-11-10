@@ -3640,6 +3640,11 @@
   },
   {
     "status": 200,
+    "original": "\\10の \\17で\n\\0Eは どくをあびた！",
+    "translated": "\\10的 \\17\n\\0E中毒了！"
+  },
+  {
+    "status": 200,
     "original": "\\10の \\17で\n\\0Eは ねむってしまった！",
     "translated": "\\10的\\17因\\n\\0E而睡着了!"
   },
@@ -3800,6 +3805,16 @@
   },
   {
     "status": 200,
+    "original": "\\19の \\1Aは\n\\00を くりだした！",
+    "translated": "\\19的 \\1A\n派出了\\00！"
+  },
+  {
+    "status": 200,
+    "original": "\\19の \\1Aは\n\\00を ひっこめた！",
+    "translated": "\\19的 \\1A\n收回了\\00！"
+  },
+  {
+    "status": 200,
     "original": "\\19の \\1Aは\n\\01を くりだそうと している\n\n\\20も ポケモンを\nいれかえますか？",
     "translated": "\\19的\\1A准备派出\\01!\\p\\20要交换宝可梦吗?"
   },
@@ -3825,18 +3840,28 @@
   },
   {
     "status": 200,
+    "original": "\\1Dと \\1Eが\nしょうぶを しかけてきた！",
+    "translated": "\\1D与 \\1E\n发起了对战！"
+  },
+  {
+    "status": 200,
+    "original": "\\1Dと \\1Eとの\nしょうぶに かった！",
+    "translated": "\\1D与 \\1E的对战\n胜利了！"
+  },
+  {
+    "status": 200,
     "original": "\\1Dとの\nしょうぶに かった！",
     "translated": "与\\n的对战获胜了!"
   },
   {
     "status": 200,
     "original": "\\1Dとの\nしょうぶに ひきわけた！",
-    "translated": "与\\n的对战平局!"
+    "translated": "\\1D的对战\n平局了！"
   },
   {
     "status": 200,
     "original": "\\1Dとの\nしょうぶに まけた！",
-    "translated": "与\\n的对战输了!"
+    "translated": "\\1D的对战\n失败了！"
   },
   {
     "status": 200,
@@ -4597,6 +4622,11 @@
     "status": 200,
     "original": "‥‥ まけても\nこころは おだやかです",
     "translated": "……就算输了\\n我的心依然平静。"
+  },
+  {
+    "status": 200,
+    "original": "‥‥‥‥‥！",
+    "translated": "……！"
   },
   {
     "status": 200,

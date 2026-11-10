@@ -148607,11 +148607,11 @@
     {
       "id": "axvj_77b3cef23873",
       "module": "剧情",
-      "address": "0x083DA740",
+      "address": "0x083DA736",
       "byte_length": 10,
-      "original": "は どくをあびた！",
+      "original": "\\10の \\17で\n\\0Eは どくをあびた！",
       "original_hex": "1a 00 45 08 2d 01 47 10 ab ff",
-      "translated": "",
+      "translated": "\\10的 \\17\n\\0E中毒了！",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -151811,11 +151811,11 @@
     {
       "id": "axvj_72ccc1005279",
       "module": "剧情",
-      "address": "0x083DB884",
+      "address": "0x083DB87E",
       "byte_length": 14,
-      "original": "との\nしょうぶに かった！",
+      "original": "\\1Dと \\1Eとの\nしょうぶに かった！",
       "original_hex": "14 19 fe 0c 36 03 48 16 00 06 50 10 ab ff",
-      "translated": "",
+      "translated": "\\1D与 \\1E的对战\n胜利了！",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -151839,11 +151839,11 @@
     {
       "id": "axvj_c71c79dd6eb3",
       "module": "剧情",
-      "address": "0x083DB8A8",
+      "address": "0x083DB892",
       "byte_length": 14,
-      "original": "との\nしょうぶに まけた！",
+      "original": "\\1Dとの\nしょうぶに まけた！",
       "original_hex": "14 19 fe 0c 36 03 48 16 00 1f 09 10 ab ff",
-      "translated": "",
+      "translated": "\\1D的对战\n失败了！",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -151867,11 +151867,11 @@
     {
       "id": "axvj_89229212bb05",
       "module": "剧情",
-      "address": "0x083DB8CE",
+      "address": "0x083DB8B6",
       "byte_length": 16,
-      "original": "との\nしょうぶに ひきわけた！",
+      "original": "\\1Dとの\nしょうぶに ひきわけた！",
       "original_hex": "14 19 fe 0c 36 03 48 16 00 1b 07 2c 09 10 ab ff",
-      "translated": "",
+      "translated": "\\1D的对战\n平局了！",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -152695,11 +152695,11 @@
     {
       "id": "axvj_05f66728dd07",
       "module": "剧情",
-      "address": "0x083DBD2E",
+      "address": "0x083DBD28",
       "byte_length": 16,
-      "original": "が\nしょうぶを しかけてきた！",
+      "original": "\\1Dと \\1Eが\nしょうぶを しかけてきた！",
       "original_hex": "37 fe 0c 36 03 48 2d 00 0c 06 09 13 07 10 ab ff",
-      "translated": "",
+      "translated": "\\1D与 \\1E\n发起了对战！",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -152741,11 +152741,11 @@
     {
       "id": "axvj_fcd094849951",
       "module": "剧情",
-      "address": "0x083DBD6E",
+      "address": "0x083DBD68",
       "byte_length": 13,
-      "original": "は\n\\00を くりだした！",
+      "original": "\\19の \\1Aは\n\\00を くりだした！",
       "original_hex": "1a fe fd 00 2d 00 08 28 41 0c 10 ab ff",
-      "translated": "",
+      "translated": "\\19的 \\1A\n派出了\\00！",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -152981,11 +152981,11 @@
     {
       "id": "axvj_febe77b0b228",
       "module": "剧情",
-      "address": "0x083DBE75",
+      "address": "0x083DBE6F",
       "byte_length": 13,
-      "original": "は\n\\00を ひっこめた！",
+      "original": "\\19の \\1Aは\n\\00を ひっこめた！",
       "original_hex": "1a fe fd 00 2d 00 1b 50 0a 22 10 ab ff",
-      "translated": "",
+      "translated": "\\19的 \\1A\n收回了\\00！",
       "is_pointer_based": false,
       "pointer_sources": [],
       "pointer_addresses": []
@@ -161423,7 +161423,7 @@
       "byte_length": 7,
       "original": "‥‥‥‥‥！",
       "original_hex": "b0 b0 b0 b0 b0 ab ff",
-      "translated": "",
+      "translated": "……！",
       "is_pointer_based": true,
       "pointer_sources": [
         "0x0838CBB4"

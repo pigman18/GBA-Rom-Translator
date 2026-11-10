@@ -23,7 +23,7 @@ Encoder = Callable[[str], bytes]
 # 默认关闭：plan_stride_rewrite 对 0x3C2A44(28) 只找到 20 处读取点，
 # 实测仍有没覆盖到的 → 索引错、模拟器 input callback 停摆。
 # 等 stride 覆盖验证充分后再开。
-STRUCT_STRIDE_EXPAND = True
+STRUCT_STRIDE_EXPAND = False
 
 
 def infer_name_cap(

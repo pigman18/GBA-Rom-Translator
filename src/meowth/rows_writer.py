@@ -80,13 +80,27 @@ def write_asm_from_plan(plan: dict, out_asm: Path) -> dict:
         lines.append("")
         stats["tables"] += 1
 
+    # 显式补丁：算法定不出来的字节改写（config 里声明的那些）。
+    # 与 tables[].insns 走同一条 .org/.byte 通道，所以不会有第二套写入逻辑。
+    for patch in plan.get("patches") or []:
+        off = _off(patch["off"])
+        raw = bytes.fromhex(str(patch.get("bytes") or "").replace(" ", ""))
+        if not raw:
+            continue
+        body = ", ".join(f"0x{b:02X}" for b in raw)
+        label = patch.get("label") or ""
+        lines.append(f".org 0x{GBA_BASE + off:08X}")
+        lines.append(f"    .byte {body}    ; {label}")
+        lines.append("")
+        stats["insns"] += 1
+
     # redirect：目前 literal 模式在 apply_rows 里改 ROM；此处只留注释统计
     n_redir = len(plan.get("redirects") or [])
     if n_redir:
         lines.append(f"; redirects: {n_redir}（literal 站点由 rows_writer.apply_rows 写 ROM）")
         lines.append("")
 
-    if not stats["tables"]:
+    if not stats["tables"] and not plan.get("patches"):
         lines.append("; 这次计划里没有表。")
         lines.append("")
 

@@ -861,6 +861,52 @@ def _ptr_sources_for_entry(
     return [f"0x{p:X}" for p in offs]
 
 
+def _collect_patches(texts: dict) -> list[dict]:
+    """收集「没法算法化」的字节补丁，统一由 plan 落盘、writer 写入。
+
+    能进主流程的补丁（改 stride 立即数、改读点指令、改基址字面量）都由
+    各自的 plan 函数**算**出来，走 ``tables[].insns`` / ``tables[].literals``；
+    这里只放算法定不出来的显式声明，避免把它们写死在 Python 里。
+
+    两个来源，语义相同：
+
+    * ``texts["patches"]`` —— 全游戏级（例如某个渲染函数里的常量）
+    * ``modules[X]["patches"]`` —— 模块级，方便和该表的配置放一起
+
+    每条 ``{"off": "0x1234", "bytes": "68 61", "label": "..."}``，``off``
+    是**文件偏移**（不带 0x08000000 基址），``bytes`` 是十六进制串。
+    支持 ``patches`` 里写 ``enabled: false`` 临时关掉。
+    """
+    out: list[dict] = []
+    seen: set[int] = set()
+
+    def _add(items, scope: str) -> None:
+        for it in items or []:
+            if not isinstance(it, dict) or it.get("enabled") is False:
+                continue
+            try:
+                off = int(str(it.get("off")), 16) & 0xFFFFFF
+                raw = bytes.fromhex(
+                    str(it.get("bytes") or "").replace(" ", "").replace(",", "")
+                )
+            except (TypeError, ValueError):
+                continue
+            if not raw or off in seen:
+                continue
+            seen.add(off)
+            out.append({
+                "off": f"0x{off:X}",
+                "bytes": raw.hex(" "),
+                "label": it.get("label") or f"{scope} 补丁",
+            })
+
+    _add(texts.get("patches"), "全局")
+    for mod_name, mod in (texts.get("modules") or {}).items():
+        if isinstance(mod, dict):
+            _add(mod.get("patches"), str(mod_name))
+    return out
+
+
 def build_write_plan(
     rom: bytes,
     texts_path: Path,
@@ -1280,6 +1326,7 @@ def build_write_plan(
         "tables": tables,
         "rows": rows,
         "redirects": redirects,
+        "patches": _collect_patches(texts),
         "skip": skip,
         "table_notes": [{"module": n, "note": m} for n, m in table_notes],
         "summary": {

@@ -633,6 +633,129 @@ def _stride_patches_by_literals(
     return out
 
 
+_STRCPYN = 0x08004724  # StringCopyN(dst, src, pad, len)
+
+
+def _bl_sites(rom: bytes, target: int, lo: int = 0, hi: int | None = None) -> list[int]:
+    """精确解码 BL，返回所有 ``bl target`` 的**指令**地址（文件偏移）。
+
+    为什么不用 capstone 线性扫描：它会从代码段一路解码下去，撞上跳转表 /
+    literal pool / 脚本流就整段错位，落到数据上以后整片指令都解析错。
+    实测找 ``0x4F7AC`` 的调用者时 capstone 返回 0 命中，这里准确找到
+    ``0x4FD24``（见 scripts/diag/find_callers.py）。
+
+    按半字独立解码，只认 BL 的 32 位编码（h1=11110xxxxxxxxxx、
+    h2=11J1J2xxxxxxxxxx），与上下文无关，因此不受错位影响。
+    """
+    out: list[int] = []
+    hi = len(rom) - 4 if hi is None else min(hi, len(rom) - 4)
+    for q in range(lo, hi, 2):
+        h1, h2 = struct.unpack_from("<HH", rom, q)
+        if (h1 & 0xF800) != 0xF000 or (h2 & 0xD000) != 0xD000:
+            continue
+        s = (h1 >> 10) & 1
+        j1 = (h2 >> 13) & 1
+        j2 = (h2 >> 11) & 1
+        i = 1 if j1 == j2 else 0
+        imm = (s << 24) | (i << 23) | (j1 << 22) | (j2 << 21) | ((h1 & 0x3FF) << 11) | (h2 & 0x7FF)
+        if s:
+            imm -= 1 << 25
+        if (GBA_BASE + q + 4 + imm * 2) & 0xFFFFFFFF == target:
+            out.append(q)
+    return out
+
+
+def _dec_adds_imm3(rom: bytes, off: int) -> tuple[int, int, int] | None:
+    """解 ``adds Rd, Rn, #imm3``（T1，imm 0..7），返回 (rd, rn, imm)。"""
+    h = struct.unpack_from("<H", rom, off)[0]
+    if (h & 0xFE00) != 0x1C00:
+        return None
+    rd = h & 7
+    rn = (h >> 3) & 7
+    imm = (h >> 6) & 7
+    return rd, rn, imm
+
+
+def _dec_movs_imm8(rom: bytes, off: int) -> bytes | None:
+    """解 ``movs Rd, #imm8``（T1），返回 movs 的原始两字节（不解 rd）。"""
+    h = struct.unpack_from("<H", rom, off)[0]
+    if (h & 0xF800) != 0x2000:
+        return None
+    return rom[off:off + 2]
+
+
+def _find_name_copy_sites(
+    rom: bytes,
+    base: int,
+    name_off: int,
+) -> list[dict]:
+    """算法定位「名字 → StringCopyN」的读点，不写死任何地址。
+
+    形态（训练家个人名，0x080F22CA）：
+
+        adds r1, r4, #4      ; src = entry + name_off
+        movs r2, #0          ; pad = 0
+        movs r3, #5          ; len = 名槽宽度
+        bl   StringCopyN
+
+    判据两层，任一层不满足就不认：
+
+    1. **函数归属**：StringCopyN 调用点必须落在「引用本表基址字面量的函数」
+       里。ROM 里 16 处 StringCopyN 调用，全套游戏共用的字符串工具很多，
+       只靠 ``#name_off`` 会误伤（例如长度同样是 5 的别的表）。
+    2. **源地址计算**：前一条必须是 ``adds rX, rY, #name_off``。
+       同函数里拷贝别的字段通常走寄存器相加（训练家名 ``adds r1, r1, r2``，
+       @0xC 长度 10），立即数不等，天然分开。
+
+    **不校验长度**：``_name_cap`` 推出来的是「名字 + 紧邻 00 填充」的宽度
+    （训练家个人名推到 16），而代码里硬编码的拷贝长度是 5。用推导值去匹配
+    会一个都匹配不上；长度这里只**读出来**（``old_len``），由调用方替换。
+
+    已经是 ``ldr rX, [rY, #name_off]``（指针形）的读点不匹配（前一条不是
+    ``adds``），那些表本来就存指针，不需要再改。
+    """
+    try:
+        from .table_stride import _func_bounds
+    except ImportError:  # pragma: no cover
+        return []
+    lits = list(find_literal_sites(rom, GBA_BASE + base))
+    if name_off:
+        lits += list(find_literal_sites(rom, GBA_BASE + base + name_off))
+    funcs = {_func_bounds(rom, lit) for lit in lits}
+    out: list[dict] = []
+    for fs, fe in sorted(funcs):
+        for bl in _bl_sites(rom, _STRCPYN, fs, fe):
+            len_off = bl - 2
+            pad_off = bl - 4
+            adds_off = bl - 6
+            if _dec_movs_imm8(rom, len_off) is None:
+                continue
+            if _dec_movs_imm8(rom, pad_off) is None:
+                continue
+            dec = _dec_adds_imm3(rom, adds_off)
+            if dec is None:
+                continue
+            rd, rn, imm = dec
+            if imm != name_off:
+                continue
+            h = struct.unpack_from("<H", rom, len_off)[0]
+            out.append({
+                "adds": adds_off,
+                "rd": rd,
+                "rn": rn,
+                "len": len_off,
+                "old_len": h & 0xFF,
+            })
+    return out
+
+
+def _enc_ldr_imm5(rd: int, rn: int, byte_off: int) -> bytes | None:
+    """``ldr Rt, [Rn, #imm5*4]``（T1）。``byte_off`` 必须是 4 的倍数且 ≤124。"""
+    if byte_off % 4 or byte_off // 4 > 31:
+        return None
+    return struct.pack("<H", 0x6800 | ((byte_off // 4) << 6) | (rn << 3) | rd)
+
+
 def plan_struct_name_ptr(
     rom: bytes,
     name: str,
@@ -653,21 +776,22 @@ def plan_struct_name_ptr(
     读点 ``adds r1, r4, #4`` 换成 ``ldr r1, [r4, #4]``（同样 2 字节，
     总长不变，后面的 ``movs r2, #0`` 填充参数也保住了）。
 
+    读点由 ``_find_name_copy_sites`` **算法定位**（literal → 函数 →
+    StringCopyN 调用点 → 回溯），不写死地址；配置里可用
+    ``read.name_ptr_sites`` 显式指定，作为算法找不到时的兜底。
+
     只改「主读取点」：``0x0800CC98`` 那种先扫名字算长度的循环不改
     （它按字节扫 FF，读到指针字节会算错），那些界面继续读旧区日文。
-
-    当前只实现 ``name_off == 4`` 且读点已确认的情形（训练家个人名）。
     """
     try:
         base, entry_size, count, name_off, _decl = _struct_geom(mod)
     except ValueError as exc:
         return None, cursor, str(exc)
-    if name_off != 4:
-        return None, cursor, f"name_off={name_off} 未实现指针旁路"
     if name_off + 4 > entry_size:
         return None, cursor, "名字槽不足 4 字节"
-    if base != 0x1C4C94 or entry_size != 32:
-        return None, cursor, "仅对训练家个人名启用（其余读点未逐个确认）"
+    if _enc_ldr_imm5(0, 0, name_off) is None:
+        return None, cursor, f"name_off={name_off} 无法编码 ldr imm5（需 4 的倍数且 ≤124）"
+    old_cap = _name_cap(rom, mod, base, entry_size, name_off, count)
 
     # 逐条编码
     enc_by_idx: dict[int, bytes] = {}
@@ -747,20 +871,60 @@ def plan_struct_name_ptr(
     if not lit_out:
         return None, cursor, "无表基字面量"
 
-    # 读点补丁：adds r1, r4, #4 → ldr r1, [r4, #4]；movs r3, #5 → #最长
+    # 读点补丁：adds rX, rY, #name_off → ldr rX, [rY, #name_off]
+    # 读点由算法定位；配置里的 read.name_ptr_sites 只在算法找不到时兜底
+    # （那是「没办法算法化」的显式声明，不是主路径）。
     max_len = max(len(v) for v in enc_by_idx.values())
-    insns = [
-        {
-            "off": "0xF22CA",
-            "bytes": "68 61",
-            "label": "adds r1,r4,#4 → ldr r1,[r4,#4]（名字槽存指针）",
-        },
-        {
-            "off": "0xF22CE",
-            "bytes": f"23 {max_len:02X}",
-            "label": f"movs r3,#5→#{max_len}（StringCopy 长度跟最长译文）",
-        },
-    ]
+    if max_len > 0xFF:
+        return None, cursor, f"最长译文 {max_len}B 超出 movs imm8"
+    sites = _find_name_copy_sites(rom, base, name_off)
+    src = "算法"
+    if not sites:
+        sites = []
+        for item in ((mod.get("read") or {}).get("name_ptr_sites") or []):
+            try:
+                adds_off = int(str(item.get("adds")), 16) & 0xFFFFFF
+                len_off = int(str(item.get("len")), 16) & 0xFFFFFF
+            except (TypeError, ValueError):
+                continue
+            dec = _dec_adds_imm3(rom, adds_off)
+            if dec is None:
+                continue
+            rd, rn, imm = dec
+            sites.append({
+                "adds": adds_off, "rd": rd, "rn": rn,
+                "len": len_off,
+                "old_len": struct.unpack_from("<H", rom, len_off)[0] & 0xFF,
+            })
+        src = "配置"
+    if not sites:
+        return None, cursor, "未找到名字拷贝读点（可写 read.name_ptr_sites 显式指定）"
+
+    insns: list[dict] = []
+    seen_site: set[int] = set()
+    for s in sites:
+        adds_off = s["adds"]
+        if adds_off in seen_site:
+            continue
+        seen_site.add(adds_off)
+        enc = _enc_ldr_imm5(s["rd"], s["rn"], name_off)
+        if enc is None:
+            continue
+        insns.append({
+            "off": f"0x{adds_off:X}",
+            "bytes": enc.hex(" "),
+            "label": f"adds r{s['rd']},r{s['rn']},#{name_off} → "
+                     f"ldr r{s['rd']},[r{s['rn']},#{name_off}]（名字槽存指针，{src}定位）",
+        })
+        h = struct.unpack_from("<H", rom, s["len"])[0]
+        rd3 = (h >> 8) & 7
+        insns.append({
+            "off": f"0x{s['len']:X}",
+            "bytes": struct.pack("<H", 0x2000 | (rd3 << 8) | max_len).hex(" "),
+            "label": f"movs r{rd3},#{s['old_len']}→#{max_len}（StringCopy 长度跟最长译文）",
+        })
+    if not insns:
+        return None, cursor, "读点识别到了但无法就地编码"
 
     table = {
         "module": name,
@@ -771,7 +935,9 @@ def plan_struct_name_ptr(
         "new_stride": entry_size,
         "count": count,
         "name_offset": name_off,
-        "old_name_cap": 5,
+        # 代码里硬编码的拷贝长度（sites 里读出来的那个 5），不是 _name_cap
+        # 推出来的「名字 + 00 填充」宽度。两者都记进 note 备查。
+        "old_name_cap": (sites[0]["old_len"] if sites else old_cap),
         "new_name_cap": max_len,
         "blob": f"gen/plan_table_{safe}.bin",
         "blob_name": f"plan_table_{safe}.bin",
@@ -781,9 +947,10 @@ def plan_struct_name_ptr(
         "field_map": {},
         "note": (
             f"名字指针旁路 base=0x{base:X} stride {entry_size}"
-            f"（名槽 {name_off}..{name_off + 4} 存 u32）；"
-            f"translated={len(enc_by_idx)} 最长 {max_len}B "
-            f"lits={len(lit_out)} insns={len(insns)}"
+            f"（名槽 {name_off}..{name_off + 4} 存 u32，"
+            f"拷贝长度 {sites[0]['old_len'] if sites else old_cap}B"
+            f"→{max_len}B）；translated={len(enc_by_idx)} "
+            f"lits={len(lit_out)} insns={len(insns)} 读点{src}"
         ),
     }
     return table, next_cursor, None

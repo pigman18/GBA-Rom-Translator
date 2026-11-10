@@ -932,6 +932,198 @@ def _collect_patches(texts: dict) -> list[dict]:
     return out
 
 
+_REF_TARGETS: dict[int, set[int]] = {}
+
+
+def _ref_targets(rom: bytes) -> set[int]:
+    """ROM 里所有「被某个 u32 指向」的 GBA 地址集合（只算落在 ROM 内的）。
+
+    一次扫描全 ROM（每个 4 字节窗口），够快；按 ``id(rom)`` 缓存。
+    """
+    key = id(rom)
+    hit = _REF_TARGETS.get(key)
+    if hit is not None:
+        return hit
+    n = len(rom)
+    out: set[int] = set()
+    unpack = struct.unpack_from
+    # 逐字节扫：脚本内联指针常落在非 4 对齐位置（+3），对齐窗口会漏。
+    for i in range(0, n - 3):
+        v = unpack("<I", rom, i)[0]
+        if GBA_BASE <= v < GBA_BASE + n:
+            out.add(v)
+    _REF_TARGETS.clear()
+    _REF_TARGETS[key] = out
+    return out
+
+
+def _run_is_referenced(rom: bytes, addr: int) -> bool:
+    """``addr`` 所在的**连续文本块**里，有没有任何地址被 u32 指向。
+
+    块边界 = 前后第一个非文本字节（文本字节指 ``0x01..0xF6`` 与 ``0xFF``；
+    ``0x00`` 是空格/垫片，``0xF7`` 以上是新编码前缀，都算边界）。
+    按块而不是按单条串判断：结构体/词池里的成员串本身没有指针，整块
+    基址有指针，按串判会把「おとこのこ」这种真标签误判成死文本。
+
+    没有引用 = 这段文本在 ROM 里**不可达**（开发者占位串/废弃文本），
+    写它既不会显示也没有站点可改，应当单列成 ``no_ref``。
+    """
+    if not rom or not (0 <= addr < len(rom)):
+        return True
+
+    def textish(b: int) -> bool:
+        return b == 0xFF or 0x01 <= b <= 0xF6
+
+    s = addr
+    while s > 0 and textish(rom[s - 1]):
+        s -= 1
+    e = addr
+    while e < len(rom) and textish(rom[e]):
+        e += 1
+    targets = _ref_targets(rom)
+    for p in range(s, e + 1):
+        if GBA_BASE + p in targets:
+            return True
+    return False
+
+
+def _pool_blob(rom: bytes, addr: int) -> tuple[int, int]:
+    """返回 ``addr`` 所在的**连续文本块** [start, end)（文件偏移）。
+
+    文本字节 = ``0x01..0xF6`` 与 ``0xFF``（``0x00`` 是字段/垫片，``0xF7+``
+    是新编码前缀，都视为边界）。
+    """
+
+    def textish(b: int) -> bool:
+        return b == 0xFF or 0x01 <= b <= 0xF6
+
+    s = addr
+    while s > 0 and textish(rom[s - 1]):
+        s -= 1
+    e = addr
+    while e < len(rom) and textish(rom[e]):
+        e += 1
+    return s, e
+
+
+def _plan_pool_relocate(
+    rom: bytes,
+    entries: list[dict],
+    skip: list[dict],
+    redirects: list[dict],
+    ptr_idx: dict[int, list[int]],
+    cursor: int,
+    encoder: Encoder | None,
+    game_id: str,
+) -> tuple[int, int]:
+    """把「整块 FF 分隔、无 00 字段」的文本池整体搬迁（等距布局）。
+
+    这类池（菜单词条池 ``0x3B2804``…）的成员串**没有各自的指针**，只有一个
+    指向池头的 u32；读取方式是顺序扫到 ``FF``。所以整池重编码后长度可以自由
+    变化，只要：① 顺序不变 ② 每个成员仍以 ``FF`` 结束 ③ 所有指向池内的
+    u32 按**内部偏移映射**重写。
+
+    只处理 ``no 0x00`` 的块：块里一旦有 ``00``，说明是定长结构体的字段
+    （如 ``0x81EC1B4`` 的性别选择结构），成员靠 ``base+固定偏移`` 读，
+    变长会把后面的偏移全部错位 —— 那种必须走名槽指针，不能整池搬。
+
+    Returns ``(新 cursor, 搬迁的池数)``。
+    """
+    by_id = {str(e.get("id")): e for e in entries if e.get("id")}
+    groups: dict[tuple[int, int], list[dict]] = {}
+    for item in skip:
+        if item.get("reason") != "unresolved_redirect":
+            continue
+        e = by_id.get(str(item.get("id")))
+        if not e:
+            continue
+        addr = _entry_file_off(e)
+        if addr is None:
+            continue
+        s, en = _pool_blob(rom, addr)
+        if not (8 <= en - s <= 0x8000):
+            continue
+        if 0 in rom[s:en]:
+            continue
+        groups.setdefault((s, en), []).append(e)
+    if not groups:
+        return cursor, 0
+
+    moved = 0
+    for (s, en), es in groups.items():
+        starts: dict[int, dict] = {}
+        for e in es:
+            a = _entry_file_off(e)
+            if a is not None:
+                starts[a] = e
+        if not starts:
+            continue
+        pos_map: dict[int, int] = {}
+        body = bytearray()
+        p = s
+        ok = True
+        while p < en:
+            if p in starts:
+                e = starts[p]
+                raw = _encode(
+                    e.get("translated") or "",
+                    encoder,
+                    game_id=game_id,
+                    module=str(e.get("module") or ""),
+                )
+                if not raw:
+                    ok = False
+                    break
+                if raw[-1] != 0xFF:
+                    raw = raw + b"\xFF"
+                pos_map[p - s] = len(body)
+                body += raw
+                end = rom.find(0xFF, p, en)
+                p = (end + 1) if end >= 0 else en
+            else:
+                pos_map[p - s] = len(body)
+                body.append(rom[p])
+                p += 1
+        if not ok or not body:
+            continue
+
+        new_base = cursor
+        cursor = (cursor + len(body) + 3) & ~3
+        if cursor > TABLE_AREA_END:
+            return cursor, moved
+
+        sites: list[dict] = []
+        for old in range(s, en):
+            rel = pos_map.get(old - s)
+            if rel is None:
+                continue
+            for site in ptr_idx.get(old, []) or []:
+                sites.append({
+                    "off": f"0x{site:X}",
+                    "mode": "literal",
+                    "add": rel,
+                })
+        if not sites:
+            continue
+
+        redirects.append({
+            "id": f"pool_{s:X}_{en:X}",
+            "module": es[0].get("module") or "",
+            "kind": "cluster",
+            "address": f"0x{GBA_BASE + s:X}",
+            "anchor": f"0x{s:X}",
+            "body_hex": bytes(body).hex(" "),
+            "sites": sites,
+            "pool": True,
+        })
+        for e in es:
+            eid = str(e.get("id") or "")
+            if eid:
+                skip[:] = [x for x in skip if str(x.get("id")) != eid]
+        moved += 1
+    return cursor, moved
+
+
 def build_write_plan(
     rom: bytes,
     texts_path: Path,
@@ -1378,11 +1570,25 @@ def build_write_plan(
                 reason = "unresolved_redirect"
                 if isinstance(mod, dict) and (mod.get("read") or {}).get("no_reader"):
                     reason = "no_reader"
+                elif addr is not None and not _run_is_referenced(rom, addr):
+                    # 整段（到前后最近的 FF）没有任何 u32 指向 → 游戏里不会
+                    # 显示。红宝石里有大量开发者占位串（サンプル メッセージ／
+                    # テスト せんとう／インタビューよう かり ジムリーダー），
+                    # 归到 unresolved 里会让「还差多少」永远说不清。
+                    reason = "no_ref"
                 skip.append({
                     "id": eid,
                     "module": module,
                     "reason": reason,
                 })
+
+    # 池搬迁：把「整块 FF 分隔、无 00 字段」的文本池整体重编码 + 重定向。
+    # 放在逐条处理之后：只有连 redirects 都没定出站点的条目才会落到这里。
+    cursor, pool_moved = _plan_pool_relocate(
+        rom, entries, skip, redirects, ptr_idx, cursor, encoder, game_id,
+    )
+    if pool_moved:
+        table_notes.append(("池搬迁", f"{pool_moved} 个文本池整块重编码（等距布局）"))
 
     plan = {
         "game_id": game_id,

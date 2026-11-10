@@ -210,7 +210,9 @@ def apply_rows(
                 mode = site.get("mode") or "literal"
                 off = _off(site["off"])
                 if mode == "literal" and off + 4 <= len(rom):
-                    rom[off:off + 4] = new_ptr.to_bytes(4, "little")
+                    # add>0：站点指向池内第 N 字节（池搬迁后内部偏移会变）
+                    add = int(site.get("add") or 0)
+                    rom[off:off + 4] = (new_ptr + add).to_bytes(4, "little")
                     stats["ptr_writes"] += 1
                 elif mode == "bl_stub" and site.get("bytes"):
                     raw = bytes.fromhex(str(site["bytes"]).replace(" ", ""))

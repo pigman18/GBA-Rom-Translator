@@ -12,7 +12,7 @@ trace_callpath.py — 记录战斗消息打印路径的调用轨迹。
 """
 import sys, os, time
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 from util.debug_patcher import GdbClient, GdbError, REG_NAMES
 
 HOST, PORT = "127.0.0.1", 2345

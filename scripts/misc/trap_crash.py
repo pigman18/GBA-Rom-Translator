@@ -12,7 +12,7 @@ CallViaR0..R3（bx rN 跳转点）+ SoftReset 下断，然后 continue。
 """
 import socket, struct, sys, time, os
 
-sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "src"))
+sys.path.insert(0, os.path.join(os.path.dirname(__file__), "..", "..", "src"))
 from util.debug_patcher import GdbClient, GdbError, CALLVIA_BPS, SOFTRESET_BP, REG_NAMES
 from util.debug_patcher import scan_ram_slots, report, parse_u32, parse_gdb_hostport, dump_animcmd_context
 

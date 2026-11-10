@@ -17,7 +17,7 @@ import shutil
 import sys
 from pathlib import Path
 
-REPO = Path(__file__).resolve().parents[1]
+REPO = Path(__file__).resolve().parents[2]
 CONFIGS = REPO / "configs"
 
 SCAN_KEYS = ("script_bank_min", "script_text_ptr_opcodes", "encoding", "trusted_lz_bands")

@@ -39,7 +39,7 @@ from pathlib import Path
 import freetype
 from PIL import Image
 
-ROOT = Path(__file__).resolve().parents[1]
+ROOT = Path(__file__).resolve().parents[2]
 GAME = "POKEMON_RUBY_AXVJ00"
 DEFAULT_TRANSLATED = ROOT / "configs" / GAME / "translate" / "texts_translated.json"
 DEFAULT_FONT_CFG = ROOT / "configs" / GAME / "translate" / "font.config.json"

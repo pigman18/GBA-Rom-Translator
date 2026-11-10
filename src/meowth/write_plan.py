@@ -627,13 +627,26 @@ def _find_anchor(
 
     日版脚本的 message 是一条条 FF 分隔的串，代码只在块头挂一个指针，
     之后顺序读到底。所以「目标串 + 块头」共享同一份数据，搬块头即可。
+
+    ⚠️ 回溯路径上每一条都必须像文本。ROM 里大量索引表/偏移表的字节也
+    恰好以 FF 分隔（实测 0x154E89 是 u16 索引，被误当串、还查到假站点），
+    照着搬会把数据区一起重编码 → 破坏索引。**路径断裂即放弃**，
+    宁可这条不翻，也不能搬错。
     """
+    from .jp_pcs import looks_like_jp_text
+
     cur = addr
     for _ in range(max_back):
         p = rom.rfind(bytes([0xFF]), max(0, cur - 400), cur - 1)
         if p < 0:
             return None
         s = p + 1
+        e = rom.find(bytes([0xFF]), s, min(s + 400, len(rom)))
+        if e < 0:
+            return None
+        body = rom[s:e + 1]
+        if not looks_like_jp_text(body):
+            return None
         sites = ptr_idx.get(s)
         if sites:
             return s, sites

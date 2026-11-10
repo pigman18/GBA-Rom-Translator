@@ -476,23 +476,43 @@ P2 渲染遗留（text_scene 删除 / 换行宽度 / 未翻译）
 P3 全场景回归
 ```
 
-### 1.8 struct 名槽自适应（扩 stride）—— 已实现，暂不启用
+### 1.8 struct 名槽自适应（扩 stride）—— 算法就绪，读取点未收敛（暂不启用）
 
-**动机**：一条译文超名槽就把整表判死。实测「雷吉斯奇鲁玩偶」29B > 装饰名
-名槽 27B → 120 条装饰名全部回落逐条 → unresolved。
+**动机**：一条译文超名槽就把整表判死。「雷吉斯奇鲁玩偶」29B > 装饰名名槽 27B
+→ 120 条装饰名全部回落逐条 → unresolved。
 
-**实现**（`struct_trampoline.plan_struct_same_stride_clone`）：
-1. 拿全部译文算出所需名槽 `need = max(len(encode(t))+1)`
-2. `new_stride = entry_size`，不足则 ×2 直到 `new_stride - name_off >= need`
-3. 整表按 new_stride 重排（`entry[:name_off] + name(new_cap) + entry[name_off+old_cap:]`）
-4. `plan_stride_rewrite(base, old, new)` 生成读取步长补丁
-5. 改基址字面量
+**算法（已实现，见 `work/wip_struct_stride_20261110.patch`）**
+1. 拿全部译文算需要的名槽 `need = max(len(encode(t)) + 1)`
+2. `new_stride` 从 `entry_size` 起翻倍，直到 `new_stride - name_off >= need`
+3. 整表按 new_stride 重排：`entry[:name_off] + 名字(new_cap) + entry[name_off+old_cap:entry_size]`
+4. 生成读取步长补丁 + 改基址字面量
 
-对装饰名实测：`28→56`、名槽 `27→55`、120 条全部 fit、20 处 stride 补丁。
+装饰名实测数据层完全成立：`28→56`、名槽 `27→55`、120 条全 fit、32 处指令补丁。
 
-**但会崩**：`plan_stride_rewrite` 只找到 20 处读取点，仍有没覆盖到的按 28
-索引的地方 → 图鉴/商店路径读错 → 模拟器 `输入回调停摆`。
-开关 `STRUCT_STRIDE_EXPAND = False` 保守关闭，行为回到「放不下的保留原文」。
+**但进游戏必崩**（`input callback 停摆 fr=8126`），做过的对照实验：
 
-**下一步**：先量清装饰名表的全部读取点（含 `movs #28; muls` 这类
-非移位写法），再打开开关。
+| 实验 | 结果 |
+|---|---|
+| 扩 stride 版 | ❌ 停摆 |
+| 关掉扩 stride（表仍生成） | ❌ 停摆 |
+| 整块跳过装饰名模块 | ❌ 停摆 |
+| 全部回滚（`165400a`） | ✅ 87 帧 |
+
+结论：不是装饰名一张表的问题，而是**这轮对 stride 扫描器的改动**（`_scan_mul_sites`
+加 `subs` 形态、以字面量为锚做全量扫描）影响了所有表，其中某处误改。
+回滚后恢复，WIP 存 `work/wip_struct_stride_20261110.patch`。
+
+**已经量清的通用事实**（下一步直接可用）：
+1. `i*stride` 有两种三连写法，以前只认加法：
+   ```
+   lsls rA,rB,#n / adds rC,rA,rB / lsls rC,rC,#m   → ((1<<n)+1) << m
+   lsls rA,rB,#n / subs rC,rA,rB / lsls rC,rC,#m   → ((1<<n)-1) << m
+   ```
+   装饰名 28 = `(8-1)<<2`，`0x0FA6B8` 就是 `lsls #3 / subs / lsls #2`。
+2. `find_ldrs` 会漏站点：`0x0FA734` 明明写着 `0x083C2A44`，却不在 `find_ldrs` 结果里
+   （22 个字面量只反查到 22 个 ldr，但集合不同）。**以字面量站点为锚、覆盖整函数**
+   扫描更可靠。
+3. 表基址有 `base` 和 `base+name_offset` 两种引用形态，必须都扫。
+
+**下一步**：不要一次全开。先只把「`subs` 形态 + 字面量锚定扫描」单独合入，
+**对现有 11 张表逐张验证不崩**，确认扫描器本身无副作用后，再打开扩 stride 开关。

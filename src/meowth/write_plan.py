@@ -871,41 +871,42 @@ def build_write_plan(
                 plan_struct_trampoline,
             )
 
-            # 主路径：整块克隆（嵌名字子值 + 改结构体基址字面量）。
-            # trampoline「子值旁路」仅当克隆失败（无字面量 / 译文全超槽等）时回落。
-            table, cursor, err = plan_struct_same_stride_clone(
-                rom, name, mod, mod_entries, encoder, cursor,
-            )
-            if table is None:
-                clone_err = err
-                table2, cursor2, err2 = plan_struct_trampoline(
-                    rom, name, mod, mod_entries, encoder, cursor,
+            # 名字读法决定能不能翻：
+            #   ① 有「返回名字指针」的读点 → trampoline 旁路，名字长度不限（最好）
+            #   ② 没有读点、只能按固定偏移内联读 → 整块克隆，能放几个放几个
+            # 顺序不能反：结构体内联名槽往往只有 6~11 字节，先克隆会为了
+            # 几条长译名把整表判死，白丢覆盖率。
+            table = None
+            cursor_saved = cursor
+            errs: list[str] = []
+            for label, fn in (
+                ("trampoline", plan_struct_trampoline),
+                ("clone", plan_struct_same_stride_clone),
+            ):
+                t, c, e = fn(
+                    rom, name, mod, mod_entries, encoder, cursor_saved
                 )
-                if table2 is not None:
-                    table, cursor = table2, cursor2
-                    table_notes.append(
-                        (
-                            name,
-                            f"整块克隆未成，回落 trampoline（原：{clone_err}）",
+                if t is not None:
+                    table, cursor = t, c
+                    if label == "clone" and errs:
+                        table_notes.append(
+                            (name, f"名字指针旁路未成（{errs[0]}），回落整块克隆")
                         )
-                    )
-                else:
-                    table_notes.append(
-                        (
-                            name,
-                            f"整块克隆与 trampoline 均失败"
-                            f"（{clone_err}; {err2}），回落逐条",
+                    break
+                errs.append(f"{label}: {e}")
+            if table is None:
+                table_notes.append(
+                    (name, f"名字指针旁路与整块克隆均失败（{' | '.join(errs)}），回落逐条")
+                )
+                for e in mod_entries:
+                    if e.get("_reject"):
+                        eid = str(e.get("id") or "")
+                        skip.append(
+                            {"id": eid, "module": name, "reason": "reject"}
                         )
-                    )
-                    for e in mod_entries:
-                        if e.get("_reject"):
-                            eid = str(e.get("id") or "")
-                            skip.append(
-                                {"id": eid, "module": name, "reason": "reject"}
-                            )
-                            if eid:
-                                handled_ids.add(eid)
-                    # 不 continue：留给下方 rows/redirects
+                        if eid:
+                            handled_ids.add(eid)
+                # 不 continue：留给下方 rows/redirects
             if table is not None:
                 for e in mod_entries:
                     eid = str(e.get("id") or "")
@@ -966,6 +967,16 @@ def build_write_plan(
                             f"超短槽回落重定向 id={eid}",
                         ))
 
+    # 已整表克隆的地址区间（供 per-entry 阶段判断「已覆盖」）
+    table_ranges: list[tuple[int, int]] = []
+    for _t in tables:
+        try:
+            lo = _off(_t["old_base"])
+            hi = lo + int(_t["count"]) * int(_t["old_stride"])
+        except (KeyError, TypeError, ValueError):
+            continue
+        table_ranges.append((lo, hi))
+
     for entry in entries:
         eid = str(entry.get("id") or "")
         if eid and eid in handled_ids:
@@ -985,6 +996,14 @@ def build_write_plan(
             continue
         # 表模块已处理；落单条目若仍挂在表模块上（无译文已 skip）则忽略
         if module in table_modules:
+            continue
+        # 地址落在「已整表克隆」的区间内 → 内容已随表写入，不再单条处理。
+        # 实测「秘密基地装饰名」同一地址在 entries 里有重复条目（239 条 vs
+        # 表 count 121），多出来的 118 条会全部变成 unresolved 噪音。
+        a_tbl = _entry_file_off(entry)
+        if a_tbl is not None and any(
+            lo <= a_tbl < hi for lo, hi in table_ranges
+        ):
             continue
 
         body = _encode(

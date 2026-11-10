@@ -188,12 +188,20 @@ def _func_bounds(rom: bytes, off: int, limit: int = 0x800) -> tuple[int, int]:
     return start, end
 
 
-def _scan_mul_sites(rom: bytes, lo: int, hi: int, stride: int) -> list[tuple[int, int, int, int]]:
-    """在 [lo, hi) 里找 ``((i<<n)+i)<<m == i*stride`` 的三连。
+def _scan_mul_sites(
+    rom: bytes, lo: int, hi: int, stride: int, *, allow_sub: bool = False,
+) -> list[tuple[int, int, int, int]]:
+    """在 [lo, hi) 里找 ``i*stride`` 的三连，两种等价形态都认：
 
-    只认 ``lsls rA,rB,#n / adds rC,rA,rB / lsls rC,rC,#m`` 这一种形态，
+        lsls rA,rB,#n / adds rC,rA,rB / lsls rC,rC,#m   → ((1<<n)+1)<<m
+        lsls rA,rB,#n / subs rC,rA,rB / lsls rC,rC,#m   → ((1<<n)-1)<<m
+
     返回 (h2 偏移, rd, rs, imm2)。K 必须**精确等于** stride 才收，
     所以这不是「窗口内瞎找 lsls」，是模式 + 常数双重校验。
+
+    减法形态是 2026-11-10 补齐的：装饰名表 0x3C2A44 的步长 28 就是
+    ``lsls #3 / subs / lsls #2``（(8-1)<<2），只认加法时那一处步长没改，
+    整表索引错位 → 模拟器 input callback 停摆。
     """
     out: list[tuple[int, int, int, int]] = []
     hi = min(hi, len(rom) - 6)
@@ -204,14 +212,24 @@ def _scan_mul_sites(rom: bytes, lo: int, hi: int, stride: int) -> list[tuple[int
         imm0 = (h0 >> 6) & 0x1F
         rd0 = h0 & 7
         rs0 = (h0 >> 3) & 7
-        if (h1 & 0xFE00) != 0x1800:          # adds rC, rn, rm
+        op = h1 & 0xFE00
+        if op not in ((0x1800, 0x1A00) if allow_sub else (0x1800,)):
             continue
         rd1 = h1 & 7
         rn1 = (h1 >> 3) & 7
         rm1 = (h1 >> 6) & 7
         if rd1 != rd0:
             continue
-        if not ((rn1 == rd0 and rm1 == rs0) or (rn1 == rs0 and rm1 == rd0)):
+        if op == 0x1800:
+            if not ((rn1 == rd0 and rm1 == rs0) or (rn1 == rs0 and rm1 == rd0)):
+                continue
+            base_k = (1 << imm0) + 1
+        else:
+            # subs rC, rn, rm：必须是「移位值 - 原值」= ((1<<n)-1)
+            if not (rn1 == rd0 and rm1 == rs0):
+                continue
+            base_k = (1 << imm0) - 1
+        if base_k <= 0:
             continue
         if (h2 & 0xF800) != 0x0000:          # lsls rC, rC, #m
             continue
@@ -220,7 +238,7 @@ def _scan_mul_sites(rom: bytes, lo: int, hi: int, stride: int) -> list[tuple[int
         rs2 = (h2 >> 3) & 7
         if rd2 != rd1 or rs2 != rd1:
             continue
-        k = ((1 << imm0) + 1) << imm2
+        k = base_k << imm2
         if k == stride:
             out.append((a + 4, rd2, rs2, imm2))
     return out

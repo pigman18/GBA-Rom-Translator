@@ -19,6 +19,72 @@ from .table_stride import find_literal_sites
 Encoder = Callable[[str], bytes]
 
 
+# struct 名槽不够时是否允许整表扩 stride。
+# 默认关闭：plan_stride_rewrite 对 0x3C2A44(28) 只找到 20 处读取点，
+# 实测仍有没覆盖到的 → 索引错、模拟器 input callback 停摆。
+# 等 stride 覆盖验证充分后再开。
+STRUCT_STRIDE_EXPAND = True
+
+
+def infer_name_cap(
+    rom: bytes,
+    base: int,
+    entry_size: int,
+    name_off: int,
+    count: int,
+) -> int:
+    """从**数据本身**推导名字槽宽度（不信任配置）。
+
+    结构体里名字后面通常紧跟别的字段，配置里的 ``desc_ptr_offset`` 经常
+    指向的是「说明指针」而不是「名字区结束」，直接拿来当名字槽宽度会
+    把价格/指针一起覆盖掉。实测五张表全部踩中：
+
+        道具名        配置 16 → 实际 10
+        树果名        配置 16 → 实际 7
+        图鉴分类名    配置 22 → 实际 6     ← 覆盖了 desc_ptr，图鉴说明全空
+        秘密基地装饰名 配置 27 → 实际 11
+        训练家个人名  配置 28 → 实际 16
+
+    判据：条目内从 name_off 起，先是一段文本（0x00/0xFF 以外的字节），
+    然后是 0x00/0xFF 填充，填充结束的位置就是名字区上界。逐条量出来取
+    **众数**——填充恰好延伸到下一个字段首字节是 0x00/0xFF 时会得到偏大的
+    值，但那种情况是少数，众数稳定落在真实边界上。
+    """
+    caps: list[int] = []
+    for i in range(count):
+        src = base + i * entry_size
+        entry = rom[src:src + entry_size]
+        if len(entry) < entry_size:
+            break
+        j = name_off
+        while j < entry_size and entry[j] not in (0x00, 0xFF):
+            j += 1
+        k = j
+        while k < entry_size and entry[k] in (0x00, 0xFF):
+            k += 1
+        caps.append(k - name_off)
+    if not caps:
+        return entry_size - name_off
+    from collections import Counter
+
+    hist = Counter(caps)
+    best = max(hist.items(), key=lambda kv: (kv[1], -kv[0]))
+    return max(1, min(best[0], entry_size - name_off))
+
+
+def _name_cap(rom: bytes, mod: dict, base: int, entry_size: int,
+              name_off: int, count: int) -> int:
+    """名字槽宽度：配置显式 ``name_cap`` > 数据推导。"""
+    read = mod.get("read") or {}
+    explicit = read.get("name_cap")
+    if explicit is not None:
+        try:
+            return max(1, min(int(explicit), entry_size - name_off))
+        except (TypeError, ValueError):
+            pass
+    return infer_name_cap(rom, base, entry_size, name_off, count)
+
+
 def _struct_geom(mod: dict) -> tuple[int, int, int, int, int]:
     read = mod.get("read") or {}
     base = _off(mod["start"])
@@ -138,6 +204,10 @@ def _candidate_struct_bases(
     _add(base & ~3)
     if name_offset:
         _add((base - name_offset) & ~3)
+        # 代码里的字面量常常**直接指向名字字段**（base+name_off），
+        # 这样算址后无需再 adds #name_off。少这个候选会漏掉整条读点：
+        # 装饰名/树果名/训练家个人名三张表都因此拿不到旁路读点。
+        _add(base + name_offset)
     # 邻域：前后各 2 个 entry，4 对齐；只保留「ROM 里确有字面量」的
     lo = max(0, (base & ~3) - entry_size * 2)
     hi = base + entry_size * 2
@@ -196,8 +266,10 @@ def find_getname_sites_auto(
 ) -> tuple[int, list[tuple[int, int]]]:
     """在候选基址上跑 :func:`find_getname_sites`，返回 ``(实际基址, sites)``。"""
     for cand in _candidate_struct_bases(rom, base, entry_size, name_offset):
+        # 候选基址已含 name_offset 时，算址结果本身就是名字指针
+        extra = 0 if (name_offset and cand == base + name_offset) else name_offset
         sites = find_getname_sites(
-            rom, cand, entry_size, name_offset=name_offset
+            rom, cand, entry_size, name_offset=extra
         )
         if sites:
             return cand, sites
@@ -264,9 +336,11 @@ def plan_struct_trampoline(
 ) -> tuple[dict | None, int, str | None]:
     """整块按子值重定向：name_ptrs + 读点 ``ldr+bx`` 钩。成功 (table, cursor, None)。"""
     try:
-        base, entry_size, count, name_off, old_cap = _struct_geom(mod)
+        base, entry_size, count, name_off, _decl_cap = _struct_geom(mod)
     except ValueError as exc:
         return None, cursor, str(exc)
+    # 名字槽宽度以数据为准（配置里的 desc_ptr 常常不是名字区结束标志）
+    old_cap = _name_cap(rom, mod, base, entry_size, name_off, count)
 
     # 固定算法找读点（symexec stride + 返回形态）
     # 合法 code_base：配置 base，或 base+name_off（读点直接返回名字址）
@@ -502,6 +576,63 @@ def plan_struct_trampoline(
     return table, cursor, None
 
 
+def _stride_patches_by_literals(
+    rom: bytes,
+    base: int,
+    name_off: int,
+    old_stride: int,
+    new_stride: int,
+) -> list[dict]:
+    """以「表基址字面量站点」为锚，把**整函数**里所有 i*old_stride 计算都改掉。
+
+    不用 ``find_ldrs``：它按 `ldr rX,[pc,#imm]` 反查字面量，实测会漏
+    （0x0FA734 明确引用 0x083C2A44，却不在结果里）—— 漏一处步长就等于
+    整表索引错位、模拟器 input callback 停摆。
+
+    覆盖两种索引写法：
+      lsls/adds/lsls  → ((1<<n)+1)<<m
+      lsls/subs/lsls  → ((1<<n)-1)<<m   （装饰名 28 = (8-1)<<2）
+    以及分离式（图鉴那种，两段之间隔着别的指令）。
+    """
+    from .table_stride import (
+        _func_bounds,
+        _scan_mul_sites,
+        _scan_split_mul,
+        find_literal_sites,
+        thumb_shift,
+    )
+
+    lits = list(find_literal_sites(rom, GBA_BASE + base))
+    if name_off:
+        lits += list(find_literal_sites(rom, GBA_BASE + base + name_off))
+    funcs: set[tuple[int, int]] = set()
+    for lit in lits:
+        funcs.add(_func_bounds(rom, lit))
+
+    ratio = new_stride // old_stride
+    delta = ratio.bit_length() - 1
+    out: list[dict] = []
+    seen: set[int] = set()
+    for fs, fe in sorted(funcs):
+        cand = _scan_mul_sites(
+            rom, fs, fe, old_stride, allow_sub=True
+        ) + _scan_split_mul(rom, fs, fe, old_stride)
+        for off, rd, rs, imm in cand:
+            if off in seen:
+                continue
+            new_imm = imm + delta
+            if not (0 <= new_imm <= 31):
+                continue
+            seen.add(off)
+            out.append({
+                "off": f"0x{off:X}",
+                "bytes": thumb_shift("lsls", rd, rs, new_imm).hex(" "),
+                "label": f"K={old_stride} lsls #{imm}→#{new_imm}"
+                         f"（stride {old_stride}→{new_stride}）",
+            })
+    return out
+
+
 def plan_struct_same_stride_clone(
     rom: bytes,
     name: str,
@@ -516,9 +647,11 @@ def plan_struct_same_stride_clone(
     放不下的槽保留原文。原表不动；仅改指向表基的字面量。
     """
     try:
-        base, entry_size, count, name_off, old_cap = _struct_geom(mod)
+        base, entry_size, count, name_off, _decl_cap = _struct_geom(mod)
     except ValueError as exc:
         return None, cursor, str(exc)
+    # 名字槽宽度以数据为准（配置里的 desc_ptr 常常不是名字区结束标志）
+    old_cap = _name_cap(rom, mod, base, entry_size, name_off, count)
 
     code_base, _sites = find_getname_sites_auto(
         rom, base, entry_size, name_offset=name_off
@@ -562,13 +695,37 @@ def plan_struct_same_stride_clone(
             idx = delta // entry_size
         by_idx[idx] = e
 
+    # 名槽自适应：先拿**全部译文**算出需要的宽度，原槽不够就整表扩 stride。
+    # 一条超长译文不该把整表判死（装饰名「雷吉斯奇鲁玩偶」= 29B > 27B，
+    # 以前会让 120 条装饰名全部回落逐条 → unresolved）。
+    need = old_cap
+    for e in entries:
+        text = e.get("translated") or ""
+        if text and text != (e.get("original") or ""):
+            raw = _encode_body(text, encoder)
+            if raw:
+                need = max(need, len(raw) + 1)
+    # ⚠️ 只有「名字是结构体最后一个字段」才能靠扩 stride 加宽名槽。
+    # 名字之后还有字段的结构体（道具名/树果名：name@0 占 16B，desc_ptr@16），
+    # 加宽名字会把后面字段整体推后 —— 代码里按固定偏移取字段全部错位，
+    # 结构体尾部字节还会被 out[:new_stride] 截掉。这类表只能保持原槽。
+    name_is_tail = (name_off + old_cap == entry_size)
+    new_cap = old_cap
+    new_stride = entry_size
+    if need > old_cap and name_is_tail and STRUCT_STRIDE_EXPAND:
+        while new_stride - name_off < need:
+            new_stride *= 2
+        if new_stride > 512:
+            return None, cursor, f"名槽需求 {need}B 导致 stride {new_stride} 过大"
+        new_cap = new_stride - name_off
+
     blob = bytearray()
     n_tr = 0
     n_keep = 0
     n_overflow = 0
     for i in range(count):
         src = base + i * entry_size
-        entry = bytearray(rom[src:src + entry_size])
+        entry = bytes(rom[src:src + entry_size])
         e = by_idx.get(i)
         raw = b""
         if e is not None:
@@ -576,26 +733,40 @@ def plan_struct_same_stride_clone(
             orig = e.get("original") or ""
             if text and text != orig:
                 raw = _encode_body(text, encoder)
-        if raw and len(raw) <= old_cap:
-            # 名字区：译文 + 余下填 0x00（保持后续字段偏移）
-            pad = bytes(old_cap - len(raw))
-            entry[name_off:name_off + old_cap] = raw + pad
+        # 单条安全上界：只能覆盖「原名字 + 紧邻的 00/FF 填充」。
+        # 名字后面紧跟着真实字段的表（训练家个人名的个别条目在名字后
+        # 直接跟 u16 数据），按统一 cap 写会把那些字节一起吃掉。
+        limit = name_off
+        while limit < name_off + new_cap and entry[limit] not in (0x00, 0xFF):
+            limit += 1
+        while limit < name_off + new_cap and entry[limit] in (0x00, 0xFF):
+            limit += 1
+        writeable = limit - name_off
+
+        if raw and len(raw) <= writeable:
+            name_field = raw + bytes(new_cap - len(raw))
             n_tr += 1
         else:
             if raw:
                 n_overflow += 1
+            tail = entry[name_off:name_off + old_cap]
+            name_field = tail + bytes(new_cap - len(tail))
             n_keep += 1
-        blob += entry
+        # 名字区之后的结构体字段原样保留，整体按 new_stride 对齐
+        out = entry[:name_off] + name_field + entry[name_off + old_cap:]
+        if len(out) < new_stride:
+            out += bytes(new_stride - len(out))
+        blob += out[:new_stride]
 
     if n_tr == 0:
-        return None, cursor, "没有能塞进原名字槽的译文"
-    # 有译文却超槽：让 write_plan 回落 trampoline（可旁路长名），避免半吊子整块
-    if n_overflow > 0:
-        return (
-            None,
-            cursor,
-            f"{n_overflow} 条译文超名槽({old_cap}B)，回落 trampoline",
-        )
+        return None, cursor, f"没有能塞进名字槽({old_cap}B)的译文"
+    # 放不下的条目保留日文，其余照写 —— 名字槽宽度由结构体决定，
+    # 不能为了几条长译名把整张表判死（那样一条都翻不了）。
+    # 仅当「名槽本来能变宽却没变」时才算异常，交给上层回落。
+    if n_overflow > 0 and new_stride == entry_size:
+        partial_note = f"{n_overflow} 条超名槽({old_cap}B)保留日文"
+    else:
+        partial_note = ""
 
     if cursor + len(blob) > TABLE_AREA_END:
         return None, cursor, "补丁表区域满了"
@@ -617,26 +788,42 @@ def plan_struct_same_stride_clone(
     if not lit_out:
         return None, cursor, "无与配置基址对齐的字面量"
 
+    # 名槽变宽 → 整表步长跟着变，必须同步改所有按 entry_size 索引的读取点
+    insns: list[dict] = []
+    if new_stride != entry_size:
+        insns = _stride_patches_by_literals(
+            rom, base, name_off, entry_size, new_stride
+        )
+        if not insns:
+            return None, cursor, f"扩 stride {entry_size}→{new_stride} 未找到读取点"
+
     table = {
         "module": name,
-        "mode": "struct_same_stride_clone",
+        "mode": (
+            "struct_same_stride_clone"
+            if new_stride == entry_size
+            else "struct_stride_expand"
+        ),
         "old_base": f"0x{base:X}",
         "old_stride": entry_size,
         "new_base": f"0x{new_base:X}",
-        "new_stride": entry_size,
+        "new_stride": new_stride,
         "count": count,
         "name_offset": name_off,
         "old_name_cap": old_cap,
-        "new_name_cap": old_cap,
+        "new_name_cap": new_cap,
         "blob": f"gen/plan_table_{safe}.bin",
         "blob_name": f"plan_table_{safe}.bin",
         "blob_hex": blob.hex(),
-        "insns": [],
+        "insns": insns,
         "literals": lit_out,
         "field_map": {},
         "note": (
-            f"同stride克隆 base=0x{base:X}; translated_fit={n_tr} "
-            f"keep_jp={n_keep} lits={len(lit_out)}"
+            f"struct 克隆 base=0x{base:X} stride {entry_size}→{new_stride}"
+            f"（名槽 {old_cap}→{new_cap}）; translated_fit={n_tr} "
+            f"keep_jp={n_keep} overflow={n_overflow} lits={len(lit_out)} "
+            f"insns={len(insns)}"
+            + (f"; {partial_note}" if partial_note else "")
         ),
     }
     return table, cursor, None

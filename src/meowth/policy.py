@@ -534,6 +534,47 @@ def is_loadword_text_ptr(rom: bytes | bytearray, ptr_off: int) -> bool:
     return False
 
 
+def is_pc_relative_literal(rom: bytes | bytearray, site: int) -> bool:
+    """``site`` 是某条 ``ldr rX, [pc, #imm]`` 直接加载的字面量。
+
+    这是「访问器 getter 表」的形态：每个取字符串的短函数各自带一份字面量
+    （函数体就是 ``ldr r0,[pc,#0]`` + ``bx lr``，字面量紧跟其后）::
+
+        0x080046ac  00 48        ldr r0, [pc, #0]
+        0x080046ae  70 47        bx  lr
+        0x080046b0  2e 94 3e 08  .word 0x083E942E   ← 「アクア」
+
+    这类站点在剧情区（0x3E94xx 一带的训练家称号）成组出现，站点地址**小于**
+    文本地址，所以 ``is_local_pool_ptr``（要求 ptr > string）不成立；前面也
+    没有脚本操作码，``is_loadword_text_ptr`` 同样不认 —— 实测 8 条卡死在这里。
+
+    判据只看两件事，都是硬事实：
+
+    1. ``site`` 4 对齐，且值是 ROM 总线地址（``0x08xxxxxx``，落在 ROM 长度内）；
+    2. 存在一条 pc 相对 ``ldr``，其目标**精确等于** ``site``
+       （T1 编码 ``01001 Rd imm8``，有效范围 ``imm8*4 ≤ 1020`` 字节，
+       所以只需回溯 0x400 字节）。
+
+    为什么不会误判普通正文：正文里 4 字节恰好等于某个文本地址的概率极低，
+    而且调用方还要求 ``value == expected_pointer``（精确等于本条的地址）、
+    且站点不在任何已登记正文 span 内。
+    """
+    if (site & 3) or site < 0 or site + 4 > len(rom):
+        return False
+    val = struct.unpack_from("<I", rom, site)[0]
+    base = BASE()
+    if not (base <= val < base + len(rom)):
+        return False
+    lo = max(0, site - 0x400 - 2)
+    a = site - 2
+    while a >= lo:
+        h = struct.unpack_from("<H", rom, a)[0]
+        if (h & 0xF800) == 0x4800 and ((a + 4) & ~3) + (h & 0xFF) * 4 == site:
+            return True
+        a -= 2
+    return False
+
+
 def is_registry_ptr(ptr_off: int) -> bool:
     return ptr_off in BIRCH_PTR_ALLOW or ptr_off in TRAINER_UI_PTR_ALLOW
 
@@ -801,6 +842,10 @@ def ptr_source_ok(
     if ptr_in_trusted_lz(ptr_off, spans) and not ui_body:
         return False
     if is_loadword_text_ptr(rom, ptr_off):
+        return True
+    # pc 相对字面量：``ldr rX,[pc,#imm]`` 直接加载的 u32 就是代码里的引用，
+    # 与脚本操作码内联等价（访问器 getter 表，见 is_pc_relative_literal）。
+    if is_pc_relative_literal(rom, ptr_off):
         return True
     if strict:
         return False

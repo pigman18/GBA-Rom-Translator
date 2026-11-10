@@ -997,7 +997,17 @@ class TranslationEngine:
         try:
             self._write_translate_build(data)
         except Exception as e:  # pragma: no cover
-            self._log("warning", f"[翻译通路] translate.build.json 生成失败: {e}")
+            # 不能静默吞掉：旧 write.plan.json 会被后续 build 直接复用，
+            # 于是「这次 plan 其实没生成」表现为「数字没变」，极难发现
+            # （2026-11-11 调试 ptrs 时踩过一次，浪费了整轮定位）。
+            # 删掉旧文件并上抛，让失败可见。
+            stale = Path(self.config.work_dir) / self.config.game / "write.plan.json"
+            try:
+                stale.unlink(missing_ok=True)
+            except OSError:
+                pass
+            self._log("error", f"[翻译通路] write.plan.json 生成失败，已删除旧文件: {e}")
+            raise
 
         return output_path
 

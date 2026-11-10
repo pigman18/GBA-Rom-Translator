@@ -580,6 +580,25 @@ def _name_window_patches(
     return out
 
 
+def _looks_like_ptr_array(rom: bytes, site: int) -> bool:
+    """站点是否处在指针数组里（相邻 4 字节也是指向 ROM 的 GBA 指针）。
+
+    池头保护的目的是「别把唯一的那个字面量改走」，而不是禁止改数组元素。
+    地点名 0x3BEF78 起就是一串 u32，指向 0x3BECB7 之后的连续串池：
+    逐条改写安全，一刀切保护会把整个模块判死（实测 2259 条 redirect=0）。
+    """
+    if site + 8 > len(rom):
+        return False
+    v = struct.unpack_from("<I", rom, site)[0]
+    for q in (site - 4, site + 4):
+        if q < 0 or q + 4 > len(rom):
+            continue
+        w = struct.unpack_from("<I", rom, q)[0]
+        if 0x08000000 <= w < 0x0A000000 and w != v:
+            return True
+    return False
+
+
 def _struct_table_base_bus(modules: dict[str, Any]) -> set[int]:
     """Struct 表基址（总线）。这些字面量是整表入口，禁止当单条名字 pointer 改写。"""
     out: set[int] = set()
@@ -945,12 +964,19 @@ def build_write_plan(
                 lz_spans=lz_spans,
                 text_spans=text_spans,
             )
-            # 与 rows 相同：整表/打包池基址字面量不得进 redirects
+            # 与 rows 相同：整表/打包池基址字面量不得进 redirects。
+            # 但「池头保护」只针对**单个字面量**：如果该站点其实是一个
+            # 指针数组的元素（相邻 4 字节也是指向文本区的 GBA 指针），
+            # 逐条改写是安全的 —— 地点名 0x3BEF78 就是这样，一刀切会把
+            # 整模块 2259 条全判死。
             if protected_bases:
                 filtered = [
                     p for p in filtered
                     if p + 4 <= len(rom)
-                    and struct.unpack_from("<I", rom, p)[0] not in protected_bases
+                    and (
+                        struct.unpack_from("<I", rom, p)[0] not in protected_bases
+                        or _looks_like_ptr_array(rom, p)
+                    )
                 ]
         if filtered:
             redirects.append({
@@ -964,11 +990,30 @@ def build_write_plan(
                 ],
             })
         else:
-            skip.append({
-                "id": eid,
-                "module": module,
-                "reason": "unresolved_redirect",
-            })
+            # 第③类兜底：定不出任何可改指针站点时，若译文放得进原槽
+            # （等长或更短），直接原地覆写。这是唯一不需要改指针的写法，
+            # 适用于被「基址+偏移」「代码内联」等方式引用、静态找不到站点的串。
+            raw_len = 0
+            if addr is not None:
+                end0 = rom.find(0xFF, addr, min(addr + 512, len(rom)))
+                if end0 >= 0:
+                    raw_len = end0 - addr + 1
+            if raw_len and len(body) <= raw_len:
+                redirects.append({
+                    "id": eid,
+                    "module": module,
+                    "kind": "inplace",
+                    "address": entry.get("address"),
+                    "at": f"0x{addr:X}",
+                    "body_hex": body.hex(" "),
+                    "pad": raw_len - len(body),
+                })
+            else:
+                skip.append({
+                    "id": eid,
+                    "module": module,
+                    "reason": "unresolved_redirect",
+                })
 
     plan = {
         "game_id": game_id,

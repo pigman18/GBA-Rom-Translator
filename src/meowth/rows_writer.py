@@ -158,6 +158,18 @@ def apply_rows(
     for row in plan.get("redirects") or []:
         try:
             body = bytes.fromhex(str(row.get("body_hex") or "").replace(" ", ""))
+            # 第③类兜底：原地覆写（定不出指针站点的串，译文不超原槽）
+            if row.get("kind") == "inplace":
+                at = _off(row["at"])
+                pad = int(row.get("pad") or 0)
+                if not body or at + len(body) + pad > len(rom):
+                    stats["errors"] += 1
+                    continue
+                rom[at:at + len(body)] = body
+                if pad:
+                    rom[at + len(body):at + len(body) + pad] = bytes([0xFF]) * pad
+                stats["inplaced"] = stats.get("inplaced", 0) + 1
+                continue
             if not body:
                 stats["errors"] += 1
                 continue

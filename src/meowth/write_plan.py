@@ -1018,7 +1018,7 @@ def build_write_plan(
         # 列对齐 UI（write.space_pad）放宽 00 密度，仍拒 is_struct_like_pcs。
         addr = _entry_file_off(entry)
         if addr is not None:
-            from .jp_pcs import is_printable_pcs, looks_like_jp_text
+            from .jp_pcs import looks_like_jp_text
             from .policy import is_struct_like_pcs
 
             end = rom.find(0xFF, addr, addr + 513)
@@ -1027,14 +1027,9 @@ def build_write_plan(
                 continue
             raw = bytes(rom[addr : end + 1])
             space_pad = bool((mod.get("write") or {}).get("space_pad"))
-            # 语种比例判据会误杀「全角数字扎堆」的真正文
-            # （わざマシン３２  １５００まい、ＬＲ 键位说明）。
-            # 走到这里的条目都**已经有译文**，再叠一条「字节流全部可印」
-            # 就足以判定它是真文本；WindowTemplate 仍由 is_struct_like_pcs 挡。
-            plausible = looks_like_jp_text(raw, allow_space_pad=space_pad)
-            if not plausible and is_printable_pcs(raw):
-                plausible = True
-            if is_struct_like_pcs(raw) or not plausible:
+            if is_struct_like_pcs(raw) or not looks_like_jp_text(
+                raw, allow_space_pad=space_pad
+            ):
                 skip.append({"id": eid, "module": module, "reason": "bad_text_target"})
                 continue
 

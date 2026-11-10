@@ -223,14 +223,15 @@
       "label": "词条·树果名",
       "group": "词条",
       "default": true,
-      "description": "树果数据表（クラボ..ナゾ，43 条）；name@0，entry_size=28，desc_ptr@0x10 指向说明池（说明池由剧情语料通道收录）",
+      "description": "树果短名表（基址 0x3A1050，stride 28，name@0，名槽 7B）。整表基址只有 1 个字面量（0x4F84C→ldr 0x4F812），该函数 6 处基址计算全部读 offset 22~26（数量/上限），名字与描述都不被读；背包实测显示的是「道具名」（樱子果/零余果），不是这张表的短名。故标 no_reader：改了也不会显示。",
       "start": "0x3A1050",
       "end": "0x3A1503",
       "type": "struct",
       "read": {
         "entry_size": 28,
         "name_offset": 0,
-        "desc_ptr_offset": 16
+        "desc_ptr_offset": 16,
+        "no_reader": true
       }
     },
     "道具说明": {
@@ -17934,7 +17935,7 @@
       "byte_length": 9,
       "original": "レジスチルドール",
       "original_hex": "7a 8d 5d 61 79 95 ae 79 ff",
-      "translated": "",
+      "translated": "雷吉斯奇鲁",
       "table_index": 119,
       "table_base": "0x083C2A54",
       "is_fixed_table": true,

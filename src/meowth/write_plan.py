@@ -1349,10 +1349,15 @@ def build_write_plan(
                     "pad": raw_len - len(body),
                 })
             else:
+                # 模块声明了「名字没有读取点」时，这些条目本来就不会显示，
+                # 单列成 no_reader，不要混进 unresolved 里虚高。
+                reason = "unresolved_redirect"
+                if isinstance(mod, dict) and (mod.get("read") or {}).get("no_reader"):
+                    reason = "no_reader"
                 skip.append({
                     "id": eid,
                     "module": module,
-                    "reason": "unresolved_redirect",
+                    "reason": reason,
                 })
 
     plan = {

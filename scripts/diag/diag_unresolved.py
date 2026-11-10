@@ -36,6 +36,7 @@ from meowth.policy import (
     BIRCH_PTR_ALLOW,
     TITLE_LZ_BAND,
     _ptr_array_element_ok,
+    _script_cmd_ptr_ok,
     _script_inline_hdr_ok,
     is_class_text_ptr,
     is_local_pool_ptr,
@@ -75,6 +76,9 @@ def classify(rom: bytes, idx: dict, off: int, category: str, spans,
             or _script_inline_hdr_ok(rom, p)
             or _ptr_array_element_ok(rom, p)
         )
+        # 脚本命令指针：u16 命令字 + 参数 + u32 文本指针（非对齐的另一种合法形态）
+        cmd_ptr = bool(p & 3) and _script_cmd_ptr_ok(rom, p) and not in_body
+        inline_hdr = inline_hdr or cmd_ptr
         if p & 3:
             if not inline_hdr:
                 first = "misaligned"

@@ -1124,6 +1124,42 @@ def _script_inline_hdr_ok(rom: bytes | bytearray, ptr_addr: int) -> bool:
     return False
 
 
+def _script_cmd_ptr_ok(rom: bytes | bytearray, ptr_addr: int) -> bool:
+    """站点是否是「u16 脚本命令字 + 参数 + u32 文本指针」的尾部。
+
+    实测剧情区还有两种内联形态，既不是 ``0f 00`` 也不是 ``6a 5a 67``：
+
+    形态 A —— **u16 命令字 + 00 00 + ptr**（10 处，相位 1/2 都有）::
+
+        16 02 | 00 00 | <ptr>        ; cmd=0x0216，参数 0
+        4f 01 | 00 00 | <ptr>        ; cmd=0x014f
+
+    形态 B —— **u16 命令字(高字节 0x67) + ptr**（8 处，相位 3）::
+
+        c2 14 08 | 67 ...           ; 上一个指针的尾巴 + 0x67
+        27 6c 02 | 67 | <ptr>        ; cmd=0x6702
+
+    两种的共同点：**指针紧跟在命令字后面**，所以站点非 4 对齐。
+
+    为什么敢放行：调用方还要求 ``cur == expected_pointer``（这 4 字节精确
+    等于该文本的 GBA 地址），而「4 个字节恰好等于某条文本地址」本身在正文里
+    就是极低概率事件；再叠加「不在任何已登记正文 span 内」这一条
+    （见 filter_pointer_sources 的 in_body 检查），误改风险可忽略。
+
+    为什么不能放宽成「非对齐一律接受」：实测会改坏别处、模拟器直接卡死
+    （见 TASKS.md §2.2）。这里只认这两种**有明确命令字结构**的形态。
+    """
+    if ptr_addr < 6 or ptr_addr + 4 > len(rom):
+        return False
+    # 形态 B：命令字高字节 0x67，指针恰在 +3
+    if (ptr_addr & 3) == 3 and rom[ptr_addr - 1] == 0x67:
+        return True
+    # 形态 A：u16 参数 0x0000 紧贴指针
+    if bytes(rom[ptr_addr - 2:ptr_addr]) == b"\x00\x00":
+        return True
+    return False
+
+
 def _ptr_array_element_ok(rom: bytes | bytearray, ptr_addr: int) -> bool:
     """站点是否处在「逐条指针数组」里（相邻 4 字节也是指向 ROM 的指针）。
 
@@ -1203,7 +1239,14 @@ def filter_pointer_sources(
             # 非对齐站点就是脚本字节流里的 ``<opcode+args> <ptr>``。
             # 逐条/直接解析路径仍然只认已知命令头，防止误改别处。
             if not inline_hdr and not trust_unaligned:
-                continue
+                # 脚本命令指针（u16 命令字 + 参数 + u32 文本指针，见
+                # _script_cmd_ptr_ok）。额外要求站点不在已登记正文内 ——
+                # 非对齐站点原本不做 in_body 检查，这里补上。
+                if not (
+                    _script_cmd_ptr_ok(rom, ptr_addr)
+                    and not in_body
+                ):
+                    continue
         elif in_body and not inline_hdr:
             continue
         if ptr_addr in title_gfx_ptr_deny():
@@ -1232,8 +1275,10 @@ def filter_pointer_sources(
                 rom, ptr_addr, text_address, lz_spans=spans, strict=False
             ):
                 # 脚本内联（0f 00 <ptr> / 6a 5a 67 <ptr>）不经 C 字面量池语义，
-                # 单独放行。
-                if not inline_hdr:
+                # 单独放行。脚本命令指针（u16 命令字 + ptr）同理。
+                if not inline_hdr and not (
+                    (ptr_addr & 3) and _script_cmd_ptr_ok(rom, ptr_addr)
+                ):
                     continue
         # Brand literals: site/string class, not module id.
         if compact in brand_compact_skip() and ptr_addr >= 0x100000:

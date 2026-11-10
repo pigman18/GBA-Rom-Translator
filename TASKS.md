@@ -475,3 +475,24 @@ P2 渲染遗留（text_scene 删除 / 换行宽度 / 未翻译）
   ↓
 P3 全场景回归
 ```
+
+### 1.8 struct 名槽自适应（扩 stride）—— 已实现，暂不启用
+
+**动机**：一条译文超名槽就把整表判死。实测「雷吉斯奇鲁玩偶」29B > 装饰名
+名槽 27B → 120 条装饰名全部回落逐条 → unresolved。
+
+**实现**（`struct_trampoline.plan_struct_same_stride_clone`）：
+1. 拿全部译文算出所需名槽 `need = max(len(encode(t))+1)`
+2. `new_stride = entry_size`，不足则 ×2 直到 `new_stride - name_off >= need`
+3. 整表按 new_stride 重排（`entry[:name_off] + name(new_cap) + entry[name_off+old_cap:]`）
+4. `plan_stride_rewrite(base, old, new)` 生成读取步长补丁
+5. 改基址字面量
+
+对装饰名实测：`28→56`、名槽 `27→55`、120 条全部 fit、20 处 stride 补丁。
+
+**但会崩**：`plan_stride_rewrite` 只找到 20 处读取点，仍有没覆盖到的按 28
+索引的地方 → 图鉴/商店路径读错 → 模拟器 `输入回调停摆`。
+开关 `STRUCT_STRIDE_EXPAND = False` 保守关闭，行为回到「放不下的保留原文」。
+
+**下一步**：先量清装饰名表的全部读取点（含 `movs #28; muls` 这类
+非移位写法），再打开开关。

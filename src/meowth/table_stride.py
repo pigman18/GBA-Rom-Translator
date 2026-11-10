@@ -157,6 +157,66 @@ def _find_mov_imm_mul_stride(
     return hits
 
 
+
+# ---------------------------------------------------------------------------
+# 同函数内的补充扫描
+# ---------------------------------------------------------------------------
+def _func_bounds(rom: bytes, off: int, limit: int = 0x800) -> tuple[int, int]:
+    """以 push {.., lr} / pop {.., pc} 为界，估出 off 所在函数的范围。"""
+    n = len(rom)
+    start = max(0, off - limit)
+    for i in range(off, start, -2):
+        h = struct.unpack_from("<H", rom, i)[0]
+        if (h & 0xFE00) == 0xB400 and (h & 0x0100):
+            start = i
+            break
+    end = min(n - 2, off + limit)
+    for i in range(off, end, 2):
+        h = struct.unpack_from("<H", rom, i)[0]
+        if (h & 0xFE00) == 0xBC00 and (h & 0x0100):
+            end = i + 2
+            break
+    return start, end
+
+
+def _scan_mul_sites(rom: bytes, lo: int, hi: int, stride: int) -> list[tuple[int, int, int, int]]:
+    """在 [lo, hi) 里找 ``((i<<n)+i)<<m == i*stride`` 的三连。
+
+    只认 ``lsls rA,rB,#n / adds rC,rA,rB / lsls rC,rC,#m`` 这一种形态，
+    返回 (h2 偏移, rd, rs, imm2)。K 必须**精确等于** stride 才收，
+    所以这不是「窗口内瞎找 lsls」，是模式 + 常数双重校验。
+    """
+    out: list[tuple[int, int, int, int]] = []
+    hi = min(hi, len(rom) - 6)
+    for a in range(lo, hi, 2):
+        h0, h1, h2 = struct.unpack_from("<HHH", rom, a)
+        if (h0 & 0xF800) != 0x0000:          # lsls
+            continue
+        imm0 = (h0 >> 6) & 0x1F
+        rd0 = h0 & 7
+        rs0 = (h0 >> 3) & 7
+        if (h1 & 0xFE00) != 0x1800:          # adds rC, rn, rm
+            continue
+        rd1 = h1 & 7
+        rn1 = (h1 >> 3) & 7
+        rm1 = (h1 >> 6) & 7
+        if rd1 != rd0:
+            continue
+        if not ((rn1 == rd0 and rm1 == rs0) or (rn1 == rs0 and rm1 == rd0)):
+            continue
+        if (h2 & 0xF800) != 0x0000:          # lsls rC, rC, #m
+            continue
+        imm2 = (h2 >> 6) & 0x1F
+        rd2 = h2 & 7
+        rs2 = (h2 >> 3) & 7
+        if rd2 != rd1 or rs2 != rd1:
+            continue
+        k = ((1 << imm0) + 1) << imm2
+        if k == stride:
+            out.append((a + 4, rd2, rs2, imm2))
+    return out
+
+
 def plan_stride_rewrite(
     rom: bytes,
     base: int,
@@ -233,6 +293,29 @@ def plan_stride_rewrite(
             ldr_off=ldr, stride=r.stride,
             reason=r.reason or "K 不等于旧 stride 且无 movs+muls",
         ))
+
+    # ---- 同函数补扫：一个 ldr 站点常有多条 ×old_stride 计算链 ----
+    # 典型：图鉴先算 species×6 判空，再算一次取名字。solve_site_auto 只
+    # 返回其中一条链，另一条保持 ×6 —— 于是「判空按 ×24、取值按 ×6」，
+    # 读到上一条目的尾巴：名字一半空一半乱，光标一移动还撞字。
+    if plan.patches:
+        seen_off = {p.offset for p in plan.patches}
+        extra_delta = ratio.bit_length() - 1
+        for ldr in ldrs:
+            fstart, fend = _func_bounds(rom, ldr)
+            for off2, rd2, rs2, imm2 in _scan_mul_sites(rom, fstart, fend, old_stride):
+                if off2 in seen_off:
+                    continue
+                new_imm2 = imm2 + extra_delta
+                if not (0 <= new_imm2 <= 31):
+                    continue
+                seen_off.add(off2)
+                plan.patches.append(Patch(
+                    offset=off2,
+                    data=thumb_shift("lsls", rd2, rs2, new_imm2),
+                    label=(f"K={old_stride} lsls #{imm2}→#{new_imm2} "
+                           f"(同函数补扫) ← ldr 0x{ldr:06X}"),
+                ))
 
     return plan
 

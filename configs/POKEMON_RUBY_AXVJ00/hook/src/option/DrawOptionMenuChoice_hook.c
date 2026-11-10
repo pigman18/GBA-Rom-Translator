@@ -22,7 +22,11 @@ void DrawOptionMenuChoice_hook_C(const uint8_t *text,
     unsigned i = 0;
     unsigned off = 0;
 
-    if (text[0] == 0xF9u) {
+    /* 汉字开头要前置 3 字节调色板控制码。
+     * ★ 2026-11-10：编码改成 F7(3B/字) 后，这里只认 F9 会漏判 ——
+     *   于是走「非汉字」分支把 style 写进 dst[2]，正好覆盖第一个汉字的
+     *   低字节，设置菜单首项显示成乱码。 */
+    if (text[0] == 0xF9u || text[0] == 0xF7u) {
         dst[0] = EXT_CTRL_CODE_BEGIN;
         dst[1] = EXT_CTRL_CODE_PALETTE;
         dst[2] = (uint8_t)style;
@@ -34,7 +38,7 @@ void DrawOptionMenuChoice_hook_C(const uint8_t *text,
         i++;
     }
 
-    if (text[0] != 0xF9u)
+    if (text[0] != 0xF9u && text[0] != 0xF7u)
         dst[2] = (uint8_t)style;
 
     dst[off + i] = 0xFF;

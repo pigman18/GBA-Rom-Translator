@@ -1018,6 +1018,7 @@ def build_write_plan(
         if is_struct:
             from .struct_trampoline import (
                 plan_struct_name_ptr,
+                plan_struct_name_ptr_fold,
                 plan_struct_same_stride_clone,
                 plan_struct_trampoline,
             )
@@ -1034,8 +1035,13 @@ def build_write_plan(
             for label, fn in (
                 ("trampoline", plan_struct_trampoline),
                 ("name_ptr", plan_struct_name_ptr),
-                # 扩 stride + 字段重排：只在配置里写了 read.reflow 的表上启用
+                # 扩 stride + 字段重排：只在配置里写了 read.reflow 的表上启用。
+                # 必须排在 name_ptr_fold 之前：reflow 名字仍内联在结构体里、
+                # 不依赖读点，比「名槽改指针」稳。
                 ("reflow", plan_struct_stride_reflow),
+                # name_off 不是 4 的倍数时，name_ptr 的 ldr imm5 编不出来，
+                # 但可以把指针抬到 4 对齐、两条指令原地折（对战塔训练家）
+                ("name_ptr_fold", plan_struct_name_ptr_fold),
                 ("clone", plan_struct_same_stride_clone),
             ):
                 t, c, e = fn(

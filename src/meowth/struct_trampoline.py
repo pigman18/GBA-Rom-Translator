@@ -956,6 +956,280 @@ def plan_struct_name_ptr(
     return table, next_cursor, None
 
 
+_STRCPY = 0x080042E8  # StringCopy(dst, src)：FF 定界，长度不限
+
+
+def _dec_adds_reg(rom: bytes, off: int) -> tuple[int, int, int] | None:
+    """解 ``adds Rd, Rn, Rm``（T1），返回 (rd, rn, rm)。"""
+    h = struct.unpack_from("<H", rom, off)[0]
+    if (h & 0xFE00) != 0x1800:
+        return None
+    return h & 7, (h >> 3) & 7, (h >> 6) & 7
+
+
+def _find_name_fold_sites(
+    rom: bytes,
+    base: int,
+    name_off: int,
+    ptr_off: int,
+) -> list[dict]:
+    """定位「名字偏移折进 adds」形态的读点（对战塔训练家表）。
+
+    形态（``0x080A9B78`` / ``0x080AE530``）::
+
+        adds r1, r6, #2      ; r1 = base + name_off
+        adds r0, r0, r1      ; r0 = idx*stride + base + name_off
+        mov  r1, sp          ; （可有可无，栈缓冲）
+        bl   0x080042E8      ; StringCopy(dst, src)，FF 定界
+
+    与 ``_find_name_copy_sites`` 的区别：那条认的是
+    ``adds / movs pad / movs len / StringCopyN`` 四连（长度硬编码在
+    ``movs`` 里）；这条是「基址加名字偏移 → 再加索引 → 整串拷贝」，
+    中间允许 0~2 条无关指令，且**没有长度常量**可改。
+
+    之所以要单独认：这种形态里名字地址是**算出来的**，不能换成
+    ``ldr Rd,[Rn,#imm]``（``#2`` 不是 4 的倍数，imm5 编不出来）。
+    但可以把「+name_off」抬到「+ptr_off」，再把紧邻的
+    ``adds Rd,Rn,Rm`` 换成 ``ldr Rd,[Rn,Rm]`` —— 地址和变成
+    ``idx*stride + base + ptr_off``，正好是 4 对齐的指针槽，**两条
+    指令原地替换、总长不变**，不需要跳板也不需要窗口。
+
+    **锚点是 RAM 基址不是 ROM 表基址**：这张表被 ``bl memcpy`` 整条拷进
+    ``0x0203826C``，两个读点算的都是「RAM 基址 + idx*stride + name_off」
+    （``r6``/``r4`` 都是 ``ldr_pc`` 取到的 RAM 字面量）。按 ROM 表基址去
+    找函数会**一个都找不到** —— 这是之前判「定不出读点」的直接原因。
+    所以这里改成全 ROM 扫 ``bl StringCopy``，再要求基址寄存器在函数内
+    由 ``ldr_pc`` 载入了「RAM 地址（0x02xxxxxx）或本表 ROM 基址」。
+    """
+    try:
+        from .table_stride import _func_bounds
+    except ImportError:  # pragma: no cover
+        return []
+
+    reg_cache: dict[tuple[int, int], dict[int, int]] = {}
+
+    def _reg_lits(fs: int, fe: int) -> dict[int, int]:
+        key = (fs, fe)
+        if key in reg_cache:
+            return reg_cache[key]
+        m: dict[int, int] = {}
+        a = fs
+        while a < fe - 1:
+            h = struct.unpack_from("<H", rom, a)[0]
+            if (h & 0xF800) == 0x4800:
+                rd = (h >> 8) & 7
+                lit = ((a + 4) & ~3) + (h & 0xFF) * 4
+                if lit + 4 <= len(rom):
+                    m[rd] = struct.unpack_from("<I", rom, lit)[0]
+            a += 2
+        reg_cache[key] = m
+        return m
+
+    out: list[dict] = []
+    seen: set[int] = set()
+    for bl in _bl_sites(rom, _STRCPY, 0, 0x800000):
+        for back in (4, 6, 8):
+            p = bl - back
+            if p < 0:
+                continue
+            dec1 = _dec_adds_imm3(rom, p)
+            if dec1 is None:
+                continue
+            rd1, rn1, imm1 = dec1
+            if imm1 != name_off:
+                continue
+            dec2 = _dec_adds_reg(rom, p + 2)
+            if dec2 is None:
+                continue
+            rd2, rn2, rm2 = dec2
+            # 名字寄存器必须是 dec2 的**源**（dst 可以是它自己，也可以是另一个）
+            if rd1 not in (rn2, rm2):
+                continue
+            other = rn2 if rm2 == rd1 else rm2
+            if max(rd1, rn1, rd2, rn2, rm2) > 7:
+                continue
+            fs, fe = _func_bounds(rom, p)
+            v = _reg_lits(fs, fe).get(rn1)
+            if v is None:
+                continue
+            if not (0x02000000 <= v < 0x03000000 or v == GBA_BASE + base):
+                continue
+            if p in seen:
+                break
+            seen.add(p)
+            out.append({
+                "adds": p,
+                "fold": p + 2,
+                "dst": rd2,
+                "name_reg": rd1,
+                "idx_reg": other,
+                "base_reg": rn1,
+                "base_val": v,
+            })
+            break
+    return out
+
+
+def plan_struct_name_ptr_fold(
+    rom: bytes,
+    name: str,
+    mod: dict,
+    entries: list[dict],
+    encoder: Encoder | None,
+    cursor: int,
+) -> tuple[dict | None, int, str | None]:
+    """名字槽改存 u32 指针，**读点两条指令原地折**（不用跳板）。
+
+    专治 ``name_off`` 不是 4 的倍数（如对战塔 ``name@2``）而读点又是
+    「算地址 → StringCopy」的表：``plan_struct_name_ptr`` 要求
+    ``ldr Rd,[Rn,#name_off]`` 的 imm5，``#2`` 编不出来，于是整表落到
+    克隆；这里把指针抬到 ``ptr_off = ceil(name_off/4)*4``，两条指令
+    换掉即可（见 ``_find_name_fold_sites``）。
+
+    RAM 侧结构大小不变（stride 不变），所以「结构被 memcpy 到 RAM、
+    有 N 处字面量引用」的表也不会被冲掉 —— 对战塔就是这种：
+    ``0x080A9DF8 bl memcpy`` 拷 64B 到 ``0x0203826C``，66 处引用。
+    """
+    try:
+        base, entry_size, count, name_off, _decl = _struct_geom(mod)
+    except ValueError as exc:
+        return None, cursor, str(exc)
+    old_cap = _name_cap(rom, mod, base, entry_size, name_off, count)
+    ptr_off = (name_off + 3) & ~3
+    if ptr_off == name_off:
+        ptr_off += 4
+    if ptr_off - name_off > 7:
+        return None, cursor, f"ptr_off-name_off={ptr_off - name_off}，adds imm3 只能 0..7"
+    if ptr_off + 4 > name_off + old_cap:
+        return None, cursor, (
+            f"名槽 {name_off}..{name_off + old_cap} 放不下 u32 指针"
+            f"（ptr@{ptr_off}）——该走扩 stride / reflow"
+        )
+
+    enc_by_idx: dict[int, bytes] = {}
+    for e in entries:
+        if e.get("_reject"):
+            continue
+        a = e.get("address")
+        if a in (None, ""):
+            continue
+        try:
+            off = _off(a)
+        except (TypeError, ValueError):
+            continue
+        delta = off - base - name_off
+        if delta % entry_size:
+            continue
+        idx = delta // entry_size
+        if not (0 <= idx < count):
+            continue
+        text = e.get("translated") or ""
+        if not text or text == (e.get("original") or ""):
+            continue
+        raw = _encode_body(text, encoder)
+        if raw:
+            enc_by_idx[idx] = raw
+    if not enc_by_idx:
+        return None, cursor, "无可用译文"
+
+    blob_len = count * entry_size
+    name_area = cursor + blob_len
+    ptrs: dict[int, int] = {}
+    na = name_area
+    for idx in sorted(enc_by_idx):
+        ptrs[idx] = GBA_BASE + na
+        na = (na + len(enc_by_idx[idx]) + 3) & ~3
+    total = na - cursor
+    if cursor + total > TABLE_AREA_END:
+        return None, cursor, "补丁表区域满了"
+
+    names = bytearray(total - blob_len)
+    for idx, ptr in ptrs.items():
+        rel = ptr - GBA_BASE - name_area
+        names[rel:rel + len(enc_by_idx[idx])] = enc_by_idx[idx]
+
+    # 克隆：[0..name_off)[FF][00 填充到 ptr_off)[u32 指针][ptr_off+4..原样]
+    # name_off 处的 FF 让**没被 patch 的老读点**在此截断（显示空名），
+    # 而不是把指针字节当文本扫出去。
+    blob = bytearray()
+    for i in range(count):
+        src = base + i * entry_size
+        entry = bytes(rom[src:src + entry_size])
+        if i in ptrs:
+            head = entry[:name_off] + b"\xFF"
+            head += b"\x00" * (ptr_off - name_off - 1)
+            entry = head + struct.pack("<I", ptrs[i]) + entry[ptr_off + 4:]
+        blob += entry[:entry_size]
+
+    new_base = cursor
+    next_cursor = (cursor + total + 3) & ~3
+
+    safe = re.sub(r"[^\w\-]+", "_", name)
+    lit_out: list[dict] = []
+    for lit in find_literal_sites(rom, GBA_BASE + base):
+        cur_v = struct.unpack_from("<I", rom, lit)[0]
+        if cur_v in (GBA_BASE + base, GBA_BASE + (base & ~3)):
+            lit_out.append({"off": f"0x{lit:X}"})
+        elif cur_v == GBA_BASE + base + name_off:
+            lit_out.append({"off": f"0x{lit:X}", "add": name_off})
+    if not lit_out:
+        return None, cursor, "无表基字面量"
+
+    sites = _find_name_fold_sites(rom, base, name_off, ptr_off)
+    if not sites:
+        return None, cursor, "未找到「adds 折址 + StringCopy」读点"
+
+    insns: list[dict] = []
+    for s in sites:
+        if ptr_off != name_off:
+            insns.append({
+                "off": f"0x{s['adds']:X}",
+                "bytes": struct.pack(
+                    "<H", 0x1C00 | (ptr_off << 6) | (s["base_reg"] << 3) | s["name_reg"]
+                ).hex(" "),
+                "label": (
+                    f"adds r{s['name_reg']},r{s['base_reg']},#{name_off}"
+                    f"→#{ptr_off}（指针槽）"
+                ),
+            })
+        enc = 0x5800 | (s["idx_reg"] << 6) | (s["name_reg"] << 3) | s["dst"]
+        insns.append({
+            "off": f"0x{s['fold']:X}",
+            "bytes": struct.pack("<H", enc).hex(" "),
+            "label": (
+                f"adds r{s['dst']},r{s['idx_reg']},r{s['name_reg']}"
+                f" → ldr r{s['dst']},[r{s['name_reg']},r{s['idx_reg']}]"
+                f"（解引用名字指针）"
+            ),
+        })
+
+    table = {
+        "module": name,
+        "mode": "struct_name_ptr_fold",
+        "old_base": f"0x{base:X}",
+        "old_stride": entry_size,
+        "new_base": f"0x{new_base:X}",
+        "new_stride": entry_size,
+        "count": count,
+        "name_offset": name_off,
+        "old_name_cap": old_cap,
+        "new_name_cap": max(len(v) for v in enc_by_idx.values()),
+        "blob": f"gen/plan_table_{safe}.bin",
+        "blob_name": f"plan_table_{safe}.bin",
+        "blob_hex": (bytes(blob) + bytes(names)).hex(),
+        "insns": insns,
+        "literals": lit_out,
+        "field_map": {},
+        "note": (
+            f"名字指针折址 base=0x{base:X} stride {entry_size}（名槽 "
+            f"{name_off} 处 FF、{ptr_off}..{ptr_off + 4} 存 u32 指针）；"
+            f"translated={len(enc_by_idx)} keep_jp={count - len(ptrs)} "
+            f"lits={len(lit_out)} insns={len(insns)} 读点算法×{len(sites)}"
+        ),
+    }
+    return table, next_cursor, None
+
+
 def plan_struct_same_stride_clone(
     rom: bytes,
     name: str,

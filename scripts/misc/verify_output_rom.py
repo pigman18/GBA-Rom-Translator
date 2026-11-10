@@ -20,7 +20,7 @@ import struct
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]
 DEFAULT_ROM = ROOT / "roms" / "outputs" / "POKEMON_RUBY_AXVJ00_translated.gba"
 # 主文件被 mGBA 锁住时流水线会改写 *_translated_new.gba
 ALT_ROM = ROOT / "roms" / "outputs" / "POKEMON_RUBY_AXVJ00_translated_new.gba"

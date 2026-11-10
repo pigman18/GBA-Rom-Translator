@@ -99,6 +99,7 @@ def scan_mul_triplets(
             form = "sub"
         if base_k <= 0:
             continue
+        hit: int | None = None
         for a2 in range(a0 + 4, min(a0 + 4 + max_gap * 2, end), 2):
             h2 = _u16(rom, a2)
             if (h2 & 0xF800) != 0x0000:
@@ -114,9 +115,27 @@ def scan_mul_triplets(
             if rd2 != rd1 or rs2 != rd1:
                 break
             if (base_k << imm2) == stride:
-                out.append((a0, a0 + 2, a2, rd2, rs0, form))
+                hit = a2
             break
+        if hit is not None:
+            out.append((a0, a0 + 2, hit, rd1, rs0, form))
+        elif base_k == stride:
+            # **两条形态**：``lsls #n`` + ``adds/subs``，末尾没有移位。
+            # 7 = (8-1)<<0 就是这种（编译器把 ``<<0`` 省掉了）。
+            # 之前只认三连，整个属性わざ表（0x3DCAEE，stride 7）扫不到。
+            out.append((a0, a0 + 2, None, rd1, rs0, form))
     return out
+
+
+def emit_pair(rd: int, rs: int, new_stride: int) -> bytes | None:
+    """``lsls rd,rs,#n`` + ``adds/subs rd,rd,rs``（不含末尾移位）。"""
+    for form in ("add", "sub"):
+        for n in range(0, 32):
+            if (1 << n) + (1 if form == "add" else -1) == new_stride:
+                w0 = 0x0000 | (n << 6) | (rs << 3) | rd
+                w1 = (0x1800 if form == "add" else 0x1A00) | (rs << 6) | (rd << 3) | rd
+                return struct.pack("<HH", w0, w1)
+    return None
 
 
 def emit_triplet(rd: int, rs: int, new_stride: int) -> bytes | None:
@@ -243,7 +262,10 @@ def collect_field_patches(
     命中映射表但基址寄存器**完全没来历**、且该函数从没出现过本表访问 →
     返回失败。改一半 = 索引错位，模拟器 input callback 停摆（实测两次）。
     """
-    trip = {a0: (a2, rd) for a0, a1, a2, rd, rs, form in triplets}
+    trip = {
+        a0: ((a2 if a2 is not None else a1), rd)
+        for a0, a1, a2, rd, rs, form in triplets
+    }
     patches: list[dict] = []
     seen_off: set[int] = set()
 
@@ -431,6 +453,25 @@ def plan_struct_stride_expand(
 
     insns: list[dict] = []
     for a0, a1, a2, rd, rs, form in triplets:
+        if a2 is None:
+            # 原形态是两条（lsls + adds/subs），新的也必须能用两条表示
+            pair = emit_pair(rd, rs, new_stride)
+            if pair is None:
+                return [], [], (
+                    f"stride {new_stride} 无法用「lsls+adds/subs」两条表示"
+                    f"（0x{a0:X} 原为两条形态）"
+                )
+            insns.append({
+                "off": f"0x{a0:X}",
+                "bytes": pair[:2].hex(" "),
+                "label": f"lsls r{rd},r{rs}（stride {old_stride}→{new_stride}·两条）",
+            })
+            insns.append({
+                "off": f"0x{a1:X}",
+                "bytes": pair[2:4].hex(" "),
+                "label": f"算术指令→新形态（两条，{old_stride}→{new_stride}）",
+            })
+            continue
         enc = emit_triplet(rd, rs, new_stride)
         if enc is None:
             return [], [], f"stride {new_stride} 无法用三连表示"

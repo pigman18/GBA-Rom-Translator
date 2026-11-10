@@ -55,8 +55,7 @@ def plan_struct_stride_reflow(
         return None, cursor, f"reflow 配置非法：{exc}"
     if name_off + name_cap >= new_stride:
         return None, cursor, "名字区与字段区重叠"
-    if not fields:
-        return None, cursor, "reflow.fields 为空"
+    # 纯名字表（没有字段要搬）时 fields 可以为空
 
     try:
         base = _off(mod.get("start"))
@@ -125,8 +124,11 @@ def plan_struct_stride_reflow(
 
         for old_off, new_off, width in fields:
             new[new_off:new_off + width] = old[old_off:old_off + width]
-        # 首字节（索引）原样
-        new[0] = old[0]
+        # 首字节（索引）原样 —— **只在名字不从 0 开始时**。
+        # 属性わざ表 name_off=0，无条件抄 old[0] 会把名字第一个字节
+        # 覆盖成原文（实测 blob 开头残留「ノ」「ゴ」）。
+        if name_off > 0:
+            new[0] = old[0]
         blob += new
 
     if n_tr == 0:

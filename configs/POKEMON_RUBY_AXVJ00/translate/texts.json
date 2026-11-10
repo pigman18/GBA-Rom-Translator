@@ -460,6 +460,24 @@
         "entry_size": 64,
         "name_offset": 2
       }
+    },
+    "属性わざ名": {
+      "label": "词条·属性招式名",
+      "group": "词条",
+      "default": true,
+      "description": "「〇〇わざ」属性名表（基址 0x3DCAEE，stride 7，name@0，17 条）。整表只有第 1 条有指针（0x11BD24/0x11C4B0），其余靠 base+i*7 顺序读；名字槽只有 7B 装不下 4~5 字，扩 stride 7→33（=32+1，两条指令可表示）让名字区变 32B。",
+      "start": "0x3DCAEE",
+      "end": "0x3DCB64",
+      "type": "struct",
+      "read": {
+        "entry_size": 7,
+        "name_offset": 0,
+        "reflow": {
+          "new_stride": 33,
+          "name_cap": 32,
+          "fields": []
+        }
+      }
     }
   },
   "count": 12673,
@@ -50999,7 +51017,7 @@
     },
     {
       "id": "axvj_bbdfc7154f26",
-      "module": "UI界面",
+      "module": "属性わざ名",
       "address": "0x083DCAEE",
       "byte_length": 7,
       "original": "ノーマルわざ",
@@ -51017,7 +51035,7 @@
     },
     {
       "id": "axvj_42a3561b1572",
-      "module": "UI界面",
+      "module": "属性わざ名",
       "address": "0x083DCB1F",
       "byte_length": 7,
       "original": "ゴーストわざ",
@@ -51029,7 +51047,7 @@
     },
     {
       "id": "axvj_e4c31df271fd",
-      "module": "UI界面",
+      "module": "属性わざ名",
       "address": "0x083DCB50",
       "byte_length": 7,
       "original": "エスパーわざ",
@@ -153894,7 +153912,7 @@
     },
     {
       "id": "axvj_becf49839f7b",
-      "module": "剧情",
+      "module": "属性わざ名",
       "address": "0x083DCAF5",
       "byte_length": 7,
       "original": "かくとうわざ",
@@ -153906,7 +153924,7 @@
     },
     {
       "id": "axvj_0e9a233fec2e",
-      "module": "剧情",
+      "module": "属性わざ名",
       "address": "0x083DCAFC",
       "byte_length": 6,
       "original": "ひこうわざ",
@@ -153918,7 +153936,7 @@
     },
     {
       "id": "axvj_f8367eda9bb7",
-      "module": "剧情",
+      "module": "属性わざ名",
       "address": "0x083DCB03",
       "byte_length": 5,
       "original": "どくわざ",
@@ -153930,7 +153948,7 @@
     },
     {
       "id": "axvj_cddf1e1187c0",
-      "module": "剧情",
+      "module": "属性わざ名",
       "address": "0x083DCB0A",
       "byte_length": 6,
       "original": "じめんわざ",
@@ -153942,7 +153960,7 @@
     },
     {
       "id": "axvj_778cc123527c",
-      "module": "剧情",
+      "module": "属性わざ名",
       "address": "0x083DCB11",
       "byte_length": 5,
       "original": "いわわざ",
@@ -153954,7 +153972,7 @@
     },
     {
       "id": "axvj_94dfa44ae927",
-      "module": "剧情",
+      "module": "属性わざ名",
       "address": "0x083DCB18",
       "byte_length": 5,
       "original": "むしわざ",
@@ -153966,7 +153984,7 @@
     },
     {
       "id": "axvj_e0986addccfd",
-      "module": "剧情",
+      "module": "属性わざ名",
       "address": "0x083DCB26",
       "byte_length": 6,
       "original": "はがねわざ",
@@ -153978,7 +153996,7 @@
     },
     {
       "id": "axvj_f457e0b334be",
-      "module": "剧情",
+      "module": "属性わざ名",
       "address": "0x083DCB2D",
       "byte_length": 6,
       "original": "はてなわざ",
@@ -153990,7 +154008,7 @@
     },
     {
       "id": "axvj_3218e74df269",
-      "module": "剧情",
+      "module": "属性わざ名",
       "address": "0x083DCB34",
       "byte_length": 6,
       "original": "ほのおわざ",
@@ -154002,7 +154020,7 @@
     },
     {
       "id": "axvj_85f764801a28",
-      "module": "剧情",
+      "module": "属性わざ名",
       "address": "0x083DCB3B",
       "byte_length": 5,
       "original": "みずわざ",
@@ -154014,7 +154032,7 @@
     },
     {
       "id": "axvj_dd9091835592",
-      "module": "剧情",
+      "module": "属性わざ名",
       "address": "0x083DCB42",
       "byte_length": 5,
       "original": "くさわざ",
@@ -154026,7 +154044,7 @@
     },
     {
       "id": "axvj_ce6492094bf4",
-      "module": "剧情",
+      "module": "属性わざ名",
       "address": "0x083DCB49",
       "byte_length": 6,
       "original": "でんきわざ",
@@ -154038,7 +154056,7 @@
     },
     {
       "id": "axvj_a0120b9c0b2d",
-      "module": "剧情",
+      "module": "属性わざ名",
       "address": "0x083DCB57",
       "byte_length": 6,
       "original": "こおりわざ",
@@ -154050,7 +154068,7 @@
     },
     {
       "id": "axvj_f6d0258901bb",
-      "module": "剧情",
+      "module": "属性わざ名",
       "address": "0x083DCB5E",
       "byte_length": 7,
       "original": "ドラゴンわざ",

@@ -160,7 +160,9 @@ def is_printable_pcs(s: bytes) -> bool:
     return True
 
 
-def looks_like_jp_text(s: bytes, *, allow_space_pad: bool = False) -> bool:
+def looks_like_jp_text(
+    s: bytes, *, allow_space_pad: bool = False, allow_latin_heavy: bool = False
+) -> bool:
     """True if ``s`` is a plausible FF-terminated JP dialogue/UI string.
 
     Strict enough to reject Thumb/code blobs that decode to mojibake kana.
@@ -169,6 +171,11 @@ def looks_like_jp_text(s: bytes, *, allow_space_pad: bool = False) -> bool:
     ``allow_space_pad``：训练卡背面等列对齐标签池用 0x00 作栏间垫片
     （如「かち······まけ」），旧 00 密度规则会误杀；由模块
     ``write.space_pad`` 打开，仍靠后面 kana 比例 + ``is_struct_like_pcs`` 挡窗模板。
+
+    ``allow_latin_heavy``：全角数字/拉丁为主的**真 UI 串**（「わざマシン３２
+    １５００まい」「ＲＴＣを リセットします」）会被 ``latinish`` 比例规则误杀。
+    只在调用方**已证实存在指向该地址的 u32 指针**时打开 —— 指针是比字形统计
+    更硬的证据；``is_struct_like_pcs``（窗模板）仍然兜底。
     """
     if not s or s[-1] != 0xFF:
         return False
@@ -230,6 +237,10 @@ def looks_like_jp_text(s: bytes, *, allow_space_pad: bool = False) -> bool:
 
     if glyph < 2:
         return False
+    # 有实证指针的全角数字/拉丁 UI 串：只要含 ≥2 个假名就认（「わざマシン３２
+    # １５００まい」latinish 占 6/15，比例规则必杀；「ＬＲ」这种 0 假名的仍然拒）。
+    if allow_latin_heavy:
+        return kanaish >= 2
     if latinish > max(1, glyph // 8):
         return False
     # Punctuation/spaces are common in dialogue — exclude them from the ratio.

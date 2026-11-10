@@ -1197,8 +1197,12 @@ def build_write_plan(
             space_pad = bool((mod.get("write") or {}).get("space_pad")) or bool(
                 entry.get("space_pad")
             )
+            # 有实证 u32 指针的串，允许「全角数字/拉丁为主」——这类真 UI 串
+            # （「わざマシン３２  １５００まい」「ＲＴＣを リセットします」）
+            # 会被字形比例规则误杀。窗模板仍由 is_struct_like_pcs 挡住。
+            has_ref = struct.pack("<I", GBA_BASE + addr) in rom
             if is_struct_like_pcs(raw) or not looks_like_jp_text(
-                raw, allow_space_pad=space_pad
+                raw, allow_space_pad=space_pad, allow_latin_heavy=has_ref
             ):
                 skip.append({"id": eid, "module": module, "reason": "bad_text_target"})
                 continue

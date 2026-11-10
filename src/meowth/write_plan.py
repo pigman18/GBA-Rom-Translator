@@ -1013,6 +1013,7 @@ def build_write_plan(
                 plan_struct_same_stride_clone,
                 plan_struct_trampoline,
             )
+            from .struct_reflow import plan_struct_stride_reflow
 
             # 名字读法决定能不能翻：
             #   ① 有「返回名字指针」的读点 → trampoline 旁路，名字长度不限（最好）
@@ -1025,6 +1026,8 @@ def build_write_plan(
             for label, fn in (
                 ("trampoline", plan_struct_trampoline),
                 ("name_ptr", plan_struct_name_ptr),
+                # 扩 stride + 字段重排：只在配置里写了 read.reflow 的表上启用
+                ("reflow", plan_struct_stride_reflow),
                 ("clone", plan_struct_same_stride_clone),
             ):
                 t, c, e = fn(

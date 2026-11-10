@@ -18,7 +18,8 @@ typedef void (*menu_print_t)(const uint8_t *str, uint32_t left, uint32_t top);
 void DrawOptionMenuChoice_hook_C(const uint8_t *text,
                                  uint32_t x, uint32_t y, uint32_t style)
 {
-    uint8_t dst[20];
+    /* 汉字 4 字节/字：3 字节控制码 + 4 个汉字(16B) + FF = 20，留 4 字节余量 */
+    uint8_t dst[24];
     unsigned i = 0;
     unsigned off = 0;
 
@@ -33,7 +34,7 @@ void DrawOptionMenuChoice_hook_C(const uint8_t *text,
         off = 3;
     }
 
-    while (text[i] != 0xFF && i < 15u) {
+    while (text[i] != 0xFF && i < 20u) {
         dst[off + i] = text[i];
         i++;
     }

@@ -217,6 +217,67 @@ def _scan_mul_sites(rom: bytes, lo: int, hi: int, stride: int) -> list[tuple[int
     return out
 
 
+
+def _scan_split_mul(rom: bytes, lo: int, hi: int, stride: int) -> list[tuple[int, int, int, int]]:
+    """分离式 ``i*stride``：``lsls rA,rB,#1`` 与 ``adds/lsls`` 不连续。
+
+    图鉴列表就是这么写的::
+
+        0808AD84: lsls r3, r5, #1      ; r3 = i*2   （在判空分支里算的）
+        0808AD88: lsls r0, r0, #3      ; 另一条链，已被上面改成 ×24
+        0808AD98: adds r1, r3, r5      ; r1 = i*2 + i = i*3
+        0808AD9A: lsls r1, r1, #1      ; i*6      ← 这一处以前完全没被改
+
+    连续三连的扫描抓不到它（两段之间隔着 0x14 字节），于是一直按 ×6 索引
+    新的 ×24 表，读到上一条目的尾巴：图鉴名字空/乱、光标一动就撞字。
+    """
+    if not (1 <= stride <= 255):
+        return []
+    hi = min(hi, len(rom) - 4)
+    # 收集「rX = rY << 1」（要求 rX != rY，排除自移位）
+    doubled: dict[int, list[tuple[int, int]]] = {}
+    for a in range(lo, hi, 2):
+        h = struct.unpack_from("<H", rom, a)[0]
+        if (h & 0xF800) != 0x0000:
+            continue
+        if ((h >> 6) & 0x1F) != 1:
+            continue
+        rd = h & 7
+        rs = (h >> 3) & 7
+        if rd != rs:
+            doubled.setdefault(rd, []).append((rs, a))
+
+    out: list[tuple[int, int, int, int]] = []
+    for a in range(lo, hi - 2, 2):
+        h1, h2 = struct.unpack_from("<HH", rom, a)
+        if (h1 & 0xFE00) != 0x1800:          # adds rD, rn, rm
+            continue
+        rd = h1 & 7
+        rn = (h1 >> 3) & 7
+        rm = (h1 >> 6) & 7
+        if (h2 & 0xF800) != 0x0000:          # lsls rD, rD, #m
+            continue
+        if (h2 & 7) != rd or ((h2 >> 3) & 7) != rd:
+            continue
+        imm2 = (h2 >> 6) & 0x1F
+        # rn 是否是「rm 的两倍」（且那条 lsls 在本条之前）
+        ok = False
+        for src, pos in doubled.get(rn, ()):
+            if src == rm and pos < a:
+                ok = True
+                break
+        if not ok:
+            for src, pos in doubled.get(rm, ()):
+                if src == rn and pos < a:
+                    ok = True
+                    break
+        if not ok:
+            continue
+        if (3 << imm2) == stride:
+            out.append((a + 2, rd, rd, imm2))
+    return out
+
+
 def plan_stride_rewrite(
     rom: bytes,
     base: int,
@@ -303,7 +364,9 @@ def plan_stride_rewrite(
         extra_delta = ratio.bit_length() - 1
         for ldr in ldrs:
             fstart, fend = _func_bounds(rom, ldr)
-            for off2, rd2, rs2, imm2 in _scan_mul_sites(rom, fstart, fend, old_stride):
+            cand = (_scan_mul_sites(rom, fstart, fend, old_stride)
+                    + _scan_split_mul(rom, fstart, fend, old_stride))
+            for off2, rd2, rs2, imm2 in cand:
                 if off2 in seen_off:
                     continue
                 new_imm2 = imm2 + extra_delta

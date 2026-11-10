@@ -21,13 +21,13 @@ typedef void (*menu_print_t)(const uint8_t *str, uint32_t left, uint32_t top);
 #define OUT_MAX         96u
 
 /* 把一条 PCS 流展开追加到 out：
- *   F7 hi lo        → 原样拷贝 3 字节（**当前编码**，与火红一致）
+ *   F7 00 hi lo     → 原样拷贝 4 字节（**当前编码**）
  *   F9 00 xx xx     → 原样拷贝 4 字节（旧编码，兼容残留）
- *   其它字节         → 原样拷贝
+ *   其它字节         → 原样拷贝（裸 0xF7 不是合法组首，单字节跳过）
  *   遇 0xFF 结束；遇 0x00（日文空格）结束。
  * 返回新的写入位置。
  *
- * ★ 2026-11-10：编码从 F9 00(4B) 换成 F7(3B) 后，这里必须同步。
+ * ★ 2026-11-10：编码定为 F7 00 hi lo（4B）后，这里必须按 4 字节分组。
  *   只认 F9 的版本会把 0xF7 当成普通单字节搬走，整条流被撕裂 ——
  *   图鉴「分类名 + 宝可梦」行乱码、名字空、上下翻页读到越界地址，
  *   全都源于这一处没跟上。 */
@@ -39,14 +39,15 @@ static unsigned append_stream(uint8_t *out, unsigned i,
 
         if (b == 0xFF || b == 0x00)
             break;
-        if (b == 0xF7u) {
-            if (i + 3u >= OUT_MAX)
+        if (b == 0xF7u && stream[1] == 0x00u) {
+            if (i + 4u >= OUT_MAX)
                 break;
             out[i] = stream[0];
             out[i + 1u] = stream[1];
             out[i + 2u] = stream[2];
-            i += 3u;
-            stream += 3;
+            out[i + 3u] = stream[3];
+            i += 4u;
+            stream += 4;
         } else if (b == 0xF9u) {
             if (i + 4u >= OUT_MAX)
                 break;
@@ -64,16 +65,16 @@ static unsigned append_stream(uint8_t *out, unsigned i,
     return i;
 }
 
-/* 统计一条流里的汉字数（F7 hi lo 或 F9 00 hi lo 各算 1 字）。 */
+/* 统计一条流里的汉字数（F7 00 hi lo 或 F9 00 hi lo 各算 1 字）。 */
 static unsigned count_cjk(const uint8_t *stream)
 {
     const uint8_t *q = stream;
     unsigned n = 0;
 
     while (q && *q != 0xFF && *q != 0x00) {
-        if (*q == 0xF7u) {
+        if (*q == 0xF7u && q[1] == 0x00u) {
             n++;
-            q += 3;
+            q += 4;
         } else if (*q == 0xF9u) {
             n++;
             q += 4;

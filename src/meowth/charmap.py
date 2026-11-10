@@ -23,11 +23,19 @@ def _build_chinese_leads(ranges: list[list[int]]) -> frozenset:
 # JP CJK pipeline defaults (game.json no longer carries these)
 _DEFAULT_CHS_LEADS = [[1, 5], [7, 26], [28, 30]]
 _DEFAULT_ESCAPE_BYTES = bytes([0xF9, 0x00])
-# 内联汉字前缀：F7 + 2 字节码位 = 3 字节/字（旧协议是 F9 00 + 2 = 4 字节）
-# 与火红一致，让 stride=8 的定长表能放下 2 个汉字。
-_DEFAULT_GLYPH_PREFIX = 0xF7
-_DEFAULT_IDEOSPACE = bytes([0x00])   # Gen3 的 0x00 就是空格；不能再用 0x01 0xF7，
-                                    # 0xF7 已变成汉字内联前缀（见 _DEFAULT_GLYPH_PREFIX）
+# 内联汉字前缀：F7 00 + 2 字节码位 = 4 字节/字。
+#
+# 历史：
+#   F9 00 hi lo（4B）—— 旧协议。F9 是 Gen3 的短语引用前缀，未挂钩的
+#                       绘制路径会把 F9 xx xx xx 当 phrase id 展开。
+#   F7 hi lo  （3B）—— 试过，为省 1 字节把 stride=8 的表塞下 2 个汉字。
+#                       但裸 0xF7 冲突面大（0x01 0xF7 全角空格、代码段
+#                       `ff f7 xx fe` 的 bl 指令），已废弃。
+#   F7 00 hi lo（4B）—— 当前。保留 F7 的「非短语」语义，第二字节恒 0
+#                       与残留的 01 F7 区分；解析端见 0xF7 后必须读 00。
+_DEFAULT_GLYPH_PREFIX = bytes([0xF7, 0x00])
+_GLYPH_HDR_LEN = 2                   # 前缀长度（F7 00），码位另占 2 字节
+_DEFAULT_IDEOSPACE = bytes([0x00])   # Gen3 的 0x00 就是空格；不能再用 0x01 0xF7
 # Sentence punct = JP PCS single-bytes (same hex as AXVJ original).
 # Drawn from CHS Sym @ 0x091E0000 (glyph 0x36..), NEVER F9 00 1E5x Normal.
 # Legal inject hex: 00 space, 37 。, 3A 、, 3B ，, 3C ！, 3D ？, 3E ：, B0 …, AE -, AF ·
@@ -89,7 +97,7 @@ class Charmap:
         self._cfg: dict[str, Any] = charmap_cfg or {}
         self._escape: bool = False
         self._escape_bytes: bytes = _DEFAULT_ESCAPE_BYTES
-        self._glyph_prefix: int = _DEFAULT_GLYPH_PREFIX
+        self._glyph_prefix: bytes = _DEFAULT_GLYPH_PREFIX
         self._punct_map: dict[str, int] = {}
         self._chinese_leads: frozenset = frozenset()
         self._ideospace_bytes: bytes = _DEFAULT_IDEOSPACE
@@ -392,7 +400,7 @@ class Charmap:
                     and enc[0] in self._chinese_leads
                     and enc[1] < 0xFA
                 ):
-                    result.append(self._glyph_prefix)
+                    result.extend(self._glyph_prefix)
                     result.extend(enc)
                 else:
                     result.extend(enc)

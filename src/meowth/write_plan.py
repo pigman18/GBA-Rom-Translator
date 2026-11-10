@@ -36,7 +36,7 @@ from .patch_table import (
     _off,
 )
 from .table_relink import parse_ldr_literal_target
-from .table_stride import find_literal_sites, plan_stride_rewrite
+from .table_stride import _func_bounds, find_literal_sites, plan_stride_rewrite
 from .thumb_symexec import solve_site_auto
 
 # stride → tables[] 扩步长；struct → 整块按值重定向（读点钩或逐条 redirect）
@@ -320,6 +320,12 @@ def _finish_table(
                                 rom, ldrs, old_stride, new_stride
                             )
                         )
+                        insns.extend(
+                            _name_window_patches(
+                                rom, ldrs, old_stride, new_stride,
+                                {int(i["off"], 16) for i in insns},
+                            )
+                        )
                 else:
                     note = note or "字面量对不上基址"
             else:
@@ -430,6 +436,147 @@ def _copy_limit_patches(
                     "bytes": bytes([new_lim, b1]).hex(" "),
                     "label": f"cmp r{b1 & 7},#{b0:#x}→#{new_lim:#x}",
                 })
+    return out
+
+
+def _name_window_patches(
+    rom: bytes, ldrs: list[int], old_stride: int, new_stride: int,
+    taken: set[int] | None = None,
+) -> list[dict]:
+    """定长名表被 stride 扩展后，读取函数的**栈缓冲窗口**必须同步放大。
+
+    这是 stride 改写的一部分，不是额外 hook：读取函数自己按
+    ``base + idx*old_stride`` 算地址，再逐字节拷进栈上定长缓冲。
+
+    典型（图鉴名字 @0x0808AD44 / 详情页 @0x0808DCBC）::
+
+        sub   sp, #12          ; 栈 12 字节
+        mov   r0, sp
+        movs  r1, #0xFF
+        strb  r1, [r0, #5]     ; buf[5] = FF  ← 名字上限 old_stride
+        ...
+        cmp   r4, #4           ; 清 5 字节
+        ...
+        cmp   r4, #9           ; 拷贝上限（_copy_limit_patches 已放）
+        add   sp, #12
+
+    只改 ×6→×24 的话，拷贝上限变成 23 而缓冲仍是 6/12 字节 →
+    写穿栈帧、覆盖返回地址 → 图鉴详情上下翻页必崩。
+
+    识别（同一栈帧内，``sub sp`` 与 ``add sp`` 之间）：
+      * ``mov rX,sp`` + ``strb rX,[rX,#old_stride-1]``（终止符位置）
+      * ``cmp rX,#imm`` + ``bls`` 回跳（清零/拷贝/占位循环上限）
+    三处一起放大：栈大小、终止符位置、各循环上限。
+    """
+    if new_stride <= old_stride:
+        return []
+    new_cap = min(new_stride, 255)
+    if new_cap < 16:
+        return []
+    stack = ((new_cap + 8) // 8) * 8
+    if stack > 508:
+        return []
+
+    taken = set(taken or ())
+    cap_lim = new_cap - 1
+    cap_lo, cap_hi = max(old_stride - 2, 1), old_stride * 2 + 4
+    out: list[dict] = []
+    done: set[int] = set()
+
+    for ldr in ldrs:
+        fstart, fend = _func_bounds(rom, ldr)
+        if fstart in done:
+            continue
+
+        sub_off = add_off = term = None
+        sub_sp = 0
+        sp_reg = -1
+        loops: list[tuple[int, int]] = []
+        for off in range(fstart, fend - 1, 2):
+            h = struct.unpack_from("<H", rom, off)[0]
+            # mov Rd,sp : 0100 0110 1 Rm(13) Rd
+            if (h & 0xFF00) == 0x4600 and ((h >> 3) & 0xF) == 13:
+                sp_reg = h & 7
+                continue
+            # strb rX,[rY,#imm5] : 0111 0 imm5 rn rt
+            if (h & 0xF800) == 0x7000 and ((h >> 6) & 0x1F) == old_stride - 1:
+                # 只认「先 mov rX,sp、再 strb [rX,#old_stride-1]」的栈缓冲。
+                # 不校验会把全局结构体上的 6 字节字段也放大 → 写穿别的内存。
+                if sp_reg >= 0 and ((h >> 3) & 7) == sp_reg and term is None:
+                    term = off
+                continue
+            # sub sp,#imm7 : 1011 0000 1 imm7
+            if (h & 0xFF80) == 0xB080:
+                if sub_off is None:
+                    sub_off = off
+                    sub_sp = (h & 0x7F) * 4
+                continue
+            # add sp,#imm7 : 1011 0000 0 imm7
+            if (h & 0xFF80) == 0xB000:
+                if add_off is None and sub_off is not None:
+                    add_off = off
+                continue
+            # cmp rX,#imm8 + bls 回跳 → 循环上限
+            if (h & 0xF800) == 0x2800 and off + 2 < fend:
+                h2 = struct.unpack_from("<H", rom, off + 2)[0]
+                if (h2 & 0xFF00) == 0xD900:
+                    loops.append((off, h & 0xFF))
+                continue
+
+        if sub_off is None or sub_sp >= stack:
+            continue
+        frame_end = add_off if add_off is not None else fend
+        if term is not None and not (sub_off < term < frame_end):
+            term = None
+        caps = [
+            (o, i) for o, i in loops
+            if sub_off < o < frame_end and cap_lo <= i <= cap_hi
+        ]
+        if term is None and not caps:
+            continue
+        done.add(fstart)
+        imm7 = stack // 4
+
+        if term is not None and term not in taken:
+            h = struct.unpack_from("<H", rom, term)[0]
+            rn, rt = (h >> 3) & 7, h & 7
+            out.append({
+                "off": f"0x{term:X}",
+                "bytes": struct.pack(
+                    "<H", 0x7000 | ((new_cap - 1) << 6) | (rn << 3) | rt
+                ).hex(" "),
+                "label": f"buf[{old_stride - 1}]=FF→[{new_cap - 1}] "
+                         f"(stride {old_stride}→{new_stride})",
+            })
+            taken.add(term)
+
+        if sub_off not in taken:
+            out.append({
+                "off": f"0x{sub_off:X}",
+                "bytes": struct.pack("<H", 0xB080 | imm7).hex(" "),
+                "label": f"sub sp,#{sub_sp}→#{stack}"
+                         f"（名表缓冲 {old_stride}→{new_cap}）",
+            })
+            taken.add(sub_off)
+        if add_off is not None and add_off not in taken:
+            out.append({
+                "off": f"0x{add_off:X}",
+                "bytes": struct.pack("<H", 0xB000 | imm7).hex(" "),
+                "label": f"add sp,#{sub_sp}→#{stack}",
+            })
+            taken.add(add_off)
+
+        for o, i in caps:
+            if o in taken:
+                continue
+            hc = struct.unpack_from("<H", rom, o)[0]
+            out.append({
+                "off": f"0x{o:X}",
+                "bytes": struct.pack("<H", 0x2800 | (hc & 0x0700)
+                                     | cap_lim).hex(" "),
+                "label": f"循环上限 #{i}→#{cap_lim}",
+            })
+            taken.add(o)
     return out
 
 

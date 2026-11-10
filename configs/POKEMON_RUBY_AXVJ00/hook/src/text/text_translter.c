@@ -400,9 +400,10 @@ int TranslateHandleChar(TextPrinter *win, uint32_t c)
     const uint8_t *p;
     uint8_t op;
 
-    /* F7 hi lo：单汉字内联（3 字节/字）。必须放在 slot 查表之前 ——
+    /* F7 00 hi lo：单汉字内联（4 字节/字）。必须放在 slot 查表之前 ——
      * 否则 0xF7 会被当成普通码位吃掉。
-     * 与火红一致：stride=8 的定长表因此能放下 2 个汉字（7 字节）。 */
+     * 第二字节恒 0：与残留的 0x01 0xF7（旧全角空格）区分；不是 00 时
+     * 只吞掉这个不可印位，绝不多跨字节（否则整条流错位 → 全屏乱码）。 */
     if (c == CHS_GLYPH_F7) {
         uint8_t lead;
         uint8_t trail;
@@ -411,9 +412,13 @@ int TranslateHandleChar(TextPrinter *win, uint32_t c)
         text = (const uint8_t *)(uintptr_t)win_u32(win, WIN_TEXT_PTR);
         idx2 = win_u16(win, WIN_TEXT_INDEX);
         p = text + idx2;
-        lead = p[0];
-        trail = p[1];
-        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(idx2 + 2));
+        if (p[0] != CHS_GLYPH_F7_OP) {
+            win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(idx2 + 1));
+            return 1;
+        }
+        lead = p[1];
+        trail = p[2];
+        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(idx2 + 3));
         if (!lead_trail_ok(lead, trail))
             return 1;
         gidx = pack_glyph_index(lead, trail);
@@ -482,8 +487,8 @@ static uint32_t phrase_width_px(const uint8_t *stream)
     while (i < 256u && stream[i] != 0xFF) {
         uint8_t b = stream[i];
         if (b == CHS_GLYPH_F7) {
-            w += CHS_GLYPH_ADVANCE_PX;   /* F7 + hi + lo = 3 字节 */
-            i += 3;
+            w += CHS_GLYPH_ADVANCE_PX;   /* F7 00 hi lo = 4 字节 */
+            i += CHS_GLYPH_LEN;
             continue;
         }
         if (b == CHS_ESCAPE) {
@@ -509,9 +514,9 @@ uint32_t GetStringWidth(const uint8_t *buf, uint32_t max_bytes)
     const uint32_t *offsets = (const uint32_t *)ADDR_PHRASE_OFFSETS;
 
     while (len < max_bytes && buf[len] != 0xFF) {
-        if (buf[len] == CHS_GLYPH_F7 && len + 2 < max_bytes) {
+        if (buf[len] == CHS_GLYPH_F7 && len + 3 < max_bytes) {
             w += CHS_GLYPH_ADVANCE_PX;
-            len += 3;
+            len += CHS_GLYPH_LEN;
         } else if (buf[len] == CHS_ESCAPE && len + 3 < max_bytes) {
             uint8_t op = buf[len + 1];
             uint16_t code = (uint16_t)((buf[len + 2] << 8) | buf[len + 3]);

@@ -234,7 +234,11 @@ void copy_tile32(void *dst, const void *src)
     d[4] = s[4]; d[5] = s[5]; d[6] = s[6]; d[7] = s[7];
 }
 
-/* 三色直取窗口字段：C=前景 D=背景 E=阴影（与官方 ApplyColors 的入参同序）。 */
+/* 三色直取窗口字段：C=前景 D=背景 E=阴影（与官方 ApplyColors 的入参同序）。
+ * bg 一律用 WIN_COLOR_D：菜单/开始菜单这类窗口靠逐格写背景擦掉上一帧，
+ * 改成 0 会让底图透出来（白块/地图透字）。
+ * 图鉴列表未捕获行的红条不是这里的问题 —— 那是「GetGlyph 失败后仍整格
+ * 填 bg」，已在 PcsPrint_Custom 里改成失败即不画。 */
 static void chs_colors(TextPrinter *win, uint8_t *fg, uint8_t *bg, uint8_t *sh)
 {
     *fg = win_u8(win, WIN_COLOR_C);

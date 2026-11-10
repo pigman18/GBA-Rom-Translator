@@ -283,7 +283,14 @@ struct ChsPhase {
 #define CHS_BATTLE_FIXED_BASE   0x280
 #define CHS_FONT_GLYPH_MAX      7168
 #define CHS_ESCAPE              0xF9   /* F9 op hi lo：短语引用 */
-#define CHS_GLYPH_F7            0xF7u  /* F7 hi lo：单汉字内联，3 字节/字 */
+/* F7 00 hi lo：单汉字内联，4 字节/字。
+ * 第二字节恒 0 —— 用于和残留的 0x01 0xF7（旧全角空格）区分。
+ * 不用裸 F7 3 字节：会与文本区外/代码段的裸 0xF7 混淆。
+ * 不用 F9 00：未挂钩的绘制路径会把 F9 xx xx xx 当 phrase id 展开。 */
+#define CHS_GLYPH_F7            0xF7u
+#define CHS_GLYPH_F7_OP         0x00u
+#define CHS_GLYPH_LEN           4u     /* 含前缀的整字字节数 */
+#define CHS_GLYPH_IS_F7(p)      ((p)[0] == CHS_GLYPH_F7 && (p)[1] == CHS_GLYPH_F7_OP)
 #define CHS_PHRASE_DEFAULT      0x80
 #define PCS_CTRL_BASE           0xFAu   /* FA~FE 控制码基（text.c/text_translate.c 共用） */
 

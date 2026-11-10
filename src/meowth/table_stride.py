@@ -162,7 +162,13 @@ def _find_mov_imm_mul_stride(
 # 同函数内的补充扫描
 # ---------------------------------------------------------------------------
 def _func_bounds(rom: bytes, off: int, limit: int = 0x800) -> tuple[int, int]:
-    """以 push {.., lr} / pop {.., pc} 为界，估出 off 所在函数的范围。"""
+    """以 push {.., lr} / pop {.., pc} / bx 为界，估出 off 所在函数的范围。
+
+    尾跳 epilogue 的常见写法是 ``pop {r1}; bx r1``（不是 ``pop {pc}``），
+    只认 pop-pc 会把下一个函数包进来 —— 图鉴列表 0x0808AD44 与相邻的
+    清屏函数 0x0808ADEC 就会连成一片，于是后者的 ``(参数+i)<<1`` 被
+    当成 ``i*6`` 误改，列表清屏步长变 ×8 → 整屏噪声。
+    """
     n = len(rom)
     start = max(0, off - limit)
     for i in range(off, start, -2):
@@ -174,6 +180,9 @@ def _func_bounds(rom: bytes, off: int, limit: int = 0x800) -> tuple[int, int]:
     for i in range(off, end, 2):
         h = struct.unpack_from("<H", rom, i)[0]
         if (h & 0xFE00) == 0xBC00 and (h & 0x0100):
+            end = i + 2
+            break
+        if (h & 0xFF00) == 0x4700:          # bx rX —— 尾跳即函数结束
             end = i + 2
             break
     return start, end

@@ -100,19 +100,33 @@ static void PcsPrint_Custom(TextPrinter *win, uint32_t cur_char)
 {
     uint8_t buf[128];
     uint8_t width = 8;
+    uint8_t save_bg = 0xFFu;      /* 0xFF = 无需恢复 */
+    uint32_t any = 0u;
+    unsigned i;
     struct ChsGlyphTiles t;
+    uint8_t fn;
 
     if (!GetGlyph(win, cur_char, buf, &width)) {
         pcs_zero(buf, sizeof buf);
         width = 8u;
     }
-    {
-        /* 缓存键基底：JP/SYM/空白 = (fontNum<<8)|code（钳制与 GetGlyph 一致） */
-        uint8_t fn = win_u8(win, WIN_FONTNUM_REAL);
-        if (fn > 6u)
-            fn = 3u;
-        t.glyph_id = (uint16_t)((fn << 8) | (cur_char & 0xFFu));
+
+    /* 整块无墨（空格 / 占位符 / 该 fontNum 下没有的字形）：
+     * 游标仍要按 width 推进，但**不能刷背景色** —— 图鉴列表的
+     * WIN_COLOR_D 是「编号红字」的色号，整格填 bg 会让未捕获行
+     * 变成一条红色实心横条。临时把 bg 压 0（透明）。 */
+    for (i = 0; i < sizeof buf; i++)
+        any |= buf[i];
+    if (any == 0u) {
+        save_bg = win_u8(win, WIN_COLOR_D);
+        win_set_u8(win, WIN_COLOR_D, 0u);
     }
+
+    /* 缓存键基底：JP/SYM/空白 = (fontNum<<8)|code（钳制与 GetGlyph 一致） */
+    fn = win_u8(win, WIN_FONTNUM_REAL);
+    if (fn > 6u)
+        fn = 3u;
+    t.glyph_id = (uint16_t)((fn << 8) | (cur_char & 0xFFu));
     t.tl = buf + 0x00;
     t.bl = buf + 0x20;
     t.tr = buf + 0x40;
@@ -121,6 +135,9 @@ static void PcsPrint_Custom(TextPrinter *win, uint32_t cur_char)
     t.ink_h = CHS_INK_NATIVE_H;
     t.pad_top = CHS_INK_NATIVE_TOP;
     DrawGlyphTiles(win, &t, width);
+
+    if (save_bg != 0xFFu)
+        win_set_u8(win, WIN_COLOR_D, save_bg);
 }
 
 /* 第二级 [fontNum]，镜像原生 sWriteGlyphTilemapFuncs——每格对应日志实证窗口：
@@ -168,7 +185,10 @@ static const PcsPrintFunc sPcsPrintFuncs[8] = {
 int DrawGlyph(TextPrinter *win, uint32_t cur_char)
 {
     /* CHS 标点 SYM 带走自绘（自建 sym 字库）；≥0xF7 不可印位直接消费。
-     * 其余按 textMode（tm1 再查 fontNum）两级表分发。 */
+     * 其余按 textMode（tm1 再查 fontNum）两级表分发。
+     * ⚠️ 2026-11-10 试过「0x80..0xF6 交回官方 FontFuncTable」，结果图鉴
+     *   列表红块反而扩大（原生 tm 基于 charBase 布局，与我们的 arena 并排会
+     *   写到别处）。回滚，保持自绘。 */
     if (cur_char >= SYM_GLYPH_BASE
         && cur_char < SYM_GLYPH_BASE + SYM_GLYPH_COUNT) {
         PcsPrint_Custom(win, cur_char);

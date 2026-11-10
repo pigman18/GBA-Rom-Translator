@@ -4030,6 +4030,11 @@
   },
   {
     "status": 200,
+    "original": "\\CC0107ＢＰ．",
+    "translated": "\\CC0107BP．"
+  },
+  {
+    "status": 200,
     "original": "\\CC010F\\CC0200\\CC0301うまれた \\02に\nニックネームを つけますか？",
     "translated": "\\CC010F\\CC0200\\CC0301要给刚出生的 \\02 起\\n昵称吗?"
   },
@@ -20551,8 +20556,9 @@
     "translated": "小混混"
   },
   {
-    "status": 404,
-    "original": "ごんきち"
+    "status": 200,
+    "original": "ごんきち",
+    "translated": "贡吉"
   },
   {
     "status": 404,
@@ -31980,6 +31986,11 @@
     "status": 200,
     "original": "にじのせきばん",
     "translated": "彩虹石板"
+  },
+  {
+    "status": 200,
+    "original": "にち",
+    "translated": "日"
   },
   {
     "status": 200,
@@ -47311,8 +47322,9 @@
     "translated": "麒麟奇"
   },
   {
-    "status": 404,
-    "original": "キルキル"
+    "status": 200,
+    "original": "キルキル",
+    "translated": "基鲁"
   },
   {
     "status": 200,
@@ -48365,8 +48377,9 @@
     "translated": "番茄酱"
   },
   {
-    "status": 404,
-    "original": "ケッキン"
+    "status": 200,
+    "original": "ケッキン",
+    "translated": "克金"
   },
   {
     "status": 200,
@@ -57458,6 +57471,11 @@
     "status": 200,
     "original": "ハリーマン",
     "translated": "万针鱼"
+  },
+  {
+    "status": 200,
+    "original": "ハルカ",
+    "translated": "小遥"
   },
   {
     "status": 200,
@@ -66609,6 +66627,11 @@
   },
   {
     "status": 200,
+    "original": "ユウキ",
+    "translated": "小悠"
+  },
+  {
+    "status": 200,
     "original": "ユウキ『\\01\nポケモンずかんは どう？\\lちょっとは ページ うまったか？\n\nオレは すごいよ\n\nトウカのもりで\nポケモン つかまえ まくって\\lモンスターボール なくなったよ！",
     "translated": "小悠「\\01\\n宝可梦图鉴怎么样了?有稍微\\p补上一些页面吗?\\p我可厉害了\\p在橙华森林里不停地抓\\n宝可梦,精灵球都用光了!」"
   },
@@ -68218,8 +68241,9 @@
     "translated": "用了记录角落之后\n可以和朋友们一起分\\p享武斗镇流行的东西了!"
   },
   {
-    "status": 404,
-    "original": "レシアーン"
+    "status": 200,
+    "original": "レシアーン",
+    "translated": "雷希"
   },
   {
     "status": 200,

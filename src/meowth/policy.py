@@ -1098,6 +1098,21 @@ def expand_pointer_sources(
     )
 
 
+_SCRIPT_INLINE_HDRS: tuple[bytes, ...] = (
+    b"\x0f\x00",        # message <ptr>
+    b"\x6a\x5a\x67",    # msgbox 变体 <ptr>（ptr 落在 +3，非 4 对齐）
+)
+
+
+def _script_inline_hdr_ok(rom: bytes | bytearray, ptr_addr: int) -> bool:
+    """站点前 1~3 字节是否命中已知的脚本内联命令头。"""
+    for hdr in _SCRIPT_INLINE_HDRS:
+        n = len(hdr)
+        if ptr_addr >= n and bytes(rom[ptr_addr - n:ptr_addr]) == hdr:
+            return True
+    return False
+
+
 def filter_pointer_sources(
     rom: bytes | bytearray,
     pointer_sources: Iterable,
@@ -1141,10 +1156,17 @@ def filter_pointer_sources(
         # - 对齐 + in_body：正文 PCS 拼出的总线地址，丢弃。
         inline = is_script_inline_ptr(rom, ptr_addr, text_address)
         in_body = ptr_site_in_text_body(ptr_addr, text_spans)
+        # 非 4 对齐的脚本内联不止 ``0f 00 <ptr>`` 一种：
+        # 实测还有 ``6a 5a 67 <ptr>``（脚本 msgbox 变体），ptr 落在 +3。
+        # 这类站点以前全被丢 → 同一条文本「改了 10 处、还剩 19 处指旧地址」，
+        # 游戏走没改的那条，画面照旧是日文。
+        # ⚠️ 不能放宽成「非对齐一律接受」：实测会改坏别处、模拟器直接卡死。
+        # 只认**已验证的命令头**，其它非对齐一律拒绝。
+        inline_hdr = inline or _script_inline_hdr_ok(rom, ptr_addr)
         if ptr_addr & 3:
-            if not inline:
+            if not inline_hdr:
                 continue
-        elif in_body and not inline:
+        elif in_body and not inline_hdr:
             continue
         if ptr_addr in title_gfx_ptr_deny():
             continue
@@ -1171,8 +1193,9 @@ def filter_pointer_sources(
             if not ptr_source_ok(
                 rom, ptr_addr, text_address, lz_spans=spans, strict=False
             ):
-                # 脚本内联（0f 00 <ptr>）不经 C 字面量池语义，单独放行。
-                if not inline:
+                # 脚本内联（0f 00 <ptr> / 6a 5a 67 <ptr>）不经 C 字面量池语义，
+                # 单独放行。
+                if not inline_hdr:
                     continue
         # Brand literals: site/string class, not module id.
         if compact in brand_compact_skip() and ptr_addr >= 0x100000:

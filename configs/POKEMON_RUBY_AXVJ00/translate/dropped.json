@@ -1,0 +1,1133 @@
+{
+  "entries": [
+    {
+      "address": "0x0839A63F",
+      "module": "道具说明",
+      "original": "？？？？？",
+      "translated": "",
+      "reason": "C_question"
+    },
+    {
+      "address": "0x081E04CD",
+      "module": "剧情",
+      "original": "？？？？",
+      "translated": "",
+      "reason": "C_question"
+    },
+    {
+      "address": "0x0839DCA8",
+      "module": "剧情",
+      "original": "？？？？？？？？",
+      "translated": "",
+      "reason": "C_question"
+    },
+    {
+      "address": "0x083A57C6",
+      "module": "剧情",
+      "original": "Ｒ‥ＤＲＩＶＥＲーＴＥＳＴ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A592B",
+      "module": "剧情",
+      "original": "ＤＯＯＲＯーＸ１",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5934",
+      "module": "剧情",
+      "original": "ＤＯＯＲＯーＸ３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A593D",
+      "module": "剧情",
+      "original": "ＭＡＣＨＩーＳ２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5946",
+      "module": "剧情",
+      "original": "ＭＡＣＨＩーＳ４",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5969",
+      "module": "剧情",
+      "original": "ＭＥーＡＳＡ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5970",
+      "module": "剧情",
+      "original": "ＭＥーＢＡＣＨＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5987",
+      "module": "剧情",
+      "original": "ＭＥーＷＡＺＡ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5997",
+      "module": "剧情",
+      "original": "ＤＯＯＲＯーＸ４",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A59A0",
+      "module": "剧情",
+      "original": "ＦＵＮＥーＫＡＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A59A9",
+      "module": "剧情",
+      "original": "ＭＥーＳＨＩＮＫＡ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A59BA",
+      "module": "剧情",
+      "original": "ＭＥーＷＡＳＵＲＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A59DB",
+      "module": "剧情",
+      "original": "ＭＡＣＨＩーＳ３",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A59EC",
+      "module": "剧情",
+      "original": "ＢーＴＯＷＥＲ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5A02",
+      "module": "剧情",
+      "original": "ＭＥーＫＩＮＯＭＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5A0C",
+      "module": "剧情",
+      "original": "ＭＥーＴＡＭＡ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5A14",
+      "module": "剧情",
+      "original": "ＭＥーＢーＢＩＧ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5A1D",
+      "module": "剧情",
+      "original": "ＭＥーＢーＳＭＡＬＬ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5A28",
+      "module": "剧情",
+      "original": "ＭＥーＺＡＮＮＥＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5A32",
+      "module": "剧情",
+      "original": "ＢＤーＴＩＭＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5ADB",
+      "module": "剧情",
+      "original": "ＧＩＲＬーＳＵＰ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5AFE",
+      "module": "剧情",
+      "original": "ＡＱＡー０",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5B0D",
+      "module": "剧情",
+      "original": "ＢＯＹーＳＵＰ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5B4A",
+      "module": "剧情",
+      "original": "ＣーＲＯＡＤ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5B57",
+      "module": "剧情",
+      "original": "ＭーＢＯＡＴ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5B5E",
+      "module": "剧情",
+      "original": "ＭーＤＵＮＧＯＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5B78",
+      "module": "剧情",
+      "original": "ＰーＳＣＨＯＯＬ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5B9A",
+      "module": "剧情",
+      "original": "ＣＯＮーＦＡＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5BB0",
+      "module": "剧情",
+      "original": "ＴーＢＡＴＴＬＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5BCF",
+      "module": "剧情",
+      "original": "ＣＯＮーＫ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5BD5",
+      "module": "剧情",
+      "original": "ＥＩＫＯＵーＲ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5BF6",
+      "module": "剧情",
+      "original": "ＹＡＭＡーＥＹＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5C08",
+      "module": "剧情",
+      "original": "ＩＮＴＥＲーＶ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5E65",
+      "module": "剧情",
+      "original": "ＰＣーＬＯＧＯＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5E6E",
+      "module": "剧情",
+      "original": "ＰＣーＯＦＦ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5E75",
+      "module": "剧情",
+      "original": "ＰＣーＯＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5E82",
+      "module": "剧情",
+      "original": "ＷＩＮーＯＰＥＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5E8B",
+      "module": "剧情",
+      "original": "ＷＡＬＬーＨＩＴ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5EAF",
+      "module": "剧情",
+      "original": "ＫＯＵＫＡーＬ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5EB7",
+      "module": "剧情",
+      "original": "ＫＯＵＫＡーＭ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5EBF",
+      "module": "剧情",
+      "original": "ＫＯＵＫＡーＨ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5ECD",
+      "module": "剧情",
+      "original": "ＰＯＫＥーＤＥＡＤ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5EDE",
+      "module": "剧情",
+      "original": "ＪＩＤＯーＤＯＡ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F25",
+      "module": "剧情",
+      "original": "ＪＩＴＥーＰＹＯＫＯ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F30",
+      "module": "剧情",
+      "original": "ＭＵーＰＡＣＨＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F39",
+      "module": "剧情",
+      "original": "ＴＫーＫＡＳＹＡ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F42",
+      "module": "剧情",
+      "original": "ＦＵーＺＡＫＵ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F4A",
+      "module": "剧情",
+      "original": "ＦＵーＺＡＫＵ２",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F53",
+      "module": "剧情",
+      "original": "ＦＵーＺＵＺＵＺＵ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F5D",
+      "module": "剧情",
+      "original": "ＲＵーＧＡＳＨＩＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F67",
+      "module": "剧情",
+      "original": "ＲＵーＧＡＳＹＡＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F71",
+      "module": "剧情",
+      "original": "ＲＵーＢＡＲＩ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F81",
+      "module": "剧情",
+      "original": "ＫＩーＧＡＳＹＡＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F8B",
+      "module": "剧情",
+      "original": "ＴＫーＷＡＲＰＩＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5F95",
+      "module": "剧情",
+      "original": "ＴＫーＷＡＲＰＯＵＴ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5FB0",
+      "module": "剧情",
+      "original": "ＴＲＡＣＫーＭＯＶＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5FBB",
+      "module": "剧情",
+      "original": "ＴＲＡＣＫーＳＴＯＰ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5FC6",
+      "module": "剧情",
+      "original": "ＴＲＡＣＫーＨＡＩＫ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A5FD1",
+      "module": "剧情",
+      "original": "ＴＲＡＣＫーＤＯＯＲ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6078",
+      "module": "剧情",
+      "original": "ＴＯＹーＤＡＮＧＯ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A60A3",
+      "module": "剧情",
+      "original": "ＴーＯＯＡＭＥーＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A60B5",
+      "module": "剧情",
+      "original": "ＴーＫＯＡＭＥーＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A60EC",
+      "module": "剧情",
+      "original": "ＴＡＭＡＫＯＲＯーＥ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A617E",
+      "module": "剧情",
+      "original": "ＺーＳＥＡＲＣＨ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A618E",
+      "module": "剧情",
+      "original": "ＴＢーＳＴＡＲＴ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A6197",
+      "module": "剧情",
+      "original": "ＴＢーＫＯＮ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083A619E",
+      "module": "剧情",
+      "original": "ＴＢーＫＡＲＡ",
+      "translated": "",
+      "reason": "B_debug"
+    },
+    {
+      "address": "0x083E9AF3",
+      "module": "剧情",
+      "original": "？？？？？",
+      "translated": "",
+      "reason": "C_question"
+    },
+    {
+      "address": "0x081DC190",
+      "module": "补漏剧情",
+      "original": "た お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x081DC198",
+      "module": "补漏剧情",
+      "original": "み お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x081DC1A0",
+      "module": "补漏剧情",
+      "original": "ぃ お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x081DC1F8",
+      "module": "补漏剧情",
+      "original": "あ お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x081DC208",
+      "module": "补漏剧情",
+      "original": "う お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x081DC700",
+      "module": "补漏剧情",
+      "original": "え あ \n",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x081DC708",
+      "module": "补漏剧情",
+      "original": "く お \n",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x081DC710",
+      "module": "补漏剧情",
+      "original": "し あ \n",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x081DC720",
+      "module": "补漏剧情",
+      "original": "え お く お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x081E0044",
+      "module": "补漏剧情",
+      "original": "く お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x081E004C",
+      "module": "补漏剧情",
+      "original": "た お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x081E0054",
+      "module": "补漏剧情",
+      "original": "ね お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x081E005C",
+      "module": "补漏剧情",
+      "original": "み お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x081E0064",
+      "module": "补漏剧情",
+      "original": "り お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x081E015C",
+      "module": "补漏剧情",
+      "original": "み お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x081E9B68",
+      "module": "补漏剧情",
+      "original": "く Ｋ ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x081EC334",
+      "module": "补漏剧情",
+      "original": "た ュ ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x081EC33C",
+      "module": "补漏剧情",
+      "original": "た ど ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x081EC344",
+      "module": "补漏剧情",
+      "original": "た お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x08348D8C",
+      "module": "补漏剧情",
+      "original": "い た \n",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x08348D94",
+      "module": "补漏剧情",
+      "original": "い っ \n",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x08348EEC",
+      "module": "补漏剧情",
+      "original": "い た \n",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x08348EF4",
+      "module": "补漏剧情",
+      "original": "い っ \n",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x0838B3E8",
+      "module": "补漏剧情",
+      "original": "え お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x0838B3F0",
+      "module": "补漏剧情",
+      "original": "か お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x0838CBEC",
+      "module": "补漏剧情",
+      "original": "く お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x08390FC0",
+      "module": "补漏剧情",
+      "original": "く お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x08391968",
+      "module": "补漏剧情",
+      "original": "み お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x08391970",
+      "module": "补漏剧情",
+      "original": "ぃ お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083A056E",
+      "module": "补漏剧情",
+      "original": "？？？",
+      "translated": "",
+      "reason": "C_question"
+    },
+    {
+      "address": "0x083AED50",
+      "module": "补漏剧情",
+      "original": "た お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083AED58",
+      "module": "补漏剧情",
+      "original": "と お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083AED60",
+      "module": "补漏剧情",
+      "original": "と お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083B1B88",
+      "module": "补漏剧情",
+      "original": "く お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083B1B90",
+      "module": "补漏剧情",
+      "original": "た お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083B1B98",
+      "module": "补漏剧情",
+      "original": "ね お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083B1BA0",
+      "module": "补漏剧情",
+      "original": "み お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083B1BA8",
+      "module": "补漏剧情",
+      "original": "り お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083B1BB0",
+      "module": "补漏剧情",
+      "original": "り お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083B1BB8",
+      "module": "补漏剧情",
+      "original": "り お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083B1C08",
+      "module": "补漏剧情",
+      "original": "え お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083B1C20",
+      "module": "补漏剧情",
+      "original": "え お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083B1CAC",
+      "module": "补漏剧情",
+      "original": "ぞ え タ え ぞ え み え ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083B1CC0",
+      "module": "补漏剧情",
+      "original": "ぞ い み い ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083B1CD8",
+      "module": "补漏剧情",
+      "original": "ぞ い タ い ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BBC98",
+      "module": "补漏剧情",
+      "original": "く お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BBCA0",
+      "module": "补漏剧情",
+      "original": "た お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BBCA8",
+      "module": "补漏剧情",
+      "original": "ね お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BBCB0",
+      "module": "补漏剧情",
+      "original": "み お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BBCB8",
+      "module": "补漏剧情",
+      "original": "り お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BBCC0",
+      "module": "补漏剧情",
+      "original": "ぃ お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BBCC8",
+      "module": "补漏剧情",
+      "original": "ぎ お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BBCD0",
+      "module": "补漏剧情",
+      "original": "ぞ お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BBE34",
+      "module": "补漏剧情",
+      "original": "み お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BBE3C",
+      "module": "补漏剧情",
+      "original": "ぞ お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BBE90",
+      "module": "补漏剧情",
+      "original": "く お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BBF88",
+      "module": "补漏剧情",
+      "original": "え お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCEE4",
+      "module": "补漏剧情",
+      "original": "あ お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCEF4",
+      "module": "补漏剧情",
+      "original": "う お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCEFC",
+      "module": "补漏剧情",
+      "original": "え お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCF04",
+      "module": "补漏剧情",
+      "original": "お お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCF0C",
+      "module": "补漏剧情",
+      "original": "か お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCF14",
+      "module": "补漏剧情",
+      "original": "き お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCF1C",
+      "module": "补漏剧情",
+      "original": "く お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCF24",
+      "module": "补漏剧情",
+      "original": "け お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCF5C",
+      "module": "补漏剧情",
+      "original": "ぞ お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCF7C",
+      "module": "补漏剧情",
+      "original": "え お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCF84",
+      "module": "补漏剧情",
+      "original": "く お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCF8C",
+      "module": "补漏剧情",
+      "original": "し お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCF94",
+      "module": "补漏剧情",
+      "original": "た お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCF9C",
+      "module": "补漏剧情",
+      "original": "と お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCFA4",
+      "module": "补漏剧情",
+      "original": "ね お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCFAC",
+      "module": "补漏剧情",
+      "original": "ふ お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCFB4",
+      "module": "补漏剧情",
+      "original": "み お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCFBC",
+      "module": "补漏剧情",
+      "original": "や お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCFC4",
+      "module": "补漏剧情",
+      "original": "り お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCFCC",
+      "module": "补漏剧情",
+      "original": "わ お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCFD4",
+      "module": "补漏剧情",
+      "original": "ぃ お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCFDC",
+      "module": "补漏剧情",
+      "original": "ゃ お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCFE4",
+      "module": "补漏剧情",
+      "original": "ぎ お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BCFEC",
+      "module": "补漏剧情",
+      "original": "ざ お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BF594",
+      "module": "补漏剧情",
+      "original": "あ お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BF59C",
+      "module": "补漏剧情",
+      "original": "う お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BF5A4",
+      "module": "补漏剧情",
+      "original": "お お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BF5AC",
+      "module": "补漏剧情",
+      "original": "か お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083BF5B4",
+      "module": "补漏剧情",
+      "original": "く お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083DE3CC",
+      "module": "补漏剧情",
+      "original": "か お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083DE3FC",
+      "module": "补漏剧情",
+      "original": "け お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083E1608",
+      "module": "补漏剧情",
+      "original": "く お ",
+      "translated": "",
+      "reason": "A_u16data"
+    },
+    {
+      "address": "0x083E9AEF",
+      "module": "补漏剧情",
+      "original": "？？？",
+      "translated": "",
+      "reason": "C_question"
+    }
+  ],
+  "note": "从 texts.json 移出的「非玩家可见文本」：调试串（ＤＯＯＲＯーＸ１ 这类）、u16 数据表被误切的 xx 00 yy 00、纯？占位。保留证据，可随时捞回。",
+  "count": 161
+}

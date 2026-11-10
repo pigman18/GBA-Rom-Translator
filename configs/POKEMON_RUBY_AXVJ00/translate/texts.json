@@ -480,7 +480,7 @@
       }
     }
   },
-  "count": 12673,
+  "count": 12512,
   "entries": [
     {
       "id": "axvj_92f0510597a5",
@@ -27315,156 +27315,6 @@
       ],
       "pointer_addresses": [
         "0x0839DC68"
-      ]
-    },
-    {
-      "id": "axvj_ceffc9eadae8",
-      "module": "道具说明",
-      "address": "0x0839A63F",
-      "byte_length": 6,
-      "original": "？？？？？",
-      "original_hex": "ac ac ac ac ac ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0839A658",
-        "0x0839AE78",
-        "0x0839AEA0",
-        "0x0839AEC8",
-        "0x0839AEF0",
-        "0x0839AF18",
-        "0x0839AF40",
-        "0x0839AF68",
-        "0x0839AF90",
-        "0x0839AFB8",
-        "0x0839AFE0",
-        "0x0839B008",
-        "0x0839B198",
-        "0x0839B328",
-        "0x0839B3F0",
-        "0x0839B418",
-        "0x0839B440",
-        "0x0839B468",
-        "0x0839B490",
-        "0x0839B4B8",
-        "0x0839B5D0",
-        "0x0839B5F8",
-        "0x0839B620",
-        "0x0839B648",
-        "0x0839B6C0",
-        "0x0839B7D8",
-        "0x0839B800",
-        "0x0839B828",
-        "0x0839B850",
-        "0x0839B878",
-        "0x0839B8A0",
-        "0x0839B8C8",
-        "0x0839B8F0",
-        "0x0839B918",
-        "0x0839C1D8",
-        "0x0839C200",
-        "0x0839C228",
-        "0x0839C9A8",
-        "0x0839C9D0",
-        "0x0839C9F8",
-        "0x0839CA20",
-        "0x0839CA48",
-        "0x0839CA70",
-        "0x0839CA98",
-        "0x0839CAC0",
-        "0x0839CAE8",
-        "0x0839CB10",
-        "0x0839CB38",
-        "0x0839CB60",
-        "0x0839CB88",
-        "0x0839CBB0",
-        "0x0839CBD8",
-        "0x0839CC00",
-        "0x0839CC28",
-        "0x0839CC50",
-        "0x0839CC78",
-        "0x0839CCA0",
-        "0x0839CCC8",
-        "0x0839CCF0",
-        "0x0839CD18",
-        "0x0839CD40",
-        "0x0839CD68",
-        "0x0839CD90",
-        "0x0839CDB8",
-        "0x0839CDE0",
-        "0x0839D010",
-        "0x0839DC90",
-        "0x0839DCB8"
-      ],
-      "pointer_addresses": [
-        "0x0839A658",
-        "0x0839AE78",
-        "0x0839AEA0",
-        "0x0839AEC8",
-        "0x0839AEF0",
-        "0x0839AF18",
-        "0x0839AF40",
-        "0x0839AF68",
-        "0x0839AF90",
-        "0x0839AFB8",
-        "0x0839AFE0",
-        "0x0839B008",
-        "0x0839B198",
-        "0x0839B328",
-        "0x0839B3F0",
-        "0x0839B418",
-        "0x0839B440",
-        "0x0839B468",
-        "0x0839B490",
-        "0x0839B4B8",
-        "0x0839B5D0",
-        "0x0839B5F8",
-        "0x0839B620",
-        "0x0839B648",
-        "0x0839B6C0",
-        "0x0839B7D8",
-        "0x0839B800",
-        "0x0839B828",
-        "0x0839B850",
-        "0x0839B878",
-        "0x0839B8A0",
-        "0x0839B8C8",
-        "0x0839B8F0",
-        "0x0839B918",
-        "0x0839C1D8",
-        "0x0839C200",
-        "0x0839C228",
-        "0x0839C9A8",
-        "0x0839C9D0",
-        "0x0839C9F8",
-        "0x0839CA20",
-        "0x0839CA48",
-        "0x0839CA70",
-        "0x0839CA98",
-        "0x0839CAC0",
-        "0x0839CAE8",
-        "0x0839CB10",
-        "0x0839CB38",
-        "0x0839CB60",
-        "0x0839CB88",
-        "0x0839CBB0",
-        "0x0839CBD8",
-        "0x0839CC00",
-        "0x0839CC28",
-        "0x0839CC50",
-        "0x0839CC78",
-        "0x0839CCA0",
-        "0x0839CCC8",
-        "0x0839CCF0",
-        "0x0839CD18",
-        "0x0839CD40",
-        "0x0839CD68",
-        "0x0839CD90",
-        "0x0839CDB8",
-        "0x0839CDE0",
-        "0x0839D010",
-        "0x0839DC90",
-        "0x0839DCB8"
       ]
     },
     {
@@ -122740,22 +122590,6 @@
       ]
     },
     {
-      "id": "axvj_08e2c0c79778",
-      "module": "剧情",
-      "address": "0x081E04CD",
-      "byte_length": 5,
-      "original": "？？？？",
-      "original_hex": "ac ac ac ac ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08047858"
-      ],
-      "pointer_addresses": [
-        "0x08047858"
-      ]
-    },
-    {
       "id": "axvj_993b74707329",
       "module": "剧情",
       "address": "0x081E04D2",
@@ -124987,18 +124821,6 @@
       "id": "axvj_286dbd931d85",
       "module": "剧情",
       "address": "0x0839DC80",
-      "byte_length": 9,
-      "original": "？？？？？？？？",
-      "original_hex": "ac ac ac ac ac ac ac ac ff",
-      "translated": "",
-      "is_pointer_based": false,
-      "pointer_sources": [],
-      "pointer_addresses": []
-    },
-    {
-      "id": "axvj_033ca8385008",
-      "module": "剧情",
-      "address": "0x0839DCA8",
       "byte_length": 9,
       "original": "？？？？？？？？",
       "original_hex": "ac ac ac ac ac ac ac ac ff",
@@ -128700,22 +128522,6 @@
       ]
     },
     {
-      "id": "axvj_a6a365f8d811",
-      "module": "剧情",
-      "address": "0x083A57C6",
-      "byte_length": 14,
-      "original": "Ｒ‥ＤＲＩＶＥＲーＴＥＳＴ",
-      "original_hex": "cc b0 be cc c3 d0 bf cc ae ce bf cd ce ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x080B576C"
-      ],
-      "pointer_addresses": [
-        "0x080B576C"
-      ]
-    },
-    {
       "id": "axvj_f9520a921f50",
       "module": "剧情",
       "address": "0x083A57E6",
@@ -129102,70 +128908,6 @@
       ]
     },
     {
-      "id": "axvj_72f61538ec45",
-      "module": "剧情",
-      "address": "0x083A592B",
-      "byte_length": 9,
-      "original": "ＤＯＯＲＯーＸ１",
-      "original_hex": "be c9 c9 cc c9 ae d2 a2 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5CAC"
-      ],
-      "pointer_addresses": [
-        "0x083A5CAC"
-      ]
-    },
-    {
-      "id": "axvj_34673e3d489a",
-      "module": "剧情",
-      "address": "0x083A5934",
-      "byte_length": 9,
-      "original": "ＤＯＯＲＯーＸ３",
-      "original_hex": "be c9 c9 cc c9 ae d2 a4 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5CB0"
-      ],
-      "pointer_addresses": [
-        "0x083A5CB0"
-      ]
-    },
-    {
-      "id": "axvj_0bc499980111",
-      "module": "剧情",
-      "address": "0x083A593D",
-      "byte_length": 9,
-      "original": "ＭＡＣＨＩーＳ２",
-      "original_hex": "c7 bb bd c2 c3 ae cd a3 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5CB4"
-      ],
-      "pointer_addresses": [
-        "0x083A5CB4"
-      ]
-    },
-    {
-      "id": "axvj_44926a0d8508",
-      "module": "剧情",
-      "address": "0x083A5946",
-      "byte_length": 9,
-      "original": "ＭＡＣＨＩーＳ４",
-      "original_hex": "c7 bb bd c2 c3 ae cd a5 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5CB8"
-      ],
-      "pointer_addresses": [
-        "0x083A5CB8"
-      ]
-    },
-    {
       "id": "axvj_a4f4eb4fb4bf",
       "module": "剧情",
       "address": "0x083A5953",
@@ -129214,38 +128956,6 @@
       ]
     },
     {
-      "id": "axvj_6d3485237b28",
-      "module": "剧情",
-      "address": "0x083A5969",
-      "byte_length": 7,
-      "original": "ＭＥーＡＳＡ",
-      "original_hex": "c7 bf ae bb cd bb ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5CCC"
-      ],
-      "pointer_addresses": [
-        "0x083A5CCC"
-      ]
-    },
-    {
-      "id": "axvj_aa5d0f30018b",
-      "module": "剧情",
-      "address": "0x083A5970",
-      "byte_length": 9,
-      "original": "ＭＥーＢＡＣＨＩ",
-      "original_hex": "c7 bf ae bc bb bd c2 c3 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5CD0"
-      ],
-      "pointer_addresses": [
-        "0x083A5CD0"
-      ]
-    },
-    {
       "id": "axvj_43f02b5f4046",
       "module": "剧情",
       "address": "0x083A5979",
@@ -129278,22 +128988,6 @@
       ]
     },
     {
-      "id": "axvj_ede369a8c200",
-      "module": "剧情",
-      "address": "0x083A5987",
-      "byte_length": 8,
-      "original": "ＭＥーＷＡＺＡ",
-      "original_hex": "c7 bf ae d1 bb d4 bb ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5CDC"
-      ],
-      "pointer_addresses": [
-        "0x083A5CDC"
-      ]
-    },
-    {
       "id": "axvj_4d5867024891",
       "module": "剧情",
       "address": "0x083A598F",
@@ -129310,54 +129004,6 @@
       ]
     },
     {
-      "id": "axvj_6398fa7e5019",
-      "module": "剧情",
-      "address": "0x083A5997",
-      "byte_length": 9,
-      "original": "ＤＯＯＲＯーＸ４",
-      "original_hex": "be c9 c9 cc c9 ae d2 a5 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5CE4"
-      ],
-      "pointer_addresses": [
-        "0x083A5CE4"
-      ]
-    },
-    {
-      "id": "axvj_df529c532a88",
-      "module": "剧情",
-      "address": "0x083A59A0",
-      "byte_length": 9,
-      "original": "ＦＵＮＥーＫＡＮ",
-      "original_hex": "c0 cf c8 bf ae c5 bb c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5CE8"
-      ],
-      "pointer_addresses": [
-        "0x083A5CE8"
-      ]
-    },
-    {
-      "id": "axvj_81dcb7ecc391",
-      "module": "剧情",
-      "address": "0x083A59A9",
-      "byte_length": 10,
-      "original": "ＭＥーＳＨＩＮＫＡ",
-      "original_hex": "c7 bf ae cd c2 c3 c8 c5 bb ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5CEC"
-      ],
-      "pointer_addresses": [
-        "0x083A5CEC"
-      ]
-    },
-    {
       "id": "axvj_021d427257b2",
       "module": "剧情",
       "address": "0x083A59B3",
@@ -129371,22 +129017,6 @@
       ],
       "pointer_addresses": [
         "0x083A5CF0"
-      ]
-    },
-    {
-      "id": "axvj_dcac1ff0c279",
-      "module": "剧情",
-      "address": "0x083A59BA",
-      "byte_length": 10,
-      "original": "ＭＥーＷＡＳＵＲＥ",
-      "original_hex": "c7 bf ae d1 bb cd cf cc bf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5CF4"
-      ],
-      "pointer_addresses": [
-        "0x083A5CF4"
       ]
     },
     {
@@ -129438,22 +129068,6 @@
       ]
     },
     {
-      "id": "axvj_7efb1752a1bc",
-      "module": "剧情",
-      "address": "0x083A59DB",
-      "byte_length": 9,
-      "original": "ＭＡＣＨＩーＳ３",
-      "original_hex": "c7 bb bd c2 c3 ae cd a4 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5D04"
-      ],
-      "pointer_addresses": [
-        "0x083A5D04"
-      ]
-    },
-    {
       "id": "axvj_1f1018409e7f",
       "module": "剧情",
       "address": "0x083A59E4",
@@ -129467,22 +129081,6 @@
       ],
       "pointer_addresses": [
         "0x083A5D08"
-      ]
-    },
-    {
-      "id": "axvj_25b3f680bd8e",
-      "module": "剧情",
-      "address": "0x083A59EC",
-      "byte_length": 8,
-      "original": "ＢーＴＯＷＥＲ",
-      "original_hex": "bc ae ce c9 d1 bf cc ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5D0C"
-      ],
-      "pointer_addresses": [
-        "0x083A5D0C"
       ]
     },
     {
@@ -129515,102 +129113,6 @@
       ],
       "pointer_addresses": [
         "0x083A5D14"
-      ]
-    },
-    {
-      "id": "axvj_5d4baf9bf7a6",
-      "module": "剧情",
-      "address": "0x083A5A02",
-      "byte_length": 10,
-      "original": "ＭＥーＫＩＮＯＭＩ",
-      "original_hex": "c7 bf ae c5 c3 c8 c9 c7 c3 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5D18"
-      ],
-      "pointer_addresses": [
-        "0x083A5D18"
-      ]
-    },
-    {
-      "id": "axvj_3d6e9d8978eb",
-      "module": "剧情",
-      "address": "0x083A5A0C",
-      "byte_length": 8,
-      "original": "ＭＥーＴＡＭＡ",
-      "original_hex": "c7 bf ae ce bb c7 bb ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5D1C"
-      ],
-      "pointer_addresses": [
-        "0x083A5D1C"
-      ]
-    },
-    {
-      "id": "axvj_bcfcad86a653",
-      "module": "剧情",
-      "address": "0x083A5A14",
-      "byte_length": 9,
-      "original": "ＭＥーＢーＢＩＧ",
-      "original_hex": "c7 bf ae bc ae bc c3 c1 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5D20"
-      ],
-      "pointer_addresses": [
-        "0x083A5D20"
-      ]
-    },
-    {
-      "id": "axvj_fb4566242e32",
-      "module": "剧情",
-      "address": "0x083A5A1D",
-      "byte_length": 11,
-      "original": "ＭＥーＢーＳＭＡＬＬ",
-      "original_hex": "c7 bf ae bc ae cd c7 bb c6 c6 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5D24"
-      ],
-      "pointer_addresses": [
-        "0x083A5D24"
-      ]
-    },
-    {
-      "id": "axvj_025a553a1cd4",
-      "module": "剧情",
-      "address": "0x083A5A28",
-      "byte_length": 10,
-      "original": "ＭＥーＺＡＮＮＥＮ",
-      "original_hex": "c7 bf ae d4 bb c8 c8 bf c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5D28"
-      ],
-      "pointer_addresses": [
-        "0x083A5D28"
-      ]
-    },
-    {
-      "id": "axvj_f0659476ef95",
-      "module": "剧情",
-      "address": "0x083A5A32",
-      "byte_length": 8,
-      "original": "ＢＤーＴＩＭＥ",
-      "original_hex": "bc be ae ce c3 c7 bf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5D2C"
-      ],
-      "pointer_addresses": [
-        "0x083A5D2C"
       ]
     },
     {
@@ -129966,22 +129468,6 @@
       ]
     },
     {
-      "id": "axvj_310d8f177f0b",
-      "module": "剧情",
-      "address": "0x083A5ADB",
-      "byte_length": 9,
-      "original": "ＧＩＲＬーＳＵＰ",
-      "original_hex": "c1 c3 cc c6 ae cd cf ca ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5D88"
-      ],
-      "pointer_addresses": [
-        "0x083A5D88"
-      ]
-    },
-    {
       "id": "axvj_3f4008ee42ca",
       "module": "剧情",
       "address": "0x083A5AE4",
@@ -130030,22 +129516,6 @@
       ]
     },
     {
-      "id": "axvj_e306c90afb1c",
-      "module": "剧情",
-      "address": "0x083A5AFE",
-      "byte_length": 6,
-      "original": "ＡＱＡー０",
-      "original_hex": "bb cb bb ae a1 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5D98"
-      ],
-      "pointer_addresses": [
-        "0x083A5D98"
-      ]
-    },
-    {
       "id": "axvj_1de5dd5cb5ea",
       "module": "剧情",
       "address": "0x083A5B04",
@@ -130059,22 +129529,6 @@
       ],
       "pointer_addresses": [
         "0x083A5D9C"
-      ]
-    },
-    {
-      "id": "axvj_1ddeb574af8e",
-      "module": "剧情",
-      "address": "0x083A5B0D",
-      "byte_length": 8,
-      "original": "ＢＯＹーＳＵＰ",
-      "original_hex": "bc c9 d3 ae cd cf ca ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5DA0"
-      ],
-      "pointer_addresses": [
-        "0x083A5DA0"
       ]
     },
     {
@@ -130190,22 +129644,6 @@
       ]
     },
     {
-      "id": "axvj_1a2bb9c82a4a",
-      "module": "剧情",
-      "address": "0x083A5B4A",
-      "byte_length": 7,
-      "original": "ＣーＲＯＡＤ",
-      "original_hex": "bd ae cc c9 bb be ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5DC0"
-      ],
-      "pointer_addresses": [
-        "0x083A5DC0"
-      ]
-    },
-    {
       "id": "axvj_3a7985e09fe4",
       "module": "剧情",
       "address": "0x083A5B51",
@@ -130219,38 +129657,6 @@
       ],
       "pointer_addresses": [
         "0x083A5DC4"
-      ]
-    },
-    {
-      "id": "axvj_a03cd43e6b79",
-      "module": "剧情",
-      "address": "0x083A5B57",
-      "byte_length": 7,
-      "original": "ＭーＢＯＡＴ",
-      "original_hex": "c7 ae bc c9 bb ce ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5DC8"
-      ],
-      "pointer_addresses": [
-        "0x083A5DC8"
-      ]
-    },
-    {
-      "id": "axvj_386781d1cf20",
-      "module": "剧情",
-      "address": "0x083A5B5E",
-      "byte_length": 9,
-      "original": "ＭーＤＵＮＧＯＮ",
-      "original_hex": "c7 ae be cf c8 c1 c9 c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5DCC"
-      ],
-      "pointer_addresses": [
-        "0x083A5DCC"
       ]
     },
     {
@@ -130283,22 +129689,6 @@
       ],
       "pointer_addresses": [
         "0x083A5DD4"
-      ]
-    },
-    {
-      "id": "axvj_e5e9ae997c67",
-      "module": "剧情",
-      "address": "0x083A5B78",
-      "byte_length": 9,
-      "original": "ＰーＳＣＨＯＯＬ",
-      "original_hex": "ca ae cd bd c2 c9 c9 c6 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5DD8"
-      ],
-      "pointer_addresses": [
-        "0x083A5DD8"
       ]
     },
     {
@@ -130350,22 +129740,6 @@
       ]
     },
     {
-      "id": "axvj_8cf4a79e34a2",
-      "module": "剧情",
-      "address": "0x083A5B9A",
-      "byte_length": 8,
-      "original": "ＣＯＮーＦＡＮ",
-      "original_hex": "bd c9 c8 ae c0 bb c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5DE8"
-      ],
-      "pointer_addresses": [
-        "0x083A5DE8"
-      ]
-    },
-    {
       "id": "axvj_5105e723cd17",
       "module": "剧情",
       "address": "0x083A5BA2",
@@ -130395,22 +129769,6 @@
       ],
       "pointer_addresses": [
         "0x083A5DF0"
-      ]
-    },
-    {
-      "id": "axvj_d55d896433be",
-      "module": "剧情",
-      "address": "0x083A5BB0",
-      "byte_length": 9,
-      "original": "ＴーＢＡＴＴＬＥ",
-      "original_hex": "ce ae bc bb ce ce c6 bf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5DF4"
-      ],
-      "pointer_addresses": [
-        "0x083A5DF4"
       ]
     },
     {
@@ -130462,38 +129820,6 @@
       ]
     },
     {
-      "id": "axvj_4b3f795ec06b",
-      "module": "剧情",
-      "address": "0x083A5BCF",
-      "byte_length": 6,
-      "original": "ＣＯＮーＫ",
-      "original_hex": "bd c9 c8 ae c5 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5E04"
-      ],
-      "pointer_addresses": [
-        "0x083A5E04"
-      ]
-    },
-    {
-      "id": "axvj_8e04f380cfe1",
-      "module": "剧情",
-      "address": "0x083A5BD5",
-      "byte_length": 8,
-      "original": "ＥＩＫＯＵーＲ",
-      "original_hex": "bf c3 c5 c9 cf ae cc ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5E08"
-      ],
-      "pointer_addresses": [
-        "0x083A5E08"
-      ]
-    },
-    {
       "id": "axvj_fbb119cb13b0",
       "module": "剧情",
       "address": "0x083A5BDD",
@@ -130542,22 +129868,6 @@
       ]
     },
     {
-      "id": "axvj_e72c9e2ee94d",
-      "module": "剧情",
-      "address": "0x083A5BF6",
-      "byte_length": 9,
-      "original": "ＹＡＭＡーＥＹＥ",
-      "original_hex": "d3 bb c7 bb ae bf d3 bf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5E18"
-      ],
-      "pointer_addresses": [
-        "0x083A5E18"
-      ]
-    },
-    {
       "id": "axvj_b12540955c0b",
       "module": "剧情",
       "address": "0x083A5BFF",
@@ -130571,22 +129881,6 @@
       ],
       "pointer_addresses": [
         "0x083A5E1C"
-      ]
-    },
-    {
-      "id": "axvj_64d4cf4bb636",
-      "module": "剧情",
-      "address": "0x083A5C08",
-      "byte_length": 8,
-      "original": "ＩＮＴＥＲーＶ",
-      "original_hex": "c3 c8 ce bf cc ae d0 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A5E20"
-      ],
-      "pointer_addresses": [
-        "0x083A5E20"
       ]
     },
     {
@@ -130814,54 +130108,6 @@
       ]
     },
     {
-      "id": "axvj_b77f83bd8f7a",
-      "module": "剧情",
-      "address": "0x083A5E65",
-      "byte_length": 9,
-      "original": "ＰＣーＬＯＧＯＮ",
-      "original_hex": "ca bd ae c6 c9 c1 c9 c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6454"
-      ],
-      "pointer_addresses": [
-        "0x083A6454"
-      ]
-    },
-    {
-      "id": "axvj_610b852f4ee9",
-      "module": "剧情",
-      "address": "0x083A5E6E",
-      "byte_length": 7,
-      "original": "ＰＣーＯＦＦ",
-      "original_hex": "ca bd ae c9 c0 c0 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6458"
-      ],
-      "pointer_addresses": [
-        "0x083A6458"
-      ]
-    },
-    {
-      "id": "axvj_6171dc1a6116",
-      "module": "剧情",
-      "address": "0x083A5E75",
-      "byte_length": 6,
-      "original": "ＰＣーＯＮ",
-      "original_hex": "ca bd ae c9 c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A645C"
-      ],
-      "pointer_addresses": [
-        "0x083A645C"
-      ]
-    },
-    {
       "id": "axvj_6732181505ec",
       "module": "剧情",
       "address": "0x083A5E7B",
@@ -130875,38 +130121,6 @@
       ],
       "pointer_addresses": [
         "0x083A6460"
-      ]
-    },
-    {
-      "id": "axvj_0f6f3fca5dc1",
-      "module": "剧情",
-      "address": "0x083A5E82",
-      "byte_length": 9,
-      "original": "ＷＩＮーＯＰＥＮ",
-      "original_hex": "d1 c3 c8 ae c9 ca bf c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6464"
-      ],
-      "pointer_addresses": [
-        "0x083A6464"
-      ]
-    },
-    {
-      "id": "axvj_a11f3002726c",
-      "module": "剧情",
-      "address": "0x083A5E8B",
-      "byte_length": 9,
-      "original": "ＷＡＬＬーＨＩＴ",
-      "original_hex": "d1 bb c6 c6 ae c2 c3 ce ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6468"
-      ],
-      "pointer_addresses": [
-        "0x083A6468"
       ]
     },
     {
@@ -130974,54 +130188,6 @@
       ]
     },
     {
-      "id": "axvj_ec095073f38e",
-      "module": "剧情",
-      "address": "0x083A5EAF",
-      "byte_length": 8,
-      "original": "ＫＯＵＫＡーＬ",
-      "original_hex": "c5 c9 cf c5 bb ae c6 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A647C"
-      ],
-      "pointer_addresses": [
-        "0x083A647C"
-      ]
-    },
-    {
-      "id": "axvj_d3844bd34552",
-      "module": "剧情",
-      "address": "0x083A5EB7",
-      "byte_length": 8,
-      "original": "ＫＯＵＫＡーＭ",
-      "original_hex": "c5 c9 cf c5 bb ae c7 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6480"
-      ],
-      "pointer_addresses": [
-        "0x083A6480"
-      ]
-    },
-    {
-      "id": "axvj_231c215ee7ae",
-      "module": "剧情",
-      "address": "0x083A5EBF",
-      "byte_length": 8,
-      "original": "ＫＯＵＫＡーＨ",
-      "original_hex": "c5 c9 cf c5 bb ae c2 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6484"
-      ],
-      "pointer_addresses": [
-        "0x083A6484"
-      ]
-    },
-    {
       "id": "axvj_717c686907f3",
       "module": "剧情",
       "address": "0x083A5EC7",
@@ -131038,22 +130204,6 @@
       ]
     },
     {
-      "id": "axvj_fe6125be5f59",
-      "module": "剧情",
-      "address": "0x083A5ECD",
-      "byte_length": 10,
-      "original": "ＰＯＫＥーＤＥＡＤ",
-      "original_hex": "ca c9 c5 bf ae be bf bb be ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A648C"
-      ],
-      "pointer_addresses": [
-        "0x083A648C"
-      ]
-    },
-    {
       "id": "axvj_6b07224fcb85",
       "module": "剧情",
       "address": "0x083A5ED7",
@@ -131067,22 +130217,6 @@
       ],
       "pointer_addresses": [
         "0x083A6490"
-      ]
-    },
-    {
-      "id": "axvj_2bcae34e555f",
-      "module": "剧情",
-      "address": "0x083A5EDE",
-      "byte_length": 9,
-      "original": "ＪＩＤＯーＤＯＡ",
-      "original_hex": "c4 c3 be c9 ae be c9 bb ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6494"
-      ],
-      "pointer_addresses": [
-        "0x083A6494"
       ]
     },
     {
@@ -131166,150 +130300,6 @@
       ]
     },
     {
-      "id": "axvj_2e1ddb4d1c68",
-      "module": "剧情",
-      "address": "0x083A5F25",
-      "byte_length": 11,
-      "original": "ＪＩＴＥーＰＹＯＫＯ",
-      "original_hex": "c4 c3 ce bf ae ca d3 c9 c5 c9 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A64D4"
-      ],
-      "pointer_addresses": [
-        "0x083A64D4"
-      ]
-    },
-    {
-      "id": "axvj_805ce62bd695",
-      "module": "剧情",
-      "address": "0x083A5F30",
-      "byte_length": 9,
-      "original": "ＭＵーＰＡＣＨＩ",
-      "original_hex": "c7 cf ae ca bb bd c2 c3 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A64D8"
-      ],
-      "pointer_addresses": [
-        "0x083A64D8"
-      ]
-    },
-    {
-      "id": "axvj_f4d94e105ddf",
-      "module": "剧情",
-      "address": "0x083A5F39",
-      "byte_length": 9,
-      "original": "ＴＫーＫＡＳＹＡ",
-      "original_hex": "ce c5 ae c5 bb cd d3 bb ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A64DC"
-      ],
-      "pointer_addresses": [
-        "0x083A64DC"
-      ]
-    },
-    {
-      "id": "axvj_b6d2e59ca6c1",
-      "module": "剧情",
-      "address": "0x083A5F42",
-      "byte_length": 8,
-      "original": "ＦＵーＺＡＫＵ",
-      "original_hex": "c0 cf ae d4 bb c5 cf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A64E0"
-      ],
-      "pointer_addresses": [
-        "0x083A64E0"
-      ]
-    },
-    {
-      "id": "axvj_05a2eb5989ea",
-      "module": "剧情",
-      "address": "0x083A5F4A",
-      "byte_length": 9,
-      "original": "ＦＵーＺＡＫＵ２",
-      "original_hex": "c0 cf ae d4 bb c5 cf a3 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A64E4"
-      ],
-      "pointer_addresses": [
-        "0x083A64E4"
-      ]
-    },
-    {
-      "id": "axvj_2cfbb0352314",
-      "module": "剧情",
-      "address": "0x083A5F53",
-      "byte_length": 10,
-      "original": "ＦＵーＺＵＺＵＺＵ",
-      "original_hex": "c0 cf ae d4 cf d4 cf d4 cf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A64E8"
-      ],
-      "pointer_addresses": [
-        "0x083A64E8"
-      ]
-    },
-    {
-      "id": "axvj_3b9b8efa3786",
-      "module": "剧情",
-      "address": "0x083A5F5D",
-      "byte_length": 10,
-      "original": "ＲＵーＧＡＳＨＩＮ",
-      "original_hex": "cc cf ae c1 bb cd c2 c3 c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A64EC"
-      ],
-      "pointer_addresses": [
-        "0x083A64EC"
-      ]
-    },
-    {
-      "id": "axvj_384a9904fa48",
-      "module": "剧情",
-      "address": "0x083A5F67",
-      "byte_length": 10,
-      "original": "ＲＵーＧＡＳＹＡＮ",
-      "original_hex": "cc cf ae c1 bb cd d3 bb c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A64F0"
-      ],
-      "pointer_addresses": [
-        "0x083A64F0"
-      ]
-    },
-    {
-      "id": "axvj_b5712be96d7c",
-      "module": "剧情",
-      "address": "0x083A5F71",
-      "byte_length": 8,
-      "original": "ＲＵーＢＡＲＩ",
-      "original_hex": "cc cf ae bc bb cc c3 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A64F4"
-      ],
-      "pointer_addresses": [
-        "0x083A64F4"
-      ]
-    },
-    {
       "id": "axvj_81c014252522",
       "module": "剧情",
       "address": "0x083A5F79",
@@ -131323,54 +130313,6 @@
       ],
       "pointer_addresses": [
         "0x083A64F8"
-      ]
-    },
-    {
-      "id": "axvj_b677b5ad16a4",
-      "module": "剧情",
-      "address": "0x083A5F81",
-      "byte_length": 10,
-      "original": "ＫＩーＧＡＳＹＡＮ",
-      "original_hex": "c5 c3 ae c1 bb cd d3 bb c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A64FC"
-      ],
-      "pointer_addresses": [
-        "0x083A64FC"
-      ]
-    },
-    {
-      "id": "axvj_d7ec818866fc",
-      "module": "剧情",
-      "address": "0x083A5F8B",
-      "byte_length": 10,
-      "original": "ＴＫーＷＡＲＰＩＮ",
-      "original_hex": "ce c5 ae d1 bb cc ca c3 c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6500"
-      ],
-      "pointer_addresses": [
-        "0x083A6500"
-      ]
-    },
-    {
-      "id": "axvj_25cc7270c509",
-      "module": "剧情",
-      "address": "0x083A5F95",
-      "byte_length": 11,
-      "original": "ＴＫーＷＡＲＰＯＵＴ",
-      "original_hex": "ce c5 ae d1 bb cc ca c9 cf ce ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6504"
-      ],
-      "pointer_addresses": [
-        "0x083A6504"
       ]
     },
     {
@@ -131403,70 +130345,6 @@
       ],
       "pointer_addresses": [
         "0x083A650C"
-      ]
-    },
-    {
-      "id": "axvj_a4f54777ef17",
-      "module": "剧情",
-      "address": "0x083A5FB0",
-      "byte_length": 11,
-      "original": "ＴＲＡＣＫーＭＯＶＥ",
-      "original_hex": "ce cc bb bd c5 ae c7 c9 d0 bf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6510"
-      ],
-      "pointer_addresses": [
-        "0x083A6510"
-      ]
-    },
-    {
-      "id": "axvj_151c2ebdcb7c",
-      "module": "剧情",
-      "address": "0x083A5FBB",
-      "byte_length": 11,
-      "original": "ＴＲＡＣＫーＳＴＯＰ",
-      "original_hex": "ce cc bb bd c5 ae cd ce c9 ca ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6514"
-      ],
-      "pointer_addresses": [
-        "0x083A6514"
-      ]
-    },
-    {
-      "id": "axvj_bcb3462a685d",
-      "module": "剧情",
-      "address": "0x083A5FC6",
-      "byte_length": 11,
-      "original": "ＴＲＡＣＫーＨＡＩＫ",
-      "original_hex": "ce cc bb bd c5 ae c2 bb c3 c5 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6518"
-      ],
-      "pointer_addresses": [
-        "0x083A6518"
-      ]
-    },
-    {
-      "id": "axvj_1fb55b08cf6e",
-      "module": "剧情",
-      "address": "0x083A5FD1",
-      "byte_length": 11,
-      "original": "ＴＲＡＣＫーＤＯＯＲ",
-      "original_hex": "ce cc bb bd c5 ae be c9 c9 cc ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A651C"
-      ],
-      "pointer_addresses": [
-        "0x083A651C"
       ]
     },
     {
@@ -131854,22 +130732,6 @@
       ]
     },
     {
-      "id": "axvj_5b8eb8244bd4",
-      "module": "剧情",
-      "address": "0x083A6078",
-      "byte_length": 10,
-      "original": "ＴＯＹーＤＡＮＧＯ",
-      "original_hex": "ce c9 d3 ae be bb c8 c1 c9 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6584"
-      ],
-      "pointer_addresses": [
-        "0x083A6584"
-      ]
-    },
-    {
       "id": "axvj_e37d8290eefa",
       "module": "剧情",
       "address": "0x083A6082",
@@ -131950,22 +130812,6 @@
       ]
     },
     {
-      "id": "axvj_f66c1c8a1476",
-      "module": "剧情",
-      "address": "0x083A60A3",
-      "byte_length": 10,
-      "original": "ＴーＯＯＡＭＥーＥ",
-      "original_hex": "ce ae c9 c9 bb c7 bf ae bf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A659C"
-      ],
-      "pointer_addresses": [
-        "0x083A659C"
-      ]
-    },
-    {
       "id": "axvj_aa86c13b502e",
       "module": "剧情",
       "address": "0x083A60AD",
@@ -131979,22 +130825,6 @@
       ],
       "pointer_addresses": [
         "0x083A65A0"
-      ]
-    },
-    {
-      "id": "axvj_694d04f6491c",
-      "module": "剧情",
-      "address": "0x083A60B5",
-      "byte_length": 10,
-      "original": "ＴーＫＯＡＭＥーＥ",
-      "original_hex": "ce ae c5 c9 bb c7 bf ae bf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A65A4"
-      ],
-      "pointer_addresses": [
-        "0x083A65A4"
       ]
     },
     {
@@ -132091,22 +130921,6 @@
       ],
       "pointer_addresses": [
         "0x083A65BC"
-      ]
-    },
-    {
-      "id": "axvj_af86360659a8",
-      "module": "剧情",
-      "address": "0x083A60EC",
-      "byte_length": 11,
-      "original": "ＴＡＭＡＫＯＲＯーＥ",
-      "original_hex": "ce bb c7 bb c5 c9 cc c9 ae bf ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A65C0"
-      ],
-      "pointer_addresses": [
-        "0x083A65C0"
       ]
     },
     {
@@ -132398,22 +131212,6 @@
       ]
     },
     {
-      "id": "axvj_c36915177c71",
-      "module": "剧情",
-      "address": "0x083A617E",
-      "byte_length": 9,
-      "original": "ＺーＳＥＡＲＣＨ",
-      "original_hex": "d4 ae cd bf bb cc bd c2 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A660C"
-      ],
-      "pointer_addresses": [
-        "0x083A660C"
-      ]
-    },
-    {
       "id": "axvj_14114ebaa06a",
       "module": "剧情",
       "address": "0x083A6187",
@@ -132427,54 +131225,6 @@
       ],
       "pointer_addresses": [
         "0x083A6610"
-      ]
-    },
-    {
-      "id": "axvj_e23757af30dd",
-      "module": "剧情",
-      "address": "0x083A618E",
-      "byte_length": 9,
-      "original": "ＴＢーＳＴＡＲＴ",
-      "original_hex": "ce bc ae cd ce bb cc ce ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6614"
-      ],
-      "pointer_addresses": [
-        "0x083A6614"
-      ]
-    },
-    {
-      "id": "axvj_23b8812c2e7c",
-      "module": "剧情",
-      "address": "0x083A6197",
-      "byte_length": 7,
-      "original": "ＴＢーＫＯＮ",
-      "original_hex": "ce bc ae c5 c9 c8 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A6618"
-      ],
-      "pointer_addresses": [
-        "0x083A6618"
-      ]
-    },
-    {
-      "id": "axvj_1264e35c69ce",
-      "module": "剧情",
-      "address": "0x083A619E",
-      "byte_length": 8,
-      "original": "ＴＢーＫＡＲＡ",
-      "original_hex": "ce bc ae c5 bb cc bb ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A661C"
-      ],
-      "pointer_addresses": [
-        "0x083A661C"
       ]
     },
     {
@@ -156738,24 +155488,6 @@
       ]
     },
     {
-      "id": "axvj_706d31f5c729",
-      "module": "剧情",
-      "address": "0x083E9AF3",
-      "byte_length": 6,
-      "original": "？？？？？",
-      "original_hex": "ac ac ac ac ac ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0809C5C8",
-        "0x08104A40"
-      ],
-      "pointer_addresses": [
-        "0x0809C5C8",
-        "0x08104A40"
-      ]
-    },
-    {
       "id": "axvj_b2e2243cc6eb",
       "module": "剧情",
       "address": "0x083E9B13",
@@ -173662,70 +172394,6 @@
       ]
     },
     {
-      "id": "axvj_d889a5e257e9",
-      "module": "补漏剧情",
-      "address": "0x081DC190",
-      "byte_length": 5,
-      "original": "た お ",
-      "original_hex": "10 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081DC1AC"
-      ],
-      "pointer_addresses": [
-        "0x081DC1AC"
-      ]
-    },
-    {
-      "id": "axvj_efba32d53479",
-      "module": "补漏剧情",
-      "address": "0x081DC198",
-      "byte_length": 5,
-      "original": "み お ",
-      "original_hex": "20 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081DC1B0"
-      ],
-      "pointer_addresses": [
-        "0x081DC1B0"
-      ]
-    },
-    {
-      "id": "axvj_42fec63288b3",
-      "module": "补漏剧情",
-      "address": "0x081DC1A0",
-      "byte_length": 5,
-      "original": "ぃ お ",
-      "original_hex": "30 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081DC1B4"
-      ],
-      "pointer_addresses": [
-        "0x081DC1B4"
-      ]
-    },
-    {
-      "id": "axvj_d9dd28e46ea1",
-      "module": "补漏剧情",
-      "address": "0x081DC1F8",
-      "byte_length": 5,
-      "original": "あ お ",
-      "original_hex": "01 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081DC214"
-      ],
-      "pointer_addresses": [
-        "0x081DC214"
-      ]
-    },
-    {
       "id": "axvj_22616b4a6268",
       "module": "补漏剧情",
       "address": "0x081DC200",
@@ -173741,22 +172409,6 @@
         "0x081DC218"
       ],
       "noise": true
-    },
-    {
-      "id": "axvj_058a6cc325fb",
-      "module": "补漏剧情",
-      "address": "0x081DC208",
-      "byte_length": 5,
-      "original": "う お ",
-      "original_hex": "03 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081DC21C"
-      ],
-      "pointer_addresses": [
-        "0x081DC21C"
-      ]
     },
     {
       "id": "axvj_6d452865a25d",
@@ -173791,70 +172443,6 @@
       ]
     },
     {
-      "id": "axvj_8b17e345e560",
-      "module": "补漏剧情",
-      "address": "0x081DC700",
-      "byte_length": 6,
-      "original": "え あ \n",
-      "original_hex": "04 00 01 00 fe ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081DC74C"
-      ],
-      "pointer_addresses": [
-        "0x081DC74C"
-      ]
-    },
-    {
-      "id": "axvj_a77793feac8a",
-      "module": "补漏剧情",
-      "address": "0x081DC708",
-      "byte_length": 6,
-      "original": "く お \n",
-      "original_hex": "08 00 05 00 fe ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081DC748"
-      ],
-      "pointer_addresses": [
-        "0x081DC748"
-      ]
-    },
-    {
-      "id": "axvj_9dc6d96a4b4d",
-      "module": "补漏剧情",
-      "address": "0x081DC710",
-      "byte_length": 6,
-      "original": "し あ \n",
-      "original_hex": "0c 00 01 00 fe ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081DC750"
-      ],
-      "pointer_addresses": [
-        "0x081DC750"
-      ]
-    },
-    {
-      "id": "axvj_47075fd2f999",
-      "module": "补漏剧情",
-      "address": "0x081DC720",
-      "byte_length": 9,
-      "original": "え お く お ",
-      "original_hex": "04 00 05 00 08 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081DC73C"
-      ],
-      "pointer_addresses": [
-        "0x081DC73C"
-      ]
-    },
-    {
       "id": "axvj_50556fb8998e",
       "module": "补漏剧情",
       "address": "0x081DC72C",
@@ -173868,102 +172456,6 @@
       ],
       "pointer_addresses": [
         "0x081DC740"
-      ]
-    },
-    {
-      "id": "axvj_2ffa10ae1897",
-      "module": "补漏剧情",
-      "address": "0x081E0044",
-      "byte_length": 5,
-      "original": "く お ",
-      "original_hex": "08 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081E0070"
-      ],
-      "pointer_addresses": [
-        "0x081E0070"
-      ]
-    },
-    {
-      "id": "axvj_d10ef526df2b",
-      "module": "补漏剧情",
-      "address": "0x081E004C",
-      "byte_length": 5,
-      "original": "た お ",
-      "original_hex": "10 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081E0074"
-      ],
-      "pointer_addresses": [
-        "0x081E0074"
-      ]
-    },
-    {
-      "id": "axvj_f2bc6c0e1140",
-      "module": "补漏剧情",
-      "address": "0x081E0054",
-      "byte_length": 5,
-      "original": "ね お ",
-      "original_hex": "18 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081E0078"
-      ],
-      "pointer_addresses": [
-        "0x081E0078"
-      ]
-    },
-    {
-      "id": "axvj_3df69970ae08",
-      "module": "补漏剧情",
-      "address": "0x081E005C",
-      "byte_length": 5,
-      "original": "み お ",
-      "original_hex": "20 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081E007C"
-      ],
-      "pointer_addresses": [
-        "0x081E007C"
-      ]
-    },
-    {
-      "id": "axvj_7c97352963d2",
-      "module": "补漏剧情",
-      "address": "0x081E0064",
-      "byte_length": 5,
-      "original": "り お ",
-      "original_hex": "28 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081E0080"
-      ],
-      "pointer_addresses": [
-        "0x081E0080"
-      ]
-    },
-    {
-      "id": "axvj_b9f4ea0164f0",
-      "module": "补漏剧情",
-      "address": "0x081E015C",
-      "byte_length": 5,
-      "original": "み お ",
-      "original_hex": "20 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081E0168"
-      ],
-      "pointer_addresses": [
-        "0x081E0168"
       ]
     },
     {
@@ -174061,22 +172553,6 @@
       ],
       "pointer_addresses": [
         "0x0804767C"
-      ]
-    },
-    {
-      "id": "axvj_d4ab89ccc508",
-      "module": "补漏剧情",
-      "address": "0x081E9B68",
-      "byte_length": 5,
-      "original": "く Ｋ ",
-      "original_hex": "08 00 c5 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081E9B74"
-      ],
-      "pointer_addresses": [
-        "0x081E9B74"
       ]
     },
     {
@@ -174245,54 +172721,6 @@
       ],
       "pointer_addresses": [
         "0x0804F31C"
-      ]
-    },
-    {
-      "id": "axvj_9935331cb103",
-      "module": "补漏剧情",
-      "address": "0x081EC334",
-      "byte_length": 5,
-      "original": "た ュ ",
-      "original_hex": "10 00 85 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081EC3C0"
-      ],
-      "pointer_addresses": [
-        "0x081EC3C0"
-      ]
-    },
-    {
-      "id": "axvj_4bb820d440ac",
-      "module": "补漏剧情",
-      "address": "0x081EC33C",
-      "byte_length": 5,
-      "original": "た ど ",
-      "original_hex": "10 00 45 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081EC3C4"
-      ],
-      "pointer_addresses": [
-        "0x081EC3C4"
-      ]
-    },
-    {
-      "id": "axvj_91e809e4a441",
-      "module": "补漏剧情",
-      "address": "0x081EC344",
-      "byte_length": 5,
-      "original": "た お ",
-      "original_hex": "10 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081EC3C8"
-      ],
-      "pointer_addresses": [
-        "0x081EC3C8"
       ]
     },
     {
@@ -175384,38 +173812,6 @@
       ]
     },
     {
-      "id": "axvj_0c5011535e15",
-      "module": "补漏剧情",
-      "address": "0x08348D8C",
-      "byte_length": 6,
-      "original": "い た \n",
-      "original_hex": "02 00 10 00 fe ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083493B8"
-      ],
-      "pointer_addresses": [
-        "0x083493B8"
-      ]
-    },
-    {
-      "id": "axvj_9ff0445dbd4b",
-      "module": "补漏剧情",
-      "address": "0x08348D94",
-      "byte_length": 6,
-      "original": "い っ \n",
-      "original_hex": "02 00 50 00 fe ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083493BC"
-      ],
-      "pointer_addresses": [
-        "0x083493BC"
-      ]
-    },
-    {
       "id": "axvj_a5e4145ac643",
       "module": "补漏剧情",
       "address": "0x08348D9C",
@@ -175693,54 +174089,6 @@
         "0x083494B4",
         "0x08349554",
         "0x083495B4"
-      ]
-    },
-    {
-      "id": "axvj_3289174ae10c",
-      "module": "补漏剧情",
-      "address": "0x08348EEC",
-      "byte_length": 6,
-      "original": "い た \n",
-      "original_hex": "02 00 10 00 fe ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08349408",
-        "0x08349458",
-        "0x083494B8",
-        "0x08349558",
-        "0x083495B8"
-      ],
-      "pointer_addresses": [
-        "0x08349408",
-        "0x08349458",
-        "0x083494B8",
-        "0x08349558",
-        "0x083495B8"
-      ]
-    },
-    {
-      "id": "axvj_2d3351f7ec58",
-      "module": "补漏剧情",
-      "address": "0x08348EF4",
-      "byte_length": 6,
-      "original": "い っ \n",
-      "original_hex": "02 00 50 00 fe ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0834940C",
-        "0x0834945C",
-        "0x083494BC",
-        "0x0834955C",
-        "0x083495BC"
-      ],
-      "pointer_addresses": [
-        "0x0834940C",
-        "0x0834945C",
-        "0x083494BC",
-        "0x0834955C",
-        "0x083495BC"
       ]
     },
     {
@@ -178188,38 +176536,6 @@
       ]
     },
     {
-      "id": "axvj_533744804e4d",
-      "module": "补漏剧情",
-      "address": "0x0838B3E8",
-      "byte_length": 5,
-      "original": "え お ",
-      "original_hex": "04 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0838B404"
-      ],
-      "pointer_addresses": [
-        "0x0838B404"
-      ]
-    },
-    {
-      "id": "axvj_ae41ca0995f6",
-      "module": "补漏剧情",
-      "address": "0x0838B3F0",
-      "byte_length": 5,
-      "original": "か お ",
-      "original_hex": "06 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0838B408"
-      ],
-      "pointer_addresses": [
-        "0x0838B408"
-      ]
-    },
-    {
       "id": "axvj_ab5addd23860",
       "module": "补漏剧情",
       "address": "0x0838B3F8",
@@ -178269,22 +176585,6 @@
       ]
     },
     {
-      "id": "axvj_f1080076dd82",
-      "module": "补漏剧情",
-      "address": "0x0838CBEC",
-      "byte_length": 5,
-      "original": "く お ",
-      "original_hex": "08 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x0838CC0C"
-      ],
-      "pointer_addresses": [
-        "0x0838CC0C"
-      ]
-    },
-    {
       "id": "axvj_a051571d5dcf",
       "module": "补漏剧情",
       "address": "0x0838CBF4",
@@ -178298,22 +176598,6 @@
       ],
       "pointer_addresses": [
         "0x0838CC10"
-      ]
-    },
-    {
-      "id": "axvj_cd3bc9d2344d",
-      "module": "补漏剧情",
-      "address": "0x08390FC0",
-      "byte_length": 5,
-      "original": "く お ",
-      "original_hex": "08 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08390FCC"
-      ],
-      "pointer_addresses": [
-        "0x08390FCC"
       ]
     },
     {
@@ -178332,38 +176616,6 @@
         "0x08391004"
       ],
       "noise": true
-    },
-    {
-      "id": "axvj_24fbb3ac6b7a",
-      "module": "补漏剧情",
-      "address": "0x08391968",
-      "byte_length": 5,
-      "original": "み お ",
-      "original_hex": "20 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08391980"
-      ],
-      "pointer_addresses": [
-        "0x08391980"
-      ]
-    },
-    {
-      "id": "axvj_4a40f903c814",
-      "module": "补漏剧情",
-      "address": "0x08391970",
-      "byte_length": 5,
-      "original": "ぃ お ",
-      "original_hex": "30 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x08391984"
-      ],
-      "pointer_addresses": [
-        "0x08391984"
-      ]
     },
     {
       "id": "axvj_4add8bb93548",
@@ -179139,22 +177391,6 @@
         "0x080AA0B8",
         "0x080AC6A0",
         "0x080AC814"
-      ]
-    },
-    {
-      "id": "axvj_9f4c1cc5d169",
-      "module": "补漏剧情",
-      "address": "0x083A056E",
-      "byte_length": 4,
-      "original": "？？？",
-      "original_hex": "ac ac ac ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083A0588"
-      ],
-      "pointer_addresses": [
-        "0x083A0588"
       ]
     },
     {
@@ -180629,54 +178865,6 @@
       ]
     },
     {
-      "id": "axvj_e40781832997",
-      "module": "补漏剧情",
-      "address": "0x083AED50",
-      "byte_length": 5,
-      "original": "た お ",
-      "original_hex": "10 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083AED6C"
-      ],
-      "pointer_addresses": [
-        "0x083AED6C"
-      ]
-    },
-    {
-      "id": "axvj_4ff0c2ece84b",
-      "module": "补漏剧情",
-      "address": "0x083AED58",
-      "byte_length": 5,
-      "original": "と お ",
-      "original_hex": "14 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083AED70"
-      ],
-      "pointer_addresses": [
-        "0x083AED70"
-      ]
-    },
-    {
-      "id": "axvj_24d2e31a1fbe",
-      "module": "补漏剧情",
-      "address": "0x083AED60",
-      "byte_length": 5,
-      "original": "と お ",
-      "original_hex": "14 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083AED74"
-      ],
-      "pointer_addresses": [
-        "0x083AED74"
-      ]
-    },
-    {
       "id": "axvj_b17387fd521b",
       "module": "补漏剧情",
       "address": "0x083AF100",
@@ -181115,150 +179303,6 @@
       ]
     },
     {
-      "id": "axvj_8bf21b45dd6b",
-      "module": "补漏剧情",
-      "address": "0x083B1B88",
-      "byte_length": 5,
-      "original": "く お ",
-      "original_hex": "08 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083B1BC4"
-      ],
-      "pointer_addresses": [
-        "0x083B1BC4"
-      ]
-    },
-    {
-      "id": "axvj_9514a4c67de6",
-      "module": "补漏剧情",
-      "address": "0x083B1B90",
-      "byte_length": 5,
-      "original": "た お ",
-      "original_hex": "10 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083B1BC8"
-      ],
-      "pointer_addresses": [
-        "0x083B1BC8"
-      ]
-    },
-    {
-      "id": "axvj_ca702090003c",
-      "module": "补漏剧情",
-      "address": "0x083B1B98",
-      "byte_length": 5,
-      "original": "ね お ",
-      "original_hex": "18 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083B1BCC"
-      ],
-      "pointer_addresses": [
-        "0x083B1BCC"
-      ]
-    },
-    {
-      "id": "axvj_a7dff579a2a5",
-      "module": "补漏剧情",
-      "address": "0x083B1BA0",
-      "byte_length": 5,
-      "original": "み お ",
-      "original_hex": "20 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083B1BD0"
-      ],
-      "pointer_addresses": [
-        "0x083B1BD0"
-      ]
-    },
-    {
-      "id": "axvj_276b36ca2e45",
-      "module": "补漏剧情",
-      "address": "0x083B1BA8",
-      "byte_length": 5,
-      "original": "り お ",
-      "original_hex": "28 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083B1BD4"
-      ],
-      "pointer_addresses": [
-        "0x083B1BD4"
-      ]
-    },
-    {
-      "id": "axvj_293869ab0f93",
-      "module": "补漏剧情",
-      "address": "0x083B1BB0",
-      "byte_length": 5,
-      "original": "り お ",
-      "original_hex": "28 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083B1BD8"
-      ],
-      "pointer_addresses": [
-        "0x083B1BD8"
-      ]
-    },
-    {
-      "id": "axvj_db2f459a3321",
-      "module": "补漏剧情",
-      "address": "0x083B1BB8",
-      "byte_length": 5,
-      "original": "り お ",
-      "original_hex": "28 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083B1BDC"
-      ],
-      "pointer_addresses": [
-        "0x083B1BDC"
-      ]
-    },
-    {
-      "id": "axvj_a0a32b788239",
-      "module": "补漏剧情",
-      "address": "0x083B1C08",
-      "byte_length": 5,
-      "original": "え お ",
-      "original_hex": "04 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083B1C14"
-      ],
-      "pointer_addresses": [
-        "0x083B1C14"
-      ]
-    },
-    {
-      "id": "axvj_afbe61ba17cd",
-      "module": "补漏剧情",
-      "address": "0x083B1C20",
-      "byte_length": 5,
-      "original": "え お ",
-      "original_hex": "04 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083B1C2C"
-      ],
-      "pointer_addresses": [
-        "0x083B1C2C"
-      ]
-    },
-    {
       "id": "axvj_804734ccdaa6",
       "module": "补漏剧情",
       "address": "0x083B1C98",
@@ -181275,38 +179319,6 @@
       ]
     },
     {
-      "id": "axvj_1013abfbe06b",
-      "module": "补漏剧情",
-      "address": "0x083B1CAC",
-      "byte_length": 17,
-      "original": "ぞ え タ え ぞ え み え ",
-      "original_hex": "40 00 04 00 60 00 04 00 40 00 04 00 20 00 04 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083B1CEC"
-      ],
-      "pointer_addresses": [
-        "0x083B1CEC"
-      ]
-    },
-    {
-      "id": "axvj_22e307e54a60",
-      "module": "补漏剧情",
-      "address": "0x083B1CC0",
-      "byte_length": 9,
-      "original": "ぞ い み い ",
-      "original_hex": "40 00 02 00 20 00 02 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083B1CF0"
-      ],
-      "pointer_addresses": [
-        "0x083B1CF0"
-      ]
-    },
-    {
       "id": "axvj_652fd562264b",
       "module": "补漏剧情",
       "address": "0x083B1CCC",
@@ -181320,22 +179332,6 @@
       ],
       "pointer_addresses": [
         "0x083B1CF4"
-      ]
-    },
-    {
-      "id": "axvj_691b580b34ca",
-      "module": "补漏剧情",
-      "address": "0x083B1CD8",
-      "byte_length": 9,
-      "original": "ぞ い タ い ",
-      "original_hex": "40 00 02 00 60 00 02 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083B1CF8"
-      ],
-      "pointer_addresses": [
-        "0x083B1CF8"
       ]
     },
     {
@@ -181643,134 +179639,6 @@
       ]
     },
     {
-      "id": "axvj_50bcf6ad1e1a",
-      "module": "补漏剧情",
-      "address": "0x083BBC98",
-      "byte_length": 5,
-      "original": "く お ",
-      "original_hex": "08 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BBD54"
-      ],
-      "pointer_addresses": [
-        "0x083BBD54"
-      ]
-    },
-    {
-      "id": "axvj_6e0815cda36f",
-      "module": "补漏剧情",
-      "address": "0x083BBCA0",
-      "byte_length": 5,
-      "original": "た お ",
-      "original_hex": "10 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BBD58"
-      ],
-      "pointer_addresses": [
-        "0x083BBD58"
-      ]
-    },
-    {
-      "id": "axvj_468d05abbb14",
-      "module": "补漏剧情",
-      "address": "0x083BBCA8",
-      "byte_length": 5,
-      "original": "ね お ",
-      "original_hex": "18 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BBD5C"
-      ],
-      "pointer_addresses": [
-        "0x083BBD5C"
-      ]
-    },
-    {
-      "id": "axvj_4e941a2039f6",
-      "module": "补漏剧情",
-      "address": "0x083BBCB0",
-      "byte_length": 5,
-      "original": "み お ",
-      "original_hex": "20 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BBD60"
-      ],
-      "pointer_addresses": [
-        "0x083BBD60"
-      ]
-    },
-    {
-      "id": "axvj_aee70a2c6fa6",
-      "module": "补漏剧情",
-      "address": "0x083BBCB8",
-      "byte_length": 5,
-      "original": "り お ",
-      "original_hex": "28 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BBD64"
-      ],
-      "pointer_addresses": [
-        "0x083BBD64"
-      ]
-    },
-    {
-      "id": "axvj_4f40d30e0d04",
-      "module": "补漏剧情",
-      "address": "0x083BBCC0",
-      "byte_length": 5,
-      "original": "ぃ お ",
-      "original_hex": "30 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BBD68"
-      ],
-      "pointer_addresses": [
-        "0x083BBD68"
-      ]
-    },
-    {
-      "id": "axvj_6e42d10b9ab0",
-      "module": "补漏剧情",
-      "address": "0x083BBCC8",
-      "byte_length": 5,
-      "original": "ぎ お ",
-      "original_hex": "38 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BBD6C"
-      ],
-      "pointer_addresses": [
-        "0x083BBD6C"
-      ]
-    },
-    {
-      "id": "axvj_25587fdd5db1",
-      "module": "补漏剧情",
-      "address": "0x083BBCD0",
-      "byte_length": 5,
-      "original": "ぞ お ",
-      "original_hex": "40 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BBD70"
-      ],
-      "pointer_addresses": [
-        "0x083BBD70"
-      ]
-    },
-    {
       "id": "axvj_2819223855c6",
       "module": "补漏剧情",
       "address": "0x083BBCD8",
@@ -182026,54 +179894,6 @@
       "noise": true
     },
     {
-      "id": "axvj_09f61fb58967",
-      "module": "补漏剧情",
-      "address": "0x083BBE34",
-      "byte_length": 5,
-      "original": "み お ",
-      "original_hex": "20 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BBE48"
-      ],
-      "pointer_addresses": [
-        "0x083BBE48"
-      ]
-    },
-    {
-      "id": "axvj_96bb501bd694",
-      "module": "补漏剧情",
-      "address": "0x083BBE3C",
-      "byte_length": 5,
-      "original": "ぞ お ",
-      "original_hex": "40 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BBE4C"
-      ],
-      "pointer_addresses": [
-        "0x083BBE4C"
-      ]
-    },
-    {
-      "id": "axvj_d25aabc84b5e",
-      "module": "补漏剧情",
-      "address": "0x083BBE90",
-      "byte_length": 5,
-      "original": "く お ",
-      "original_hex": "08 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BBE9C"
-      ],
-      "pointer_addresses": [
-        "0x083BBE9C"
-      ]
-    },
-    {
       "id": "axvj_f441aa1a6be8",
       "module": "补漏剧情",
       "address": "0x083BBF48",
@@ -182091,38 +179911,6 @@
       "noise": true
     },
     {
-      "id": "axvj_54a9b37ed8af",
-      "module": "补漏剧情",
-      "address": "0x083BBF88",
-      "byte_length": 5,
-      "original": "え お ",
-      "original_hex": "04 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BBF94"
-      ],
-      "pointer_addresses": [
-        "0x083BBF94"
-      ]
-    },
-    {
-      "id": "axvj_bec120d284ba",
-      "module": "补漏剧情",
-      "address": "0x083BCEE4",
-      "byte_length": 5,
-      "original": "あ お ",
-      "original_hex": "01 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BCF30"
-      ],
-      "pointer_addresses": [
-        "0x083BCF30"
-      ]
-    },
-    {
       "id": "axvj_c664e4eba225",
       "module": "补漏剧情",
       "address": "0x083BCEEC",
@@ -182138,374 +179926,6 @@
         "0x083BCF34"
       ],
       "noise": true
-    },
-    {
-      "id": "axvj_e9387f65eda4",
-      "module": "补漏剧情",
-      "address": "0x083BCEF4",
-      "byte_length": 5,
-      "original": "う お ",
-      "original_hex": "03 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BCF38"
-      ],
-      "pointer_addresses": [
-        "0x083BCF38"
-      ]
-    },
-    {
-      "id": "axvj_61aeef5e82aa",
-      "module": "补漏剧情",
-      "address": "0x083BCEFC",
-      "byte_length": 5,
-      "original": "え お ",
-      "original_hex": "04 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BCF3C"
-      ],
-      "pointer_addresses": [
-        "0x083BCF3C"
-      ]
-    },
-    {
-      "id": "axvj_3b877af9e8ee",
-      "module": "补漏剧情",
-      "address": "0x083BCF04",
-      "byte_length": 5,
-      "original": "お お ",
-      "original_hex": "05 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BCF40"
-      ],
-      "pointer_addresses": [
-        "0x083BCF40"
-      ]
-    },
-    {
-      "id": "axvj_0a2e4412156a",
-      "module": "补漏剧情",
-      "address": "0x083BCF0C",
-      "byte_length": 5,
-      "original": "か お ",
-      "original_hex": "06 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BCF44"
-      ],
-      "pointer_addresses": [
-        "0x083BCF44"
-      ]
-    },
-    {
-      "id": "axvj_8a0a74df8445",
-      "module": "补漏剧情",
-      "address": "0x083BCF14",
-      "byte_length": 5,
-      "original": "き お ",
-      "original_hex": "07 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BCF48"
-      ],
-      "pointer_addresses": [
-        "0x083BCF48"
-      ]
-    },
-    {
-      "id": "axvj_5a90a4263480",
-      "module": "补漏剧情",
-      "address": "0x083BCF1C",
-      "byte_length": 5,
-      "original": "く お ",
-      "original_hex": "08 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BCF4C"
-      ],
-      "pointer_addresses": [
-        "0x083BCF4C"
-      ]
-    },
-    {
-      "id": "axvj_189496c721b2",
-      "module": "补漏剧情",
-      "address": "0x083BCF24",
-      "byte_length": 5,
-      "original": "け お ",
-      "original_hex": "09 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BCF50"
-      ],
-      "pointer_addresses": [
-        "0x083BCF50"
-      ]
-    },
-    {
-      "id": "axvj_429850f627ba",
-      "module": "补漏剧情",
-      "address": "0x083BCF5C",
-      "byte_length": 5,
-      "original": "ぞ お ",
-      "original_hex": "40 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BCF68"
-      ],
-      "pointer_addresses": [
-        "0x083BCF68"
-      ]
-    },
-    {
-      "id": "axvj_d348cb24136f",
-      "module": "补漏剧情",
-      "address": "0x083BCF7C",
-      "byte_length": 5,
-      "original": "え お ",
-      "original_hex": "04 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BCFF8"
-      ],
-      "pointer_addresses": [
-        "0x083BCFF8"
-      ]
-    },
-    {
-      "id": "axvj_8c4ca159f395",
-      "module": "补漏剧情",
-      "address": "0x083BCF84",
-      "byte_length": 5,
-      "original": "く お ",
-      "original_hex": "08 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BCFFC"
-      ],
-      "pointer_addresses": [
-        "0x083BCFFC"
-      ]
-    },
-    {
-      "id": "axvj_5c842fde6639",
-      "module": "补漏剧情",
-      "address": "0x083BCF8C",
-      "byte_length": 5,
-      "original": "し お ",
-      "original_hex": "0c 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BD000"
-      ],
-      "pointer_addresses": [
-        "0x083BD000"
-      ]
-    },
-    {
-      "id": "axvj_2d91cffbdab0",
-      "module": "补漏剧情",
-      "address": "0x083BCF94",
-      "byte_length": 5,
-      "original": "た お ",
-      "original_hex": "10 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BD004"
-      ],
-      "pointer_addresses": [
-        "0x083BD004"
-      ]
-    },
-    {
-      "id": "axvj_eb7be0690022",
-      "module": "补漏剧情",
-      "address": "0x083BCF9C",
-      "byte_length": 5,
-      "original": "と お ",
-      "original_hex": "14 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BD008"
-      ],
-      "pointer_addresses": [
-        "0x083BD008"
-      ]
-    },
-    {
-      "id": "axvj_488a2512224f",
-      "module": "补漏剧情",
-      "address": "0x083BCFA4",
-      "byte_length": 5,
-      "original": "ね お ",
-      "original_hex": "18 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BD00C"
-      ],
-      "pointer_addresses": [
-        "0x083BD00C"
-      ]
-    },
-    {
-      "id": "axvj_5567de143cdb",
-      "module": "补漏剧情",
-      "address": "0x083BCFAC",
-      "byte_length": 5,
-      "original": "ふ お ",
-      "original_hex": "1c 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BD010"
-      ],
-      "pointer_addresses": [
-        "0x083BD010"
-      ]
-    },
-    {
-      "id": "axvj_f324ee7c87e5",
-      "module": "补漏剧情",
-      "address": "0x083BCFB4",
-      "byte_length": 5,
-      "original": "み お ",
-      "original_hex": "20 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BD014"
-      ],
-      "pointer_addresses": [
-        "0x083BD014"
-      ]
-    },
-    {
-      "id": "axvj_2354d65ca57f",
-      "module": "补漏剧情",
-      "address": "0x083BCFBC",
-      "byte_length": 5,
-      "original": "や お ",
-      "original_hex": "24 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BD018"
-      ],
-      "pointer_addresses": [
-        "0x083BD018"
-      ]
-    },
-    {
-      "id": "axvj_4f7c6c31afa8",
-      "module": "补漏剧情",
-      "address": "0x083BCFC4",
-      "byte_length": 5,
-      "original": "り お ",
-      "original_hex": "28 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BD01C"
-      ],
-      "pointer_addresses": [
-        "0x083BD01C"
-      ]
-    },
-    {
-      "id": "axvj_2c6d1e8c7af7",
-      "module": "补漏剧情",
-      "address": "0x083BCFCC",
-      "byte_length": 5,
-      "original": "わ お ",
-      "original_hex": "2c 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BD020"
-      ],
-      "pointer_addresses": [
-        "0x083BD020"
-      ]
-    },
-    {
-      "id": "axvj_e5ced3f740bd",
-      "module": "补漏剧情",
-      "address": "0x083BCFD4",
-      "byte_length": 5,
-      "original": "ぃ お ",
-      "original_hex": "30 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BD024"
-      ],
-      "pointer_addresses": [
-        "0x083BD024"
-      ]
-    },
-    {
-      "id": "axvj_80f3b3d44cdf",
-      "module": "补漏剧情",
-      "address": "0x083BCFDC",
-      "byte_length": 5,
-      "original": "ゃ お ",
-      "original_hex": "34 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BD028"
-      ],
-      "pointer_addresses": [
-        "0x083BD028"
-      ]
-    },
-    {
-      "id": "axvj_ee178840fe1d",
-      "module": "补漏剧情",
-      "address": "0x083BCFE4",
-      "byte_length": 5,
-      "original": "ぎ お ",
-      "original_hex": "38 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BD02C"
-      ],
-      "pointer_addresses": [
-        "0x083BD02C"
-      ]
-    },
-    {
-      "id": "axvj_f0b60dd12dd9",
-      "module": "补漏剧情",
-      "address": "0x083BCFEC",
-      "byte_length": 5,
-      "original": "ざ お ",
-      "original_hex": "3c 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BD030"
-      ],
-      "pointer_addresses": [
-        "0x083BD030"
-      ]
     },
     {
       "id": "axvj_6faea5917625",
@@ -182553,86 +179973,6 @@
       ],
       "pointer_addresses": [
         "0x080F57F8"
-      ]
-    },
-    {
-      "id": "axvj_b52de2a5fa65",
-      "module": "补漏剧情",
-      "address": "0x083BF594",
-      "byte_length": 5,
-      "original": "あ お ",
-      "original_hex": "01 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BF5C8"
-      ],
-      "pointer_addresses": [
-        "0x083BF5C8"
-      ]
-    },
-    {
-      "id": "axvj_a339b267f9d3",
-      "module": "补漏剧情",
-      "address": "0x083BF59C",
-      "byte_length": 5,
-      "original": "う お ",
-      "original_hex": "03 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BF5CC"
-      ],
-      "pointer_addresses": [
-        "0x083BF5CC"
-      ]
-    },
-    {
-      "id": "axvj_0b54e882b523",
-      "module": "补漏剧情",
-      "address": "0x083BF5A4",
-      "byte_length": 5,
-      "original": "お お ",
-      "original_hex": "05 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BF5D0"
-      ],
-      "pointer_addresses": [
-        "0x083BF5D0"
-      ]
-    },
-    {
-      "id": "axvj_3636429de80d",
-      "module": "补漏剧情",
-      "address": "0x083BF5AC",
-      "byte_length": 5,
-      "original": "か お ",
-      "original_hex": "06 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BF5D4"
-      ],
-      "pointer_addresses": [
-        "0x083BF5D4"
-      ]
-    },
-    {
-      "id": "axvj_84646aa43ddf",
-      "module": "补漏剧情",
-      "address": "0x083BF5B4",
-      "byte_length": 5,
-      "original": "く お ",
-      "original_hex": "08 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083BF5D8"
-      ],
-      "pointer_addresses": [
-        "0x083BF5D8"
       ]
     },
     {
@@ -184937,38 +182277,6 @@
       ]
     },
     {
-      "id": "axvj_4765849fa0ae",
-      "module": "补漏剧情",
-      "address": "0x083DE3CC",
-      "byte_length": 5,
-      "original": "か お ",
-      "original_hex": "06 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083DE3D8"
-      ],
-      "pointer_addresses": [
-        "0x083DE3D8"
-      ]
-    },
-    {
-      "id": "axvj_a0a13559a2bf",
-      "module": "补漏剧情",
-      "address": "0x083DE3FC",
-      "byte_length": 5,
-      "original": "け お ",
-      "original_hex": "09 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083DE418"
-      ],
-      "pointer_addresses": [
-        "0x083DE418"
-      ]
-    },
-    {
       "id": "axvj_ddca58239890",
       "module": "补漏剧情",
       "address": "0x083DE404",
@@ -185063,22 +182371,6 @@
       ],
       "pointer_addresses": [
         "0x08130AC0"
-      ]
-    },
-    {
-      "id": "axvj_054fe1adfe9f",
-      "module": "补漏剧情",
-      "address": "0x083E1608",
-      "byte_length": 5,
-      "original": "く お ",
-      "original_hex": "08 00 05 00 ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x083E1614"
-      ],
-      "pointer_addresses": [
-        "0x083E1614"
       ]
     },
     {
@@ -186324,24 +183616,6 @@
       "pointer_addresses": [
         "0x0809D3FC",
         "0x0809D470"
-      ]
-    },
-    {
-      "id": "axvj_29e09cb22fb7",
-      "module": "补漏剧情",
-      "address": "0x083E9AEF",
-      "byte_length": 4,
-      "original": "？？？",
-      "original_hex": "ac ac ac ff",
-      "translated": "",
-      "is_pointer_based": true,
-      "pointer_sources": [
-        "0x081412D8",
-        "0x081412F4"
-      ],
-      "pointer_addresses": [
-        "0x081412D8",
-        "0x081412F4"
       ]
     },
     {

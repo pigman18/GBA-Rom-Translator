@@ -769,10 +769,24 @@ def _packed_scan_pool_heads(
     训练家 class 名等是连续 ``…FF 下一条…``，代码字面量常只挂池头
     （如 ``ポケモントレーナー`` @ 0x1C4A14）。把该字面量改成单条扩展译文
     后，后续 class 名全部失联 → 领航员训练家信息列表错位乱画。
+
+    ⚠️ **只有「真被代码当基址用」的地址才配保护**（``_is_code_base``：
+    存在 ``ldr rX,[pc,#imm]`` 加载该字面量）。否则误伤普通指针：
+
+    * 地点名 0x3BECB7 —— range 起点，但 ``find_ldrs`` 为 0；它的
+      0x3BEF78 是「[ptr][flags][ptr][flags]」混排表里的普通指针，
+      单条改安全，却因为 ``heads.add(GBA_BASE + lo)`` 被整条拒掉。
+    * 道具说明 0x3984DC 同理。
+    * 训练卡 0x389D6C 有 1 处 ldr → 确实是基址，保护正确。
     """
     by_mod: dict[str, list[dict]] = {}
     for e in entries:
         by_mod.setdefault(str(e.get("module") or ""), []).append(e)
+
+    from .table_stride import find_ldrs
+
+    def _is_code_base(addr: int) -> bool:
+        return bool(find_ldrs(rom, addr))
 
     heads: set[int] = set()
     for name, mod in modules.items():
@@ -813,9 +827,12 @@ def _packed_scan_pool_heads(
             if near < max(1, (len(in_rg) - 1) // 2):
                 continue
             head = _entry_file_off(in_rg[0])
-            if head is not None:
-                heads.add(GBA_BASE + head)
-            heads.add(GBA_BASE + lo)
+            for cand in (head, lo):
+                if cand is None:
+                    continue
+                # 只有被代码 ldr 当基址加载的才保护；普通指针不要误伤
+                if _is_code_base(cand):
+                    heads.add(GBA_BASE + cand)
     return heads
 
 

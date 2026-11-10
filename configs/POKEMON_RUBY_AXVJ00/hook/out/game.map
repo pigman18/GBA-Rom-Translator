@@ -58,7 +58,7 @@ LOAD out\obj/UnusedPrintMonName_hook.o
 LOAD out\obj/DrawOptionMenuChoice_entry.o
 LOAD out\obj/DrawOptionMenuChoice_hook.o
 
-.text           0x08800000     0x1b90
+.text           0x08800000     0x1cec
  *entry.o(.text*)
  .text          0x08800000       0x18 out\obj/text_entry.o
                 0x08800000                EngineEntry
@@ -91,82 +91,82 @@ LOAD out\obj/DrawOptionMenuChoice_hook.o
                 0x08801024                scene_remap_tile
                 0x088010e8                scene_gctn_linear
                 0x08801110                scene_gctn_mode2
- .text          0x088011fc      0x6b4 out\obj/text_render.o
-                0x088013c0                vram_tile
-                0x088013f4                copy_tile32
-                0x08801418                DrawGlyphTiles
-                0x0880172c                arrow_inplace12
-                0x08801754                ChsBlitTileDirect
-                0x0880178c                ChsGlyphMetrics
-                0x088017b8                DecompressGlyph_Chinese
-                0x08801898                GetChineseFontWidthFunc
-                0x088018a8                chs_pitch_write_op
-                0x088018ac                chs_pitch_set_write_op
- .text          0x088018b0       0x24 out\obj/MapNamePopup_hook.o
-                0x088018b0                MapNamePopup_CalcLeftPx
- .text          0x088018d4       0x14 out\obj/UpdateNickInHealthbox_hook.o
-                0x088018d4                HealthboxNickCpusetCtrl
-                0x088018dc                HealthboxNickCpusetWords
-                0x088018e0                HealthboxNickCpusetCtrlStock
- .text          0x088018e8      0x16c out\obj/UnusedPrintMonName_hook.o
-                0x0880192c                UnusedPrintMonName_hook_C
- .text          0x08801a54       0xa4 out\obj/DrawOptionMenuChoice_hook.o
-                0x08801a54                DrawOptionMenuChoice_hook_C
+ .text          0x088011fc      0x810 out\obj/text_render.o
+                0x0880140c                vram_tile
+                0x08801440                copy_tile32
+                0x08801464                DrawGlyphTiles
+                0x08801888                arrow_inplace12
+                0x088018b0                ChsBlitTileDirect
+                0x088018e8                ChsGlyphMetrics
+                0x08801914                DecompressGlyph_Chinese
+                0x088019f4                GetChineseFontWidthFunc
+                0x08801a04                chs_pitch_write_op
+                0x08801a08                chs_pitch_set_write_op
+ .text          0x08801a0c       0x24 out\obj/MapNamePopup_hook.o
+                0x08801a0c                MapNamePopup_CalcLeftPx
+ .text          0x08801a30       0x14 out\obj/UpdateNickInHealthbox_hook.o
+                0x08801a30                HealthboxNickCpusetCtrl
+                0x08801a38                HealthboxNickCpusetWords
+                0x08801a3c                HealthboxNickCpusetCtrlStock
+ .text          0x08801a44      0x16c out\obj/UnusedPrintMonName_hook.o
+                0x08801a88                UnusedPrintMonName_hook_C
+ .text          0x08801bb0       0xa4 out\obj/DrawOptionMenuChoice_hook.o
+                0x08801bb0                DrawOptionMenuChoice_hook_C
  *(.rodata*)
- .rodata        0x08801af8       0x98 out\obj/PrintNextChar_hook.o
+ .rodata        0x08801c54       0x98 out\obj/PrintNextChar_hook.o
  *(.rodata.*)
-                0x08801b90                        . = ALIGN (0x4)
+                0x08801cec                        . = ALIGN (0x4)
 
-.data           0x08801b90        0x0
- .data          0x08801b90        0x0 out\obj/text_entry.o
- .data          0x08801b90        0x0 out\obj/PrintNextChar_hook.o
- .data          0x08801b90        0x0 out\obj/text_translter.o
- .data          0x08801b90        0x0 out\obj/text_scene.o
- .data          0x08801b90        0x0 out\obj/text_render.o
- .data          0x08801b90        0x0 out\obj/MapNamePopup_entry.o
- .data          0x08801b90        0x0 out\obj/MapNamePopup_hook.o
- .data          0x08801b90        0x0 out\obj/UpdateNickInHealthbox_entry.o
- .data          0x08801b90        0x0 out\obj/UpdateNickInHealthbox_hook.o
- .data          0x08801b90        0x0 out\obj/UnusedPrintMonName_entry.o
- .data          0x08801b90        0x0 out\obj/UnusedPrintMonName_hook.o
- .data          0x08801b90        0x0 out\obj/DrawOptionMenuChoice_entry.o
- .data          0x08801b90        0x0 out\obj/DrawOptionMenuChoice_hook.o
+.data           0x08801cec        0x0
+ .data          0x08801cec        0x0 out\obj/text_entry.o
+ .data          0x08801cec        0x0 out\obj/PrintNextChar_hook.o
+ .data          0x08801cec        0x0 out\obj/text_translter.o
+ .data          0x08801cec        0x0 out\obj/text_scene.o
+ .data          0x08801cec        0x0 out\obj/text_render.o
+ .data          0x08801cec        0x0 out\obj/MapNamePopup_entry.o
+ .data          0x08801cec        0x0 out\obj/MapNamePopup_hook.o
+ .data          0x08801cec        0x0 out\obj/UpdateNickInHealthbox_entry.o
+ .data          0x08801cec        0x0 out\obj/UpdateNickInHealthbox_hook.o
+ .data          0x08801cec        0x0 out\obj/UnusedPrintMonName_entry.o
+ .data          0x08801cec        0x0 out\obj/UnusedPrintMonName_hook.o
+ .data          0x08801cec        0x0 out\obj/DrawOptionMenuChoice_entry.o
+ .data          0x08801cec        0x0 out\obj/DrawOptionMenuChoice_hook.o
 
-.igot.plt       0x08801b90        0x0
- .igot.plt      0x08801b90        0x0 out\obj/text_entry.o
+.igot.plt       0x08801cec        0x0
+ .igot.plt      0x08801cec        0x0 out\obj/text_entry.o
 
-.glue_7         0x08801b90        0x0
- .glue_7        0x08801b90        0x0 linker stubs
+.glue_7         0x08801cec        0x0
+ .glue_7        0x08801cec        0x0 linker stubs
 
-.glue_7t        0x08801b90        0x0
- .glue_7t       0x08801b90        0x0 linker stubs
+.glue_7t        0x08801cec        0x0
+ .glue_7t       0x08801cec        0x0 linker stubs
 
-.vfp11_veneer   0x08801b90        0x0
- .vfp11_veneer  0x08801b90        0x0 linker stubs
+.vfp11_veneer   0x08801cec        0x0
+ .vfp11_veneer  0x08801cec        0x0 linker stubs
 
-.v4_bx          0x08801b90        0x0
- .v4_bx         0x08801b90        0x0 linker stubs
+.v4_bx          0x08801cec        0x0
+ .v4_bx         0x08801cec        0x0 linker stubs
 
-.iplt           0x08801b90        0x0
- .iplt          0x08801b90        0x0 out\obj/text_entry.o
+.iplt           0x08801cec        0x0
+ .iplt          0x08801cec        0x0 out\obj/text_entry.o
 
-.rel.dyn        0x08801b90        0x0
- .rel.iplt      0x08801b90        0x0 out\obj/text_entry.o
+.rel.dyn        0x08801cec        0x0
+ .rel.iplt      0x08801cec        0x0 out\obj/text_entry.o
 
-.bss            0x08801b90        0x0
- .bss           0x08801b90        0x0 out\obj/text_entry.o
- .bss           0x08801b90        0x0 out\obj/PrintNextChar_hook.o
- .bss           0x08801b90        0x0 out\obj/text_translter.o
- .bss           0x08801b90        0x0 out\obj/text_scene.o
- .bss           0x08801b90        0x0 out\obj/text_render.o
- .bss           0x08801b90        0x0 out\obj/MapNamePopup_entry.o
- .bss           0x08801b90        0x0 out\obj/MapNamePopup_hook.o
- .bss           0x08801b90        0x0 out\obj/UpdateNickInHealthbox_entry.o
- .bss           0x08801b90        0x0 out\obj/UpdateNickInHealthbox_hook.o
- .bss           0x08801b90        0x0 out\obj/UnusedPrintMonName_entry.o
- .bss           0x08801b90        0x0 out\obj/UnusedPrintMonName_hook.o
- .bss           0x08801b90        0x0 out\obj/DrawOptionMenuChoice_entry.o
- .bss           0x08801b90        0x0 out\obj/DrawOptionMenuChoice_hook.o
+.bss            0x08801cec        0x0
+ .bss           0x08801cec        0x0 out\obj/text_entry.o
+ .bss           0x08801cec        0x0 out\obj/PrintNextChar_hook.o
+ .bss           0x08801cec        0x0 out\obj/text_translter.o
+ .bss           0x08801cec        0x0 out\obj/text_scene.o
+ .bss           0x08801cec        0x0 out\obj/text_render.o
+ .bss           0x08801cec        0x0 out\obj/MapNamePopup_entry.o
+ .bss           0x08801cec        0x0 out\obj/MapNamePopup_hook.o
+ .bss           0x08801cec        0x0 out\obj/UpdateNickInHealthbox_entry.o
+ .bss           0x08801cec        0x0 out\obj/UpdateNickInHealthbox_hook.o
+ .bss           0x08801cec        0x0 out\obj/UnusedPrintMonName_entry.o
+ .bss           0x08801cec        0x0 out\obj/UnusedPrintMonName_hook.o
+ .bss           0x08801cec        0x0 out\obj/DrawOptionMenuChoice_entry.o
+ .bss           0x08801cec        0x0 out\obj/DrawOptionMenuChoice_hook.o
 
 /DISCARD/
  *(.comment)

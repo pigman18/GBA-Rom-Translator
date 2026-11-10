@@ -46,6 +46,14 @@
  *   背包第 7 行「小」的下半截曾被 0x1E0 的 ▶ 覆盖 —— 就是这条。 */
 #define CHS_ROW_TILES   62u
 #define CHS_ROWS         8u
+/* 状态槽数。必须远大于段数：段是 8 个（8 行循环），但一个场景里的窗口
+ * 模板可能有十几个（背包就有列表、说明、道具标签、数量……）。
+ * 槽不够时按散列覆盖，两个模板轮流用同一个槽 → lwin/endcol 互相踩，
+ * 表现为「某些行被反复清空」（实证：背包第 6、7 行表项在、tile 全空）。 */
+#define CHS_SLOTS       32u
+/* 一段能容纳的列数：62 tile / 2（上/下）= 31 列。清理由此封顶，
+ * 否则第 32 列会写到下一段的开头（8 段是首尾相接的）。 */
+#define CHS_ROW_COLS    (CHS_ROW_TILES / 2u)
 
 /* 字形索引的位域：低 15 位是序号，bit15 表示取右半（同一个字的第二片） */
 #define CHS_GLYPH_HALF_BIT  0x8000u
@@ -56,111 +64,65 @@
 #define CHS_STATE_ADDR  0x0203E000u
 
 struct ChsRowState {
-    uint32_t win;   /* 窗口指针 */
-    uint8_t  row;   /* 文本行 (CURSOR_Y + CURSOR_TILE_Y) >> 1 */
-    uint8_t  rx;    /* 行内像素相位 0..7 */
-    uint8_t  ctx;   /* 上次绘制后留下的 CURSOR_TILE_X */
+    uint32_t key;    /* tile 池（tpl->tileData），窗口的物理资源标识 */
+    uint32_t lwin;   /* 上次的 win 指针；只有同一个 printer 重打才算重印 */
+    uint16_t lidx;   /* 上次的 TEXT_INDEX，回退即重印 */
+    uint8_t  seg;    /* 段号 ((CY+CTY)>>1) & 7 */
+    uint8_t  ctx;    /* 上次绘制后留下的 CURSOR_TILE_X */
+    uint8_t  rx;     /* 行内像素相位 0..7 */
+    uint8_t  hstart; /* 本段上次的起始绝对列 */
+    uint8_t  hend;   /* 本段上次的结束绝对列 */
     uint8_t  used;
-};
+    uint8_t  pad;
+};                      /* 20B x 32 = 640B @ 0x0203E000..0x203E280 */
 
 static struct ChsRowState *st_tab(void)
 {
     return (struct ChsRowState *)(uintptr_t)CHS_STATE_ADDR;
 }
 
-/* 取本窗口的状态槽。按窗口指针定位；满了就按指针散列挑一个固定槽，
- * 让两个窗口不会共用同一个槽（共用会让相位互相污染）。 */
+/* 取本窗口的状态槽。
+ *
+ * ★ key 用 **tile 池**（`tpl->tileData`）而不是 `win` 指针、也不是模板指针：
+ *   - 用 `win`：游戏重印一段文本时常常新建 TextPrinter，指针每次都变，
+ *     按 win 索引必然拿空槽 → 丢失「本行上次画到哪一列」，旧尾巴永远擦不掉。
+ *   - 用模板：多个窗口 memcpy 同一 ROM 模板，指针相同 → 互相踩。
+ *   tile 池既不随实例变，也确实按窗口隔离。 */
 static struct ChsRowState *st_slot(TextPrinter *win)
 {
     struct ChsRowState *tab = st_tab();
+    uint8_t *tpl = win_template(win);
+    uint32_t key = tpl ? win_u32(tpl, TPL_TILE_DATA) : 0u;
     unsigned i;
-    unsigned free_slot = CHS_ROWS;
+    unsigned free_slot = CHS_SLOTS;
 
-    for (i = 0; i < CHS_ROWS; i++) {
-        if (tab[i].used && tab[i].win == (uint32_t)(uintptr_t)win)
+    /* key 用 **tile 池指针**，不能用模板指针：游戏里多个窗口是
+     * `memcpy` 同一个 ROM WindowTemplate 再改字段建出来的，模板指针相同，
+     * 按模板记账会让「背包列表」和「道具标签」共用一个槽 ——
+     * endcol 互相踩，一个 col=1 的窗口读到 endcol=29 就把整行清空
+     * （实证：clear 记录 seg=6/7, col=1, endcol=29 → 背包第 6、7 行空白）。
+     * tileData（0x06008000 / 0x0600C000 …）才是真正的物理资源。 */
+    if (key == 0u)
+        key = (uint32_t)(uintptr_t)win;
+
+    for (i = 0; i < CHS_SLOTS; i++) {
+        if (tab[i].used && tab[i].key == key)
             return &tab[i];
-        if (!tab[i].used && free_slot == CHS_ROWS)
+        if (!tab[i].used && free_slot == CHS_SLOTS)
             free_slot = i;
     }
-    if (free_slot == CHS_ROWS)
-        free_slot = (unsigned)(((uintptr_t)win >> 4) & (CHS_ROWS - 1u));
-    tab[free_slot].win = (uint32_t)(uintptr_t)win;
-    tab[free_slot].row = 0xFFu;         /* 强制下一次绘制归零相位 */
+    if (free_slot == CHS_SLOTS)
+        free_slot = (unsigned)((key >> 6) & (CHS_SLOTS - 1u));
+    tab[free_slot].key = key;
+    tab[free_slot].lwin = 0u;
+    tab[free_slot].lidx = 0u;
+    tab[free_slot].seg = 0xFFu;         /* 强制下一次绘制归零相位 */
     tab[free_slot].rx = 0u;
     tab[free_slot].ctx = 0xFFu;
+    tab[free_slot].hstart = 0u;
+    tab[free_slot].hend = 0u;
     tab[free_slot].used = 1u;
     return &tab[free_slot];
-}
-
-/* ---- 临时探针：按 textMode 统计绘制次数（0x0203F800，实测恒零区） ---- */
-#define CHS_PROBE 0
-#define CHS_PROBE_ADDR 0x0203F800u
-
-static void probe_hit(unsigned mode, unsigned font)
-{
-#if CHS_PROBE
-    volatile uint8_t *p = (volatile uint8_t *)(uintptr_t)CHS_PROBE_ADDR;
-
-    p[mode & 7u] = (uint8_t)(p[mode & 7u] + 1u);
-    p[8] = (uint8_t)font;
-#else
-    (void)mode; (void)font;
-#endif
-}
-
-/* tm2：把正在打印的文本流前 16 字节抓出来（判断字节编码对不对） */
-static void probe_text(TextPrinter *win)
-{
-#if CHS_PROBE
-    volatile uint8_t *p = (volatile uint8_t *)(uintptr_t)CHS_PROBE_ADDR;
-    uint32_t tp;
-    uint16_t ti;
-    unsigned i;
-
-    if (p[0x20] != 0u)
-        return;
-    /* 只抓「战斗名字」：tm2 + font4（8px 小字） */
-    if ((win_u8(win, WIN_TEXTMODE) & 7u) != 2u
-        || win_u8(win, WIN_FONTNUM_REAL) != 4u)
-        return;
-    tp = win_u32(win, WIN_TEXT_PTR);
-    ti = win_u16(win, WIN_TEXT_INDEX);
-    if (!((tp >= 0x08000000u && tp < 0x0A000000u)
-          || (tp >= 0x02000000u && tp < 0x02040000u)))
-        return;
-    for (i = 0; i < 16u; i++)
-        p[0x20 + i] = *(volatile uint8_t *)(uintptr_t)(tp + ti + i);
-    p[0x30] = (uint8_t)((tp >> 24) & 0xFFu);
-    p[0x31] = (uint8_t)((tp >> 16) & 0xFFu);
-    p[0x32] = (uint8_t)((tp >> 8) & 0xFFu);
-    p[0x33] = (uint8_t)(tp & 0xFFu);
-    p[0x34] = (uint8_t)(ti & 0xFFu);
-    p[0x35] = (uint8_t)((ti >> 8) & 0xFFu);
-    p[0x20] = 0xFFu;              /* 标记已抓 */
-#endif
-}
-
-/* tm2 缓冲路径的目标指针探针：dst 是否为空、以及它的高 16 位 */
-static void probe_buf(uint32_t dst, unsigned adv, unsigned cx, unsigned cy)
-{
-#if CHS_PROBE
-    volatile uint8_t *p = (volatile uint8_t *)(uintptr_t)CHS_PROBE_ADDR;
-
-    if (dst == 0u) {
-        p[9] = (uint8_t)(p[9] + 1u);
-        return;
-    }
-    if (p[10] == 0u && p[11] == 0u) {
-        p[10] = (uint8_t)((dst >> 16) & 0xFFu);
-        p[11] = (uint8_t)((dst >> 8) & 0xFFu);
-        p[12] = (uint8_t)(dst & 0xFFu);
-        p[13] = (uint8_t)adv;
-        p[14] = (uint8_t)cx;
-        p[15] = (uint8_t)cy;
-    }
-#else
-    (void)dst; (void)adv; (void)cx; (void)cy;
-#endif
 }
 
 /* =====================================================================================
@@ -238,6 +200,31 @@ uint8_t *vram_tile(TextPrinter *win, uint16_t tile)
     return base + ((uint32_t)tile << 5);
 }
 
+/* 把本行段里 [from, to) 列（绝对列）的上下两半 tile 全部填成背景色。
+ *
+ * 这是「重印时擦掉旧尾巴」的唯一手段：官方引擎从不自己擦旧像素，
+ * 它靠上层 FillWindow 清窗口；而我们的中文画在自己的 arena（那 512 tile
+ * 日文字库区）里，游戏的 FillWindow 清不到，只能自己按列清。
+ * 只清 [from, to) 而不是整段，是为了不碰同一 tilemap 行上另一个窗口的字
+ * （背包列表 col22~30 与说明框 col0~13 就压在同一批行上）。 */
+static void clear_cols(
+    TextPrinter *win, uint16_t base, unsigned from, unsigned to, uint8_t bg)
+{
+    unsigned c;
+
+    if (to > CHS_ROW_COLS)
+        to = CHS_ROW_COLS;
+    if (from >= to)
+        return;
+
+    for (c = from; c < to; c++) {
+        uint16_t tu = (uint16_t)(base + (uint16_t)(c * 2u));
+
+        fill_run(vram_tile(win, tu), 0u, 8u, bg);
+        fill_run(vram_tile(win, (uint16_t)(tu + 1u)), 0u, 8u, bg);
+    }
+}
+
 void copy_tile32(void *dst, const void *src)
 {
     const uint32_t *s = (const uint32_t *)src;
@@ -285,22 +272,54 @@ static void draw_glyph_tilemap(
     struct ChsRowState *st = st_slot(win);
     unsigned row = ((unsigned)win_u8(win, WIN_CURSOR_Y)
                     + (unsigned)win_u8(win, WIN_CURSOR_TILE_Y)) >> 1;
+    unsigned seg = row & (CHS_ROWS - 1u);
     unsigned col = (unsigned)win_u8(win, WIN_CURSOR_X)
                  + (unsigned)win_u8(win, WIN_CURSOR_TILE_X);
     unsigned ctx = (unsigned)win_u8(win, WIN_CURSOR_TILE_X);
     uint16_t base = (uint16_t)(win_u16(win, WIN_TILE_BASE)
-                               + (uint16_t)((row & (CHS_ROWS - 1u)) * CHS_ROW_TILES));
+                               + (uint16_t)(seg * CHS_ROW_TILES));
     unsigned rx, gx;
     uint8_t fg, bg, sh;
 
-    /* 相位：行号变了或列游标被外力移动过 → 归零 */
-    if (st->row != (uint8_t)row || st->ctx != (uint8_t)ctx)
-        st->rx = 0u;
-    st->row = (uint8_t)row;
-    st->ctx = (uint8_t)ctx;
-    rx = (unsigned)st->rx;
-
     chs_colors(win, &fg, &bg, &sh);
+
+    {
+        uint32_t wkey = (uint32_t)(uintptr_t)win;
+        uint16_t ti = win_u16(win, WIN_TEXT_INDEX);
+
+        if (st->seg != (uint8_t)seg) {
+            /* 换到另一段（另一 tilemap 行）：本段没有历史，从零记账。 */
+            st->seg = (uint8_t)seg;
+            st->hstart = (uint8_t)col;
+            st->hend = (uint8_t)col;
+            st->rx = 0u;
+        } else if (st->lwin == wkey && ti < st->lidx && st->lidx > 2u
+                   && col <= (unsigned)st->hstart + 1u) {
+            /* 重印：**同一个 printer 对象**把 index 退回去重打同一行，
+             * 且起点又回到原来的位置。三者同时成立才动手。
+             *
+             * 为什么必须清：Text_SetWindowText 只重置 textIndex/state，
+             * 不碰旧像素；官方引擎靠上层 FillWindow 清窗口，而中文画在
+             * 我们自己的 arena 里，游戏清不到。新文本更短时旧字就留在
+             * 右边（Navigator 提示条「查看训练家的信息」后那个「图」）。
+             *
+             * 为什么判据要这么紧：背包/商店里每一行、商品名与价格都是
+             * **不同的 printer 实例**，它们共用同一个 tile 池；只要判据
+             * 稍微放宽（比 index 大小、比起点位置），就会把别人刚写好的
+             * 内容当成「自己的旧尾巴」清掉 —— 背包第 6、7 行、商店整列
+             * 商品名都这么被清空过。加了 win 指针相同这一条，跨实例永不误伤。 */
+            clear_cols(win, base, col, (unsigned)st->hend, bg);
+            st->hstart = (uint8_t)col;
+            st->hend = (uint8_t)col;
+            st->rx = 0u;
+        } else if (st->ctx != (uint8_t)ctx) {
+            /* 同行内列游标被外力搬动（FC 0E 定位）→ 相位归零 */
+            st->rx = 0u;
+        }
+        st->lwin = wkey;
+        st->lidx = ti;
+    }
+    rx = (unsigned)st->rx;
 
     gx = 0;
     while (gx < advance) {
@@ -346,6 +365,16 @@ static void draw_glyph_tilemap(
     win_set_u8(win, WIN_CURSOR_TILE_X,
                (uint8_t)(ctx + ((rx + advance) >> 3u)));
     st->ctx = win_u8(win, WIN_CURSOR_TILE_X);
+    {
+        /* 记下本段画到的最右列，供下次重印时确定要清多长 */
+        unsigned end = col + ((rx + advance) >> 3u)
+                     + ((((rx + advance) & 7u) != 0u) ? 1u : 0u);
+
+        if (end > CHS_ROW_COLS)
+            end = CHS_ROW_COLS;
+        if (end > (unsigned)st->hend)
+            st->hend = (uint8_t)end;
+    }
 }
 
 /* textMode 2：战斗/血条用的线性缓冲（win[0x20] 递增，不碰 tilemap） */
@@ -356,9 +385,6 @@ static void draw_glyph_buffer(
     unsigned gx = 0;
     uint8_t fg, bg, sh;
 
-    probe_text(win);
-    probe_buf(win_u32(win, WIN_TILE_DATA), advance,
-              win_u8(win, WIN_CURSOR_X), win_u8(win, WIN_CURSOR_Y));
     if (!dst)
         return;
     chs_colors(win, &fg, &bg, &sh);
@@ -393,9 +419,6 @@ void DrawGlyphTiles(
         return;
     if (advance == 0u || advance > 16u)
         advance = CHS_GLYPH_ADVANCE_PX;
-
-    probe_hit((unsigned)(win_u8(win, WIN_TEXTMODE) & 7u),
-              (unsigned)win_u8(win, WIN_FONTNUM_REAL));
 
     if ((win_u8(win, WIN_TEXTMODE) & 7u) == 2u) {
         draw_glyph_buffer(win, t, advance);

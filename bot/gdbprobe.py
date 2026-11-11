@@ -59,6 +59,7 @@ from util.gdb_patcher import (                              # noqa: E402
     load_gdb_points,
     resolve_hooks,
 )
+import util.gdb_patcher as _gp                             # noqa: E402
 
 DEFAULT_PORT = 2345
 
@@ -103,6 +104,8 @@ class ProbeSession:
         # 用这一条最快。
         self.watch_addrs = list(watch_addrs or [])
         self.watch_hits: list[tuple[int, int, int]] = []   # (addr, pc, newval)
+        # 文本块归属统计：(tileData 地址, textMode, fontNum) -> 次数
+        self._tile_blocks: dict[tuple[int, int, int], int] = {}
 
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
@@ -273,6 +276,7 @@ class ProbeSession:
                     generic_log(ctx, hook, regs)
                     if hook.fn is not None:
                         hook.fn(gdb, regs, ctx, hook.point.cfg)
+                    self._log_textblock(ctx, gdb, hook, regs)
                     self._log_stack(ctx, gdb, hook, regs)
                 except (GdbError, OSError) as e:
                     self.log(f"  handler 读取失败: {e}")
@@ -287,6 +291,52 @@ class ProbeSession:
             except Exception:
                 pass
             self.log(f"\n探针结束：命中 {n} 次。日志 {self.logpath}")
+            if self._tile_blocks:
+                self.log("  文本块归属（tileData / charBlock / tm / fn → 次数）:")
+                for (addr, tm, fn), c in sorted(self._tile_blocks.items(),
+                                                key=lambda kv: -kv[1]):
+                    blk = (addr - 0x06000000) >> 14
+                    self.log(f"    0x{addr:08X}  block{blk}  tm={tm} fn={fn}  × {c}")
+
+    def _log_textblock(self, ctx: Ctx, gdb: GdbClient, hook, regs: dict) -> None:
+        """记录这个 text printer 的**字形 tile 落在哪块 VRAM**。
+
+        用途（2026-11-11）：判断「文本 char block 能不能独占」。火红的字形放
+        独占 block，而 Ruby 这屏是 BG2=block2、BG3=block0 混用。要知道我们的
+        12px 渲染器该抢哪一块，必须先把每个场景每个文本窗口的实际 tileData 抓出来。
+
+        数据链路（全是实测字段，别猜）：
+            win = r0（InitTextPrinter 的第一个参数）
+            win[0x00] = 模板指针（WIN_TEMPLATE，低位可能是 1 需 & ~1）
+            模板[0x0C] = **VRAM 地址本身**（TPL_TILE_DATA）→ 0x06008000 / 0x0600C000
+            VRAM 地址 → charBlock = (addr - 0x06000000) >> 14
+        """
+        if hook.name != "InitTextPrinter":
+            return
+        win = regs.get("r0", 0)
+        if not (0x02000000 <= win < 0x04000000):
+            return
+        try:
+            tpl = int.from_bytes(bytes(gdb.read_mem(win + 0x00, 4)), "little") & ~1
+            if not (0x02000000 <= tpl < 0x0A000000):
+                return
+            addr = int.from_bytes(bytes(gdb.read_mem(tpl + 0x0C, 4)), "little")
+        except (GdbError, OSError):
+            return
+        if not (0x06000000 <= addr < 0x06018000):
+            return
+        blk = (addr - 0x06000000) >> 14
+        # 顺手把 textMode/fontNum 带上：两者决定走哪条渲染路径
+        try:
+            tm = bytes(gdb.read_mem(win + 0x0A, 1))[0]
+            fn = bytes(gdb.read_mem(win + 0x0B, 1))[0]
+        except (GdbError, OSError):
+            tm = fn = 0
+        key = (addr, tm, fn)
+        self._tile_blocks[key] = self._tile_blocks.get(key, 0) + 1
+        if self._tile_blocks[key] <= 3:
+            ctx.log(f"  文本块: tileData=0x{addr:08X} (charBlock {blk}) "
+                    f"tm={tm} fn={fn}")
 
     def _log_stack(self, ctx: Ctx, gdb: GdbClient, hook, regs: dict) -> None:
         """把栈上「看起来像 ROM 代码地址」的字标出来 —— 这就是调用链。

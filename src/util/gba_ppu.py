@@ -266,6 +266,22 @@ def _obj_dim(shape: int, size: int) -> tuple[int, int]:
     return table[shape][size]
 
 
+def _obj_tile_step(one_d: bool, bpp8: bool, wt: int, ty: int, tx: int) -> int:
+    """计算 sprite 内第 (tx,ty) 个 8x8 块相对 tile_no 的偏移。
+
+    ★ 实测结论（2026-11-11，标题画面 7 个 OBJ 逐块反查）：
+      OAM 的 tile 号字段对 8bpp 来说**已经是槽位号**（一个 8bpp tile 占
+      两个 32B 槽，tile 号就是那个 32B 槽的序号），所以 1D 映射下
+      步长恒为 1，**不要**因为 8bpp 就 ×2。
+      实测：步长 1 → 标题 logo 45.3%；步长 2 → 掉到 0.6%。
+
+      2D 映射：每行固定 32 个槽位（与 bpp 无关）。
+    """
+    if one_d:
+        return ty * wt + tx
+    return ty * 32 + tx
+
+
 @dataclass
 class ObjSprite:
     """一个已解出的 OBJ，带它在屏幕上的位置与像素。"""
@@ -342,10 +358,9 @@ def parse_oam(snap: Snapshot) -> list[ObjSprite]:
         mask = np.ones((h, w), dtype=bool)
         if bpp8:
             pal = cgram_to_rgb(snap.pal, 0x100, 256)
-            # 1D 映射：tile 号连续；2D 映射按 32 tile 一行
             for ty in range(ht):
                 for tx in range(wt):
-                    tno = tile_no + (ty * 32 + tx if not snap.obj_1d else ty * wt + tx)
+                    tno = tile_no + _obj_tile_step(snap.obj_1d, bpp8, wt, ty, tx)
                     off = obj_vram_base + (tno & 0x3FF) * 64
                     if off + 64 > len(flat):
                         continue
@@ -358,7 +373,7 @@ def parse_oam(snap: Snapshot) -> list[ObjSprite]:
             pal = cgram_to_rgb(snap.pal, 0x100 + palbank * 16, 16)
             for ty in range(ht):
                 for tx in range(wt):
-                    tno = tile_no + (ty * 32 + tx if not snap.obj_1d else ty * wt + tx)
+                    tno = tile_no + _obj_tile_step(snap.obj_1d, bpp8, wt, ty, tx)
                     off = obj_vram_base + (tno & 0x3FF) * 32
                     if off + 32 > len(flat):
                         continue
@@ -405,12 +420,57 @@ class RenderTrace:
         return " | ".join(s)
 
 
+@dataclass
+class BlendSpec:
+    """亮度衰减 / 混合参数（BLDCNT/BLDALPHA/BLDY 全部只写不可读，必须外部给）。
+
+    GBA 硬件规则（GBATEK）：
+      亮度衰减（mode 1 且 BLDY 控制）：out = c - c*evy/16   （变暗）
+                                      out = c + (31-c)*evy/16 （变亮，EVY 高位）
+      alpha 混合（mode 1 且 BLDALPHA）：out = (c1*eva + c2*evb) / 16
+
+    实测（title_menu 主菜单帧）：EVY=9 ⇒ ref/canvas 中位数 0.5643 ≈ 9/16，
+    说明菜单界面用「亮度衰减 9/16」把 BG0 压暗，而 WIN0 内的菜单条不衰减。
+    """
+
+    evy: int = 0                    # 0-16，亮度衰减强度
+    evy_up: bool = False            # True = 变亮
+    eva: int = 0                    # alpha 混合系数（第一目标）
+    evb: int = 0                    # alpha 混合系数（第二目标）
+    alpha: bool = False             # True = 走 alpha 混合而不是亮度衰减
+    outside_window_only: bool = True  # 只对窗口外生效（Pokemon 的常规用法）
+
+    def apply(self, canvas: np.ndarray, mask: np.ndarray) -> np.ndarray:
+        """对 mask=True 的像素做混合/衰减。"""
+        out = canvas.copy()
+        sel = mask
+        if not sel.any():
+            return out
+        c = out[sel].astype(np.int16)
+        if self.alpha and (self.eva or self.evb):
+            # 单目标 alpha：与黑色混合 = 乘 eva/16
+            k = self.eva / 16.0
+            out[sel] = np.clip(np.round(c * k), 0, 255).astype(np.uint8)
+            return out
+        if self.evy == 0:
+            return out
+        e = self.evy / 16.0
+        if self.evy_up:
+            out[sel] = np.clip(np.round(c + (255 - c) * e), 0, 255).astype(np.uint8)
+        else:
+            out[sel] = np.clip(np.round(c - c * e), 0, 255).astype(np.uint8)
+        return out
+
+
 def render(snap: Snapshot, *, scroll=None, backdrop=None,
+           blend: Optional[BlendSpec] = None,
+           window: Optional[tuple] = None,
            trace: Optional[RenderTrace] = None) -> np.ndarray:
     """按快照重放 240x160 帧。
 
     scroll: {bg: (hx, vy)}，缺省全 0（只写寄存器读不到，见模块 docstring）
-    backdrop: 背景色索引，缺省 0
+    blend:  BlendSpec，缺省不衰减（BLD 只写不可读，必须外部给）
+    window: WIN0 矩形 (x0, y0, x1, y1)，缺省 None = 无窗口（全屏都算窗口外）
     """
     tr = trace if trace is not None else RenderTrace()
     tr.mode = snap.mode
@@ -465,6 +525,19 @@ def render(snap: Snapshot, *, scroll=None, backdrop=None,
         else:
             o = next(x for x in objs if x.index == _idx)
             _blit_obj(canvas, o)
+
+    # ── 亮度衰减 / alpha 混合 ──
+    if blend is not None and (blend.evy or blend.alpha):
+        if blend.outside_window_only and window is not None:
+            x0, y0, x1, y1 = window
+            sel = np.ones((SCREEN_H, SCREEN_W), dtype=bool)
+            sel[max(0, y0):max(0, y1), max(0, x0):max(0, x1)] = False
+        else:
+            sel = np.ones((SCREEN_H, SCREEN_W), dtype=bool)
+        canvas = blend.apply(canvas, sel)
+        tr.assumptions.append(
+            f"BLD 手动: evy={blend.evy} alpha={blend.alpha} "
+            f"win={window}")
 
     return canvas
 

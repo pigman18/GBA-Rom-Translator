@@ -1268,6 +1268,12 @@ def build_write_plan(
                     if e.get("_reject"):
                         skip.append({"id": eid, "module": name, "reason": "reject"})
                 tables.append(table)
+                # 附加表：同一模块派生的第二份落盘（如名字就地折址表，
+                # 写在原表地址上，与主表的 stride-4 指针数组并存）。
+                for extra in (table.pop("extra_tables", None) or []):
+                    tables.append(extra)
+                    if extra.get("note"):
+                        table_notes.append((extra.get("module") or name, str(extra["note"])))
                 table_modules.add(name)
                 if table.get("note"):
                     table_notes.append((name, str(table["note"])))

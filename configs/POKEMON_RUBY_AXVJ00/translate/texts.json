@@ -300,15 +300,15 @@
       "label": "词条·图鉴分类名",
       "group": "词条",
       "default": true,
-      "description": "图鉴条目内联分类名（+0x06，6字节00补齐）",
-      "start": "0x384746",
-      "end": "0x38717D",
+      "description": "图鉴条目分类名（表项 +0x00，6 字节 00 补齐；+0x06 起是身高/体重/说明指针）",
+      "start": "0x38474C",
+      "end": "0x387183",
       "type": "struct",
       "read": {
         "entry_size": 28,
-        "name_offset": 6,
+        "name_offset": 0,
         "eos": 0,
-        "draw_sites": false
+        "draw_sites": true
       }
     },
     "图鉴说明": {

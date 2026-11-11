@@ -553,24 +553,22 @@ def plan_struct_trampoline(
     # ── 直接绘制点：``ldr rX,=base+name_off`` + ``adds rD,rA,rX`` + 画字 ──
     # getter 挂了钩不等于全部覆盖：图鉴条目页 / 另一个图鉴页都是**自己算**
     # 名字地址再交给绘制函数，不经过 getter（`たねポケモン` 一直是日文就是这原因）。
-    # 做法：另存一份**同 stride 镜像表**（名字区 4B 放指针 + FF），把这两个
-    # 站点各自的 literal 指到镜像表，再把紧邻的 ``adds`` 换成 ``ldr`` 解引用。
-    # 旧表一个字节不动 → 其它读者（身高/体重、比对）行为完全不变。
+    # 做法：把**原表就地**改成「名字区 4B 放指针 + FF」，两个绘制站点的
+    # ``adds`` 换成 ``ldr`` 解引用。不克隆、不改 literal、不改 stride：
+    #   · 数值读点（身高/体重/说明指针）读的是原表原位 → 逐字节不变；
+    #   · 表项里的指针字段（图鉴说明入口 +0x0C）由 rows_writer 原地改，
+    #     就地折名字不会覆盖它（只写 +0..+4）。
+    # 曾经的「克隆镜像表 + 改 literal」会把 rows_writer 已经改好的 +0x0C
+    # 说明指针换回原版 → 图鉴说明整片变日文（2026-11-11 实测）。
     _want_draw = bool((mod.get("read") or {}).get("draw_sites"))
-    mirror_rel = len(blob)
-    mirror = bytearray()
+    fold = bytearray()
     for i in (range(count) if _want_draw else ()):
         src = base + i * entry_size
         e = bytearray(rom[src:src + entry_size])
         e[name_off:name_off + 4] = ptr_bytes[i * 4:i * 4 + 4]
         if name_off + 4 < entry_size:
             e[name_off + 4] = 0xFF
-        mirror += bytes(e)
-    if cursor + len(mirror) > TABLE_AREA_END:
-        return None, cursor, "补丁表区域满了（含镜像表）"
-    blob = blob + bytes(mirror)
-    cursor = (cursor + len(mirror) + 3) & ~3
-    mirror_gba = GBA_BASE + new_base + mirror_rel + name_off
+        fold += bytes(e)
 
     draw_sites: list[dict] = []
     for lit in (find_literal_sites(rom, GBA_BASE + base + name_off) if _want_draw else ()):
@@ -602,20 +600,33 @@ def plan_struct_trampoline(
             "rd": rd2, "lit_reg": lit_reg, "idx_reg": idx_reg,
         })
     for s in draw_sites:
-        insns.append({
-            "off": f"0x{s['lit']:X}",
-            "bytes": struct.pack("<I", mirror_gba).hex(" "),
-            "label": "literal → 镜像表名字区（指针槽）",
-        })
-        enc = 0x5800 | (s["idx_reg"] << 6) | (s["lit_reg"] << 3) | s["rd"]
-        insns.append({
-            "off": f"0x{s['adds']:X}",
-            "bytes": struct.pack("<H", enc).hex(" "),
-            "label": (
-                f"adds r{s['rd']},r{s['lit_reg']},r{s['idx_reg']}"
-                f" → ldr r{s['rd']},[r{s['lit_reg']},r{s['idx_reg']}]（解引用名字指针）"
-            ),
-        })
+        # 名字地址所在的寄存器可能在绘制之后还要用（图鉴另一页
+        # `adds r5,r4,r6` 之后 `ldrh r0,[r5,#6]` 读身高、`[r5,#8]` 读体重、
+        # `adds r6,#0xc` 取说明指针）——改那条 adds 会把 r5 变成字符串指针，
+        # 后续字段全错位。此时改紧跟着的 `adds rX, rd, #0`（把名字地址
+        # 搬进参数寄存器那一条）为 `ldr rX,[rd]`，rd 保持原义。
+        mov_off = _mov_reg_after(rom, s["adds"] + 2, s["rd"], lookahead=4)
+        if mov_off is not None:
+            rt = struct.unpack_from("<H", rom, mov_off)[0] & 7
+            enc = 0x6800 | (s["rd"] << 3) | rt
+            insns.append({
+                "off": f"0x{mov_off:X}",
+                "bytes": struct.pack("<H", enc).hex(" "),
+                "label": (
+                    f"adds r{rt},r{s['rd']},#0 → ldr r{rt},[r{s['rd']}]"
+                    f"（解引用名字指针；r{s['rd']} 保留给后续字段）"
+                ),
+            })
+        else:
+            enc = 0x5800 | (s["idx_reg"] << 6) | (s["lit_reg"] << 3) | s["rd"]
+            insns.append({
+                "off": f"0x{s['adds']:X}",
+                "bytes": struct.pack("<H", enc).hex(" "),
+                "label": (
+                    f"adds r{s['rd']},r{s['lit_reg']},r{s['idx_reg']}"
+                    f" → ldr r{s['rd']},[r{s['lit_reg']},r{s['idx_reg']}]（解引用名字指针）"
+                ),
+            })
 
     safe = re.sub(r"[^\w\-]+", "_", name)
     table = {
@@ -640,6 +651,30 @@ def plan_struct_trampoline(
             f"names={count} translated={n_tr} original={count - n_tr}"
         ),
     }
+    if fold:
+        # 名字折址表**就地**写回原表（只覆盖 +name_off..+name_off+4），
+        # 表项其它字段（含 +0x0C 说明指针）由后续 rows 指针改写决定，
+        # 所以这里必须先落盘、后打指针补丁（rows_writer 的注入阶段在其后）。
+        table["extra_tables"] = [{
+            "module": f"{name}-名字折址",
+            "mode": "inplace_name_fold",
+            "old_base": f"0x{base:X}",
+            "old_stride": entry_size,
+            "new_base": f"0x{base:X}",
+            "new_stride": entry_size,
+            "count": count,
+            "name_offset": name_off,
+            "blob": f"gen/plan_fold_{safe}.bin",
+            "blob_name": f"plan_fold_{safe}.bin",
+            "blob_hex": bytes(fold).hex(),
+            "insns": [],
+            "literals": [],
+            "field_map": {},
+            "note": (
+                f"名字槽就地折成 u32 指针（+{name_off} = ptr、"
+                f"+{name_off + 4} = FF），其余字段保持原版"
+            ),
+        }]
     return table, cursor, None
 
 
@@ -1064,6 +1099,35 @@ def _ldr_site_for_literal(rom: bytes, lit: int, back: int = 0x400) -> int | None
             continue
         if ((a + 4) & ~3) + (h & 0xFF) * 4 == lit:
             return a
+    return None
+
+
+def _mov_reg_after(
+    rom: bytes, start: int, src: int, *, lookahead: int = 4
+) -> int | None:
+    """``start`` 起 ``lookahead`` 条内找 ``adds rX, r<src>, #0``（即 mov）。
+
+    返回该指令的**文件偏移**；找不到返回 ``None``。
+
+    用途：图鉴分类名有两种绘制点形态——
+    一种 ``adds r0,r0,r4`` 之后直接 bl（可以就地改成寄存器偏移 ldr）；
+    另一种 ``adds r5,r4,r6`` 之后先 ``adds r0,r5,#0`` 再 bl，而且 bl 之后
+    还用 r5 读 entry+6/+8/+12（身高/体重/说明指针）。后者只能改那条搬参数
+    的 mov，改成 ``ldr r0,[r5]``，才能保住 r5 的原义。
+    """
+    for k in range(lookahead):
+        a = start + 2 * k
+        if a + 2 > len(rom):
+            return None
+        h = struct.unpack_from("<H", rom, a)[0]
+        # adds Rd, Rn, #imm3（T1，立即数在 bit6-8）
+        if (h & 0xFE00) != 0x1C00:
+            continue
+        if (h >> 6) & 7:
+            continue                      # 不是 +0
+        if ((h >> 3) & 7) != src:
+            continue
+        return a
     return None
 
 

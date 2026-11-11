@@ -85,33 +85,41 @@ static unsigned count_cjk(const uint8_t *stream)
     return n;
 }
 
+/* 中文「宝可梦」后缀（跳板注入用）。
+ *
+ * 原版这条行是「分类名（右对齐 5 格）+ 占位串里的 ポケモン」，后缀来自
+ * `gDexText_UnknownPoke`（`0x083E9688` = `？？？？？ポケモン`）。那个地址
+ * **没有指针引用**（4 对齐 / 非对齐全扫过），管线改不到它，所以这里直接
+ * 注入中文后缀，不再读 ROM 里的日文串。
+ *
+ * 码位由 charmap 决定：
+ *   python -c "from meowth.charmap import Charmap; from pathlib import Path;
+ *              print(Charmap(Path('configs/POKEMON_RUBY_AXVJ00/charmap.txt')).encode('宝可梦').hex(' '))"
+ *   → f7 00 01 63 f7 00 07 d7 f7 00 09 66 ff
+ */
+static const uint8_t k_suffix[] = {
+    0xF7, 0x00, 0x01, 0x63,   /* 宝 */
+    0xF7, 0x00, 0x07, 0xD7,   /* 可 */
+    0xF7, 0x00, 0x09, 0x66,   /* 梦 */
+    0xFF
+};
+
 void UnusedPrintMonName_hook_C(const uint8_t *name,
                                uint32_t left, uint32_t top)
 {
-    const uint8_t *ref = (const uint8_t *)ADDR_DEX_TEXT_UNKNOWN_POKE;
     uint8_t out[OUT_MAX];
     unsigned i = 0;
     unsigned ncat;
 
-    /* 分类名直接就是 F9 00 单字流（F980 已移除，不再有短语引用）。
+    /* 分类名直接就是 F7 00 单字流（F980 已移除，不再有短语引用）。
      * 若上游仍传入 F9 80 形态，跳过这 4 字节引用——但正常路径不会出现。 */
     if (name[0] == 0xF9u && name[1] != 0x00u)
         name += 4;
 
-    /* 占位串 ref 里，问号占位（0xAC）之后就是宝可梦名字节流。 */
-    {
-        unsigned j = 0;
-        while (ref[j] == 0xACu)
-            j++;
-        if (ref[j] == 0xF9u && ref[j + 1u] != 0x00u)
-            j += 4;
-        ref += j;
-    }
-
     ncat = count_cjk(name);
 
     i = append_stream(out, i, name);
-    i = append_stream(out, i, ref);
+    i = append_stream(out, i, k_suffix);
 
     /* 占位串整体 76px：5问号(40px)+宝可梦(33px@11px步进)。
      * 本串 宝可梦已紧跟分类名，若分类名不足 4 字则盖不满尾部，会露出

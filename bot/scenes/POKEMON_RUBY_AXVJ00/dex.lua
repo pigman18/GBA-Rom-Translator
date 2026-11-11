@@ -15,6 +15,15 @@ local function body(api)
     api.burst("dex_enter", 12, 6)
     api.shot("dex_open")
 
+    -- 2026-11-11：进「图鉴条目页」（A 选中列表项）——分类名「たねポケモン」那行
+    -- 只在这一页画，列表页看不到；这一页的两个绘制点走的是直接读字段
+    -- （不走 getter），是 12px 分类名的验收点。
+    api.tap("A", 4, 30)
+    api.burst("dex_entry_f", 8, 6)
+    api.shot("dex_entry")
+    api.tap("B", 4, 20)
+    api.burst("dex_entry_back_f", 4, 5)
+
     -- 上下翻几屏（图鉴列表是长列表）
     -- 每项都连抓 4 帧：宝可梦名/分类名重绘时的过渡帧是溢出高发点
     for i = 1, 5 do

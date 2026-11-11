@@ -255,16 +255,37 @@ def main() -> int:
         p = yaml_by_addr.get(addr)
         if not p:
             continue
-        pals = [pa for x in by_addr[addr] for pa in x["pal_addrs"]]
-        new = pals[0] if pals else None
+        g = by_addr[addr]
+        pals = [pa for x in g for pa in x["pal_addrs"]]
         cur = p.get("palette")
-        if new and (not cur or int(str(cur), 16) != new):
-            updates[p["id"]] = new
-            print(f"  {p['id']:16s} 现有={cur or '(空)':12s} → 建议=0x{new:08X}")
-        elif new:
-            print(f"  {p['id']:16s} 现有=0x{int(str(cur), 16):08X}  一致")
-        else:
-            print(f"  {p['id']:16s} 现有={cur or '(空)'}  bot 侧未找到调色板")
+        # ★ bpp 要以 **yaml 预设自己的 format** 为准，不是 bot 侧看到的。
+        #   实测：0x0836CDA4 这个 ROM 块同时被 4bpp(32x8 版权字) 和
+        #   8bpp(32x32) 的 sprite 引用；按 bot 侧 any(bpp8) 判会误判成
+        #   8bpp 从而跳过，但这个预设本身是 4bpp，反推完全有效。
+        preset_bpp8 = str(p.get("format", "4bpp")) == "8bpp"
+
+        # ★ 只补空值，绝不覆盖已有 palette。
+        #   实测反例：title_banner 现有 0x0836D148（灰白系，正确），
+        #   bot 抓到 0x083E1A58（绿色渐变，是别的资源）。8bpp 的 256 色
+        #   调色板在 CGRAM 里跨多个 bank，按 bank 取前 16 色会撞上邻居，
+        #   所以 8bpp 的反推结果不可信 —— 有现值时必须保留现值。
+        if cur:
+            print(f"  {p['id']:16s} 现有={cur}  保留（不覆盖）")
+            continue
+        if not pals:
+            print(f"  {p['id']:16s} 现有=(空)  bot 侧未找到调色板")
+            continue
+        if preset_bpp8:
+            print(f"  {p['id']:16s} 现有=(空)  8bpp 反推不可靠，跳过")
+            continue
+
+        # 4bpp：优先选紧邻 tile 数据的调色板（结构体布局 palette 在 tiles 前）
+        near = [a for a in pals if 0 < addr - a <= 0x100]
+        new = near[0] if near else pals[0]
+        updates[p["id"]] = new
+        gap = addr - new
+        print(f"  {p['id']:16s} 现有=(空) → 0x{new:08X}"
+              f"（距 tile {gap:+d}B{'，紧邻✓' if near else ''}）")
 
     if args.write and updates:
         bak = YAML_PATH.with_suffix(".yaml.bak")

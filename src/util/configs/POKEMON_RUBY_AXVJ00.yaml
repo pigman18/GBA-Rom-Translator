@@ -80,6 +80,7 @@ tiles:
     label: rt tag=0x03E9 LoadCompressedObjectPic
     default: false
     address: '0x0836CDA4'
+    palette: '0x0836CD84'
     format: 4bpp
     compression: lz77_swap
     sprite_size: 32x8
@@ -113,6 +114,7 @@ tiles:
     label: rt tag=0x1000 LoadCompressedObjectPic
     default: false
     address: '0x0837CB34'
+    palette: '0x0837B5C8'
     format: 4bpp
     compression: lz77_swap
     sprite_size: 16x8

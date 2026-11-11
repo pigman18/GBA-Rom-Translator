@@ -46,6 +46,31 @@
 ⚠️ 护栏：同一问题静态推演连续卡死 3 次（工具调用或长推理无产出），立即转 ②，
 禁止第 4 次自我辩论。静态分析给「假设」，②③ 给「实证」。
 
+## ★ 首选：让 bot 直接跑 GDB（2026-11-11 起）
+
+`bot/run.py` 已内置 GDB 探针（`bot/gdbprobe.py`）：起 mGBA 时加 `-g`，自动连 stub、
+下断点、抓样本，**命中记录和截图落在同一轮、同一目录**。
+
+```bash
+python bot/run.py POKEMON_RUBY_AXVJ00 dex --gdb InitTextPrinter
+python bot/run.py POKEMON_RUBY_AXVJ00 dex --gdb InitTextPrinter --gdb-side origin
+python bot/run.py POKEMON_RUBY_AXVJ00 dex --gdb InitTextPrinter,PrintNextChar --gdb-port 2345
+```
+
+- 监听点仍然**只来自** `src/util/configs/{game}.yaml` 的 `gdb:` 列表——加监控点不改代码；
+- 日志：`work/{game}/bot/{scene}/{stamp}/{origin|translated}/gdb_probe.log`，
+  与 `shot` 的五件套（png/vram/pal/io/ram）同目录 ⇒「画面 + 寄存器 + 调用链」同源；
+- 探针默认**不去重**：bug 常藏在「连着 N 次相同 print」的第 k 次，去重会把它吞掉；
+- 每次命中额外打一行 `栈@0x… 代码地址: +08=… +14=…`，把栈上像 ROM 地址的字标出来 =
+  **调用链**。这条对 `InitTextPrinter` 这类「只有一层 LR」的断点是必需的：
+  上层 `AddTextPrinterParameterized`(0x08002CFC) 被 5+ 处调用，LR 恒为 0x08002D14，
+  区别全在栈上（2026-11-11 就是靠它一路走到 `0x0808AA24 movs r1,#0x17`）；
+- `-g` 在 mGBA 里是**无参数开关**：写成 `-g 2345` 会把 `2345` 当 ROM 路径，
+  mGBA 直接退出、stub 根本没起来（实测踩过）。
+
+人工那套（手工开 mGBA 再 `gdb_patcher.py log`，或 `scripts/GDB_README.md` 里
+`cmd.txt`/`out.txt` 轮询）只在「要交互式单步、看正在跑的现场」时才用。
+
 ## ② gdb_patcher.py 增加监听点
 
 ### 加监听点（yaml）

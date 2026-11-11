@@ -201,7 +201,8 @@ def prepare_rom(src: Path, workdir: Path, shared_save: Path | None):
 
 
 def run_side(side, source, output_dir, scene, game, mgba,
-             ident_hex=None, pos_desc=None, timeout=900):
+             ident_hex=None, pos_desc=None, timeout=900,
+             gdb_points=None, gdb_port=2345, gdb_timeout=90.0):
     output_dir.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     env.update(
@@ -220,17 +221,52 @@ def run_side(side, source, output_dir, scene, game, mgba,
                "-C", "fpsTarget=600",
                "-C", "mute=1",
                "-C", "volume=0",
-               "-C", "audioSync=0",
-               str(source)]
+               "-C", "audioSync=0"]
+    if gdb_points:
+        # -g：启动即开 GDB stub 并**暂停**等连接（mGBA 语义），
+        # 所以探针线程必须马上连上并 cont，否则 Lua 脚本一帧都推不动。
+        # ★ `-g` 在 mGBA 里是**无参数开关**（`-g, --gdb  Start GDB session
+        #  (default port 2345)`）。写成 `-g 2345` 会把 "2345" 当成 ROM 路径，
+        # mGBA 直接报错退出、stub 根本没起来（2026-11-11 实测踩过）。
+        command += ["-g"]
+        if gdb_port != 2345:
+            command += ["-C", f"gdb.port={gdb_port}"]
+    command.append(str(source))
     env.setdefault("SDL_AUDIODRIVER", "dummy")
     print(f"[bot] {side}: {source} -> {output_dir}", flush=True)
 
+    probe = None
+    if gdb_points:
+        from gdbprobe import ProbeSession, load_origin
+        probe = ProbeSession(
+            out_dir=output_dir,
+            game=game,
+            functions=gdb_points,
+            port=gdb_port,
+            origin=load_origin(game),
+        )
+
     proc = popen_hidden(command, cwd=str(output_dir), env=env)
+    if probe is not None:
+        probe.start()
+        print(f"[bot] {side} GDB 探针: {gdb_points} @127.0.0.1:{gdb_port}"
+              f" -> {output_dir / 'gdb_probe.log'}", flush=True)
     try:
         rc = wait_hidden(proc, timeout=timeout)
     except subprocess.TimeoutExpired:
         proc.kill()
+        if probe is not None:
+            probe.stop()
         raise SystemExit(f"[ERR] {side} emulator timeout ({timeout}s)")
+    if probe is not None:
+        # mGBA 已退出：给探针把最后一条 cont 的错误收掉，再确认它真的连上过
+        probe.wait(proc, timeout=gdb_timeout)
+        if not probe.connected:
+            detail = "；".join(probe.errors) or "(无错误信息)"
+            raise SystemExit(
+                f"[ERR] {side} GDB 探针没连上 stub（因此这一侧没有跑起来）：{detail}")
+        print(f"[bot] {side} GDB 命中 {probe.hits} 次 -> {output_dir / 'gdb_probe.log'}",
+              flush=True)
 
     log = output_dir / "scene.log"
     text = log.read_text(encoding="utf-8", errors="replace") if log.is_file() else ""
@@ -318,6 +354,15 @@ def main() -> int:
                     help="跳过读档证明闸门（仅用于不采集对照的诊断场景）")
     ap.add_argument("--timeout", type=int, default=900,
                     help="单侧模拟器超时（秒）")
+    ap.add_argument("--gdb", dest="gdb_points", default=None, metavar="点[,点]",
+                    help="同时跑 GDB 探针：逗号分隔的监听点名（须在 "
+                         "src/util/configs/{game}.yaml 的 gdb: 里定义，"
+                         "如 InitTextPrinter）。起 mGBA 时自动加 -g 并由 "
+                         "bot/gdbprobe.py 连上，命中落 {side}/gdb_probe.log")
+    ap.add_argument("--gdb-port", type=int, default=2345,
+                    help="GDB stub 端口（默认 2345，两侧串行复用）")
+    ap.add_argument("--gdb-side", choices=["origin", "translated", "both"],
+                    default="both", help="只在某一侧跑 GDB 探针（默认 both）")
     args = ap.parse_args()
 
     game, scene = args.gameId, args.scene
@@ -425,7 +470,11 @@ def main() -> int:
             run_side(side, staged, side_dir, scene, game, mgba,
                      ident_hex=None if args.no_prove else ident_hex,
                      pos_desc=pos_desc,
-                     timeout=args.timeout)
+                     timeout=args.timeout,
+                     gdb_points=(args.gdb_points
+                                 if args.gdb_side in ("both", side) else None),
+                     gdb_port=args.gdb_port,
+                     gdb_timeout=max(60.0, float(args.timeout) / 4))
             manifest["roms"][side] = {
                 "path": str(src), "sha256": file_hash(src),
                 "save_sha256": save_sha,

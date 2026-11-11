@@ -1,3 +1,7 @@
+> **2026-11-11 起优先用 `bot/run.py --gdb <监听点>`**：它自动起 `mGBA -g`、连 stub、
+> 下断点、抓样本，日志与截图同目录（`bot/gdbprobe.py`）。本文这套手工 `cmd.txt` 轮询
+> 只在「要交互式单步、看正在跑的现场」时用。见 `docs/HOOK_DEBUG_WORKFLOW.md` ★ 节。
+
 # GDB 抓崩溃现场 —— 操作说明
 
 ## 目标

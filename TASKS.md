@@ -338,7 +338,14 @@ blob 落到 new_base → insns 按 .org/.byte 打补丁 → literals 改字面�
 - [ ] **#9 编号与名字错位（名字整体左移 8px）**（用户截图 2）。
   一行是两条路径：游戏直绘 `No003`（不经 `PrintNextChar`）+ `AddTextPrinter` 打名字；
   tilemap 实测 origin 名字列 23 / 我们列 22；破折号填充因此多画一个（右端都停在 217）。
-  详见 §9.2；下一步探针见 §9.3。
+  详见 §9.2；根因见 §9.4。
+
+  **已修（2026-11-11 14:15）**：GDB 并入 bot 后一次抓到完整调用链
+  （`0x080030C5 → 0x0806F18F → 0x0808ADDF → 0x0808AA2D → 0x0808AF11`），
+  定位到 `0x0808AA24 movs r1,#0x17`（x 是硬编码常量），而我们的
+  `hook/game_addrs.asm` 把 `DEX_NAME_COLUMN` 从 0x17 改成了 0x16 —— 5 处全变。
+  改回 0x17：名字墨迹 px176 → **184**（= origin），编号与名字之间恢复一格空隙，
+  破折号 6 个 → 5 个（= origin）。
 
   2026-11-11 12:10 探针结论（`pb_log` 逐笔画记账，EWRAM 环）：
   - 列表行确实是 `tm=1` 画的，`abs = WIN_CURSOR_X + WIN_CURSOR_TILE_X`（我们的公式）；

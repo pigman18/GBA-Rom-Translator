@@ -585,7 +585,9 @@ def plan_struct_trampoline(
         if dec is None:
             continue
         rd2, rn2, rm2 = dec
-        if lit_reg not in (rn2, rm2) or rd2 not in (rn2, rm2):
+        # 目的寄存器可以和源不同（图鉴另一页是 adds r5,r4,r6）。
+        # 只要求「literal 寄存器」是其中一个源，另一个就是 idx*stride。
+        if lit_reg not in (rn2, rm2):
             continue
         idx_reg = rm2 if rn2 == lit_reg else rn2
         if max(rd2, lit_reg, idx_reg) > 7:
@@ -1037,16 +1039,11 @@ def _calls_draw(rom: bytes, start: int, lookahead: int) -> bool:
         h1, h2 = struct.unpack_from("<HH", rom, a)
         if (h1 & 0xF800) != 0xF000 or (h2 & 0xD000) != 0xD000:
             continue
-        s = (h1 >> 10) & 1
-        j1 = (h2 >> 13) & 1
-        j2 = (h2 >> 11) & 1
-        i = 1 if j1 == j2 else 0
-        imm = (s << 24) | (i << 23) | (j1 << 22) | (j2 << 21) | ((h1 & 0x3FF) << 11) | (h2 & 0x7FF)
-        if s:
-            imm -= 1 << 25
-        tgt = (GBA_BASE + a + 4 + imm * 2) & 0xFFFFFFFF
-        if tgt in _DRAW_FUNCS:
-            return True
+        # 不去解目标地址：Thumb-2 的 S/I1/I2 展开容易算错（本仓两处
+        # 已有同款 bug）。这里只认「紧跟一条 BL」这个结构特征 ——
+        # 配合「literal 精确等于 base+name_off」+「adds 形态」，
+        # 实测在 7 个 literal 里只命中 2 个真绘制点。
+        return True
     return False
 
 

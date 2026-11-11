@@ -307,7 +307,8 @@
       "read": {
         "entry_size": 28,
         "name_offset": 6,
-        "eos": 0
+        "eos": 0,
+        "draw_sites": true
       }
     },
     "图鉴说明": {

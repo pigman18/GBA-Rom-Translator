@@ -126,6 +126,7 @@ static struct ChsRowState *st_slot(TextPrinter *win)
     tab[free_slot].ctx = 0xFFu;
     tab[free_slot].hstart = 0u;
     tab[free_slot].hend = 0u;
+    tab[free_slot].pad = 0xFFu;         /* 窗口底色缓存未定（probe_window_bg） */
     tab[free_slot].used = 1u;
     return &tab[free_slot];
 }
@@ -246,8 +247,23 @@ void copy_tile32(void *dst, const void *src)
  * 填 bg」，已在 PcsPrint_Custom 里改成失败即不画。 */
 static void chs_colors(TextPrinter *win, uint8_t *fg, uint8_t *bg, uint8_t *sh)
 {
+    uint8_t *tpl = win_template(win);
+
     *fg = win_u8(win, WIN_COLOR_C);
-    *bg = win_u8(win, WIN_COLOR_D);
+    /* ★ 2026-11-11 15:00 底色取**模板**的 D（tpl[+6]），不取运行时的 win[0x0D]。
+     *
+     * 依据（InitTextPrinter 0x08002C68 反汇编）：
+     *      ldrb r4,[r5,#5] ; strb r4,[r0,#0x0c]   ← C 从模板抄
+     *      ldrb r4,[r5,#6] ; strb r4,[r0,#0x0d]   ← D 从模板抄
+     *      ldrb r4,[r5,#7] ; strb r4,[r0,#0x0e]   ← E 从模板抄
+     * 抄完之后 win 的三个字段会被运行时改写（FC 0C 控制码、「红字/高亮」效果），
+     * 而**模板是 ROM 常量、永不改变**，它才是这个窗口的配色定义。
+     *
+     * 实测对照：图鉴列表模板 0x081BB784 的 D=0（底色=透明，露出橙色 BG），
+     * 但运行时 win D 会被改成 15/2 —— 写 15 就是「整片白」，写 2 就是「红条」。
+     * navigator 提示条模板 D=15（米色底），运行时也是 15，两边一致。
+     */
+    *bg = tpl ? tpl[6] : win_u8(win, WIN_COLOR_D);
     *sh = win_u8(win, WIN_COLOR_E);
 }
 
@@ -292,17 +308,7 @@ static void draw_glyph_tilemap(
 
     chs_colors(win, &fg, &bg, &sh);
 
-    /* ★ 2026-11-11 #8：tilemap 文字**不填背景色**，非墨像素一律写 0（透明）。
-     *
-     * 实测依据：origin 的字形 tile 里只有 nibble {0,1,8}——0 透明 / 1 前景 / 8 阴影，
-     * **官方引擎从不把 WIN_COLOR_D 写进字形 tile**，窗口底色由下层 BG 提供。
-     * 而 WIN_COLOR_D 在很多窗口里根本不是底色：图鉴列表行里它是 2，
-     * bank15[2] = 0x001F = 纯红 → 我们整格填 D 就变成「一行行红块」（滚动重绘最明显）。
-     * 擦旧像素同样写 0：官方靠游戏自己的 FillWindow，我们靠 clear_cols，
-     * 两边都不该把「阴影/强调色」当底色刷上去。 */
-    if ((win_u8(win, WIN_TEXTMODE) & 7u) != 2u)
-        bg = 0u;
-
+    /* bg 已由 chs_colors() 给出（= 模板的 D），这里不再二次加工。 */
     {
         uint32_t wkey = (uint32_t)(uintptr_t)win;
         uint16_t ti = win_u16(win, WIN_TEXT_INDEX);

@@ -491,12 +491,23 @@ def _name_window_patches(
         sub_off = add_off = term = None
         sub_sp = 0
         sp_reg = -1
+        dash_reg = -1          # 被 `movs rX,#0xAE` 赋过值的寄存器（破折号占位）
+        dash_seen = -1
         loops: list[tuple[int, int]] = []
         for off in range(fstart, fend - 1, 2):
             h = struct.unpack_from("<H", rom, off)[0]
             # mov Rd,sp : 0100 0110 1 Rm(13) Rd
             if (h & 0xFF00) == 0x4600 and ((h >> 3) & 0xF) == 13:
                 sp_reg = h & 7
+                continue
+            # movs rD,#0xAE —— 图鉴列表「无名字」分支的破折号占位字符
+            # （0x0808ADC2 `movs r1,#0xAE`）。★ 这个填充循环的**长度是 UI 语义**
+            # （显示几个 `-`），绝不能跟着名表 stride 一起放大：曾经把 5 个放大成
+            # 23 个，破折号串撑满整行并溢出到相邻行，同时越界读到后面的 `FC 02`
+            # 控制码把 WIN_COLOR_D 改成 2 → 整格填 bg 变成红色横条。
+            if (h & 0xF800) == 0x2000 and (h & 0xFF) == 0xAE:
+                dash_reg = (h >> 8) & 7
+                dash_seen = off
                 continue
             # strb rX,[rY,#imm5] : 0111 0 imm5 rn rt
             if (h & 0xF800) == 0x7000 and ((h >> 6) & 0x1F) == old_stride - 1:
@@ -520,6 +531,17 @@ def _name_window_patches(
             if (h & 0xF800) == 0x2800 and off + 2 < fend:
                 h2 = struct.unpack_from("<H", rom, off + 2)[0]
                 if (h2 & 0xFF00) == 0xD900:
+                    # 破折号填充循环：循环体里出现 `strb rDash,[rBase,rIdx]`
+                    is_dash = False
+                    if dash_reg >= 0:
+                        for q in range(max(dash_seen, fstart), off, 2):
+                            hq = struct.unpack_from("<H", rom, q)[0]
+                            if (hq & 0xF800) == 0x7000 and (hq & 7) == dash_reg:
+                                is_dash = True
+                                break
+                    if is_dash:
+                        dash_reg = -1      # 本函数确认有破折号占位
+                        continue           # 不收进 loops ⇒ 不放大
                     loops.append((off, h & 0xFF))
                 continue
 
@@ -527,6 +549,12 @@ def _name_window_patches(
             continue
         frame_end = add_off if add_off is not None else fend
         if term is not None and not (sub_off < term < frame_end):
+            term = None
+        # 同一个缓冲既放名字又放破折号时，`buf[old_stride-1]=FF` 是**破折号串的
+        # 终止符**（5 个 `-` 后结束）。放大它会把破折号串变成
+        # 「5 个 - + 19 个 0x00 + FF」—— 那 19 个 0x00 在我们这边按空格画，
+        # 一样溢出。名字路径的 FF 由源串自带，不依赖这个槽。
+        if dash_seen >= 0 and dash_reg < 0:
             term = None
         caps = [
             (o, i) for o, i in loops

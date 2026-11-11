@@ -80,6 +80,7 @@ class ProbeSession:
         cont_timeout: float = 30.0,
         quiet: bool = True,
         dedup: bool = False,
+        watch_addrs: Optional[list[int]] = None,
     ):
         self.out_dir = Path(out_dir)
         self.out_dir.mkdir(parents=True, exist_ok=True)
@@ -97,6 +98,11 @@ class ProbeSession:
         # 分析用：默认**不**去重（去重会把「连着 7 次同样的 print」吞成一行，
         # 而 bug 恰恰常藏在重复里的第 k 次）
         self.dedup = dedup
+        # 写 watchpoint（Z2）：用来回答「这个寄存器/字段到底被谁写、写几次」。
+        # 静态调不动的问题（比如 BGxCNT 的 charBase 位是不是每帧被重设）
+        # 用这一条最快。
+        self.watch_addrs = list(watch_addrs or [])
+        self.watch_hits: list[tuple[int, int, int]] = []   # (addr, pc, newval)
 
         self._stop = threading.Event()
         self._thread: Optional[threading.Thread] = None
@@ -121,7 +127,8 @@ class ProbeSession:
         self.stop()
 
     def start(self) -> None:
-        if not self.functions:
+        # 只有 watchpoint、没有监听点时也必须启动（否则 -g 会让 mGBA 一直暂停）
+        if not self.functions and not self.watch_addrs:
             return
         self._thread = threading.Thread(target=self._run, name="gdb-probe", daemon=True)
         self._thread.start()
@@ -164,10 +171,10 @@ class ProbeSession:
 
     def _run(self) -> None:
         points = load_gdb_points(self.game)
-        hooks = resolve_hooks(points, self.functions)
-        if not hooks:
-            self.errors.append(f"yaml 里没有这些监听点: {self.functions}")
-            self.log(f"[ERR] 监听点未定义: {self.functions}")
+        hooks = resolve_hooks(points, self.functions) if self.functions else []
+        if not hooks and not self.watch_addrs:
+            self.errors.append(f"既没有监听点也没有 watchpoint: {self.functions!r}")
+            self.log("[ERR] 没有任何探针目标")
             return
 
         gdb = self._attach()
@@ -203,6 +210,13 @@ class ProbeSession:
             f" [{self.game}: {', '.join(h.name for h in hooks)}] ====="
         )
 
+        for wa in self.watch_addrs:
+            try:
+                r = gdb.cmd(f"Z2,{wa & 0xFFFFFFFF:x},2")
+                self.log(f"  watchpoint 0x{wa:08X} 写监视: {r}")
+            except (GdbError, OSError) as e:
+                self.log(f"[ERR] watchpoint 0x{wa:08X} 失败: {e}")
+
         armed = []
         for h in hooks:
             try:
@@ -211,7 +225,7 @@ class ProbeSession:
                 self.log(f"  断点 {h.name} @0x{h.bp:08X} OK")
             except (GdbError, OSError) as e:
                 self.log(f"[ERR] 断点 {h.name} @0x{h.bp:08X} 失败: {e}")
-        if not armed:
+        if not armed and not self.watch_addrs:
             gdb.close()
             self.errors.append("所有断点设置失败")
             return
@@ -221,7 +235,7 @@ class ProbeSession:
         try:
             while n < self.limit and not self._stop.is_set():
                 try:
-                    gdb.cont(timeout=self.cont_timeout)
+                    stop = gdb.cont(timeout=self.cont_timeout)
                 except GdbError as e:
                     msg = str(e)
                     # 场景跑完 mGBA 退出 ⇒ 连接断开，属正常收尾
@@ -233,6 +247,22 @@ class ProbeSession:
                     break
                 regs = gdb.read_regs()
                 pc = (regs.get("r15", 0) & ~1) & 0xFFFFFFFF
+
+                # watchpoint 停因：记一条「谁写的、写成什么」，不占命中计数
+                if isinstance(stop, str) and "watch" in stop:
+                    wa = self.watch_addrs[0] if self.watch_addrs else 0
+                    try:
+                        cur = int.from_bytes(bytes(gdb.read_mem(wa, 2)), "little")
+                    except (GdbError, OSError):
+                        cur = -1
+                    self.watch_hits.append((wa, pc, cur))
+                    if len(self.watch_hits) <= 40:
+                        self.log(f"\n[WATCH] 0x{wa:08X} <- 0x{cur:04X}  "
+                                 f"PC=0x{pc:08X} LR=0x{regs.get('r14', 0) & ~1:08X}")
+                    elif len(self.watch_hits) % 200 == 0:
+                        self.log(f"  …watch 已命中 {len(self.watch_hits)} 次")
+                    continue
+
                 n += 1
                 self.hits = n
                 hook = by_pc.get(pc)

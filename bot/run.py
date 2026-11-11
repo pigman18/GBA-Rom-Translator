@@ -202,7 +202,7 @@ def prepare_rom(src: Path, workdir: Path, shared_save: Path | None):
 
 def run_side(side, source, output_dir, scene, game, mgba,
              ident_hex=None, pos_desc=None, timeout=900,
-             gdb_points=None, gdb_port=2345, gdb_timeout=90.0):
+             gdb_points=None, gdb_port=2345, gdb_timeout=90.0, gdb_watch=None):
     output_dir.mkdir(parents=True, exist_ok=True)
     env = os.environ.copy()
     env.update(
@@ -222,7 +222,7 @@ def run_side(side, source, output_dir, scene, game, mgba,
                "-C", "mute=1",
                "-C", "volume=0",
                "-C", "audioSync=0"]
-    if gdb_points:
+    if gdb_points or gdb_watch:
         # -g：启动即开 GDB stub 并**暂停**等连接（mGBA 语义），
         # 所以探针线程必须马上连上并 cont，否则 Lua 脚本一帧都推不动。
         # ★ `-g` 在 mGBA 里是**无参数开关**（`-g, --gdb  Start GDB session
@@ -236,14 +236,15 @@ def run_side(side, source, output_dir, scene, game, mgba,
     print(f"[bot] {side}: {source} -> {output_dir}", flush=True)
 
     probe = None
-    if gdb_points:
+    if gdb_points or gdb_watch:
         from gdbprobe import ProbeSession, load_origin
         probe = ProbeSession(
             out_dir=output_dir,
             game=game,
-            functions=gdb_points,
+            functions=gdb_points or "",
             port=gdb_port,
             origin=load_origin(game),
+            watch_addrs=gdb_watch,
         )
 
     proc = popen_hidden(command, cwd=str(output_dir), env=env)
@@ -361,6 +362,9 @@ def main() -> int:
                          "bot/gdbprobe.py 连上，命中落 {side}/gdb_probe.log")
     ap.add_argument("--gdb-port", type=int, default=2345,
                     help="GDB stub 端口（默认 2345，两侧串行复用）")
+    ap.add_argument("--gdb-watch", default=None, metavar="ADDR[,ADDR]",
+                    help="对这些地址下写 watchpoint（Z2），记录「谁写的、写成什么」。"
+                         "用来确认寄存器/字段是否每帧被重设，例如 BG2CNT=0x0400000A")
     ap.add_argument("--gdb-side", choices=["origin", "translated", "both"],
                     default="both", help="只在某一侧跑 GDB 探针（默认 both）")
     args = ap.parse_args()
@@ -471,8 +475,11 @@ def main() -> int:
                      ident_hex=None if args.no_prove else ident_hex,
                      pos_desc=pos_desc,
                      timeout=args.timeout,
-                     gdb_points=(args.gdb_points
-                                 if args.gdb_side in ("both", side) else None),
+                     gdb_points=((args.gdb_points or "") or None)
+                                 if args.gdb_side in ("both", side) else None,
+                     gdb_watch=([int(x, 16) for x in args.gdb_watch.split(",") if x.strip()]
+                                if (args.gdb_watch and args.gdb_side in ("both", side))
+                                else None),
                      gdb_port=args.gdb_port,
                      gdb_timeout=max(60.0, float(args.timeout) / 4))
             manifest["roms"][side] = {

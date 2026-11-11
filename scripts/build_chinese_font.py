@@ -176,6 +176,14 @@ def bdf_to_ink(
     shift = em_top - pad_top
     if bw > ink_w or bh > ink_h:
         shift = max(0, shift)
+    # 基线 shift 必须落在「整条墨迹还在框内」的区间，否则满格字会被裁。
+    # 满格字（bh 接近 ink_h）本来就装不下，这时退回**顶部对齐**
+    # （shift = -min_y，= 改动前的行为），只给「一/二/三」这类矮字用基线。
+    lo, hi = -min_y, ink_h - 1 - max_y
+    if lo <= hi:
+        shift = max(lo, min(hi, shift))
+    else:
+        shift = -min_y
 
     ox = 0
     if center_x and bw < ink_w:

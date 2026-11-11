@@ -550,6 +550,71 @@ def plan_struct_trampoline(
     if not insns:
         return None, cursor, "读点已识别但入口无法就地装 ldr+bx 钩"
 
+    # ── 直接绘制点：``ldr rX,=base+name_off`` + ``adds rD,rA,rX`` + 画字 ──
+    # getter 挂了钩不等于全部覆盖：图鉴条目页 / 另一个图鉴页都是**自己算**
+    # 名字地址再交给绘制函数，不经过 getter（`たねポケモン` 一直是日文就是这原因）。
+    # 做法：另存一份**同 stride 镜像表**（名字区 4B 放指针 + FF），把这两个
+    # 站点各自的 literal 指到镜像表，再把紧邻的 ``adds`` 换成 ``ldr`` 解引用。
+    # 旧表一个字节不动 → 其它读者（身高/体重、比对）行为完全不变。
+    _want_draw = bool((mod.get("read") or {}).get("draw_sites"))
+    mirror_rel = len(blob)
+    mirror = bytearray()
+    for i in (range(count) if _want_draw else ()):
+        src = base + i * entry_size
+        e = bytearray(rom[src:src + entry_size])
+        e[name_off:name_off + 4] = ptr_bytes[i * 4:i * 4 + 4]
+        if name_off + 4 < entry_size:
+            e[name_off + 4] = 0xFF
+        mirror += bytes(e)
+    if cursor + len(mirror) > TABLE_AREA_END:
+        return None, cursor, "补丁表区域满了（含镜像表）"
+    blob = blob + bytes(mirror)
+    cursor = (cursor + len(mirror) + 3) & ~3
+    mirror_gba = GBA_BASE + new_base + mirror_rel + name_off
+
+    draw_sites: list[dict] = []
+    for lit in (find_literal_sites(rom, GBA_BASE + base + name_off) if _want_draw else ()):
+        cur_v = struct.unpack_from("<I", rom, lit)[0]
+        if cur_v != GBA_BASE + base + name_off:
+            continue
+        ldr_off = _ldr_site_for_literal(rom, lit)
+        if ldr_off is None:
+            continue
+        lit_reg = (struct.unpack_from("<H", rom, ldr_off)[0] >> 8) & 7
+        dec = _dec_adds_reg(rom, ldr_off + 2)
+        if dec is None:
+            continue
+        rd2, rn2, rm2 = dec
+        if lit_reg not in (rn2, rm2) or rd2 not in (rn2, rm2):
+            continue
+        idx_reg = rm2 if rn2 == lit_reg else rn2
+        if max(rd2, lit_reg, idx_reg) > 7:
+            continue
+        # 必须是「算完名字地址就交给绘制函数」：后面 3 条内出现
+        # ``bl`` 到画字函数，否则可能是数值读取（实测 0x0808C244 读
+        # entry+16 的数值，光看 literal+adds 会误判）。
+        if not _calls_draw(rom, ldr_off + 2, 5):
+            continue
+        draw_sites.append({
+            "lit": lit, "adds": ldr_off + 2,
+            "rd": rd2, "lit_reg": lit_reg, "idx_reg": idx_reg,
+        })
+    for s in draw_sites:
+        insns.append({
+            "off": f"0x{s['lit']:X}",
+            "bytes": struct.pack("<I", mirror_gba).hex(" "),
+            "label": "literal → 镜像表名字区（指针槽）",
+        })
+        enc = 0x5800 | (s["idx_reg"] << 6) | (s["lit_reg"] << 3) | s["rd"]
+        insns.append({
+            "off": f"0x{s['adds']:X}",
+            "bytes": struct.pack("<H", enc).hex(" "),
+            "label": (
+                f"adds r{s['rd']},r{s['lit_reg']},r{s['idx_reg']}"
+                f" → ldr r{s['rd']},[r{s['lit_reg']},r{s['idx_reg']}]（解引用名字指针）"
+            ),
+        })
+
     safe = re.sub(r"[^\w\-]+", "_", name)
     table = {
         "module": name,
@@ -958,6 +1023,32 @@ def plan_struct_name_ptr(
 
 _STRCPY = 0x080042E8  # StringCopy(dst, src)：FF 定界，长度不限
 
+# 画字函数（把「名字地址 → 像素」的那一步）。判定「这是绘制点」用它做闸门：
+# 只认 literal+adds 会把数值读取（entry+16 那种）误当成名字绘制。
+_DRAW_FUNCS = (0x0808DD60, 0x0806F16C, 0x0806F158)
+
+
+def _calls_draw(rom: bytes, start: int, lookahead: int) -> bool:
+    """``start`` 起 ``lookahead`` 条指令内有没有 ``bl <画字函数>``。"""
+    for k in range(lookahead):
+        a = start + 2 * k
+        if a + 4 > len(rom):
+            return False
+        h1, h2 = struct.unpack_from("<HH", rom, a)
+        if (h1 & 0xF800) != 0xF000 or (h2 & 0xD000) != 0xD000:
+            continue
+        s = (h1 >> 10) & 1
+        j1 = (h2 >> 13) & 1
+        j2 = (h2 >> 11) & 1
+        i = 1 if j1 == j2 else 0
+        imm = (s << 24) | (i << 23) | (j1 << 22) | (j2 << 21) | ((h1 & 0x3FF) << 11) | (h2 & 0x7FF)
+        if s:
+            imm -= 1 << 25
+        tgt = (GBA_BASE + a + 4 + imm * 2) & 0xFFFFFFFF
+        if tgt in _DRAW_FUNCS:
+            return True
+    return False
+
 
 def _dec_adds_reg(rom: bytes, off: int) -> tuple[int, int, int] | None:
     """解 ``adds Rd, Rn, Rm``（T1），返回 (rd, rn, rm)。"""
@@ -965,6 +1056,18 @@ def _dec_adds_reg(rom: bytes, off: int) -> tuple[int, int, int] | None:
     if (h & 0xFE00) != 0x1800:
         return None
     return h & 7, (h >> 3) & 7, (h >> 6) & 7
+
+
+def _ldr_site_for_literal(rom: bytes, lit: int, back: int = 0x400) -> int | None:
+    """找把 ``lit`` 当地址装入寄存器的 ``ldr rX,[pc,#imm8*4]`` 指令地址。"""
+    lo = max(0, lit - back) & ~1
+    for a in range(lit - 4, lo, -2):
+        h = struct.unpack_from("<H", rom, a)[0]
+        if (h & 0xF800) != 0x4800:
+            continue
+        if ((a + 4) & ~3) + (h & 0xFF) * 4 == lit:
+            return a
+    return None
 
 
 def _find_name_fold_sites(

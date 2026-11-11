@@ -308,7 +308,7 @@
         "entry_size": 28,
         "name_offset": 6,
         "eos": 0,
-        "draw_sites": true
+        "draw_sites": false
       }
     },
     "图鉴说明": {

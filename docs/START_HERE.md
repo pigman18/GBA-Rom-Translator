@@ -3,6 +3,9 @@
 > 目的：一页判断树 + 自检，防止重演 2026-08-18 红框 BUG 的教训
 > （连续两晚在符号表/反汇编/指针表上绕 4 小时，用户一句话 + 字节搜索几分钟就定案）。
 > 上游文档：`docs/复盘_20260818_红框调试过程与问题.md`、`docs/DONT.md`、`AGENTS.md`。
+> **文本协议只有一个权威：`docs/PROTOCOL_CURRENT.md`**（`F7 00 hi lo` + relocate）。
+> 旧的三通道设计文档（`RUBY_ENCODING_CURRENT.md` / `TASKS_2026-11-04_archive.md` / `PLAN_F7_ENCODING.md`）
+> 已于 2026-11-11 删除：`F9 00` 原地写、`F9 80` 短语引用、`SLT2`、`PhraseTable` 全部废弃。
 
 ## 0. 先回答三个问题再动手
 

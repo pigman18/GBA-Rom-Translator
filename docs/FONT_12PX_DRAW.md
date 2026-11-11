@@ -13,7 +13,8 @@
 
 ## 绘制（现行 · 2026-11-07 · 官方落址重接）
 
-- **入口**：`PrintNextChar_Hook` 仅拦截 `F9`（+ SLT2 slot）；其余 **return Origin → 官方 FontFunc**。
+- **入口**：`PrintNextChar_Hook` 全面接管（`F7 00` 内联汉字 / `F9` 兼容旁载 / 其余 JP PCS 同池 8px）；
+  `SLT2` 空表桩仍会先查一次（待删，见 `docs/PROTOCOL_CURRENT.md` §4）。
 - **汉字**：`PrintGlyph` → `DecompressGlyph_Chinese` + `DrawGlyphTile_refpr`（`CopyGlyph(C,E,D)` ink-only）。
 - **落址（窗体 tm0/1/3）**：与 FontFunc[0] 同构  
   `abs = TILE_BASE + OFFSET + 2*xOff + yOff`；每画完一列 8px → `OFFSET += 2`；map 走官方 `UpdateTilemap`（**不**改 `textMode`）。  
@@ -24,7 +25,8 @@
 - **保留**：`scene_remap_tile` 仅避让图鉴/PSS/菜单 ▶ 图标段 `0x1E8..`→`0x3E8..`（战斗窗禁止 remap）。
 - **打包**：`font_patch._burn_plan_table_blobs` / `_burn_patch_table_redirects` — armips 高址常写丢，表须烙入（缺则道具名全空）。
 - **禁止**：抬水位躲撞字、为躲裁切改 lexicon、改字库容器为真 12×12 tile、默认 `CHS_GLYPH_ADVANCE_PX→16`。
-- **F9 路由**：仅第二字节 `00` → 旁载单字；其余（含 `F9 80`）→ PhraseTable。名字左移走 `write.type=op` / `CHS_NAME_PHRASE_LEFT`。
+- **F7 路由**：`F7 00 hi lo` = 单汉字 4 字节，自由长度（`append_stream` 按 4 字节组消费）。
+  `F9 00` 旁载仅作兼容残留；`F9 80` 短语表**已废弃**（别再按它改宽度/左移）。
 - **等 A 箭头**：`TILE_X = base_tx + ceil(chs_px/8)`；半列未齐时 `TILE_OFFSET+=2`。
 - **地图名弹窗**：钩 `0x0809F67E` 跳过 pad/二次 GetMapName。
 

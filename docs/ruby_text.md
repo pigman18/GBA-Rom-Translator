@@ -166,13 +166,12 @@ sPrintGlyphFuncs[win->textMode]            ← 第一次分发：决定"怎么�
 PrintNextChar_C(win, cur_char)
  ├─ scene_is_buffer_printer?        → return 0（原版 FontFunc 接管）
  ├─ cur_char==0xEF                  → DrawMenuCursorEF（菜单 ▶ 固定 tile 对）
- ├─ cur_char==0xF9 (CHS_ESCAPE):
- │   ├─ op==00 ll tt                → pack_glyph_index → PrintGlyph_CHS（内联汉字 12px）
- │   └─ op!=00 hi lo                → PhraseTable：父串未结束且短语流无等待控制码
- │                                    → inline_phrase_no_controls 内联绘制；
- │                                      否则 redirect_phrase_stream 切流
- ├─ slot_lookup_and_draw            → SlotTable（'SLT2' 分桶 O(桶) / legacy 平铺线性）
- │                                    命中 → slot_draw_chinese 画中文并推进 INDEX
+ ├─ cur_char==0xF7 (CHS_GLYPH_F7):
+ │   └─ F7 00 hi lo                → pack_glyph_index → PrintGlyph → 12px 单字（**现行唯一编码**）
+ ├─ cur_char==0xF9 (CHS_ESCAPE，兼容残留)
+ │   └─ op==00 ll tt                → 同上（旁载单字）
+ ├─ slot_lookup_and_draw            → SlotTable（'SLT2'）：**空表桩**，现已无任何
+ │                                    `slot:true` 模块，查不到 → 走正常绘制
  └─ 其余可印 JP PCS                 → DrawGlyph_CHS（Sym 带 0x36..3E / 空白 / 经官方
                                       取址展开后 CHS 同池 8px 步进）
 ```

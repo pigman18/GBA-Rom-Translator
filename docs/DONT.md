@@ -85,8 +85,9 @@
 - **根因**（2026-08）：engine.py 的 PhraseOffsets 生成改用 `.word`（u32，4B/项），
   但 hook 仍读 `uint16_t *offsets`（u16，2B/项）。
   导致奇数 code 全部读到 0 → 指向第一条目 → 渲染垃圾字形 → VRAM 腐蚀 → 全局红字。
-- **现行**（F9 80 字节流表）：表体常 >64KB，**两侧均为 u32**：
-  engine `.word` ↔ hook `uint32_t *`。
+- **现行**：`PhraseTable` / `PhraseOffsets` **已废弃**（不再有 `F9 80` 引用），
+  只剩 `GetStringWidth()` 的 `op != 0` 分支还在读，属待清理死重量。
+  这条只作为「读写步长必须同宽」的历史教训保留。
 - **禁止**：单独改 engine.py 表生成或 hook 的 offsets 类型。两者必须同宽：
   engine 用 `.halfword` ↔ hook 用 `uint16_t *`，
   engine 用 `.word` ↔ hook 用 `uint32_t *`。
@@ -102,8 +103,10 @@
 - **根因**：把「显示不对」当成「协议不够用」，于是改协议/改数据去迁就；
   实际编码逻辑本来就简单（一个前缀 `F7` + 码位），该做的是**在 hook 上叠一层**。
 - **禁止**：
-  - 未经证实就改 `F7 00 hi lo` 编码、`F9 00`/`F9 80` 通道、SLT2、PhraseTable 位宽、
+  - 未经证实就改 `F7 00 hi lo` 编码、`append_stream` 的自由长度语义、
     `rows/redirects/tables` 写入模型、任何 hook 的返回契约。
+  - 把已废弃的 `F9 00` 原地写 / `F9 80` 短语引用 / `SLT2` / `PhraseTable` 重新引入
+    或写进新文档（见 `docs/PROTOCOL_CURRENT.md`）。
   - 用「改译文/改 texts.json 数据」去绕显示问题（数据是协议产出，改了就等于改协议）。
   - 改原版指令来「消掉」某个显示（如 nop 打印点）；原版流程照跑，覆盖由 hook 负责。
 - ✓ 解决：先给「现状为什么错」的实测证据（字节/截图/反汇编）。没有证据 → 只能加不能改。

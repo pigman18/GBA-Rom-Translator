@@ -25,7 +25,7 @@ translate_plan.py
 
 问题：
 - `write.relocate=false` 是人拍脑袋设的，不代表 ROM 真的没指针
-- `write.slot=true` 导致大批条目退到 SLT2 运行时查表
+- 历史：`write.slot=true` 曾导致大批条目退到 SLT2 运行时查表（SLT2 现已废弃）
 - `write.byte_length` 与真实 ROM 几何脱节（道具名就是这样）
 
 ### 新架构（Python 自动判定）

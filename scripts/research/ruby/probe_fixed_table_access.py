@@ -37,7 +37,7 @@ SYM = ROOT / "configs" / "POKEMON_RUBY_AXVJ00" / "symbols" / "pokeruby_jp.sym"
 
 GBA_BASE = 0x08000000
 
-# 要探测的定长表模块（对应 docs/RUBY_ENCODING_CURRENT.md §六 的 1,096 条）
+# 要探测的定长表模块（历史背景见 git 里的 RUBY_ENCODING_CURRENT.md，已删）
 TARGETS = [
     "招式名",
     "道具名",

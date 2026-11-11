@@ -17,7 +17,8 @@
 | `relocate` | `true`：允许 Python 改指针写扩展区；`false`：禁止 |
 | `hook` | `true`：前序失败后生成 `pointer_redirect.asm`；默认 `false` |
 
-路径：`in_place` → `relocate` → `upgrade`(F9 80) → `hook` → `keep`。  
+路径：`relocate` → `hook` → `keep`。
+（`in_place` 原地写、`upgrade` 升 F9 80 都已废弃，见 `docs/PROTOCOL_CURRENT.md`。）  
 地点名：`relocate=false` 且 `hook=false`。
 
 ## 安全默认（`safe`）

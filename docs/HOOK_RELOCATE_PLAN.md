@@ -1,3 +1,6 @@
+> **历史方案（`F9 80` upgrade 那一步已废弃）**：现在越槽一律 relocate / 就地折名字，
+> 编码只有 `F7 00 hi lo`，见 `docs/PROTOCOL_CURRENT.md`。本文保留作设计演进记录。
+
 # 最终方案：`relocate` / `hook` 双开关 + `type=hook`
 
 > 保存日期：2026-08-05。供日后查阅；实现以代码为准。

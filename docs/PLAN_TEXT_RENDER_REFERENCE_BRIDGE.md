@@ -64,7 +64,7 @@ src/text/
 │    [policy]12px 步进 + scene 门控(队伍页脚/菜单mode2/商店/战斗窗特判集中成带注释分区);
 │            pitch 相位家族(chs_pitch_key/bind_slot 等~100行)**保留**(原定随 16px 整列方案退役;
           该方案已放弃,此状态变更,后续如需收敛另立新案)
-└── text_translter.c                ← 现 text_translate.c 更名;F900 整串+F980短语+slot v2
+└── text_translter.c                ← 现 text_translate.c 更名；F7 单通道（F9 兼容残留）
                                       全家**保留**(用户实测:全走 slot 太卡,通道无法删),
                                       仅 slot_lookup_legacy 待 v2 覆盖率验证后再清(~60行)
 
@@ -117,7 +117,7 @@ win->cursorX, win->cursorY, &glyph, glyph.width, glyph.height)` 后接现有 Upd
 ## 7. 已撤决策备案
 
 - `REMOVE_F980_HOOK_REFACTOR_REQ.md` 于 2026-08-27 应用户指令移除:
-  F980/PhraseTable 通道**保留**(全走 slot 实测太卡);slot/relocate 主链不变,
+  当时决定保留 F980/PhraseTable（现已全部废弃，勿再照此实施）；slot/relocate 主链不变,
   slot key 字节边界(A/B 口径)遗留开放,实施 text_translter 时一并定。
 
 

@@ -54,6 +54,11 @@
 /* 一段能容纳的列数：62 tile / 2（上/下）= 31 列。清理由此封顶，
  * 否则第 32 列会写到下一段的开头（8 段是首尾相接的）。 */
 #define CHS_ROW_COLS    (CHS_ROW_TILES / 2u)
+/* 屏幕可见列数（240px / 8）。绘制循环到这一列就停 ——
+ * 窗口宽度在 printer 里查不到（WindowTemplate 的 width 没被存进来），
+ * 所以这里只能做「不出屏」的兜底：再往右画既看不见，又会踩到相邻
+ * 窗口的 tilemap 项（背包技能页长招式名就是这么糊到右边框外的）。 */
+#define CHS_SCREEN_COLS 30u
 
 /* 字形索引的位域：低 15 位是序号，bit15 表示取右半（同一个字的第二片） */
 #define CHS_GLYPH_HALF_BIT  0x8000u
@@ -332,7 +337,14 @@ static void draw_glyph_tilemap(
         unsigned c = off >> 3u;
         unsigned sx = gx & 7u;
         unsigned w = 8u - sp;
-        uint16_t tu = (uint16_t)(base + (uint16_t)((col + c) * 2u));
+        uint16_t tu;
+
+        /* 出屏即停：既省掉看不见的绘制，也避免把 tilemap 写到相邻窗口去
+         * （超出右边框的长招式名会踩坏右邻窗口的项）。 */
+        if ((unsigned)col + c >= CHS_SCREEN_COLS)
+            break;
+
+        tu = (uint16_t)(base + (uint16_t)((col + c) * 2u));
         const uint8_t *sup = (gx < 8u) ? t->tl : t->tr;
         const uint8_t *slo = (gx < 8u) ? t->bl : t->br;
 

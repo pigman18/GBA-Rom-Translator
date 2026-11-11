@@ -292,6 +292,17 @@ static void draw_glyph_tilemap(
 
     chs_colors(win, &fg, &bg, &sh);
 
+    /* ★ 2026-11-11 #8：tilemap 文字**不填背景色**，非墨像素一律写 0（透明）。
+     *
+     * 实测依据：origin 的字形 tile 里只有 nibble {0,1,8}——0 透明 / 1 前景 / 8 阴影，
+     * **官方引擎从不把 WIN_COLOR_D 写进字形 tile**，窗口底色由下层 BG 提供。
+     * 而 WIN_COLOR_D 在很多窗口里根本不是底色：图鉴列表行里它是 2，
+     * bank15[2] = 0x001F = 纯红 → 我们整格填 D 就变成「一行行红块」（滚动重绘最明显）。
+     * 擦旧像素同样写 0：官方靠游戏自己的 FillWindow，我们靠 clear_cols，
+     * 两边都不该把「阴影/强调色」当底色刷上去。 */
+    if ((win_u8(win, WIN_TEXTMODE) & 7u) != 2u)
+        bg = 0u;
+
     {
         uint32_t wkey = (uint32_t)(uintptr_t)win;
         uint16_t ti = win_u16(win, WIN_TEXT_INDEX);

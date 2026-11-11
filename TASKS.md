@@ -329,14 +329,22 @@ blob 落到 new_base → insns 按 .org/.byte 打补丁 → literals 改字面�
 
 ### 2.22 图鉴列表两条新 BUG（2026-11-11 11:45，用户实机）
 
-- [ ] **#8 滚动时名字位置出现纯红实心块**（用户截图 1）。
-  实测红 = `pal[15][2] = 0x001F`；`blit_run()` 把非墨像素写成 `bg=WIN_COLOR_D` 的整格填充。
-  通用修法：补背景统一写 index 0（透明）+ `clear_cols` 擦旧像素，只有实测确认 D 是底色才用 D。
-  详见 `docs/AXVJ_UI_ISSUES_20261111.md` §9.1。
+- [x] **#8 滚动时名字位置出现纯红实心块**（用户截图 1）——**已修 2026-11-11 12:05**。
+  实测红 = `pal[15][2] = 0x001F`；`blit_run()` 把非墨像素写成 `bg=WIN_COLOR_D` 的整格填充，
+  而 origin 的字形 tile 只有 nibble `{0,1,8}`（原生从不填 bg）。
+  改法：`text_render.c::draw_glyph_tilemap` 里 `bg = 0`（tm2 缓冲除外），`clear_cols` 一并写透明。
+  验收：dex 红色像素 498 → **264（= origin 同帧）**；dex fail 帧 73 → **19**；
+  options fail 0；bag 与基线**逐项完全相同**（同一批既有失败，非本次引入）。
 - [ ] **#9 编号与名字错位（名字整体左移 8px）**（用户截图 2）。
   一行是两条路径：游戏直绘 `No003`（不经 `PrintNextChar`）+ `AddTextPrinter` 打名字；
   tilemap 实测 origin 名字列 23 / 我们列 22；破折号填充因此多画一个（右端都停在 217）。
   详见 §9.2；下一步探针见 §9.3。
+
+  2026-11-11 12:10 探针结论（`pb_log` 逐笔画记账，EWRAM 环）：
+  - 列表行确实是 `tm=1` 画的，`abs = WIN_CURSOR_X + WIN_CURSOR_TILE_X`（我们的公式）；
+  - 但环里混进了别的窗口（同一 `cy` 有 `cx=22` 与 `cx=24` 两组 printer），
+    **日志必须带 template 指针才能区分窗口**，否则又是"看错窗口"；
+  - 空格不是原因：`GetGlyph(code=0)` 明确返回 `width=8`，`PcsPrint_Custom` 会照常推进一格。
 
 ### 2.21 剩余日文盘点：338 → 195 条（2026-11-11 03:35）
 

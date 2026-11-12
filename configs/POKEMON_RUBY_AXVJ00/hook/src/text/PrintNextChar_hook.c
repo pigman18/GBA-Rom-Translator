@@ -138,7 +138,7 @@ static unsigned fc_arg_count(uint8_t type)
     }
 }
 
-static unsigned grid_phase(const uint8_t *text, uint16_t index)
+static unsigned grid_phase_adv(const uint8_t *text, uint16_t index, unsigned adv)
 {
     unsigned w = 0u;
     uint16_t i = 0u;
@@ -162,11 +162,11 @@ static unsigned grid_phase(const uint8_t *text, uint16_t index)
             continue;
         }
         if (c == 0xF7u && i + 1u < index && text[i + 1u] == 0u) {
-            w += CHS_GLYPH_ADVANCE_PX;
+            w += adv;
             i = (uint16_t)(i + 4u);
             continue;
         }
-        if (c >= PCS_CTRL_BASE) {              /* FA / FD / 0xF9 残留：0px */
+        if (c >= PCS_CTRL_BASE) {              /* FA / FD 等控制码：0px */
             ++i;
             continue;
         }
@@ -174,6 +174,21 @@ static unsigned grid_phase(const uint8_t *text, uint16_t index)
         ++i;
     }
     return w & 7u;
+}
+
+/* 12px（Normal）默认；Small 场景由调用方传 8。 */
+static unsigned grid_phase(const uint8_t *text, uint16_t index)
+{
+    return grid_phase_adv(text, index, CHS_GLYPH_ADVANCE_PX);
+}
+
+/* 按窗口字体号选宽度算相位（Small 窗必须用 8，否则整行错位）。 */
+static unsigned grid_phase_for(TextPrinter *win, const uint8_t *text, uint16_t index)
+{
+    uint8_t fn = win_u8(win, WIN_FONTNUM_REAL);
+    return grid_phase_adv(text, index,
+                          (fn == 2u || fn == 4u) ? CHS_GLYPH_ADVANCE_SMALL
+                                                 : CHS_GLYPH_ADVANCE_PX);
 }
 
 /* GBA VRAM 禁止 byte 写：一列 64B 一律 32bit 读写。 */
@@ -463,8 +478,30 @@ static void grid_pair_fill(uint8_t *p, uint8_t bg)
 /* =====================================================================
  * §4 两个绘制入口
  * ===================================================================== */
-/* 汉字：字模 12×12 墨迹（y=3..14）按 phase 铺到 1~2 个 tile 列。
- * 盒内像素先清 0 再写墨迹 —— 既去掉重印残留，又天然保留共享列邻字的 4px。 */
+/* 按 fontNum 选中文 BDF 字库。
+ *
+ * 为什么必须分（2026-11-12 实测）：队伍列表 / 战斗名走 fontNum=4（Small），
+ * 窗口排版按 8px/格算好，而 Normal 是 12px 墨迹。旧代码无条件用 Normal +
+ * 12px 推进，等于把 12px 字硬塞进 8px 格排版里 —— 实机就是名字散架、
+ * 笔画错位、并覆盖邻格（party 场景 y96 带 origin 与 translated 差异成片）。
+ *
+ * fontNum 语义（game.h FontIsShadowed + FontSubTable）：
+ *   0/1/2/6 → 1bpp 普通；3/4/5 → shadowed 4bpp。
+ *   其中 2/4 是「小字」档（Small 字库，8px 步进），其余用 Normal。
+ * MIDDLE（大字号）当前没有 fontNum 映射到它，保留常量备用。
+ */
+static const uint8_t *grid_font_for(uint8_t font_num, unsigned *advance)
+{
+    if (font_num == 2u || font_num == 4u) {
+        *advance = CHS_GLYPH_ADVANCE_SMALL;          /* 8px */
+        return (const uint8_t *)(uintptr_t)ADDR_FONT_CHS_SMALL;
+    }
+    *advance = CHS_GLYPH_ADVANCE_PX;                 /* 12px */
+    return (const uint8_t *)(uintptr_t)GRID_FONT_NORMAL;
+}
+
+/* 汉字：墨迹按 phase 铺到 1~2 个 tile 列。
+ * 盒内像素先清 0 再写墨迹 —— 既去掉重印残留，又天然保留共享列邻字的余量。 */
 static void grid_draw_chs(TextPrinter *win, uint16_t gidx, unsigned phase)
 {
     GridTarget t;
@@ -474,16 +511,17 @@ static void grid_draw_chs(TextPrinter *win, uint16_t gidx, unsigned phase)
     unsigned sx, sy, ncols, delta;
     uint8_t fg, bg, sh;
     const uint8_t *g;
+    unsigned adv;
+    const uint8_t *font = grid_font_for(win_u8(win, WIN_FONTNUM_REAL), &adv);
 
-    ncols = (phase + CHS_GLYPH_ADVANCE_PX + 7u) >> 3;   /* 恒为 2 */
-    delta = (phase + CHS_GLYPH_ADVANCE_PX) >> 3;         /* 1 或 2 */
+    ncols = (phase + adv + 7u) >> 3;                     /* 1 或 2 列承载 */
+    delta = (phase + adv) >> 3;                          /* Small: 恒 1 */
     if (!grid_setup(win, &t) || gidx >= GRID_GLYPH_SLOTS) {
         win_set_u8(win, WIN_CURSOR_TILE_X,
                    (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + delta));
         return;
     }
-    g = (const uint8_t *)(uintptr_t)(GRID_FONT_NORMAL
-        + (uint32_t)gidx * GRID_GLYPH_BYTES);
+    g = font + (uint32_t)gidx * GRID_GLYPH_BYTES;
     fg = grid_fg(win);
     bg = grid_bg(win);
     sh = grid_shadow(win);
@@ -815,7 +853,7 @@ int PrintNextChar_Hook(TextPrinter *win)
      * 产物里出现 F9 就是流水线的 bug，应在生成端修，不在这里加分支。 */
     if (c == 0xF7u && p[1] == 0u) {
         gidx = (uint16_t)(GRID_LEAD_ADJUST(p[2]) * 256u + (unsigned)p[3]);
-        grid_draw_chs(win, gidx, grid_phase(text, index));
+        grid_draw_chs(win, gidx, grid_phase_for(win, text, index));
         win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(index + 4u));
         return 1;
     }

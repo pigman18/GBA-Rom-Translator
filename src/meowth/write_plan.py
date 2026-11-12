@@ -1090,6 +1090,7 @@ def _plan_pool_relocate(
         body = bytearray()
         p = s
         ok = True
+        copied_raw = 0        # else 分支原样拷贝的字节数
         while p < en:
             if p in starts:
                 e = starts[p]
@@ -1109,10 +1110,19 @@ def _plan_pool_relocate(
                 end = rom.find(0xFF, p, en)
                 p = (end + 1) if end >= 0 else en
             else:
+                # 未被识别为成员的字节：可能属于 skip 的短串（／ ー ♂ ♀ 等）。
+                # 原样拷贝就会把未翻译日文搬进新池，而整池指针被改写后，
+                # 原本读这些位置的窗口全部读到日文（实测：队伍列表名字变
+                # 「とびますか？」，命令菜单两项重复日文）。
+                # 这类池**不搬**，保持原指针 —— 宁可不译，不能把日文搬到
+                # 会被 102 个站点引用的新池里。
+                copied_raw += 1
                 pos_map[p - s] = len(body)
                 body.append(rom[p])
                 p += 1
         if not ok or not body:
+            continue
+        if copied_raw:
             continue
 
         new_base = cursor

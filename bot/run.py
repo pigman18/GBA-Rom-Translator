@@ -6,12 +6,12 @@
   2) 截图落 work/{gameId}/bot/{scene}/{时间}/{origin|translated}/{number}.png
   3) 两侧使用**同一份 .sav**，且**不是即时存档**（savestate 基于内存，
      会让 hook 改动不被加载，验收失真）
-  4) 采集后由 verify.py 对比截图判：已汉化 + 无撞 UI + 无乱码
-  5) 像素级判据：origin 中不存在的字形像素出现在 translated ⇒ 判乱码
+  4) 本脚本只负责采集；验收见 bot/SKILL.md（子代理看图：撞 UI /
+     日文→中文或不丢字 / 文字颜色）
 
 用法：
   python bot/run.py <gameId> <scene> [--save PATH] [--origin X] [--translated Y]
-                                    [--verify] [--check]
+                                    [--check]
 """
 from __future__ import annotations
 
@@ -346,10 +346,6 @@ def main() -> int:
     ap.add_argument("--translated")
     ap.add_argument("--save", help="两侧共用的 .sav 路径（非即时存档）")
     ap.add_argument("--mgba")
-    ap.add_argument("--verify", action="store_true",
-                    help="[旧行为] 采集后跑 verify.py；现在默认就会跑，保留此参数仅为兼容")
-    ap.add_argument("--no-verify", action="store_true",
-                    help="采集后跳过 verify.py（默认会跑并写出 verdict.json）")
     ap.add_argument("--check", action="store_true", help="只校验输入，不起模拟器")
     ap.add_argument("--no-prove", action="store_true",
                     help="跳过读档证明闸门（仅用于不采集对照的诊断场景）")
@@ -507,17 +503,8 @@ def main() -> int:
 
     n = len(manifest["pairs"])
     print(f"[bot] {n} frame-aligned pairs: {run_dir / 'manifest.json'}")
-    if n == 0:
-        return 1
-
-    # 默认就验收。历史上 --verify 是可选的，结果实际运行的批次大多没带它，
-    # 采集了大量截图却没有 verdict —— 验收数据存在但从未被使用。
-    # 用 --no-verify 显式跳过。
-    if args.no_verify:
-        print("[bot] verify SKIPPED (--no-verify)")
-        return 0
-    return subprocess.call([sys.executable, "-X", "utf8",
-                            str(BOT / "verify.py"), str(run_dir)])
+    print("[bot] capture only — review with bot/SKILL.md (no verify.py)")
+    return 0 if n else 1
 
 
 if __name__ == "__main__":

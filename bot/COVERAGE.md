@@ -6,17 +6,11 @@
 跑法（两侧共用同一份 .sav，自动读 `saves/scene_saves.json`）：
 
 ```bash
-python bot/run.py POKEMON_RUBY_AXVJ00 <scene>          # 采集
-python bot/run.py POKEMON_RUBY_AXVJ00 <scene> --verify  # 采集 + 判据
+python bot/run.py POKEMON_RUBY_AXVJ00 <scene>          # 只采集
 ```
 
-`verify.py` 需要 numpy + Pillow，系统 python 里没有。用隔离环境里的解释器：
-
-```
-C:\Users\pigman\.workbuddy\binaries\python\envs\default\Scripts\python.exe
-```
-
-（`--verify` 走的是 `sys.executable`，所以用上面这个解释器启动 `run.py` 才会自动带上）
+画面验收：按 [`bot/SKILL.md`](SKILL.md) 由子代理对比 origin/translated（撞 UI /
+日文→中文或不丢字 / 文字颜色）。`verify.py` 已移除。
 
 ---
 

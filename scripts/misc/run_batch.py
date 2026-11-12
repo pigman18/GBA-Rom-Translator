@@ -14,7 +14,7 @@ import subprocess
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parent.parent.parent
 SCENES = ROOT / "bot" / "scenes" / "POKEMON_RUBY_AXVJ00"
 BOTRUNS = ROOT / "work" / "POKEMON_RUBY_AXVJ00" / "bot"
 SAV = ROOT / "work" / "_probe" / "teleport.sav"
@@ -56,7 +56,7 @@ def warp_line(name: str) -> str:
 
 def run_one(name: str, timeout: int = 900) -> tuple[bool, int]:
     cmd = [PY, str(ROOT / "bot" / "run.py"), "POKEMON_RUBY_AXVJ00", name,
-           "--no-verify", "--save", str(SAV), "--timeout", str(timeout)]
+           "--save", str(SAV), "--timeout", str(timeout)]
     p = subprocess.run(cmd, capture_output=True, text=True, encoding="utf-8",
                        errors="replace")
     ok = "frame-aligned" in (p.stdout or "")

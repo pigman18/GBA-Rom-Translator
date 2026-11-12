@@ -2,7 +2,7 @@
 -- _lib.lua — POKEMON_FIRE_BPRJ00 场景共用构建器
 --
 -- 火红 phase-1：冷启动标题 → 主菜单，不读档。
--- 验证由 bot/verify.py 对比 origin vs translated 截图完成。
+-- 验收见 bot/SKILL.md（origin vs translated 看图）。
 -- ============================================================================
 
 local M = {}

@@ -7,8 +7,8 @@
 --   1) 场景存 bot/scenes/{gameId}/{scene}.lua，经 main.lua 执行
 --   2) 截图落 bot/shoots/{gameId}/{scene}/{时间}/{origin|translated}/{number}.png
 --   3) 两侧用**同一份 .sav**、非即时存档（savestate 基于内存，hook 改动不加载）
---   4) 对比截图判：已汉化 + 无撞 UI + 无乱码
---   5) 像素级判据由 verify.py 完成（本文件负责采集）
+--   4) 本文件只负责采集；验收见 bot/SKILL.md（origin vs translated 看图）
+--   5) 三项：撞 UI / 日文→中文或不丢字 / 文字颜色
 --
 -- ════════════════════════════════════════════════════════════════════════════
 -- 【2026-10-17 时序模型重写 —— 本文件的核心变更】

@@ -5,8 +5,7 @@
 ;
 ; 2026-11-11 重写：
 ;   - 文件名按 README §3.2 与其他域统一为复数 hooks_origin.s（旧 hook_origin.s 作废）；
-;   - 引擎改为串页方案：F7 00 统一协议、页表只读、零运行时分配；
-;   - F9 短语 / SLT2 / PhraseTable / SlotTable 运行时查表全部废弃，
+;   - 引擎改为纯函数 tile 网格：F7 00 统一协议、零运行时分配；
 ;     相关桩（P02/P04/P05/P24 等）早已移除，此处不再有第二处订址。
 ;
 ; 全 ROM 只此一处 hook：PrintNextChar@0x080032F8 整函数接管。

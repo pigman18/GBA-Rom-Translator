@@ -5,8 +5,6 @@ GUI checkboxes → translate/build only process checked modules.
 
 Authoritative file: ``configs/<game_id>/translate/texts.json``.
 Wrap: module ``word_count`` on texts.json = max Hanzi/line (default 14).
-Phrase channel: module ``write.type=op`` → direct F9 second byte
-(e.g. 宝可梦名 0x01); default phrase is ``F9 80``.
 """
 
 from __future__ import annotations
@@ -17,7 +15,6 @@ from typing import Any
 from .config_loader import load_modules
 
 # Types whose text body lives in a fixed-length ROM slot.
-# Only these may auto-upgrade F9 00 → F9 80 on byte_length overflow.
 FIXED_SLOT_TYPES = frozenset({"stride", "struct"})
 
 # Inject geometry: modules whose ``type`` builds a name/desc table layout.
@@ -67,11 +64,10 @@ def module_type(game_id: str, module_id: str | None) -> str:
 
 
 def module_is_fixed_slot(game_id: str, module_id: str | None) -> bool:
-    """True if module text is a fixed-length slot (may auto F9 00 → F9 80).
+    """True if module text is a fixed-length slot (``stride`` / ``struct``).
 
-    ``stride`` / ``struct`` → fixed_slot. ``scan`` / ``pointer`` / ``stride_ptr``
-    / ``ptr_stride`` / needle / prefix → trusted_ptr (relocate, no auto upgrade).
-    See docs/模块参数定义.md inject_body.
+    ``scan`` / ``pointer`` / ``stride_ptr`` / ``ptr_stride`` / needle / prefix
+    → trusted_ptr (relocate). See docs/模块参数定义.md inject_body.
     """
     typ = module_type(game_id, module_id)
     return typ in FIXED_SLOT_TYPES

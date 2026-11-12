@@ -1,15 +1,13 @@
 """翻译通路规划：为每条目决策注入 type 并编码 target_hex。
 
 type:
-  replace  — 写入原槽：F900 整串，或越槽时的 F9 80 短语引用（带 ``phrase_code``）
+  replace  — 写入原槽（装得下时）
   relocate — 编码超槽位且有可用指针源且模块 ``relocate=true``，写扩展区 + 指针改写
   keep     — 都无法满足，保留原文（ROM 不动）
 
 优先级链（纯 1→4，编排期一次定死）：
   1. F900 原地
   2. 不够 → relocate（指针须在编排期校验可用）
-  3. 指针不够 → F980 原地
-  4. F980 不够 → hook
   否则 keep
 
 translate 阶段产出 ``translate.build.json``（含已校验的 pointer_sources /
@@ -21,7 +19,6 @@ import re
 from typing import Any
 
 from .charmap import normalize_zh_punct
-from .config_loader import F9_EOS, F9_PHRASE_DEFAULT
 
 # Meowth decode of FD xx → \20 / \13 / …；勿匹配 \\CC 色码。
 _RE_EXPAND_PLACEHOLDER = re.compile(r"\\(?!CC)(?:v|[0-9A-Fa-f]{2})")
@@ -33,9 +30,6 @@ POINTER_OFFSET = 0x08000000
 
 # 同 id 多 type 冲突时保留优先级更高者（注入去重 / 载入 build 用）
 #
-# ⚠️ 2026-11-05：f980 从优先级表移除。火红零运行时查表，ruby 的
-#    PhraseTable hook 已删除，任何残留 f980 条目写进 ROM 都不会显示。
-#    旧 build.json 里若还有 f980，会因 rank=0 被 relocate/replace 顶掉。
 PLAN_TYPE_RANK: dict[str, int] = {
     "relocate": 50,
     "replace": 30,
@@ -123,7 +117,7 @@ def module_allows_relocate(game_id: str, module_id: str | None) -> bool:
 
 
 def module_allows_replace(game_id: str, module_id: str | None) -> bool:
-    """该模块是否允许 replace（原地写入 F900 / F980 短语引用）。
+    """该模块是否允许 replace（原地写入原槽）。
 
     默认 True；``write.replace: false`` 禁止原地替换。
     """
@@ -141,9 +135,9 @@ def module_allows_slot(game_id: str, module_id: str | None) -> bool:
 
 
 def module_allows_phrase(game_id: str, module_id: str | None) -> bool:
-    """该模块是否允许 F9 80 短语引用（仍写入原槽，type=replace）。
+    """该模块是否允许原地写入（type=replace）。
 
-    ``write.relocate=false`` 只禁止改指针，**不禁止** F9 80 短语原地。
+    ``write.relocate=false`` 只禁止改指针，**不禁止**原地写入。
     """
     return module_allows_replace(game_id, module_id)
 
@@ -169,17 +163,12 @@ def module_write_build_meta(game_id: str, module_id: str | None) -> dict | None:
     return dict(write)
 
 
-def _encode_phrase_ref(code: int, channel: int = F9_PHRASE_DEFAULT) -> bytes:
-    """F9 <channel> (code>>8) (code&0xFF) FF — 短语引用（5 字节）。"""
-    return bytes([0xF9, channel & 0xFF, (code >> 8) & 0xFF, code & 0xFF, F9_EOS])
-
-
 def pad_inplace_to_slot(encoded: bytes, byte_length: int) -> bytes:
     """in_place：正文后用 FF 补齐到 ``byte_length``（target_hex 与槽等长）。
 
-    避免只写短串（如 5B 的 F980）而槽尾残留日文假名。
+    避免只写短串而槽尾残留日文假名。
     """
-    eos = bytes([F9_EOS])
+    eos = b"\xff"
     body = bytes(encoded)
     while body.endswith(eos):
         body = body[:-1]
@@ -212,7 +201,7 @@ def _file_offset(addr: int | str) -> int:
 def entry_has_expand_placeholder(entry: dict) -> bool:
     """True if the JP slot is a StringExpand template (FD xx / \\XX).
 
-    仅作形态标记；纯 1→4 链不再据此禁止 F980。
+    仅作形态标记。
     """
     hx = (entry.get("original_hex") or "").replace(" ", "").lower()
     i = 0
@@ -440,160 +429,12 @@ def _prepare_encoded(
             "target_hex": original_hex,
             "reason": "译文编码失败",
         }
-    # 去掉后缀自带 EOS，由前缀 + 后缀重新拼一条 FF 结尾流
+    # 去掉后缀自带 EOS，由前缀 + 后缀重新拼一条 0xFF 结尾流
     rest = bytes(encoded_rest)
-    while rest.endswith(bytes([F9_EOS])):
+    while rest.endswith(b"\xff"):
         rest = rest[:-1]
-    encoded = ph_prefix + rest + bytes([F9_EOS])
-    # F901/F981 已移除：短语恒 F9 80，不再重写通道字节。
+    encoded = ph_prefix + rest + b"\xff"
     return s, to_encode, encoded, ph_prefix
-
-
-def _ensure_phrase_code(phrase_codes: dict[str, int], text: str) -> int:
-    code = phrase_codes.get(text)
-    if code is None:
-        code = len(phrase_codes)
-        phrase_codes[text] = code
-    return code
-
-
-def _encode_segment_text(charmap: Any, seg: str) -> bytes:
-    """编码纯文本段（不含控制码）为 F9 00 流并以 FF 结尾。"""
-    if not seg:
-        return b""
-    # 直接复用 Charmap.encode 的字符映射逻辑，但避免再次处理控制码
-    # seg 已由上层切分，不含 \ 控制，保持字符级编码即可
-    return bytes(charmap.encode(seg))
-
-
-def _segmented_encode(
-    to_encode: str,
-    charmap: Any,
-    phrase_codes: dict[str, int],
-    *,
-    use_phrase: bool = False,
-    channel: int = F9_PHRASE_DEFAULT,
-) -> bytes:
-    """按控制码切段编码：{F9 xx FF}{FE/FB…}{F9 xx FF}…
-
-    - 文字段：F9 00 流（use_phrase=False）或 F9 80 短语引用（use_phrase=True，统一升级）
-    - 控制码：FE/FB/FD/FC/F8 等原样穿插，文字段自带 FF 终止
-    """
-    from .pcs_codes import BACKSLASH_CODES, BRACKET_MACROS
-
-    result = bytearray()
-    cur = ""
-    n = len(to_encode)
-    i = 0
-
-    def flush_cur() -> None:
-        nonlocal cur
-        if not cur:
-            return
-        if use_phrase:
-            code = _ensure_phrase_code(phrase_codes, cur)
-            result.extend(_encode_phrase_ref(code, channel))
-        else:
-            result.extend(_encode_segment_text(charmap, cur))
-        cur = ""
-
-    while i < n:
-        ch = to_encode[i]
-        if ch == "\n":
-            flush_cur()
-            if i + 1 < n and to_encode[i + 1] == "\n":
-                result.append(0xFB)
-                i += 2
-            else:
-                result.append(0xFE)
-                i += 1
-            continue
-        if ch == "\r":
-            flush_cur()
-            i += 1
-            continue
-        if ch == "[":
-            end = to_encode.find("]", i)
-            if end != -1:
-                token = to_encode[i : end + 1]
-                if token in BRACKET_MACROS:
-                    flush_cur()
-                    result.extend(BRACKET_MACROS[token])
-                    i = end + 1
-                    continue
-        if ch == "\\":
-            matched = False
-            if getattr(charmap, "_escape", False):
-                for token, _nb in (("\\pn", 3), ("\\p", 2), ("\\l", 2)):
-                    if to_encode[i:].startswith(token):
-                        flush_cur()
-                        result.append(0xFB)
-                        i += len(token)
-                        matched = True
-                        break
-            if matched:
-                continue
-            for code_str, code_bytes in BACKSLASH_CODES:
-                if to_encode[i:].startswith(code_str):
-                    flush_cur()
-                    result.extend(code_bytes)
-                    i += len(code_str)
-                    matched = True
-                    break
-            if matched:
-                continue
-            if to_encode[i:].startswith("\\CC"):
-                j = i + 3
-                hex_chars: list[int] = []
-                while j < n and j - (i + 3) < 20:
-                    pair = to_encode[j : j + 2]
-                    if len(pair) == 2 and all(
-                        c in "0123456789ABCDEFabcdef" for c in pair
-                    ):
-                        hex_chars.append(int(pair, 16))
-                        j += 2
-                    else:
-                        break
-                if hex_chars:
-                    flush_cur()
-                    result.append(0xFC)
-                    result.extend(hex_chars)
-                    i = j
-                    continue
-            if to_encode[i:].startswith("\\btn"):
-                pair = to_encode[i + 4 : i + 6]
-                if len(pair) == 2 and all(
-                    c in "0123456789ABCDEFabcdef" for c in pair
-                ):
-                    flush_cur()
-                    result.append(0xF8)
-                    result.append(int(pair, 16))
-                    i += 6
-                    continue
-            if i + 2 < n:
-                pair = to_encode[i + 1 : i + 3]
-                if len(pair) == 2 and all(
-                    c in "0123456789ABCDEFabcdef" for c in pair
-                ):
-                    flush_cur()
-                    result.append(0xFD)
-                    result.append(int(pair, 16))
-                    i += 3
-                    continue
-        if ch == "{" and i + 3 < n and to_encode[i + 3] == "}":
-            hex_str = to_encode[i + 1 : i + 3]
-            if all(c in "0123456789ABCDEFabcdef" for c in hex_str):
-                flush_cur()
-                result.append(int(hex_str, 16))
-                i += 4
-                continue
-        cur += ch
-        i += 1
-
-    flush_cur()
-    if not result or result[-1] != F9_EOS:
-        result.append(F9_EOS)
-    return bytes(result)
 
 
 def _keep(original_hex: str, reason: str) -> dict:
@@ -626,7 +467,6 @@ def _reuse_slot_capacity(
 def plan_entry(
     entry: dict,
     charmap: Any,
-    phrase_codes: dict[str, int],
     game_id: str = "",
     *,
     rom: bytes | bytearray | None = None,
@@ -638,7 +478,7 @@ def plan_entry(
 
     三条翻译通路，优先级：relocate > replace > slot。
     - relocate：指针重定向到扩展区（write.relocate 控制）
-    - replace：原地写入 F900 / F980 短语（write.replace 控制）
+    - replace：原地写入（write.replace 控制）
     - slot：运行时查表拦截，兜底通路（write.slot 控制）
     除非 write.slot=false，否则所有翻译内容均可进入通路。
     """
@@ -654,7 +494,6 @@ def plan_entry(
     allow_reloc = module_allows_relocate(game_id, module_id)
     allow_replace = module_allows_replace(game_id, module_id)
     allow_slot = module_allows_slot(game_id, module_id)
-    channel = F9_PHRASE_DEFAULT  # F901/F981 已移除，短语恒 F9 80
 
     rebase = rebase_truncated_fd_slot(rom, entry)
     write_addr = _entry_address_off(entry)
@@ -700,12 +539,6 @@ def plan_entry(
 
     # --- 通路 2: replace（原地写入 F900 整串）---
     #
-    # ⚠️ 2026-11-05：F980 短语引用通道已**彻底移除**（对齐火红协议）。
-    #    火红全 ROM 只有 F7 一种中文编码、零运行时查表；ruby 这边同理，
-    #    hook 侧 PhraseTable 查表代码已删除（text_translter.c）。
-    #    所以放不下时**不能再退化成 F9 80 短语引用** —— 那会写出游戏
-    #    完全不认识的字节（实测产物里 7,551 条 F9 80 全部不显示）。
-    #
     #    正确退路：交给通路 1 之外的 relocate。若本条没有可用指针，
     #    就一路落到 keep（保留原文），由归属分析把它改造成指针重定向。
     if allow_replace:
@@ -717,11 +550,10 @@ def plan_entry(
             if slot_cap != byte_length:
                 plan["byte_length"] = slot_cap
             return _with_write_meta(plan)
-        # 放不下：不再走 F980，继续往后面的通路/keep 落
+        # 放不下：继续往后面的通路/keep 落
 
     # --- 通路 3: slot（已废除）---
     #
-    # ⚠️ 2026-11-05：SLT2 运行时查表通道彻底移除。
     #    hook 侧 slot_lookup_v2/legacy 已从 text_translter.c 删除，
     #    translated_slot.asm 也不再 include（main.asm）。
     #    再产出 type=slot 的条目等于写死数据，游戏读不到。
@@ -808,21 +640,9 @@ def finalize_plans_against_ptr_slots(
     return out
 
 
-def preallocate_upgrade_phrases(
-    entries: list[dict],
-    charmap: Any,
-    phrase_codes: dict[str, int],
-    game_id: str = "",
-    **_kwargs: Any,
-) -> None:
-    """兼容旧调用：短语码改为 plan_entry 按需分配，此处不再预占。"""
-    return None
-
-
 def plan_entries(
     entries: list[dict],
     charmap: Any,
-    phrase_codes: dict[str, int],
     game_id: str = "",
     *,
     rom: bytes | bytearray | None = None,
@@ -848,7 +668,6 @@ def plan_entries(
         plan_entry(
             e,
             charmap,
-            phrase_codes,
             game_id=game_id,
             rom=rom,
             text_spans=text_spans,

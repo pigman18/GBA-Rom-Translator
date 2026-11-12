@@ -4,7 +4,7 @@
 ; IDs: P08
 ; =============================================================================
 
-; --- [P08] 选项高亮：F9 80 短语引用下 dst[2]=style 会指错短语 ---
+; --- [P08] 选项高亮：中文流内控制码会覆盖外层 style ---
 ; 改为打印前写调色板/前景色覆盖变量（见 DrawOptionMenuChoice_hook.c）
 ; pokeruby: src/option.c DrawOptionMenuChoice()
 .org DrawOptionMenuChoice

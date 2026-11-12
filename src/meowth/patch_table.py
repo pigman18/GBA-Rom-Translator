@@ -109,15 +109,11 @@ def _choose_stride(old: int, need: int) -> int | None:
 
 
 def _groups_intact(body: bytes) -> bool:
-    """F7 00 hi lo 一组 4 字节、F9 op hi lo 一组 4 字节。中间可夹单字节，但不能切断组。"""
+    """`F7 00 hi lo` 一组 4 字节。中间可夹单字节，但不能切断组。"""
     i = 0
     n = len(body)
     while i < n:
         if body[i] == 0xF7:
-            if i + 4 > n:
-                return False
-            i += 4
-        elif body[i] == 0xF9:
             if i + 4 > n:
                 return False
             i += 4

@@ -1,7 +1,7 @@
 /* DrawOptionMenuChoice_hook — 设置窗口选项高亮绘制。
  *
  * 原版：FC 05 <palette> ，dst[2]=style 切换调色板。
- * 翻译后：F9 80 hi lo 短语引用，短语流内自带 FC 05 0F，会覆盖外层 style。
+ * 翻译后中文流内自带调色板控制码，会覆盖外层 style。
  *
  * 修复：打印前写入两个预留变量：
  *   ADDR_OPT_PALETTE_OVERRIDE = style                    强制 tilemap palette
@@ -24,10 +24,9 @@ void DrawOptionMenuChoice_hook_C(const uint8_t *text,
     unsigned off = 0;
 
     /* 汉字开头要前置 3 字节调色板控制码。
-     * 汉字流 = F7 00 hi lo（4B/字）或旧 F9 00 hi lo。
+     * 汉字流 = F7 00 hi lo（4B/字）。
      * 只判首字节 F7 不够 —— 残留的裸 0xF7 会误判，必须连第二字节 00 一起看。 */
-    if (text[0] == 0xF9u
-        || (text[0] == 0xF7u && text[1] == 0x00u)) {
+    if (text[0] == 0xF7u && text[1] == 0x00u) {
         dst[0] = EXT_CTRL_CODE_BEGIN;
         dst[1] = EXT_CTRL_CODE_PALETTE;
         dst[2] = (uint8_t)style;

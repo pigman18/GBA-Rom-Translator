@@ -522,7 +522,7 @@ local function dump_win(w)
                 u32(dbg, 32), u32(dbg, 36), u32(dbg, 40), u32(dbg, 44))
         end
         -- 把当前文本指针处的前 12 字节读出来：用来判断这个窗口到底在打印
-        -- 原始日文（JP 字节）还是我们的 F9 编码（F9 80 hi lo / F9 00 lead trail）。
+        -- 原始日文（JP 字节）还是我们的中文编码（F7 00 hi lo）。
         local tp = u32(raw, 0x10)
         if tp and tp > 0x08000000 and tp < 0x0A000000 then
             local tb = emu:readRange(tp, 12)

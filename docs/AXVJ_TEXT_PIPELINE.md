@@ -93,7 +93,7 @@ dest = win[0x20] ; BlitGlyphTiles(...) ; win[0x20] += 0x40   ; 不写 tilemap
 ```
 hook @ 0x0800336E (RegularGlyph):
   if (win->textMode == 2)  return to_origin;          // 战斗缓冲不接管
-  if (cur_char == 0xF9) {                             // F9 00 lead trail
+  if (cur_char == 0xF7) {                             // F7 00 hi lo
       win->textIndex += 3;
       gidx = pack(lead, trail);
       src  = FontChsNormal + (gidx << 7);             // 128B = 8x16 4bpp TL/BL/TR/BR

@@ -14,7 +14,7 @@
  * 全部 tile 落在原版自己的 [TB, TB+0x1F0) 预载字库区内，不碰 UI 图标。
  *
  * ── 协议（用户口径）───────────────────────────────────────────────────
- * 全局统一 `F7 00 hi lo`；F9 短语 / SLT2 已废弃。流里只有：
+ * 全局统一 `F7 00 hi lo`。流里只有：
  *   F7 00 hi lo   4B / 12px   → 0x09000000 字库，gidx = lead_adjust(hi)*256+lo
  *   PCS 单字节    1B / 8px    → 原版 GetGlyphTilePointers + 1bpp→4bpp 现场展开
  *   FA..FF 控制码             → 原版状态机
@@ -545,8 +545,17 @@ static void grid_draw_pcs(TextPrinter *win, uint8_t glyph, unsigned phase)
      * V1~V5 却特判成「固定 tile 对 0x1F0/0x1F1」并只写 tilemap，而
      * 0x1F0/0x1F1 在新引擎里从未被写入内容（VRAM 实测全 0）→ 光标整块
      * 消失。删掉特判，与其它 PCS 一样取字模展开即可。
-     * 0x00..0x1F 仍是控制/空格区，取 0 号字模会画出杂字。 */
-    if (glyph < 0x20u) {
+     *
+     * ★ 0x01..0x1F 绝不能再当控制码吞掉（2026-11-12 实测定案）：
+     * 日版 PCS 这个区段是正常假名（`0x0A` = こ）。旧代码 `if (glyph < 0x20)
+     * return;` 把它们整个跳过不画，那一格保留上次打印的残留内容 ——
+     * 继续游戏菜单「55 こ」「5 こ」的计数词正是 0x0A，屏幕上就显示成
+     * 箭头/ザ 等残影（用户点名的「个→箭头、只→箭头」）。
+     * 官方 PrintGlyph_TextMode1 @0x0800360C 反汇编：对任何 glyph 都直接
+     * 调 FontSubTable[fontNum](win,glyph) 再 cursorTileX+=1，没有任何
+     * 低码位特判。这里照官方行为走，让 0x01..0x1F 正常取字模。
+     * 只有 0x00（空格）保持「只推进不重绘」，与官方空白 tile 语义一致。 */
+    if (glyph == 0x00u) {
         win_set_u8(win, WIN_CURSOR_TILE_X,
                    (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
         return;
@@ -802,6 +811,8 @@ int PrintNextChar_Hook(TextPrinter *win)
         return grid_control(win, c, (uint16_t)(index + 1u));
     }
 
+    /* 中文编码：全局唯一 `F7 00 hi lo`。
+     * 产物里出现 F9 就是流水线的 bug，应在生成端修，不在这里加分支。 */
     if (c == 0xF7u && p[1] == 0u) {
         gidx = (uint16_t)(GRID_LEAD_ADJUST(p[2]) * 256u + (unsigned)p[3]);
         grid_draw_chs(win, gidx, grid_phase(text, index));

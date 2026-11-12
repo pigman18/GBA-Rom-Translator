@@ -11,25 +11,16 @@ from .config_loader import parse_int_addr
 def _safe_truncate_encoded(encoded: bytes, maxlen: int) -> bytes:
     """Truncate an encoded stream at whole-unit boundaries.
 
-    A CJK glyph is a 3-byte F7 hi lo group; a phrase ref is a 4-byte F9 op hi lo.
-    Cutting the raw
-    stream mid-group leaves a dangling F9 whose following byte (often the
-    slot terminator 0xFF) is then read as a bogus phrase code, making
-    PrintNextChar redirect the PhraseTable offsets out of bounds (花屏/红字).
+    中文编码只有一种：``F7 00 hi lo``（4 字节/字，第二字节恒 0）。
+    按整组截断，绝不切半个字 —— 切坏会留下悬空的 0xF7，后续字节被错读成
+    字形索引，画出一堆杂字。
     """
     out = bytearray()
     i = 0
     n = len(encoded)
     while i < n:
         if encoded[i] == 0xF7:
-            # F7 hi lo —— 单汉字内联，3 字节一组
-            if i + 2 < n and len(out) + 3 <= maxlen:
-                out += encoded[i:i + 3]
-                i += 3
-            else:
-                break
-            continue
-        if encoded[i] == 0xF9:
+            # F7 00 hi lo —— 单汉字内联，4 字节一组
             if i + 3 < n and len(out) + 4 <= maxlen:
                 out += encoded[i:i + 4]
                 i += 4
@@ -348,7 +339,7 @@ class RomWriter:
         Raises ValueError on any write failure — never silently skips.
 
         注入前按 id 去重；同一 id 只处理一次。in_place 若会覆盖
-        其它条目的 relocate ``pointer_sources`` 则跳过（防 F9 写入指针槽）。
+        其它条目的 relocate ``pointer_sources`` 则跳过（防中文写入指针槽）。
         """
         if not isinstance(rom, bytearray):
             rom = bytearray(rom)
@@ -641,15 +632,12 @@ class RomWriter:
     ) -> None:
         """按 translate.build.json 的 type 注入（翻译通路）。
 
-        in_place     → target_hex 写入原地址（含 F900 整串或 F9 80 短语引用）
-        upgrade/f980 → 旧 build 别名，按 in_place 处理
+        in_place     → target_hex 写入原地址
         relocate     → target_hex 写入扩展区并改写 plan.pointer_sources（不再校验/回退）
         keep         → 保留原文，日志打印
         """
         entry_id = entry.get("id", "?")
         ptype = plan.get("type") or "keep"
-        if ptype in ("f980", "upgrade"):
-            ptype = "replace"
         category = plan.get("module") or entry.get("module") or ""
         original = entry.get("original", "")
 
@@ -776,8 +764,6 @@ class RomWriter:
         except Exception as e:
             raise ValueError(f"Entry {entry_id}: encoding failed for '{translated}': {e}") from e
 
-        # F901/F981 直接通道已移除：短语恒 F9 80，不再重写通道字节。
-
         is_pointer_based = entry.get("is_pointer_based", bool(pointer_sources))
         original_length = entry.get("byte_length", 0)
         category = (
@@ -829,15 +815,6 @@ class RomWriter:
                     f"byte_length={original_length} invalid for in-place write"
                 )
             if len(encoded) > original_length:
-                # Slot too small even for a 5-byte F9 80 reference (<5B): keep the
-                # original text rather than truncting into a broken F9 sequence.
-                if original_length < 5:
-                    print(
-                        f"  SKIP {entry_id} @ 0x{address:X} (cat={category}): "
-                        f"slot {original_length}B < 5, auto-F9-80 cannot fit; keeping original"
-                    )
-                    stats["replace"] += 1
-                    return
                 print(
                     f"  WARN {entry_id} @ 0x{address:X} (cat={category}): "
                     f"'{translated}' encoded {len(encoded)}B > slot {original_length}B, "

@@ -39,7 +39,7 @@ MenuPrint_AlignedToRightOfReferenceString(str, left, top, gDexText_UnknownPoke);
 ### 日版地址（已从 AXVJ ROM 确认）
 
 - 日版 `gDexText_UnknownPoke` = **`0x083E9688`**
-  - 现内容：`ac ac ac ac ac f9 80 03 fa ff` = 「？？？？？宝可梦」
+  - 现内容：`ac ac ac ac ac` + 短词引用 + `fa ff` = 「？？？？？宝可梦」
   - 原盘内容：`ac ac ac ac ac 9f 59 73 7e ff` = 「？？？？？ポケモン」
 - 引用 `0x083E9688` 的 pool 槽：`0x0808C238`、`0x0808D5D8`（全 ROM 仅这两处）。
 - `0x0808C234` 起是一个指针表：`0x0202D8FC, 0x083E9688, 0x083E9692, 0x083E9699, 0x0838474C`。
@@ -49,8 +49,8 @@ MenuPrint_AlignedToRightOfReferenceString(str, left, top, gDexText_UnknownPoke);
   - 身高：`BL 0x0808D7E6` @ (16,7)；体重：`BL 0x0808D7F1` @ (16,9)；描述：`BL 0x0806E9C9` @ (3,13)。
   - 日版 `CATEGORY_LEFT = 13`（美版为 11）。
 - 运行时捕获（InitTextPrinter 日志）：
-  - 分类名以短语打印：`f9 80 0b 32 ff`（= 森林蜥蜴，phrase 0x800B=2866）。
-  - 占位串按 `ac×5 + f9 80 03 fa ff` 打印。
+  - 分类名以短词流打印（= 森林蜥蜴）。
+  - 占位串按 `ac×5` + 后缀 + `fa ff` 打印。
   - 两条均 win=0x0202E658、textMode=1、fontNum=3；LR=0x08002D14。
 - 宽度规则（`GetStringWidth_hook.c`）：中文汉字 12px/字；JP 假名/问号 8px/字。5 个问号区 = 40px。
 

@@ -9,7 +9,7 @@
 @   - 引擎改为纯函数 tile 网格（tile = TILE_BASE+(row&7)*62+col*2），
 @     12px 跨列共享由运行时逐像素合成；无页表 / 无 PHYS 池 / 无 EWRAM 相位表；
 @   - 旧 Hook3 跳板、WaitArrow_Prepare_Hook、GlyphIwtdTramp（P24）早已移除，
-@     不再复建；F9 短语 / SLT2 协议层随用户口径整体废弃。
+@     不再复建。
 @
 @ ⚠️ lr 契约（决定引擎能否回落原版）：
 @   P01 桩用 bx（不是 bl）进 EngineEntry，EngineEntry 又用 bx 进 C，

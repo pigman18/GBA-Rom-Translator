@@ -170,7 +170,7 @@ PrintNextChar_C(win, cur_char)
  │   └─ F7 00 hi lo                → pack_glyph_index → PrintGlyph → 12px 单字（**现行唯一编码**）
  ├─ cur_char==0xF9 (CHS_ESCAPE，兼容残留)
  │   └─ op==00 ll tt                → 同上（旁载单字）
- ├─ slot_lookup_and_draw            → SlotTable（'SLT2'）：**空表桩**，现已无任何
+ ├─ slot_lookup_and_draw            → SlotTable（'运行时查表'）：**空表桩**，现已无任何
  │                                    `slot:true` 模块，查不到 → 走正常绘制
  └─ 其余可印 JP PCS                 → DrawGlyph_CHS（Sym 带 0x36..3E / 空白 / 经官方
                                       取址展开后 CHS 同池 8px 步进）

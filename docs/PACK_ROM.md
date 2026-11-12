@@ -56,8 +56,6 @@ C:\Python314\python.exe scripts\verify_output_rom.py
 | P01/P04/P07/P08 订址桩 | `bx` 目标 == `out/game_syms.asm` 回填地址 `\|1` |
 | P03 三处血条池 | `0x04000006`（原版 `0x04000008`） |
 | PhraseOffsets | u32 单调递增 |
-| PhraseTable | **已废**：表里现在是 `F7 00` 流，无 `F9 80` 引用（待清理） |
-| SlotTable | **已废**：只剩 `SLT2` 空表桩（256 桶全空） |
 | 字库 Normal/Small/Sym | 非空 |
 
 退出码 `0` = 全通过。任何 `FAIL` 都在说明「源码 / game.bin / armips 产物」三者脱节，

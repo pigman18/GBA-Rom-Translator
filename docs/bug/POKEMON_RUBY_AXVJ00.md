@@ -68,10 +68,10 @@ python scripts/measure_text_row.py <png> --y0 122 --y1 136
 167: 3D=？
 168: 3E=：
 6960: @ Sentence punct / space / … use JP PCS single-bytes (00,37,3A-3D,3E,B0,AE…)
-6961: @ — do NOT map ，。！？、：… here as 1E5x (that became F9 00 + Normal blur).
+6961: @ — do NOT map ，。！？、：… here as 1E5x (that became Normal blur).
 ```
 
-设计意图是对的（走原版单字节路径，避免 `F9 00` 走中文路径糊掉），
+设计意图是对的（走原版单字节路径，避免走中文路径糊掉），
 但**这几个码位在原版字库里是半角 8px**（上面实测）。
 
 **② 渲染侧不按字符区分步进**
@@ -119,7 +119,7 @@ uint8_t GetChineseFontWidthFunc(uint16_t ChineseChar, uint8_t fontId)
 | 方案 | 做法 | 风险 / 前提 |
 |---|---|---|
 | **A** 改步进函数 | `GetChineseFontWidthFunc()` 对这几个单字节标点返回 8 | ⚠ 单字节字符走的是**原版字体路径**，可能根本不进这个函数（它只处理中文双字节字形）。需先确认调用链，否则改了不生效 |
-| **B** 补全角字模 | 给 BDF 补 `！？。，、：；` 的全角（12px）字形，并把 charmap 改到 `1E5x` 段 | ✅ 方案最"正"；⚠ 但 charmap 第 6961 行明确记着「1E5x 会变成 F9 00 + Normal 糊掉」，历史上踩过，必须先解决那条路径 |
+| **B** 补全角字模 | 给 BDF 补 `！？。，、：；` 的全角（12px）字形，并把 charmap 改到 `1E5x` 段 | ✅ 方案最"正"；⚠ 但 charmap 第 6961 行明确记着「1E5x 会变成 Normal 糊掉」，历史上踩过，必须先解决那条路径 |
 | **C** 译文换半角 | 把译文里的全角标点批量换成原版使用的半角 | ✅ 改动最小、最安全；⚠ 中文排版习惯上半角不好看，且要动 3316 条译文缓存 |
 
 **倾向**：先做 C 验证「半角就不畸形」这个假设，再决定要不要上 A/B。

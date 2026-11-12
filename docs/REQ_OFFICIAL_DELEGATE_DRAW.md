@@ -4,7 +4,7 @@
 
 ## 1. 背景与现状
 
-当前 `configs/POKEMON_RUBY_AXVJ00/hook` 在 `main.asm:16` 劫 `PrintNextChar_RegularGlyph@0x0800336E`，`PrintNextChar_hook.c:319` 判定 `F9 00` 后全程自绘 `DrawGlyphTiles_hook.c:260 draw_glyph_tile_12` + 自算 `vram_tile/linear_cursor_tile/compute_mode2_pair`，官方仅复用最底层 `CopyGlyph2bpp@0x080038A0` / `UpdateTilemap@0x080036DC`。
+当前 `configs/POKEMON_RUBY_AXVJ00/hook` 在 `main.asm:16` 劫 `PrintNextChar_RegularGlyph@0x0800336E`，`PrintNextChar_hook.c` 判定 `F7 00` 后全程自绘 `DrawGlyphTiles_hook.c:260 draw_glyph_tile_12` + 自算 `vram_tile/linear_cursor_tile/compute_mode2_pair`，官方仅复用最底层 `CopyGlyph2bpp@0x080038A0` / `UpdateTilemap@0x080036DC`。
 
 已验证官方链路（`AXVJ_TEXT_PIPELINE.md` + capstone 反汇编实证）：
 
@@ -13,7 +13,7 @@ PrintNextChar@0x080032F8 --bhi--> RegularGlyph@0x0800336E --ldr FontFuncTable@0x
 FontFunc --call--> GetGlyphTilePointers@0x08003730 --call--> CopyGlyph1/2bpp@0x08003830/0x080038A0 --call--> UpdateTilemap@0x080036DC
 ```
 
-用户诉求：`PrintNextChar` 读 `F900`、`GetGlyphTilePointers` 给地址、`GetGlyphWidth` 给 `12` 后理论可全委托。
+用户诉求：`PrintNextChar` 读 `F7 00`、`GetGlyphTilePointers` 给地址、`GetGlyphWidth` 给 `12` 后理论可全委托。
 
 ## 2. 已解析地址（AXVJ 日版 ROM 实测，非美版符号推测）
 
@@ -42,7 +42,7 @@ FontFunc --call--> GetGlyphTilePointers@0x08003730 --call--> CopyGlyph1/2bpp@0x0
 ## 3. 为何不能“零自实现”
 
 * **width 12 越界**：官方 `DrawGlyphTile:3877` 用 `sGlyphMasks[9][8]` 与 `sShiftFuncs[9]`，索引 `width` 仅 `0..8`，`12` 直接越界。`GetGlyphWidth=12` 裸交官方即崩。
-* **F9 4字节消费**：官方 `ProcessCurrentChar` 每次 `index++` 取 `1B`，`F9 00 ll tt` 需一次消费 `4B` 并 `index+=3`，不钩 `PrintNextChar` 会把 `ll/tt` 当独立 PCS 查 `Type1Map` 乱码。
+* **4 字节消费**：官方 `ProcessCurrentChar` 每次 `index++` 取 `1B`，`F7 00 hi lo` 需一次消费 `4B` 并 `index+=3`，不钩 `PrintNextChar` 会把 `hi/lo` 当独立 PCS 查 `Type1Map` 乱码。
 * **12px=8+4 spill**：官方单趟只写一列 `8px`，`startPixel+width>8` 的 `mask` 清列会把下字左 4 列擦掉。中文 `128B` 需拆 `TL/BL + TR/BR` 两趟 `spill`，且 `chs_px &7` 相位需跨字累积，官方 `CURSOR_X/TILE_OFFSET` 无此累积。
 
 结论：可委托的是“取址/算索引/贴图/调色”，必须自留的是“4字节消费 + 8+4 两趟调度 + 相位累积”。
@@ -63,7 +63,6 @@ FontFunc --call--> GetGlyphTilePointers@0x08003730 --call--> CopyGlyph1/2bpp@0x0
 ### 5.1 Hook1: PrintNextChar（必留）
 
 * 位置：`main.asm:16 .org PrintNextChar_RegularGlyph` / `PrintNextChar_entry.s:33`
-* 逻辑：`r4=win, r3=cur_char`；若 `textMode==2`（战斗血条缓冲，`game.h:320`）直接 `return 0` 交官方；若 `cur_char==0xF9` 按 `op` 分流：`F9 00 ll tt` → `pack_glyph_index` → `gidx` → `WIN_TEXT_INDEX+=3` → 入 Hook2/3/4 委托路径并 `return 1`；`F9 80`/slot 同理；否则 `return 0` 交官方 `FontFunc`。
 * 验收：`WIN_TEXT_PTR@0x10` 与 `WIN_TEXT_INDEX@0x14` 推进正确，无悬空 `F9`。
 
 ### 5.2 Hook2: GetGlyphWidth / GetStringWidth
@@ -87,7 +86,7 @@ FontFunc --call--> GetGlyphTilePointers@0x08003730 --call--> CopyGlyph1/2bpp@0x0
 ## 6. 数据流（委托后）
 
 ```
-F9 00 ll tt --PrintNextChar--> gidx --GetGlyphTilePointers(IWRAM摆渡)--> upper/lower(32B)
+F7 00 hi lo --PrintNextChar--> gidx --GetGlyphTilePointers(IWRAM摆渡)--> upper/lower(32B)
                 |
                 +--GetGlyphWidth=12--> width
                 |

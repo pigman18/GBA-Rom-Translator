@@ -1045,25 +1045,6 @@ class TranslationEngine:
                 self._log("warning", "[翻译通路] 勾选模块下无条目，跳过 write.plan")
                 return
 
-        # 短语码仍供 PhraseTable / 调试；写入决策不再走 plan_entry keep/replace
-        self.charmap._phrase_codes = {}
-        if self._custom_translations:
-            phrases = sorted(
-                {
-                    self.charmap._sanitize(v)
-                    for v in self._custom_translations.values()
-                    if len(v) > 1
-                },
-                key=lambda s: (len(s), s),
-            )
-            for code, s in enumerate(phrases):
-                self.charmap._phrase_codes[s] = code
-
-        phrase_codes = self.charmap._phrase_codes
-        phrases_by_code = [None] * len(phrase_codes)
-        for s, code in phrase_codes.items():
-            phrases_by_code[code] = s
-
         rom_bytes = None
         rom_path = getattr(self.config, "rom_path", None)
         if rom_path:
@@ -1110,7 +1091,6 @@ class TranslationEngine:
         )
 
         mirror = plan_to_translate_build_mirror(plan, flat)
-        mirror["phrases"] = phrases_by_code
         mirror["modules"] = (
             list(self.config.modules or []) if self.config.modules else active_list
         )
@@ -1775,30 +1755,8 @@ class TranslationEngine:
             else:
                 self._log("info", f"Default fonts synced: {copied} files -> {fonts_dir}")
 
-        # PhraseTable early write; pack 阶段以 translate.build.json 为准重生
-        if not self._custom_translations:
-            return
-        sideload_encode = getattr(self.charmap, "_sideload_encode", None)
-        if sideload_encode is None:
-            sideload_encode = self.charmap.encode
-
-        pc = getattr(self.charmap, "_phrase_codes", None)
-        if pc:
-            entries = sorted(pc.items(), key=lambda kv: kv[1])
-            phrases = [s for s, _ in entries]
-        else:
-            phrases = sorted(
-                {self.charmap._sanitize(v) for v in self._custom_translations.values() if len(v) > 1},
-                key=lambda s: (len(s), s),
-            )
-        if not phrases:
-            return
-
-        from ..build_rom_data import write_phrase_data_asm
-
-        phrase_asm = fonts_dir / "phrase_data.asm"
-        _, n_ph, nbytes = write_phrase_data_asm(phrases, sideload_encode, phrase_asm)
-        self._log("info", f"[短语] PhraseTable {n_ph} 条流, {nbytes}B -> {phrase_asm.name}")
+        # 不再提前生成 phrase_data.asm；font_patch 侧也已关掉 write_phrases。
+        # 注释即文档，避免再次被当成「还有活的调用路径」。
 
     def _resolve_bdf_font_path(self, explicit: Path | None = None) -> Path | None:
         """解析 CJK BDF：CLI ``--bdf`` > ``configs/{game}/fonts/normal.bdf``。
@@ -2196,112 +2154,6 @@ class TranslationEngine:
             charmap_cfg=_charmap_cfg,
         )
 
-        # Assign 2-byte codes (0x0000-0xFFFF) to custom_translation phrases (>1 char)
-        # 优先复用 translate 阶段的 translate.build.json phrases（含 upgrade 自动
-        # 分配短语），保证 PhraseTable 与 translate.build.json 的 f980 码一致。
-        self.charmap._phrase_codes: dict[str, int] = {}
-        _bp_phrases: list | None = None
-        try:
-            _bp_path = (game_work or Path(self.config.work_dir) / self.config.game) / "translate.build.json"
-            if _bp_path.exists():
-                _bp_data = json.loads(_bp_path.read_text(encoding="utf-8"))
-                _bp_phrases = _bp_data.get("phrases") or []
-        except Exception:
-            _bp_phrases = None
-        if _bp_phrases:
-            for code, s in enumerate(_bp_phrases):
-                if s:
-                    self.charmap._phrase_codes[s] = code
-            self._log(
-                "info",
-                f"[短语] 复用 translate.build.json 码表: {len(_bp_phrases)} 条",
-            )
-        elif self._custom_translations:
-            phrases = sorted(
-                {self.charmap._sanitize(v) for v in self._custom_translations.values() if len(v) > 1},
-                key=lambda s: (len(s), s),
-            )
-            for code, s in enumerate(phrases):
-                self.charmap._phrase_codes[s] = code
-            if phrases:
-                self._log(
-                    "info",
-                    f"[短语] F9 XX 分配: {len(phrases)} 条码位 0x0000-0x{len(phrases)-1:04X} "
-                    f"(默认通道 XX=80；write.op 改 XX，范围 01..7E)",
-                )
-
-
-        # Auto-switch F9 00 → F9 80: ONLY fixed-slot modules (stride/struct).
-        # Trusted-ptr modules (scan/剧情/…) keep full F9 00 and relocate.
-        # See docs/模块参数定义.md inject_body / module_is_fixed_slot.
-        self._auto_phrase_extra: list[dict] = []
-        if is_cjk_language(self.config.target_lang) and data:
-            from ..modules import module_is_fixed_slot
-
-            _pc = self.charmap._phrase_codes
-            _raw_enc = self.charmap.encode  # pre-wrap: raw per-char encode
-            _gid = self.config.game
-            _all_inject = []
-            for tbl in data.get("tables") or []:
-                for en in tbl.get("entries") or []:
-                    if "translated" in en:
-                        _all_inject.append(en)
-            _all_inject.extend(en for en in data.get("free_texts") or [] if "translated" in en)
-
-            for en in _all_inject:
-                t = (en.get("translated") or "").strip('"')
-                o = (en.get("original") or "").strip('"')
-                if not t or t == o:
-                    continue
-                mid = en.get("_axvj_module") or en.get("module")
-                if not module_is_fixed_slot(_gid, mid):
-                    continue
-                bl = en.get("byte_length", 0)
-                if bl < 5:
-                    continue  # too small for even F9 80; keep original
-                s = self.charmap._sanitize(t)
-                if s in _pc:
-                    continue
-                raw_len = len(_raw_enc(t))
-                if raw_len > bl:
-                    code = len(_pc)
-                    _pc[s] = code
-                    self._auto_phrase_extra.append({
-                        "original": o,
-                        "translated": t,
-                        "module": mid,
-                        "byte_length": bl,
-                        "raw_encoded_len": raw_len,
-                    })
-            if self._auto_phrase_extra:
-                self._log(
-                    "info",
-                    f"[短语] 自动进 F9 80: {len(self._auto_phrase_extra)} 条 "
-                    f"(仅定长槽 stride/struct 越槽)",
-                )
-
-        # Wrap encode: full-text match → F9 80 <high> <low> FF (rom_writer may patch →op)
-        # else F9 00 per-char (side font, auto write).
-        from ..config_loader import F9_EOS, F9_PHRASE_DEFAULT
-
-        _orig_encode = self.charmap.encode
-        self.charmap._sideload_encode = _orig_encode  # PhraseTable streams use this
-
-        def _encode(text):
-            s = self.charmap._sanitize(text)
-            pc = getattr(self.charmap, "_phrase_codes", None)
-            if pc and s in pc:
-                code = pc[s]
-                return bytes([
-                    0xF9,
-                    F9_PHRASE_DEFAULT,
-                    (code >> 8) & 0xFF,
-                    code & 0xFF,
-                    F9_EOS,
-                ])
-            return _orig_encode(text)
-
-        self.charmap.encode = _encode
 
         from ..config_loader import DEFAULT_WORD_COUNT, module_word_counts
 
@@ -2610,31 +2462,6 @@ class TranslationEngine:
             )
             output_path = alt
         self._log("info", Messages.SAVED_ROM.format(path=output_path))
-
-        # Auto-switch review dump (view-only; not part of any pipeline stage).
-        auto_extra = getattr(self, "_auto_phrase_extra", None)
-        extra_path = (game_work or Path(self.config.work_dir) / self.config.game) / "lexicon.extra.json"
-        if auto_extra:
-            try:
-                extra_data = {
-                    e.get("original") or "": e.get("translated") or ""
-                    for e in auto_extra
-                }
-                extra_path.parent.mkdir(parents=True, exist_ok=True)
-                extra_path.write_text(
-                    json.dumps(extra_data, ensure_ascii=False, indent=2),
-                    encoding="utf-8",
-                )
-                self._log("info", f"[短语] 自动进 F9 80 记录 → {extra_path} ({len(extra_data)} 条)")
-            except Exception as e:
-                self._log("warning", f"lexicon.extra.json 写失败 (non-fatal): {e}")
-        else:
-            # Drop stale auto-upgrade dump from prior builds.
-            try:
-                if extra_path.is_file():
-                    extra_path.unlink()
-            except OSError:
-                pass
 
         self.callbacks.on_stage_change("build", "completed")
         return output_path

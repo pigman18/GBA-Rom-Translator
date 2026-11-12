@@ -62,7 +62,7 @@
 | ID | 地址 | 改动 | 类型 | 目的 | pokeruby 对应 |
 |---|---|---|---|---|---|
 | P07 | `0x0808DD60` | `ldr r3,=(UnusedPrintMonName_Hook\|1); bx r3`（4B+pool） | JMP | 图鉴条目屏分类名行：拼接分类+宝可梦短语流一次性打印 | `src/pokedex.c` 条目页分类名行打印（美版为静态函数，AXVJ 自命名 UnusedPrintMonName） |
-| P08 | `0x080889F0` | `push {r3}; ldr r3,=(DrawOptionMenuChoice_Hook\|1); bx r3`（6B+pool） | JMP | 设置窗口选项高亮：改为调色板/前景色覆盖变量（`F9 80` 短语引用那套已废弃） | `src/option.c` `DrawOptionMenuChoice()` |
+| P08 | `0x080889F0` | `push {r3}; ldr r3,=(DrawOptionMenuChoice_Hook\|1); bx r3`（6B+pool） | JMP | 设置窗口选项高亮：改为调色板/前景色覆盖变量 | `src/option.c` `DrawOptionMenuChoice()` |
 
 ### F. 数据清理（置空日文残留）
 
@@ -118,7 +118,7 @@ hook/
     │   ├── entry.s                 #   P01 跳板（EngineEntry，链接首位 = game.bin 起点）
     │   ├── hook_origin.s           #   P01 订址桩（只 hook PrintNextChar）
     │   ├── PrintNextChar_hook.c    #   引擎主体
-    │   ├── text_translter.c        #   F7 协议层（F9 仅兼容残留；SLT2 空表桩待删）
+    │   ├── text_translter.c        #   F7 协议层
     │   ├── text_render.c           #   共享绘制原语（GlyphScratchRange/页游标）
     │   └── text_scene.c            #   场景布局闸
     ├── map_name_popup/             # P04 三件套（entry.s / MapNamePopup_hook.c / hooks_origin.s）

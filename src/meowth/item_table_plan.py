@@ -138,8 +138,6 @@ def build_item_entry(rom: bytes, index: int, name: bytes) -> bytes:
         while len(body) + 1 > NAME_CAP and body:
             if body[:1] == b"\xf7":      # F7 00 hi lo = 4 字节一组
                 body = body[:-4]
-            elif body[:1] == b"\xf9":    # F9 op hi lo = 4 字节一组
-                body = body[:-4]
             else:
                 body = body[:-1]
         fitted = _fit(body + b"\xFF", NAME_CAP)

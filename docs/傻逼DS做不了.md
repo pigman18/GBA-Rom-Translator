@@ -10,17 +10,15 @@
 
 二：hook
 【原有内容】
-if f9
- return f9
+if f7
+ return f7
 return jp
 【改为】
-if f9
- return f9
+if f7
+ return f7
 if has_cache(jp)
- return f9(get_cache(jp))
+ return f7(get_cache(jp))
 return jp
-（历史条目，已作废）当年曾要求「别删 F900/F980 链路」；两条链路后来确实整体废弃，
-现行编码只有 `F7 00 hi lo`，见 `docs/PROTOCOL_CURRENT.md`。
 
 三：
 gdb_patcher.py

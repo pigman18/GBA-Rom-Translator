@@ -9,7 +9,7 @@
   1. game.bin @0x08800000 与 hook/out/game.bin 一致；EngineEntry 跳板
   2. P01/P04/P07/P08 订址桩的 bx 目标 == out/game_syms.asm 回填地址 |1
   3. P03 三处血条池 == 0x04000006（原版 0x04000008）
-  4. PhraseOffsets u32 单调 / PhraseTable 为 F9 00 流；SLT2 已废弃（仅提示）
+  4. 废弃区（PhraseOffsets / PhraseTable / SlotTable）必须为 0xFF 填充
   5. 字库 Normal/Small/Sym 非空
 
 退出码 0 = 全通过，1 = 有失败项。
@@ -158,22 +158,15 @@ def main(argv: list[str]) -> int:
         val = struct.unpack_from("<I", rom, addr - ROM_BASE)[0]
         chk(label, val == 0x04000006, f"{val:#010x}")
 
-    # 4. 数据区
-    po = at(0x08810000, 0x10000)
-    offs = [struct.unpack_from("<I", po, i * 4)[0] for i in range(2000)]
-    chk("PhraseOffsets 非空", sum(1 for x in po if x) > 1000, f"{sum(1 for x in po if x)} nz")
-    chk("  u32 单调", all(offs[i] <= offs[i + 1] for i in range(1999)))
-    pt = at(0x08820000, 8)
-    chk("PhraseTable F9 00 流", pt[0] == 0xF9 and pt[1] == 0x00, pt.hex(" "))
-    # SLT2 于 2026-11-05 彻底移除；缺席不算失败（旧验收口径作废）
-    slt2 = at(0x09EA0000, 4)
-    results.append(
-        (
-            "SlotTable SLT2(已废)",
-            True,
-            "absent(ok)" if slt2 != b"SLT2" else "present(legacy)",
-        )
-    )
+    # 4. 废弃区必须为空（短语表 / 运行时查表均已删除，
+    #    0x08810000 / 0x08820000 / 0x09EA0000 应保持 0xFF 填充）
+    for label, addr, size in [
+        ("PhraseOffsets 区(已删)", 0x08810000, 0x100),
+        ("PhraseTable 区(已删)", 0x08820000, 0x100),
+        ("SlotTable 区(已删)", 0x09EA0000, 0x100),
+    ]:
+        seg = at(addr, size)
+        chk(label, seg == b"\xff" * size, "empty" if seg == b"\xff" * size else seg[:16].hex(" "))
 
     # 5. 字库（四个槽位；2026-11-02 起 Middle 为独立第 4 套）
     for label, addr, size in [

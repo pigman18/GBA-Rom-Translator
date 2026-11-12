@@ -107,12 +107,11 @@ def expand_varlen(entries: list[bytes]) -> tuple[bytes, list[int]]:
 ```
 允许区间：0x08800000 以上（armips 会把 ROM 撑到 32MB）
 已占用：
-  PhraseOffsets  0x08810000   （F980 移除后释放）
-  PhraseTable    0x08820000   （F980 移除后释放）
   FontChsNormal  0x09000000
-  SlotTable      0x09EA0000   （SLT2 移除后释放）
   game.bin       0x08800000 起，不超过 0x08810000
 ```
+
+空闲：`0x08810000` / `0x08820000` / `0x09EA0000` 三段已归还。
 
 **分配策略**：
 1. 从最高的已知占用点之后开始（如 `0x09F00000`）
@@ -181,7 +180,7 @@ def patch_literal(rom: bytearray, lit_off: int, new_gba_addr: int) -> None:
 
 | 表 | stride | 中文 2 字需 | 3 字需 | 判定 |
 |---|---|---|---|---|
-| 招式名 | 8 | `F9 00 hi lo`×2+FF = 9B | 13B | ❌ 塞不下 2 字 |
+| 招式名 | 8 | `F7 00 hi lo`×2+FF = 9B | 13B | ❌ 塞不下 2 字 |
 | 特性名 | 8 | 9B | 13B | ❌ 塞不下 |
 | 属性名 | 5 | 9B | 13B | ❌ 塞不下 2 字 |
 | 图鉴分类名 | 28（字段 6） | 名称字段只有 6B | — | ❌ 塞不下 |

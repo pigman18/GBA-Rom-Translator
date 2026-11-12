@@ -18,7 +18,7 @@
 | `hook` | `true`：前序失败后生成 `pointer_redirect.asm`；默认 `false` |
 
 路径：`relocate` → `hook` → `keep`。
-（`in_place` 原地写、`upgrade` 升 F9 80 都已废弃，见 `docs/PROTOCOL_CURRENT.md`。）  
+（`in_place` 原地写已废弃，见 `docs/PROTOCOL_CURRENT.md`。）  
 地点名：`relocate=false` 且 `hook=false`。
 
 ## 安全默认（`safe`）

@@ -174,7 +174,7 @@ def layout_texts(
     from .extract import trusted_lz_spans
     from .policy import filter_pointer_sources
     from .config_loader import (
-        F9_PHRASE_DEFAULT, F9_EOS, load_game_config,
+        load_game_config,
         parse_int_addr,
     )
     from .text_wrap import wrap_text
@@ -303,23 +303,8 @@ def layout_texts(
             wc = (word_count_modules or {}).get(category, word_count_default or DEFAULT_WORD_COUNT)
             translated = _prepare_zh_text(translated, word_count=wc)
 
-        # ---- encode with phrase codes (same as build_rom) ----
-        # PhraseTable stores expanded F9 00+PCS streams, so \\n/controls are OK.
-        sanitized = charmap._sanitize(translated)
-        phrase_codes = getattr(charmap, "_phrase_codes", None)
-        if phrase_codes and sanitized in phrase_codes:
-            code = phrase_codes[sanitized]
-            encoded = bytes([
-                0xF9,
-                F9_PHRASE_DEFAULT,
-                (code >> 8) & 0xFF,
-                code & 0xFF,
-                F9_EOS,
-            ])
-        else:
-            encoded = charmap.encode(translated)
-
-        # F901/F981 直接通道已移除：短语恒 F9 80，不再重写通道字节。
+        # ---- encode ----
+        encoded = charmap.encode(translated)
 
         # ---- decide: relocate or in-place ----
         if is_armips:
@@ -600,37 +585,6 @@ def run_layout(
             entries.append(e)
     for e in data.get("free_texts") or []:
         entries.append(e)
-
-    # ---- wrap charmap with phrase codes (same as build_rom) ----
-    if custom_translations and target_lang.startswith("zh"):
-        from .config_loader import F9_PHRASE_DEFAULT, F9_EOS
-
-        charmap._phrase_codes = {}
-        phrases = sorted(
-            {charmap._sanitize(v) for v in custom_translations.values() if len(v) > 1},
-            key=lambda s: (len(s), s),
-        )
-        for code, s in enumerate(phrases):
-            charmap._phrase_codes[s] = code
-
-        _orig_encode = charmap.encode
-        charmap._sideload_encode = _orig_encode
-
-        def _encode(text):
-            s = charmap._sanitize(text)
-            pc = getattr(charmap, "_phrase_codes", None)
-            if pc and s in pc:
-                code = pc[s]
-                return bytes([
-                    0xF9,
-                    F9_PHRASE_DEFAULT,
-                    (code >> 8) & 0xFF,
-                    code & 0xFF,
-                    F9_EOS,
-                ])
-            return _orig_encode(text)
-
-        charmap.encode = _encode
 
     # ---- layout text injection ----
     result = layout_texts(

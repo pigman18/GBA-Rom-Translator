@@ -819,48 +819,11 @@ def apply_font_patch(
         with _baserom.open("ab") as _bf:
             _bf.write(b"\xff" * (_need - _sz))
 
-    # translate.build.json → phrase_data.asm（armips 数据，不编进 game.bin）
-    build_json = work_dir / "translate.build.json"
     fonts_src.mkdir(parents=True, exist_ok=True)
-    encode_fn = None
-    if build_json.is_file():
-        from .build_rom_data import emit_data_asms_from_build_json
-        from .charmap import Charmap
-
-        try:
-            cm_path = get_charmap_path(game_id)
-            cm = Charmap(charmap_path=cm_path, target_lang="zh-Hans")
-            # PhraseTable streams must be F9 00 sideload, not F9 80 wrap
-            encode_fn = cm.encode
-        except Exception as exc:
-            print(f"[data] warn: charmap for phrases unavailable ({exc}); no phrases")
-        stats = emit_data_asms_from_build_json(
-            build_json,
-            fonts_src,
-            encode_fn=encode_fn,
-            write_phrases=encode_fn is not None,
-        )
-        print(
-            f"[data] from translate.build.json → "
-            f"phrases={stats.get('phrase_count', 0)}/{stats.get('phrase_bytes', 0)}B"
-        )
-        # refresh fonts.s so includes pick up new asms
-        _generate_fonts_s(
-            font_patch_cfg, fonts_src, graphic_dir / "fonts.s", game_id=game_id
-        )
-    else:
-        print(f"[data] warn: no {build_json}; phrases only")
-
-    # type=slot → translated_slot.asm（JP hex → 中文 F9 流查找表）
-    from .translated_slot import write_slot_table_asm
-
-    n_slot = write_slot_table_asm(
-        work_dir / "translate.build.json",
-        build_dir / "gen" / "translated_slot.asm",
-        rom_path=build_dir / "baserom.gba",
+    # refresh fonts.s so includes pick up new font bins
+    _generate_fonts_s(
+        font_patch_cfg, fonts_src, graphic_dir / "fonts.s", game_id=game_id
     )
-    if n_slot:
-        print(f"[slot] translated_slot.asm: {n_slot} type=slot entries")
 
     # 唯一补丁表：消费 write.plan.json（由 write_plan 生成）
     from .rows_writer import load_plan, write_asm_from_plan

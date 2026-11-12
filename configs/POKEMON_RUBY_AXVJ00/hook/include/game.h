@@ -16,8 +16,6 @@
 #define ADDR_CALL_VIA_R2                   0x081B12DCu
 #define ADDR_CHS_PITCH_CTRL                0x0203FF80u
 #define ADDR_CHS_PITCH_SLOTS               0x0203FF90u
-#define ADDR_CHS_BAG_LINEAR_OFF            0x0203FFD0u
-#define ADDR_CHS_BAG_LINEAR_BASE           0x0203FFD2u
 #define ADDR_COPY_GLYPH_1BPP_4BPP          0x08003830u
 #define ADDR_COPY_GLYPH_2BPP_4BPP          0x080038A0u
 #define ADDR_DEX_TEXT_UNKNOWN_POKE         0x083E9688u
@@ -39,39 +37,22 @@
 #define ADDR_MENU_PRINT_TEXT               0x0806F16Cu
 #define ADDR_OPT_FG_COLOR                  0x0203FFD1u
 #define ADDR_OPT_PALETTE_OVERRIDE          0x0203FFD0u
-#define ADDR_PHRASE_OFFSETS                0x08810000u
-#define ADDR_PHRASE_TABLE                  0x08820000u
 #define ADDR_PLAY_BGM                      0x080724ACu
 #define ADDR_PLAY_SE                       0x080724CCu
 #define ADDR_PRINT_GLYPH_TM1_ORIGIN        0x0800360Cu
-#define ADDR_SLOT_TABLE                    0x09EA0000u
 #define ADDR_TEXT_CLEAR_WINDOW             0x08003BA8u
 #define ADDR_UPDATE_TILEMAP                0x080036DCu
 // <<<GEN_ADDR_END>>>
 /*
- * 短语表（PhraseTable）—— 固定长度字段突破字符数限制的方案。
- * 日版 Gen3 的招式/特性/物种等字段有 stride 限制（6-8 字节），
- * 若用 F9 00 ll tt 侧载一个汉字占 4 字节，8 字节槽最多 2 汉字。
- * 短语表将"文本存储"和"字段引用"解耦：
- *   字段槽（8B）：F9 <op> hi lo FF          → 4 字节引用
- *   PhraseTable：F9 00×N + FE/FB… + FF      → 展开侧载流（含控制符）
- * 查找路径（实现在 src/text_translate.c）：
- *   F9 80/op →
- *   PhraseOffsets[code]（u32 数组 @ 0x08810000）
- *   → PhraseTable + offset（字节流 @ 0x08820000）
- *   → 父串未结束 + 无 FE/FB/FA：内联绘制，INDEX+3 续父串（对齐 GetStringWidth）
- *   → 父串即短语引用+FF：切流，短语 FF = 整句 EOS（地名等）
- * layout: .org 0x08810000 → offsets （u32[code_max], sentinel = total_size）
- *         .org 0x08820000 → streams （PCS bytes ending in FF）
- *
- * 勿在 0x0203FFF0/F7F8 放 PhraseResume（崩/踩图）；0x0203FFD2 起为游戏
- * 数据区（页游标表曾落此处 → 背包/队伍死机根因，已移除）。
- * 改 phrases 只重生 asm + armips，不必重编 game.bin。
+ * 现行唯一中文编码：内联 `F7 00 hi lo`（4 字节/字），解析见
+ * PrintNextChar_hook.c 的 PrintNextChar_Hook / GetStringWidth。
+ * 0x08810000 / 0x08820000 两段已归还为空闲（产物里是 FF 填充），
+ * 需要新的固定 VMA 数据区时可用。
  */
 /* Sym punct bank (9×64B), after Small @ 0x09100000+0xE0000.
  * Font3 layout: upper+lower 8×8 @4bpp-index (0/E/F), NOT 16×16 2bpp.
  * Inject hex = JP PCS (00 space, 37。 3A、 3B， 3C！ 3D？ 3E： …);
- * PrintNextChar draw_chs_pcs: Sym/blank/F900/JP-via-CHS → same DrawGlyph. */
+ * PrintNextChar draw_chs_pcs: Sym/blank/JP-via-CHS → same DrawGlyph. */
 #define SYM_GLYPH_BASE             0x36u
 #define SYM_GLYPH_COUNT            9u
 /* Legacy single-slot (unused by hook; kept for docs/config). */
@@ -282,17 +263,15 @@ struct ChsPhase {
 #define CHS_BATTLE_TEXT_BASE_HI 0x1C0 /* exclusive; covers 0x190 and 0x1B8 */
 #define CHS_BATTLE_FIXED_BASE   0x280
 #define CHS_FONT_GLYPH_MAX      7168
-#define CHS_ESCAPE              0xF9   /* F9 op hi lo：短语引用 */
-/* F7 00 hi lo：单汉字内联，4 字节/字。
+/* F7 00 hi lo：唯一的汉字内联编码，4 字节/字。
  * 第二字节恒 0 —— 用于和残留的 0x01 0xF7（旧全角空格）区分。
  * 不用裸 F7 3 字节：会与文本区外/代码段的裸 0xF7 混淆。
- * 不用 F9 00：未挂钩的绘制路径会把 F9 xx xx xx 当 phrase id 展开。 */
+ * 见 docs/PROTOCOL_CURRENT.md §4。 */
 #define CHS_GLYPH_F7            0xF7u
 #define CHS_GLYPH_F7_OP         0x00u
 #define CHS_GLYPH_LEN           4u     /* 含前缀的整字字节数 */
 #define CHS_GLYPH_IS_F7(p)      ((p)[0] == CHS_GLYPH_F7 && (p)[1] == CHS_GLYPH_F7_OP)
-#define CHS_PHRASE_DEFAULT      0x80
-#define PCS_CTRL_BASE           0xFAu   /* FA~FE 控制码基（text.c/text_translate.c 共用） */
+#define PCS_CTRL_BASE           0xFAu   /* FA~FE 控制码基 */
 
 #define FONT_NORMAL_UNSHADOWED  0
 #define FONT_NORMAL_SHADOWED    3
@@ -385,9 +364,9 @@ static inline void CopyGlyph1bppTo4bpp_Origin(
  * （四舍五入，残差 ≤4px），0=维持原生位置。只读缓冲区，不改写。
  * ROM 补丁严禁占 r0（native mov r0,sp 的缓冲区指针必须原样进 C）。 */
 uint32_t MapNamePopup_CalcLeftPx(const uint8_t *buf);
-/* 文本流像素宽度（来源 src/text_translate.c；纯工具无 hook）：遍历到
- * 0xFF 或 max_bytes，字面量/空白 8px、F9 00 内联汉字 12px、F9 80 短语查表逐字
- * 累加、FA~FE 控制码 0px。供地名弹窗等需要真实渲染宽度的场景复用。 */
+/* 文本流像素宽度（实现在 PrintNextChar_hook.c，纯工具无 hook）：遍历到
+ * 0xFF 或 max_bytes；`F7 00 hi lo` 汉字 12px、其余字面量/空白 8px、
+ * FA~FE 控制码 0px。供地名弹窗等需要真实渲染宽度的场景复用。 */
 uint32_t GetStringWidth(const uint8_t *buf, uint32_t max_bytes);
 /* （原 P24 InitWindowTileData 分区器钩子已于 2026-08-25 随页游标表移除：
  *  页表落 0x0203FFD2 游戏数据区，为背包/队伍死机根因。） */

@@ -1,4 +1,4 @@
-> **历史方案（`F9 80` upgrade 那一步已废弃）**：现在越槽一律 relocate / 就地折名字，
+> **历史方案**：现在越槽一律 relocate / 就地折名字，
 > 编码只有 `F7 00 hi lo`，见 `docs/PROTOCOL_CURRENT.md`。本文保留作设计演进记录。
 
 # 最终方案：`relocate` / `hook` 双开关 + `type=hook`
@@ -11,7 +11,7 @@
 2. **`relocate` 布尔**：替换旧字段 `no_relocate`（极性反过来：`relocate=true` 才允许改指针写扩展区）。
 3. **`hook` 布尔**：前序路径都走不通后，是否允许「指针重定向 asm」路径。
 
-地名等已踩坑域：**`relocate=false` 且 `hook=false`**，只保留装得下的 `in_place`（+ 可选 F980 `upgrade`，不改指针）。
+地名等已踩坑域：**`relocate=false` 且 `hook=false`**，只保留装得下的 `in_place`。
 
 ## 模块字段（`modules.json` / util map）
 
@@ -29,9 +29,9 @@
 ## `plan_entry` 路径（固定顺序）
 
 ```text
-in_place（F900 ≤ 槽）
+in_place（≤ 槽）
   → relocate（relocate=true 且有指针）
-  → upgrade（槽 ≥ 5，F9 80）
+  
   → hook（hook=true 且有指针）→ 生成 pointer_redirect.asm
   → keep
 ```

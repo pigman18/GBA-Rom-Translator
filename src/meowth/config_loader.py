@@ -53,15 +53,6 @@ STAGE_MODULES = "modules"
 # Max 汉字 per line (texts.json module ``word_count``).
 DEFAULT_WORD_COUNT = 14
 
-# F9 channel protocol (AXVJ Chinese):
-#   F9 00 …     — 旁载单字 (reserved)
-#   F9 80 hi/lo — 默认短语（表内为 F9 00+PCS 流）
-#   bare FA..FF — PCS controls / EOS (NOT F9 channels)
-# 说明：F901/F981 等直接通道（write.type=op / style）已移除，只走 F900/F980。
-F9_SIDE_GLYPH = 0x00
-F9_PHRASE_DEFAULT = 0x80
-F9_EOS = 0xFF
-
 
 def parse_int_addr(val: Any, default: int | None = None) -> int:
     """Parse config address/offset: int or ``0x…`` / bare-hex string.

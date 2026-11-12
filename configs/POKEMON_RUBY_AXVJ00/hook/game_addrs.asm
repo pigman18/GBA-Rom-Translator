@@ -45,7 +45,7 @@ StringLength                           equ 0x0800436C
 
 ; --- 图鉴分类名行（UnusedPrintMonName，参数 name/left/top）---
 UnusedPrintMonName                     equ 0x0808DD60
-; 图鉴「???」占位串（AC*5 + F9 80 03 + FA FF）
+; 图鉴「???」占位串（AC*5 + 后缀 + FA FF）
 DexTextUnknownPoke                     equ 0x083E9688  ; C: ADDR_DEX_TEXT_UNKNOWN_POKE
 
 ; --- Menu (shop/bag InitMenu ▶) ---
@@ -70,10 +70,8 @@ DrawMapNamePopup_StringLength          equ 0x0809F67E
 ; --- 扩展区 / game.bin 装入点 ---
 GameBinAddresses                       equ 0x08800000  ; C: ADDR_GAME_BIN
 ; StyleLeft 表已移除（宝可梦名起笔左移 = hook 常量 CHS_NAME_PHRASE_LEFT）
-; PhraseOffsets / PhraseTable：短语表固定 VMA（phrase_data.asm .org 标签同名）
-; ⚠️ 勿命名为 PhraseOffsets/PhraseTable——与 phrase_data.asm 标签冲突。
-PhraseOffsetsVMA                        equ 0x08810000  ; C: ADDR_PHRASE_OFFSETS
-PhraseTableVMA                          equ 0x08820000  ; C: ADDR_PHRASE_TABLE
+; PhraseOffsets / PhraseTable 已废弃（2026-11-12）：短语表不再生成，
+; 0x08810000 / 0x08820000 两段归还为空闲。不要再用这两个地址。
 FontChsNormal                          equ 0x09000000  ; C: ADDR_FONT_CHS_NORMAL
 ; 8px 小汉库（meowth 管线生成，与 Normal 同 128B/字 容器；队伍名等小字窗使用）
 FontChsSmall                           equ 0x09100000  ; C: ADDR_FONT_CHS_SMALL
@@ -89,8 +87,7 @@ FontSubTable                           equ 0x081BB3BC  ; C: ADDR_FONT_SUBTABLE
 FontType1Map                           equ 0x081B34A8  ; C: ADDR_FONT_TYPE1_MAP
 ; Sym punct: free ROM after Small; Font3 8x16 4bpp U+L (not 16x16 2bpp)
 PokeRSFontChsSymAddress                equ 0x091E0000  ; C: ADDR_FONT_CHS_SYM
-; SlotTable: type=slot 查找表（JP hex → 中文 F9 流，PrintNextChar 运行时拦截）
-SlotTableVMA                         equ 0x09EA0000  ; C: ADDR_SLOT_TABLE
+; 0x09EA0000 归还为空闲。不要在 hook 里重新引入查表。
 ; EWRAM pitch slots (JP+CN share CHS pool; do not dual-path FontFunc):
 ;   ChsPitchCtrl  @ 0x0203FF80 (16B): cur, gen, pad[2], age[8]
 ;   ChineseTileState slots[8] @ 0x0203FF90 (64B)

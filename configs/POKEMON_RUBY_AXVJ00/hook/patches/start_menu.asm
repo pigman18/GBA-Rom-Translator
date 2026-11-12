@@ -1,7 +1,8 @@
 ; =============================================================================
 ; [P13~P16] pokedex unit "Zhi" + badge unit "Ge"
 ; pokeRS-style: .loadtable + .strn
-; AXVJ encodes Han as F9 00 ll tt (see patches/chs_unit_charmap.txt)
+; AXVJ encodes Han as F7 00 ll tt —— 全仓唯一中文侧载前缀
+;  旧版此处用 F9 00，hook 只认 F7 00，导致「只/个」被当作 PCS 画成箭头。）
 ;
 ; Dex (append after ConvertIntToFullwidth; was hiragana hiki):
 ;   0x08090EF0, 0x08090F3C  -> r0 cursor

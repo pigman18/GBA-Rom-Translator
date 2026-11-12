@@ -21,8 +21,8 @@ yaml 有条目但无同名 handler → 仅通用日志；有 → 在通用日志
 ``--functions`` 按名筛选；缺省监听全部 ``default != false`` 条目。
 
 文本类增强（InitTextPrinter / ProcessCurrentChar）：
-  - 非 F9 单字节：默认按日文 PCS 假名表解码（ROM 为 AXVJ 日版底包）
-  - 该点 cfg.charmap / --charmap：F9 00 lead trail 汉字 + F9 80 短语流递归查表
+  - 其它单字节：默认按日文 PCS 假名表解码（ROM 为 AXVJ 日版底包）
+  - 该点 cfg.charmap / --charmap：`F7 00 hi lo` 汉字查表
 
 用法：
   mGBA 打开 ROM，Tools → Start GDB stub（2345），Pause。
@@ -54,12 +54,8 @@ DEFAULT_LOG = REPO_ROOT / "work" / "gdb_patcher_log.log"
 
 STR_MAX = 512
 
-# F9 通道 / 短语表（hook/src/game.h + PrintNextChar_hook.c）：
-#   F9 00 lead trail   = F900 通道，双字节汉字（查 charmap double）
-#   F9 80 hi lo [FF]   = F980 通道，短语引用，code=(hi<<8)|lo
-F9_PHRASE_DEFAULT = 0x80
-ADDR_PHRASE_OFFSETS = 0x08810000   # u32[code] → 流内偏移（sentinel = total_size）
-ADDR_PHRASE_TABLE = 0x08820000     # 短语流：F9 00×N + PCS 单字节 + 控制符 + FF
+# 中文编码（hook/src/game.h + PrintNextChar_hook.c）：
+#   F7 00 hi lo = 单汉字内联，4 字节，hi/lo 是 charmap 码位
 
 
 def u16(b: bytes, o: int) -> int:
@@ -115,11 +111,9 @@ def decode_text(
     data: bytes,
     single: dict[int, str],
     double: dict[int, str],
-    resolve_phrase: Optional[Callable] = None,
-    _depth: int = 0,
 ) -> str:
-    """解码 FF 结尾文本：F9 00 lead trail → 查表；F9 80 → 短语流递归；
-    控制码 → \\n/\\l/\\CC/\\v；非 F9 单字节 → 查 single（当前字库）。"""
+    """解码 FF 结尾文本：`F7 00 hi lo` → 查表；
+    控制码 → \\n/\\l/\\CC/\\v；其它单字节 → 查 single（当前字库）。"""
     out: list[str] = []
     i = 0
     n = len(data)
@@ -127,29 +121,13 @@ def decode_text(
         b = data[i]
         if b == 0xFF:
             break
-        if b == 0xF9:
+        if b == 0xF7:
             if i + 3 < n and data[i + 1] == 0x00:
                 key = (data[i + 2] << 8) | data[i + 3]
-                out.append(double.get(key, f"<F9:{key:04X}>"))
+                out.append(double.get(key, f"<F7:{key:04X}>"))
                 i += 4
                 continue
-            if i + 2 < n and resolve_phrase is not None and data[i + 1] == F9_PHRASE_DEFAULT:
-                code = (data[i + 2] << 8) | data[i + 3]
-                if _depth >= 4:
-                    out.append(f"{{F9 80→短语{code:04X}(深度超限)}}")
-                else:
-                    stream = resolve_phrase(code)
-                    if stream:
-                        sub = decode_text(stream, single, double, resolve_phrase, _depth + 1)
-                        out.append(f"{{F9 80→短语{code:04X}:{sub}}}")
-                    else:
-                        out.append(f"{{F9 80→短语{code:04X}:<查表失败>}}")
-                i += 4
-                continue
-            if i + 2 < n:
-                out.append(f"{{F9→短语0x{(data[i + 1] << 8) | data[i + 2]:04X}}}")
-                break
-            out.append("<F9>")
+            out.append("<F7>")
             i += 1
             continue
         if b == 0xFE:
@@ -250,25 +228,10 @@ class Ctx:
         return True
 
     def text_of(self, data: bytes) -> str:
-        """有字库查表，无字库原样字节转义。F9 80 短语经 GDB 读短语表递归解码。"""
+        """有字库查表，无字库原样字节转义。"""
         if self.single or self.double:
-            return decode_text(data, self.single, self.double, self._resolve_phrase)
+            return decode_text(data, self.single, self.double)
         return raw_dump(data)
-
-    def _resolve_phrase(self, code: int) -> Optional[bytes]:
-        """从 GDB 实时 ROM 读短语流：PhraseOffsets[code] → PhraseTable+off → FF 结尾流。"""
-        try:
-            off_b = bytes(self.gdb.read_mem(ADDR_PHRASE_OFFSETS + code * 4, 4))
-            if len(off_b) < 4:
-                return None
-            off = u32(off_b, 0)
-            if off >= 0x01000000:
-                return None
-            stream = bytes(self.gdb.read_mem(ADDR_PHRASE_TABLE + off, STR_MAX))
-        except GdbError:
-            return None
-        end = stream.find(0xFF)
-        return stream[: end + 1] if end >= 0 else stream
 
     def char_of(self, b: int) -> str:
         if self.single:
@@ -1465,7 +1428,7 @@ def run_log(args: argparse.Namespace) -> int:
     if args.game == DEFAULT_GAME:
         from meowth.jp_pcs import BYTE_TO_CHAR as JP_BYTE_TO_CHAR
 
-        single = dict(JP_BYTE_TO_CHAR)  # AXVJ 日版底包：非 F9 单字节按日文 PCS
+        single = dict(JP_BYTE_TO_CHAR)  # AXVJ 日版底包：非 F7 单字节按日文 PCS
         decode_mode = "日文PCS"
     else:
         single = {}                     # 非日版：原样字节，不做假名解码
@@ -1474,7 +1437,7 @@ def run_log(args: argparse.Namespace) -> int:
     double: dict[int, str] = {}
     if charmap_src:
         _, double = load_charmap(charmap_src)
-        mode = f"{decode_mode} + F900/F980 字库 {charmap_src}"
+        mode = f"{decode_mode} + F7 00 字库 {charmap_src}"
     else:
         mode = decode_mode
 

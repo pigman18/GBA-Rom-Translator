@@ -73,7 +73,7 @@ Build 会：打字库、按 **翻译模块** 注入（默认安全集 `ui+script
 
 进度条批次 = LLM 批次数。缺 Key 时无法补全新抽出的未译文。
 
-开场博士指针在 Thumb 字面量池（S1 登记，非 loadword）。中文编码 `F9 00`；`\\p`/`\\l` → `0xFB`。
+开场博士指针在 Thumb 字面量池（S1 登记，非 loadword）。中文编码 `F7 00 hi lo`；`\\p`/`\\l` → `0xFB`。
 
 **翻译范围：** 凡日文能纳入的都译；**仅**起名输入法五十音格保留日文。强制留日名单见 `configs/POKEMON_RUBY_AXVJ00/translate/README.md`（性别主文、起名主文、选宠两条 FC 精确串等）。短标签「男孩/女孩」、时钟是/否合串走 lexicon。交付只走 `start_gui.bat` 正统流程，勿手改成品 ROM。
 
@@ -81,4 +81,4 @@ Build 会：打字库、按 **翻译模块** 注入（默认安全集 `ui+script
 现行回归入口是 **`scripts/verify_output_rom.py`**（静态字节核对，不启模拟器）：
 - 流水线基线：`7297 replaced / 2221 relocated / 0 skipped`（原版 AXVJ，`--seed-only`）
 - 产物核对项：P01/P04/P07/P08 订址桩命中、P03 三池 `0x04000006`、
-  `game.bin` 嵌入一致、PhraseOffsets u32 单调、SlotTable `SLT2`、字库非空
+  `game.bin` 嵌入一致、字库非空

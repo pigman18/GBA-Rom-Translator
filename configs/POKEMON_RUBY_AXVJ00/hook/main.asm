@@ -46,7 +46,7 @@ JP2CHS_Entry:               ; = text/entry.s EngineEntry = 引擎入口跳板
 
 .include "./graphic/fonts.s"
 
-; type=slot：JP hex → 中文流查找表（PrintNextChar 运行时拦截；历史桩）
-.include "./gen/translated_slot.asm"
+; 数据侧 type=slot 恒为 0 条，hook 侧从不消费，仅剩空壳表。
+; 不再 include ./gen/translated_slot.asm。
 ; 串页方案已整体退役：不建页表、不后置烙入、不 include 任何 text_page 产物。
-; armips 只装 main.asm include 的桩 / 纯值补丁 / game.bin / 字库 / slot 表。
+; armips 只装 main.asm include 的桩 / 纯值补丁 / game.bin / 字库。

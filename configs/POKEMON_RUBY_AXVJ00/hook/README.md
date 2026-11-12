@@ -17,13 +17,13 @@ hook/
 │   ├── start_menu.asm        #    开始菜单
 │   └── ui_pss.asm            #    P17 P18 PSS 图标列
 ├── src/                      # 【复杂钩子】gcc 编入 out/game.bin + armips 订址桩
-│   ├── text/                 #    文本引擎域（2026-08-24 由单文件 text.c 拆分）
+│   ├── text/                 #    文本引擎域（收敛为三件套）
 │   │   ├── entry.s           #      P01 跳板 EngineEntry（链接首位约束）
-│   │   ├── hook_origin.s     #      P01 订址桩（armips 侧，只 hook PrintNextChar）
-│   │   ├── PrintNextChar_hook.c  #  引擎主体（接管日版打印）
-│   │   ├── text_translter.c  #      F9 协议层 / PhraseTable 查找
-│   │   ├── text_render.c     #      共享绘制原语（GlyphScratchRange / 页游标）
-│   │   └── text_scene.c      #      场景布局闸
+│   │   ├── hooks_origin.s    #      P01 订址桩（armips 侧，只 hook PrintNextChar）
+│   │   └── PrintNextChar_hook.c  #  运行时全部逻辑：控制码 / 纯函数 tile 网格 /
+│   │                             #  12px 逐像素合成 + GetStringWidth
+│   ├── include/              #    game.h / text_grid.h（网格常量唯一契约）
+│   │                         #    旧 text.h / text_render.h / text_scene.h 已删除
 │   ├── map_name_popup/       #    P04 地名弹窗域三件套
 │   │   ├── entry.s           #      跳板 MapName_DisplayCellLength
 │   │   ├── MapNamePopup_hook.c
@@ -41,13 +41,13 @@ hook/
 │       ├── DrawOptionMenuChoice_entry.s
 │       └── DrawOptionMenuChoice_hook.c
 ├── reference/                # 【2026-11-02 已删除】5 个 ref* 符号无调用者（原占约 8KB）
-│                              #   绘制原语已内联在 src/text/text_render.c
+│                              #   旧绘制原语随 2026-11-11 串页重构一并删除
 ├── link/game.ld              # gcc 链接脚本（VMA 0x08800000）
 ├── gen/                      # 生成物：translated_slot.asm（流水线写，勿手改）
 ├── graphic/                  # 生成物：fonts.s + phrase_data（流水线写，勿手改）
 ├── out/                      # 生成物：game.bin / game.map / game_syms.asm（勿手改）
 ├── build.bat                 # 【权威】Windows 构建
-└── Makefile                  # WSL 构建（2026-11-02 已按 src/text/ 四文件重写，未实测）
+└── Makefile                  # WSL 构建（2026-11-11 按 text 三件套 / 10 obj 重写，未实测）
 ```
 
 ## 2. 新补丁分类决策树
@@ -164,9 +164,18 @@ Q1 需要用 C 写逻辑吗？（查表 / 协议解析 / 寄存器编组 / 超�
 - **不要 `cd hook && armips main.asm`**：`main.asm` 的 `./charmap.txt`、
   `./graphic/fonts.s`、`./gen/translated_slot.asm` 只在流水线 staging 目录里齐全，
   原地跑必然报 `does not exist`。单独验证汇编层请用完整打包命令（见 `docs/PACK_ROM.md`）。
-- **`build.bat` 是权威构建脚本**（Windows）。`Makefile` 已于 2026-11-02 按实际
-  `src/text/` 四文件结构重写并与 `build.bat` 的 15 个 obj 顺序逐项对齐，
-  但当前环境未装 WSL，**尚未实测**——首次使用请先核对产物 `game.bin` 大小/符号。
+- **`build.bat` 是权威构建脚本**（Windows）。`Makefile` 与 `build.bat` 的
+  **10 个 obj** 顺序逐项对齐（2026-11-11 串页重构后：text 域只剩
+  `text_entry.o` + `PrintNextChar_hook.o`，旧三个 .c 已删除）。
+  构建期**零页表**：字库由 `font_patch` 装入 `0x09000000`，运行时直接按
+  `gidx` 取 128B 字模；`engine.run_full()` 不再后置烙入 `0x09500000`。
+  串页方案（4.4MB 页表 / PHYS 288 对）因页池盖住原版场景图块已整体退役，
+  见 `docs/DESIGN_TEXT_12PX_GRID.md`。
+- **可选运行时诊断**：`set EXTRA_CFLAGS=-DGRID_DIAG && build.bat` 会把每个字的
+  `phase/col/t0/fg/bg/win[0x0D]/tpl[6]` 写进 EWRAM `0x0203E000` 环形区；
+  bot 的 `NNN.ram.bin` 偏移 `+0x3E000` 可离线解码。产品构建不带此宏。
+  当前环境未装 WSL，`Makefile` 尚未实测——首次使用请先核对产物
+  `game.bin` 大小/符号（`EngineEntry` 必须等于 `0x08800000`）。
 - WSL 构建（待实测）：先 `scripts/wsl-interop-setup.sh`（binfmt 注册），然后
   `PATH="$REPO/tools/wsl-bin:$PATH" make`；包装器内置 `</dev/null`
   （Windows 控制台 exe 在此环境不重定向 stdin 会永久阻塞）。

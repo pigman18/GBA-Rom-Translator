@@ -262,6 +262,9 @@ class ProbeSession:
                     if len(self.watch_hits) <= 40:
                         self.log(f"\n[WATCH] 0x{wa:08X} <- 0x{cur:04X}  "
                                  f"PC=0x{pc:08X} LR=0x{regs.get('r14', 0) & ~1:08X}")
+                        # 栈回溯：BIOS SWI 包装会盖掉真实调用者（LR 只剩 svc 的返回地址），
+                        # 所以把 [sp..sp+128] 里像 ROM 代码的地址都打出来。
+                        self._log_stack_raw(ctx, gdb, regs)
                     elif len(self.watch_hits) % 200 == 0:
                         self.log(f"  …watch 已命中 {len(self.watch_hits)} 次")
                     continue
@@ -337,6 +340,30 @@ class ProbeSession:
         if self._tile_blocks[key] <= 3:
             ctx.log(f"  文本块: tileData=0x{addr:08X} (charBlock {blk}) "
                     f"tm={tm} fn={fn}")
+
+    def _log_stack_raw(self, ctx: Ctx, gdb: GdbClient, regs: dict) -> None:
+        """watchpoint 命中时回溯调用链（不需要 hook 对象）。
+
+        为什么单独写一个：BIOS 的 LZ77 解压走 `svc`，停下来的 LR 只是
+        `svc` 包装里的返回地址（`0x081B129A`），真实调用者在更上层。
+        只能扫栈找 ROM 代码地址。
+        """
+        sp = regs.get("r13", 0)
+        if not (0x02000000 <= sp < 0x04000000):
+            return
+        try:
+            raw = bytes(gdb.read_mem(sp, 160))
+        except (GdbError, OSError):
+            return
+        if len(raw) < 160:
+            return
+        words = []
+        for i in range(0, 160, 4):
+            v = int.from_bytes(raw[i:i + 4], "little")
+            if 0x08000000 <= v < 0x0A000000:
+                words.append(f"+{i:02X}=0x{v & ~1:08X}")
+        if words:
+            ctx.log("  栈回溯: " + " ".join(words))
 
     def _log_stack(self, ctx: Ctx, gdb: GdbClient, hook, regs: dict) -> None:
         """把栈上「看起来像 ROM 代码地址」的字标出来 —— 这就是调用链。

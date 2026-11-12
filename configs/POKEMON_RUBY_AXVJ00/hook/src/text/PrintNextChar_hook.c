@@ -1,44 +1,64 @@
 /* =====================================================================================
- * text.c — AXVJ 日版打印引擎（全面接管版）
+ * PrintNextChar_hook.c — AXVJ 12px 渲染器：纯函数 tile 网格（运行时唯一 C 模块）
  *
- * 架构：严格 pokeruby 数据流 + 日版语义（设计文档 docs/ruby_jp_design.md）：
- *   取码 → GetGlyph（唯一取址，逐字形字体属性）→ sPrintGlyphFuncs[textMode]
- *   → sWriteGlyphTilemapFuncs[fontNum] → UpdateTilemap(win, nCols, tiles..)
+ * ── 为什么重写（2026-11-11 晚）────────────────────────────────────────
+ * 串页方案把「12px 相位」整体前移到构建期，于是每列 64B 内容必须在运行时
+ * 搬进某个 VRAM tile —— 反推出 PHYS 池 / 288 对槽 / 4.4MB 页表，
+ * 也就是又回到了「管 tile」；而池子盖住原版场景图块，画面出现黑块碎片。
  *
- * 四行一分发（一行一原生语义，行间零共享可变状态）：
- *   tm0 = FontFunc[0] Linear 滚动光栅（TILE_BASE+TILE_OFF，对话/战斗/详情页）
- *   tm1 = FontFunc[1] 等宽：全局游标 scratch（7732 基线；等宽窗 tileData=共享
- *         只读 atlas，像素必须落自由区，表项经 UpdateTilemap 指向 scratch）
- *   tm2 = FontFunc[2] 指针缓冲（dst==0 幻影跳过；血条走 slot+缓冲绘制）
- *   tm3 = 与 tm1 共用（菜单/对话主窗；font4 队伍窗走原生 Origin 路径）
- *   tm4..7 / 未验证 fontNum → UNKNOWN：消费返回 1、无绘制（缺字=排查信号）
+ * 本文件回到 11-10 已实证的机制（TASKS.md §1.2 / POKEMON_RUBY §9.3.3）：
+ *   tile = TILE_BASE + (row&7)*62 + col*2   ← 屏幕行列的**纯函数**
+ *   12px 跨列共享由**运行时逐像素合成**：读回该列 64B，清本字墨迹盒，
+ *   写墨迹，再 32bit 写回。共享列的前 4px 落在盒外，天然不被邻字擦掉。
+ * 没有分配器、没有水位、没有回收、没有场景门控、没有页表、没有 EWRAM 相位表。
+ * 全部 tile 落在原版自己的 [TB, TB+0x1F0) 预载字库区内，不碰 UI 图标。
  *
- * 字体为每字形属性（GetGlyph 返回 width/bank）：
- *   常规（fn3 等）= FontChsNormal 12px；队伍等 fn4 = FontChsSmall 8px 沉底小字
- *   （与原生 font4 8×8 混排节奏一致）；同流混排由像素制光标自然处理。
+ * ── 协议（用户口径）───────────────────────────────────────────────────
+ * 全局统一 `F7 00 hi lo`；F9 短语 / SLT2 已废弃。流里只有：
+ *   F7 00 hi lo   4B / 12px   → 0x09000000 字库，gidx = lead_adjust(hi)*256+lo
+ *   PCS 单字节    1B / 8px    → 原版 GetGlyphTilePointers + 1bpp→4bpp 现场展开
+ *   FA..FF 控制码             → 原版状态机
  *
- * 相位载体：12px 半列相位存 pitch 槽 chs_px；win[0x1A]=窗左缘（Init 后恒定，
- * 原生 UpdateTilemap 会误推它 → map_at 用 PreserveCursorX）；表项列 = win[0x1B]。
- *
- * hook 面：本文件有且只有一个 ROM hook——P01@0x032F8 → entry.s EngineEntry
- *   → PrintNextChar_Hook。除 PrintNextChar_Hook 与导出工具外全部 static；
- *   跨模块 API（PrintGlyph/DrawGlyph/TranslateHandleEscape）见 include/text.h。
- *
- * 模块划分（include/src 布局）：
- *   本文件 = 引擎；src/text_translter.c = F9 翻译链路（F900/F980/slot）；
- *   src/text_render.c = 共享渲染原语 + GetGlyph 字形源解析；
- *   src/text_render.c = refpr + pitch + 日版 GetCursorTileNum（薄路径）。
- * 本文件取代 text_jp2chs.c 及旧多文件引擎（归档于 src/bak/text/，移出构建）。
+ * ── hook 链与 lr 契约 ─────────────────────────────────────────────────
+ * P01 @0x080032F8 → entry.s EngineEntry（bx）→ PrintNextChar_Hook（本文件唯一导出）。
+ * P01 只盖 8B 且订址桩用 bx（非 bl），C 的 lr = 原版调用者返回地址；
+ * 从 C 再 bl PrintNextChar_Origin 会多压一层 {r4,lr} → 栈失衡，
+ * 故任何情况下都不回落原版 PrintNextChar（设计 §5.1 判断 D）。
  * ===================================================================================== */
-#include "text.h"
-#include "text_render.h"
-#include "text_scene.h"
+#include "game.h"
+#include "text_grid.h"
 
 /* =====================================================================
- * §1 常量与布局
+ * §0 可选运行时诊断（-DGRID_DIAG 才启用；产品构建不带）
+ *
+ * 环形日志落 0x0203E000（docs §9.4.4 实证该区恒零、不被堆使用），
+ * 128 条 × 24B；写指针在 +0x1000。bot 的 shot 会落 ram.bin，
+ * 离线按 EWRAM 偏移 0x3E000 解码即可，无需 GDB。
+ *
+ * 24B/条：[0]tag [1..2]code [3]phase [4]cx [5]rel [6]col [7]flags
+ *         [8..9]t0 [10]fg_used [11]bg_used
+ *         [12]winC [13]winD [14]winE [15]palette
+ *         [16]tpl5 [17]tpl6 [18]tpl7 [19]tpl8
+ *         [20..23]textPtr
  * ===================================================================== */
-#define PCS_MENU_CURSOR      0xEFu
+typedef struct GridTarget GridTarget;   /* 定义见 §3，§0 的前置声明只需不完整类型 */
+#ifdef GRID_DIAG
+#define DIAG_BASE   0x0203E000u
+#define DIAG_RECS   128u
+#define DIAG_RECB   24u
+#define DIAG_SEQP   0x1000u
+static void diag_emit(unsigned tag, unsigned code, unsigned phase,
+                      TextPrinter *win, const GridTarget *t, unsigned t0,
+                      unsigned fg, unsigned bg);
+static void diag_ctrl(unsigned tag, unsigned code, uint16_t index);
+#else
+#define diag_emit(t,c,ph,w,gt,t0,fg,bg)          ((void)0)
+#define diag_ctrl(t,c,i)                         ((void)0)
+#endif
 
+/* =====================================================================
+ * §1 原版语义常量
+ * ===================================================================== */
 enum {
     AXV_STATE_END = 0,
     AXV_STATE_BEGIN,
@@ -50,10 +70,9 @@ enum {
     AXV_STATE_PLACEHOLDER,
     AXV_STATE_WAIT_CLEAR,
     AXV_STATE_WAIT_SCROLL,
-    AXV_STATE_WAIT_SOUND,
+    AXV_STATE_WAIT_SOUND
 };
 
-/* FC 子类型（sub_8003110，= pokeruby ExtCtrlCode 家族 1..16） */
 #define FC_FG            1u
 #define FC_BG            2u
 #define FC_SHADOW        3u
@@ -71,374 +90,725 @@ enum {
 #define FC_SHIFT_TILE_Y  15u
 #define FC_CLEARWINDOW   16u
 
-#define WIN_BUFFER_PTR   0x20
-
-/* struct ChsGlyphTiles（含 glyph_id）→ include/text_render.h */
-
-/* ---- 前置声明（跨模块 API 见 include/text.h）---- */
-int  PrintNextChar_Hook(TextPrinter *win);
-static int  DrawMenuCursorEF(TextPrinter *win);
+#define TPL_TILE_DATA    0x0C
+#define TPL_TILEMAP      0x10
+#define TPL_DEFAULT_FONT 0x08
 
 /* =====================================================================
- * §11 单字节分发（PCS 两级表，镜像原生 sPrintGlyphFuncs × sWriteGlyphTilemapFuncs）
+ * §2 纯函数网格：行 / 列 / tile 号
  * ===================================================================== */
-typedef void (*PcsPrintFunc)(TextPrinter *win, uint32_t glyph);
-
-/* 自绘：GetGlyph 取字模 → 既有 sPrintGlyphFuncs[textMode]（原逻辑不动；
- * CHS/SYM 亦经此）。原版假名/数字/符号是 8×16 容器、8px 步进。 */
-/* 取不到字模时不要「静默消费」：那样游标不推进，该列永远停在窗口清屏时的
- * 空白 tile 号上，而池里那一格可能是上一个窗口留下的脏数据 → 屏幕上是
- * 一整列杂点（背包「×N」列实证）。这里改用全透明字形走正常绘制：
- * 该列被 mask 写成 0、表项指向本窗口自己的格子、游标照常推进。 */
-static void pcs_zero(uint8_t *p, unsigned n)
+/* GetCursorTilemapPointer@0x08003708 里 (curY+curTY) 本身就是 tilemap 行号
+ * （每行 32 项）；换行 CTY += 2（16px 字占上下两行）⇒ >>1 是连续文本行号。 */
+static unsigned grid_row(TextPrinter *win)
 {
-    while (n-- != 0u)
-        *p++ = 0u;
+    return ((unsigned)win_u8(win, WIN_CURSOR_Y)
+            + (unsigned)win_u8(win, WIN_CURSOR_TILE_Y)) >> 1;
 }
 
-static void PcsPrint_Custom(TextPrinter *win, uint32_t cur_char)
+static uint16_t grid_tile(TextPrinter *win, unsigned col)
 {
-    uint8_t buf[128];
-    uint8_t width = 8;
-    uint8_t save_bg = 0xFFu;      /* 0xFF = 无需恢复 */
-    uint32_t any = 0u;
+    uint16_t tb = win_u16(win, WIN_TILE_BASE);
+    return (uint16_t)((unsigned)tb
+            + (grid_row(win) & (GRID_SEG_COUNT - 1u)) * GRID_SEG_TILES
+            + 2u * col);
+}
+
+/* 12px 相位：从串首（或最近换行 / 清窗口）到 index 累计像素，取低 3 位。
+ * 零 EWRAM 状态 —— 原版 tm0 用 TILE_OFFSET 累加器，这里连累加器都不要。
+ * FC 参数必须按类型跳过，否则颜色/字体号字节会被误当成 PCS 或 F7 前缀。 */
+static unsigned fc_arg_count(uint8_t type)
+{
+    switch (type) {
+    case FC_FG:
+    case FC_BG:
+    case FC_SHADOW:
+    case FC_PALETTE:
+    case FC_FONT:
+    case FC_PAUSE:
+    case FC_SHIFT_TILE_X:
+    case FC_SHIFT_TILE_Y:
+        return 1u;
+    case FC_ALLCOLORS:
+        return 3u;
+    case FC_PLAYBGM:
+    case FC_PLAYSE:
+        return 2u;
+    default:
+        return 0u;   /* FC_ESCAPE 的被转义字节留给下一轮当普通 token 计宽 */
+    }
+}
+
+static unsigned grid_phase(const uint8_t *text, uint16_t index)
+{
+    unsigned w = 0u;
+    uint16_t i = 0u;
+
+    if (!text)
+        return 0u;
+    while (i < index) {
+        uint8_t c = text[i];
+        if (c == 0xFFu)
+            break;
+        if (c == 0xFEu || c == 0xFBu) {       /* 换行 / 等待清屏：相位归零 */
+            w = 0u;
+            ++i;
+            continue;
+        }
+        if (c == 0xFCu) {
+            uint8_t type = (i + 1u < index) ? text[i + 1u] : 0u;
+            if (type == FC_CLEARWINDOW)
+                w = 0u;
+            i = (uint16_t)(i + 2u + fc_arg_count(type));
+            continue;
+        }
+        if (c == 0xF7u && i + 1u < index && text[i + 1u] == 0u) {
+            w += CHS_GLYPH_ADVANCE_PX;
+            i = (uint16_t)(i + 4u);
+            continue;
+        }
+        if (c >= PCS_CTRL_BASE) {              /* FA / FD / 0xF9 残留：0px */
+            ++i;
+            continue;
+        }
+        w += CHS_GLYPH_ADVANCE_JP_PX;
+        ++i;
+    }
+    return w & 7u;
+}
+
+/* GBA VRAM 禁止 byte 写：一列 64B 一律 32bit 读写。 */
+static void grid_pair_load(uint8_t *p, uint32_t addr)
+{
+    uint32_t *d = (uint32_t *)(void *)p;
+    const uint32_t *s = (const uint32_t *)(const void *)(uintptr_t)addr;
     unsigned i;
-    struct ChsGlyphTiles t;
-    uint8_t fn;
-
-    if (!GetGlyph(win, cur_char, buf, &width)) {
-        pcs_zero(buf, sizeof buf);
-        width = 8u;
-    }
-
-    /* 整块无墨（空格 / 占位符 / 该 fontNum 下没有的字形）：
-     * 游标仍要按 width 推进，但**不能刷背景色** —— 图鉴列表的
-     * WIN_COLOR_D 是「编号红字」的色号，整格填 bg 会让未捕获行
-     * 变成一条红色实心横条。临时把 bg 压 0（透明）。 */
-    for (i = 0; i < sizeof buf; i++)
-        any |= buf[i];
-    if (any == 0u) {
-        save_bg = win_u8(win, WIN_COLOR_D);
-        win_set_u8(win, WIN_COLOR_D, 0u);
-    }
-
-    /* 缓存键基底：JP/SYM/空白 = (fontNum<<8)|code（钳制与 GetGlyph 一致） */
-    fn = win_u8(win, WIN_FONTNUM_REAL);
-    if (fn > 6u)
-        fn = 3u;
-    t.glyph_id = (uint16_t)((fn << 8) | (cur_char & 0xFFu));
-    t.tl = buf + 0x00;
-    t.bl = buf + 0x20;
-    t.tr = buf + 0x40;
-    t.br = buf + 0x60;
-    t.ink_w = CHS_INK_NATIVE_W;
-    t.ink_h = CHS_INK_NATIVE_H;
-    t.pad_top = CHS_INK_NATIVE_TOP;
-    DrawGlyphTiles(win, &t, width);
-
-    if (save_bg != 0xFFu)
-        win_set_u8(win, WIN_COLOR_D, save_bg);
+    for (i = 0u; i < GRID_PAIR_BYTES / 4u; ++i)
+        d[i] = s[i];
 }
 
-/* 第二级 [fontNum]，镜像原生 sWriteGlyphTilemapFuncs——每格对应日志实证窗口：
- *  [4]=PrintGlyph_TextMode1_Origin 队伍名窗 0x081BB43C（charBase1）：font4 走
- *                FontType1Map 紧凑区 [TILE_BASE,+0xD5]，在 CHS scratch 带
- *                [0xD7,0x14B] 下方，原生表项指向的 tile 完好（gdb 实证；
- *                ♂/♀/Lv/状态图标 0x14C-0x151/0x18C-0x19B 不再被覆写）。
- *  [3]=Custom    弹窗 0x081BB49C（charBase0）/请选择 0x081BB484：font3 线性
- *                区 [1,0x1BC] 与 scratch 带重叠（数字 0xA2→tile0x145，208 处实证）。
- *  [1]=Custom    无实证，默认安全（原生同为紧凑区，将来可切 Origin）。
- *  其余=Custom。 */
-static const PcsPrintFunc sPcsTm1FontFuncs[8] = {
-    PcsPrint_Custom,       /* font0 */
-    PcsPrint_Custom,       /* font1：无实证，默认自绘 */
-    PcsPrint_Custom,       /* font2 */
-    PcsPrint_Custom,       /* font3：线性区与 scratch 带重叠 */
-    PcsPrint_Custom,       /* font4：改走自绘 —— 原生委托按 TB+2×字形码 画日文
-                            * 字库，与中文叠在同一条 tilemap 上会出现「并排两份」 */
-    PcsPrint_Custom,       /* font5 */
-    PcsPrint_Custom,       /* font6 */
-    PcsPrint_Custom,       /* font7 */
-};
-
-static void PcsPrint_Tm1(TextPrinter *win, uint32_t cur_char)
+static void grid_pair_store(const uint8_t *p, uint32_t addr)
 {
-    sPcsTm1FontFuncs[win_u8(win, WIN_FONTNUM_REAL) & 7u](win, cur_char);
+    uint32_t *d = (uint32_t *)(void *)(uintptr_t)addr;
+    const uint32_t *s = (const uint32_t *)(const void *)p;
+    unsigned i;
+    for (i = 0u; i < GRID_PAIR_BYTES / 4u; ++i)
+        d[i] = s[i];
 }
 
-/* 第一级 [textMode]，镜像原生 sPrintGlyphFuncs：
- *  [1]=Tm1      二级查 fontNum（上表）。
- *  [3]=Custom   菜单/对话 0x081BB46C：原生 tm3 = FontFuncTable[3]@0x08003494
- *               另一策略未 RE；上版误派 tm1 函数致数字/假名蓝块（140 处实证）。
- *  其余=Custom（tm0/tm2 自绘，已验证）。 */
-static const PcsPrintFunc sPcsPrintFuncs[8] = {
-    PcsPrint_Custom,       /* 0：tm0 自绘 */
-    PcsPrint_Tm1,          /* 1：二级查 fontNum */
-    PcsPrint_Custom,       /* 2：tm2 缓冲自绘（血条 slot/JP） */
-    PcsPrint_Custom,       /* 3：tm3 自绘（原生 tm3 未 RE） */
-    PcsPrint_Custom,       /* 4 */
-    PcsPrint_Custom,       /* 5 */
-    PcsPrint_Custom,       /* 6 */
-    PcsPrint_Custom,       /* 7 */
-};
-
-int DrawGlyph(TextPrinter *win, uint32_t cur_char)
+/* 4bpp 低半字节 = 左像素（字库与 VRAM 同口径）。 */
+static uint8_t grid_pair_px(const uint8_t *p, unsigned x, unsigned y)
 {
-    /* CHS 标点 SYM 带走自绘（自建 sym 字库）；≥0xF7 不可印位直接消费。
-     * 其余按 textMode（tm1 再查 fontNum）两级表分发。
-     * ⚠️ 2026-11-10 试过「0x80..0xF6 交回官方 FontFuncTable」，结果图鉴
-     *   列表红块反而扩大（原生 tm 基于 charBase 布局，与我们的 arena 并排会
-     *   写到别处）。回滚，保持自绘。 */
-    if (cur_char >= SYM_GLYPH_BASE
-        && cur_char < SYM_GLYPH_BASE + SYM_GLYPH_COUNT) {
-        PcsPrint_Custom(win, cur_char);
-        return 1;
-    }
-    if (cur_char >= 0xF7u)
-        return 1;
-    sPcsPrintFuncs[win_u8(win, WIN_TEXTMODE) & 7u](win, cur_char);
-    return 1;
+    unsigned off = ((y >= 8u) ? 32u : 0u)
+                 + (y & 7u) * 4u + ((x & 7u) >> 1);
+    uint8_t b = p[off];
+    return (x & 1u) ? (uint8_t)(b >> 4) : (uint8_t)(b & 0xFu);
 }
 
-/* F9 汉字：DecompressGlyph_Chinese 解压进栈上字形缓冲（宽度随 fontNum 8/12，
- * upstream 同款分层：解压填缓冲 → 渲染行写窗口），再进 tm 分发。
- * glyphWidth 形参仅为兼容旧签名——实际宽度以 glyph.width 为准。
- * 缓冲在栈：game.bin 无 RAM 段（link/game.ld），全局落 ROM 写无效。 */
-void PrintGlyph(TextPrinter *win, uint32_t gidx, unsigned glyphWidth)
+static void grid_pair_set(uint8_t *p, unsigned x, unsigned y, uint8_t v)
 {
-    struct TextGlyph glyph;
-    struct ChsGlyphTiles t;
-    unsigned advance;
-    uint8_t fn;
-
-    (void)glyphWidth;
-    fn = win_u8(win, WIN_FONTNUM_REAL);
-    if (fn > 6u)
-        fn = 3u;
-    /* tm2 缓冲（战斗顶栏名/Lv 等）：原生 8px 槽，中文须 FontChsSmall */
-    if (win_u8(win, WIN_TEXTMODE) == 2u)
-        fn = 4u;
-    DecompressGlyph_Chinese(&glyph, (uint16_t)(gidx & 0xFFFFu), fn);
-    advance = glyph.width;
-    t.glyph_id = (uint16_t)(0x8000u | (gidx & 0x1FFFu));
-    t.tl = (const uint8_t *)&glyph.gfxBufferTop[0];
-    t.tr = (const uint8_t *)&glyph.gfxBufferTop[8];
-    t.bl = (const uint8_t *)&glyph.gfxBufferBottom[0];
-    t.br = (const uint8_t *)&glyph.gfxBufferBottom[8];
-    ChsGlyphMetrics(fn, &t);
-    DrawGlyphTiles(win, &t, advance);
+    unsigned off = ((y >= 8u) ? 32u : 0u)
+                 + (y & 7u) * 4u + ((x & 7u) >> 1);
+    uint8_t b = p[off];
+    if (x & 1u)
+        p[off] = (uint8_t)((b & 0x0Fu) | (uint8_t)(v << 4));
+    else
+        p[off] = (uint8_t)((b & 0xF0u) | (uint8_t)(v & 0xFu));
 }
 
+/* 字库 128B = TL(0) BL(32) TR(64) BR(96)，16×16 槽。 */
+static uint8_t grid_glyph_px(const uint8_t *g, unsigned x, unsigned y)
+{
+    unsigned tile = (x >> 3) * 2u + (y >> 3);
+    unsigned off = tile * 32u + (y & 7u) * 4u + ((x & 7u) >> 1);
+    uint8_t b = g[off];
+    return (x & 1u) ? (uint8_t)(b >> 4) : (uint8_t)(b & 0xFu);
+}
+
+static void grid_copy32(uint8_t *dst, const uint8_t *src)
+{
+    uint32_t *d = (uint32_t *)(void *)dst;
+    const uint32_t *s = (const uint32_t *)(const void *)src;
+    unsigned i;
+    for (i = 0u; i < 8u; ++i)
+        d[i] = s[i];
+}
 
 /* =====================================================================
- * §14 FC 子处理器（sub_8003110 类型 1..16）
+ * §3 目标格与发射
  * ===================================================================== */
-typedef void (*axv_fn1)(uint32_t a0);
-static void axv_play_bgm(uint16_t id) { ((axv_fn1)(ADDR_PLAY_BGM | 1u))(id); }
-static void axv_play_se(uint16_t id)  { ((axv_fn1)(ADDR_PLAY_SE | 1u))(id); }
-typedef void (*axv_win_fn)(TextPrinter *);
-static void axv_clear_window(TextPrinter *win)    { ((axv_win_fn)(ADDR_TEXT_CLEAR_WINDOW | 1u))(win); }
+struct GridTarget {
+    uint32_t base;      /* VRAM 字库区基址（tpl+0x0C）或 tm2 缓冲（win+0x20） */
+    unsigned cx;        /* 窗左缘列 curX */
+    unsigned col;       /* 绝对列 = cx + cursorTileX */
+    unsigned rel;       /* 初始 cursorTileX（tm2 缓冲按它线性排布） */
+    int buffered;       /* 缓冲直绘：不写 tilemap */
+};
 
-/* =====================================================================
- * §14b 等 A 箭头前置同步（pokeruby text.c DrawInitialDownArrow 同名收敛）
- * ---------------------------------------------------------------------
- * 原 P05 补丁（0x08003F4C 桩 → WaitArrow_Prepare_Hook 跳板）折入本函数：
- *   1) CHS 相位对齐：半列相位（cursorX&7）时 TILE_OFFSET +=2（防 FA/FB
- *      翻页双▼，B04）；cursorTileX 由渲染行增量维护，无需槽位折算回写；
- *   2) downArrowCounter 清零（原跳板 strh [r0,#6]，见 game.h
- *      WIN_DOWN_ARROW_COUNTER）；
- *   3) 尾跳原版主体延续点 DrawInitialDownArrow_Body@0x08003DAD——
- *      与旧跳板逐语义一致（跳过原生序言，延续点自含所需状态）。
- * ===================================================================== */
-static void DrawInitialDownArrow(TextPrinter *win)
+static int grid_setup(TextPrinter *win, GridTarget *t)
 {
-    if (!win)
+    const uint8_t *tpl = win_template(win);
+
+    t->cx  = win_u8(win, WIN_CURSOR_X);
+    t->rel = win_u8(win, WIN_CURSOR_TILE_X);
+    t->col = t->cx + t->rel;
+    t->buffered = (win_u8(win, WIN_TEXTMODE) == 2u)
+               || (tpl != 0 && win_u32(tpl, TPL_TILEMAP) == 0u);
+    t->base = t->buffered ? win_u32(win, WIN_TILE_DATA)
+                          : (tpl ? *(const uint32_t *)(const void *)(tpl + TPL_TILE_DATA) : 0u);
+    return t->base != 0u && t->col < GRID_COLS_PER_SEG;
+}
+
+#ifdef GRID_DIAG
+static void diag_write(unsigned slot, const uint8_t *r)
+{
+    volatile uint8_t *p =
+        (volatile uint8_t *)(uintptr_t)(DIAG_BASE + slot * DIAG_RECB);
+    unsigned i;
+    for (i = 0u; i < DIAG_RECB; ++i)
+        p[i] = r[i];
+}
+
+static unsigned diag_slot(void)
+{
+    volatile uint32_t *seqp =
+        (volatile uint32_t *)(uintptr_t)(DIAG_BASE + DIAG_SEQP);
+    uint32_t seq = *seqp;
+    *seqp = seq + 1u;
+    return (unsigned)(seq & (DIAG_RECS - 1u));
+}
+
+static void diag_emit(unsigned tag, unsigned code, unsigned phase,
+                      TextPrinter *win, const GridTarget *t, unsigned t0,
+                      unsigned fg, unsigned bg)
+{
+    const uint8_t *tpl = win_template(win);
+    uint32_t textptr = win_u32(win, WIN_TEXT_PTR);
+    uint8_t r[DIAG_RECB];
+    unsigned i;
+    for (i = 0u; i < DIAG_RECB; ++i)
+        r[i] = 0u;
+    r[0] = (uint8_t)tag;
+    r[1] = (uint8_t)(code & 0xFFu);
+    r[2] = (uint8_t)((code >> 8) & 0xFFu);
+    r[3] = (uint8_t)phase;
+    r[4] = (uint8_t)t->cx;
+    r[5] = (uint8_t)t->rel;
+    r[6] = (uint8_t)t->col;
+    r[7] = (uint8_t)((win_u8(win, WIN_FONTNUM_REAL) & 0x7Fu)
+                     | (t->buffered ? 0x80u : 0u));   /* 低7位 = fontNum */
+    r[8] = (uint8_t)(t0 & 0xFFu);
+    r[9] = (uint8_t)((t0 >> 8) & 0xFFu);
+    r[10] = (uint8_t)fg;
+    r[11] = (uint8_t)bg;
+    r[12] = win_u8(win, WIN_COLOR_C);
+    r[13] = win_u8(win, WIN_COLOR_D);
+    r[14] = win_u8(win, WIN_COLOR_E);
+    r[15] = win_u8(win, WIN_PALETTE);
+    if (tpl) {
+        r[16] = tpl[5];
+        r[17] = tpl[6];
+        r[18] = tpl[7];
+        r[19] = tpl[8];
+    }
+    r[20] = (uint8_t)(textptr & 0xFFu);
+    r[21] = (uint8_t)((textptr >> 8) & 0xFFu);
+    r[22] = (uint8_t)((textptr >> 16) & 0xFFu);
+    r[23] = (uint8_t)((textptr >> 24) & 0xFFu);
+    diag_write(diag_slot(), r);
+}
+
+/* 控制码 / 越界保护只占一条记录，code 塞 t0 或控制码。 */
+static void diag_ctrl(unsigned tag, unsigned code, uint16_t index)
+{
+    uint8_t r[DIAG_RECB];
+    unsigned i;
+    for (i = 0u; i < DIAG_RECB; ++i)
+        r[i] = 0u;
+    r[0] = (uint8_t)tag;
+    r[1] = (uint8_t)(code & 0xFFu);
+    r[2] = (uint8_t)((code >> 8) & 0xFFu);
+    r[14] = (uint8_t)(index & 0xFFu);
+    r[15] = (uint8_t)((index >> 8) & 0xFFu);
+    diag_write(diag_slot(), r);
+}
+#endif
+
+/* 把两列 64B 写回 VRAM/缓冲，并给每列写一次 tilemap 表项。
+ * 非缓冲时若 tile 号会越过 0x1F0（UI 图标段）→ 整字不写，只推进游标。 */
+static void grid_emit(TextPrinter *win, GridTarget *t,
+                      const uint8_t *p0, const uint8_t *p1,
+                      unsigned ncols, unsigned delta)
+{
+    unsigned c;
+    uint16_t t0;
+
+    if (!t->buffered) {
+        t0 = grid_tile(win, t->col);
+        if ((unsigned)t0 + 2u * (ncols - 1u) + 2u > GRID_TILE_LIMIT) {
+            diag_ctrl(3u, (uint32_t)t0, 0u);
+            win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(t->rel + delta));
+            return;                                   /* 保护 UI 图标，宁可不显示 */
+        }
+        grid_pair_store(p0, t->base + 32u * t0);
+        if (ncols > 1u)
+            grid_pair_store(p1, t->base + 32u * (t0 + 2u));
+        for (c = 0u; c < ncols; ++c) {
+            /* UpdateTilemap 按 (curX+curTX) 找表项；两列要分别写。
+             * PreserveCursorX 防止原生函数把窗左缘 curX 推歪。 */
+            win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(t->col + c - t->cx));
+            UpdateTilemap_PreserveCursorX(win,
+                (uint16_t)(t0 + 2u * c), (uint16_t)(t0 + 2u * c + 1u));
+        }
+    } else {
+        uint32_t addr = t->base + (uint32_t)t->rel * GRID_PAIR_BYTES;
+        grid_pair_store(p0, addr);
+        if (ncols > 1u)
+            grid_pair_store(p1, addr + GRID_PAIR_BYTES);
+    }
+    win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(t->rel + delta));
+}
+
+/* §3 末尾定义（grid_bg 之后），此处前置声明供 grid_load 使用。 */
+static void grid_pair_fill(uint8_t *p, uint8_t bg);
+
+/* 两列一律先铺成「窗口背景色」，不继承 VRAM 里的旧内容。
+ *
+ * 盒外像素若是读回的日文字库预渲染背景、或游戏别处载入的图形（彩色
+ * nibble），会当成字缝里的白块/绿蓝条纹显示（V1 实证）。
+ * 只有 phase=4 时第 0 列的左 4px 属于**前一个字**，需把它刚写下的墨迹
+ * 挑回来，其余一律是背景色。 */
+static void grid_load(TextPrinter *win, GridTarget *t,
+                      uint8_t *p0, uint8_t *p1,
+                      unsigned ncols, unsigned phase, uint8_t bg)
+{
+    unsigned x, y;
+    uint32_t tmp[GRID_PAIR_BYTES / 4u];
+    uint8_t *q = (uint8_t *)(void *)tmp;
+    uint32_t addr;
+
+    grid_pair_fill(p0, bg);
+    grid_pair_fill(p1, bg);
+    if (phase == 0u)
         return;
-    arrow_inplace12(win);
-    win_set_u16(win, WIN_DOWN_ARROW_COUNTER, 0);
+
+    if (!t->buffered) {
+        uint16_t t0 = grid_tile(win, t->col);
+        if ((unsigned)t0 + 2u * (ncols - 1u) + 2u > GRID_TILE_LIMIT)
+            return;
+        addr = t->base + 32u * t0;
+    } else {
+        addr = t->base + (uint32_t)t->rel * GRID_PAIR_BYTES;
+    }
+    grid_pair_load(q, addr);
+    for (y = 0u; y < 16u; ++y) {
+        for (x = 0u; x < 4u; ++x) {
+            uint8_t v = grid_pair_px(q, x, y);
+            if (v != 0u && v != bg)
+                grid_pair_set(p0, x, y, v);
+        }
+    }
+}
+
+static uint8_t grid_fg(TextPrinter *win)
+{
+    /* C = win[0x0C]：前景（主墨）。FC 01 可动态改，InitTextPrinter 从
+     * tpl[5] 拷入，六场景 DIAG 实测常态 C=1。
+     * 反例：开始菜单玩家名一行 C=14（FC 01 0E），旧实现
+     *   `FontIsShadowed(fn) ? 1 : tpl[5]`
+     * 把动态改色整段吞掉，那 9 个字全被画成 1 —— 正是「继续游戏菜单
+     * 颜色不对」的根因。字模里 15 号 nibble 对应 C，见 FONT_12PX_DRAW.md。 */
+    return win_u8(win, WIN_COLOR_C);
+}
+
+static uint8_t grid_shadow(TextPrinter *win)
+{
+    /* E = win[0x0E]：阴影。六场景 DIAG 实测恒为 8，tpl[7]=8。
+     * origin 预载字模是 {15 背景 / 1 主墨 / 8 阴影} 三色；V1~V5 的
+     * ink-only 重映射把 14/15 一律折成 fg，阴影层整片消失，日文假名
+     * 与玩家名因此变粗发黑（「1井」）、菜单整体比 origin 暗一档。 */
+    return win_u8(win, WIN_COLOR_E);
+}
+
+/* 空白像素必须写**窗口背景色索引**，不能写 0（透明）。
+ * 依据 FONT_12PX_DRAW.md：原版 CopyGlyph2bppTo4bpp 的映射是
+ * 「15→C(主墨) 14→E(阴影) 0→D(背景)」—— 0 被映射成背景色，
+ * 预渲染字模整体不透明。写 0 会让文字 tile 透出下层 BG：
+ *   V2 实证：对话「欢迎」变黑底（palette0=#000000）；
+ *   V1 实证：字缝里露出地图绿/蓝条纹与残留白块。
+ * win[0x0D] = backgroundColor（FC 02 可改），InitTextPrinter 从 tpl[6] 拷入。 */
+static uint8_t grid_bg(TextPrinter *win)
+{
+    const uint8_t *tpl = win_template(win);
+    /* 预载字模的背景是**窗口模板的固定色**，不是当前绘制色。
+     * GRID_DIAG 六场景实测：对话/选项/导航/开始菜单 tpl[6]=0xF(白)，
+     * 图鉴/背包 tpl[6]=0(透明，露出下层气泡)，且除 FC 临时改色外
+     * win[0x0D] 恒等于 tpl[6]。
+     * 图鉴滚动时 FC 会把 win[0x0D] 改成 2(红) 画一小段高亮；若拿它铺
+     * 整列 64B，会把 12px 共享列里前一个汉字的右半整片染成纯红方块
+     * （VRAM 实证：tile 16B..171 主色 nibble=2）。故只认模板背景。 */
+    if (tpl)
+        return tpl[6];
+    return win_u8(win, WIN_COLOR_D);
+}
+
+static void grid_pair_fill(uint8_t *p, uint8_t bg)
+{
+    uint32_t *d = (uint32_t *)(void *)p;
+    uint32_t v = (uint32_t)bg * 0x11111111u;
+    unsigned i;
+    for (i = 0u; i < GRID_PAIR_BYTES / 4u; ++i)
+        d[i] = v;
+}
+
+/* =====================================================================
+ * §4 两个绘制入口
+ * ===================================================================== */
+/* 汉字：字模 12×12 墨迹（y=3..14）按 phase 铺到 1~2 个 tile 列。
+ * 盒内像素先清 0 再写墨迹 —— 既去掉重印残留，又天然保留共享列邻字的 4px。 */
+static void grid_draw_chs(TextPrinter *win, uint16_t gidx, unsigned phase)
+{
+    GridTarget t;
+    uint32_t buf[(2u * GRID_PAIR_BYTES) / 4u];
+    uint8_t *p0 = (uint8_t *)(void *)buf;
+    uint8_t *p1 = p0 + GRID_PAIR_BYTES;
+    unsigned sx, sy, ncols, delta;
+    uint8_t fg, bg, sh;
+    const uint8_t *g;
+
+    ncols = (phase + CHS_GLYPH_ADVANCE_PX + 7u) >> 3;   /* 恒为 2 */
+    delta = (phase + CHS_GLYPH_ADVANCE_PX) >> 3;         /* 1 或 2 */
+    if (!grid_setup(win, &t) || gidx >= GRID_GLYPH_SLOTS) {
+        win_set_u8(win, WIN_CURSOR_TILE_X,
+                   (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + delta));
+        return;
+    }
+    g = (const uint8_t *)(uintptr_t)(GRID_FONT_NORMAL
+        + (uint32_t)gidx * GRID_GLYPH_BYTES);
+    fg = grid_fg(win);
+    bg = grid_bg(win);
+    sh = grid_shadow(win);
+    diag_emit(0u, gidx, phase, win, &t, grid_tile(win, t.col), fg, bg);
+
+    grid_load(win, &t, p0, p1, ncols, phase, bg);
+    /* 阴影层：origin 的 tm1 预载字模是「C 主墨 + E 右下 1px 阴影 + D 背景」
+     * 三色预渲染（pal9/pal15 实测 1/8/15）。12px 汉字字库只有 0/15 单色，
+     * 若只写 C，整屏汉字比 origin 少一整层墨迹 → 菜单发灰、发细、颜色对不上。
+     * 按同一语义程序化补影：墨迹右下 1px 先铺 E，再写 C 压在上面。
+     * 不是 DONT.md §9 禁止的 `colors[0]=bg+OR`（那会把背景混进墨色糊成重影），
+     * 这里是显式三色独立像素。 */
+    for (sy = 0u; sy + 1u < 16u; ++sy) {
+        for (sx = 0u; sx < GRID_INK_W; ++sx) {
+            unsigned dx = phase + sx + 1u;
+            uint8_t *p;
+            if (!grid_glyph_px(g, sx, sy) || dx >= ncols * 8u)
+                continue;
+            p = (dx >> 3) ? p1 : p0;
+            grid_pair_set(p, dx & 7u, sy + 1u, sh);
+        }
+    }
+    for (sy = 0u; sy < 16u; ++sy) {
+        for (sx = 0u; sx < GRID_INK_W; ++sx) {
+            unsigned dx = phase + sx;
+            uint8_t *p = (dx >> 3) ? p1 : p0;
+            uint8_t v = grid_glyph_px(g, sx, sy);
+            /* 背景已由 grid_pair_fill 铺满；此处不能再写 bg，否则会把上一步
+             * 刚补的阴影层整片洗掉。只在主墨像素上写 C。 */
+            if (v)
+                grid_pair_set(p, dx & 7u, sy, fg);
+        }
+    }
+    grid_emit(win, &t, p0, p1, ncols, delta);
+}
+
+/* PCS 单字节：原版字模现场展开到栈上 64B（不引用预载日文字库，
+ * 因为 [TB, TB+512) 已被本引擎按屏幕列接管），再按 phase 贴进网格。 */
+static void grid_draw_pcs(TextPrinter *win, uint8_t glyph, unsigned phase)
+{
+    GridTarget t;
+    uint32_t tmp[GRID_PAIR_BYTES / 4u];
+    uint32_t buf[(2u * GRID_PAIR_BYTES) / 4u];
+    uint8_t *gp = (uint8_t *)(void *)tmp;
+    uint8_t *p0 = (uint8_t *)(void *)buf;
+    uint8_t *p1 = p0 + GRID_PAIR_BYTES;
+    uint8_t *up = 0;
+    uint8_t *lo = 0;
+    uint8_t fn;
+    uint8_t fg, bg, sh;
+    int shadowed;
+    unsigned sx, sy, ncols, delta;
+
+    ncols = (phase + CHS_GLYPH_ADVANCE_JP_PX + 7u) >> 3;  /* 1 或 2 */
+    delta = (phase + CHS_GLYPH_ADVANCE_JP_PX) >> 3;       /* 恒为 1 */
+    /* 菜单光标 ▶(0xEF) **就是普通 PCS 字模**：ROM 实证 font3 0xEF 的
+     * upper/lower 是三角墨迹，font0 0xEF 的 lower 是 `00 60 70 78 7c
+     * 78 70 60`。origin 开始菜单把它画在 BG tile 0x128（三色预渲染）。
+     * V1~V5 却特判成「固定 tile 对 0x1F0/0x1F1」并只写 tilemap，而
+     * 0x1F0/0x1F1 在新引擎里从未被写入内容（VRAM 实测全 0）→ 光标整块
+     * 消失。删掉特判，与其它 PCS 一样取字模展开即可。
+     * 0x00..0x1F 仍是控制/空格区，取 0 号字模会画出杂字。 */
+    if (glyph < 0x20u) {
+        win_set_u8(win, WIN_CURSOR_TILE_X,
+                   (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
+        return;
+    }
+    if (!grid_setup(win, &t)) {
+        win_set_u8(win, WIN_CURSOR_TILE_X,
+                   (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + delta));
+        return;
+    }
+    fn = win_u8(win, WIN_FONTNUM_REAL);
+    fg = grid_fg(win);
+    bg = grid_bg(win);
+    sh = grid_shadow(win);
+    shadowed = FontIsShadowed(fn);
+    GetGlyphTilePointers_Origin(fn, glyph, &up, &lo);
+    if (!up || !lo) {
+        win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(t.rel + delta));
+        return;
+    }
+    if (shadowed) {
+        /* font3/4/5：32B/tile 的 4bpp-index 字模，nibble 语义
+         *   0 = 背景(D) / 14 = 阴影(E) / 15 = 主墨(C)  ← FONT_12PX_DRAW.md
+         * 原样保留，交给下面的三色重映射，绝不 ink-only 归一。 */
+        grid_copy32(gp, up);
+        grid_copy32(gp + 32u, lo);
+    } else {
+        /* font0/1/2/6：1bpp 8B/tile，原版展开函数 r2=「1 时色」r3=「0 时色」。
+         * 传 (1,0) 只作墨迹标记，颜色由重映射统一决定。 */
+        CopyGlyph1bppTo4bpp_Origin(up, gp, 1u, 0u);
+        CopyGlyph1bppTo4bpp_Origin(lo, gp + 32u, 1u, 0u);
+    }
+    /* 空白/填充字形：原版 tm1 只把表项指到预载的空白 tile，**不重绘 VRAM**。
+     * 本引擎若照常整列铺背景，会把 phase=4 共享列里前一个 12px 汉字的
+     * 右半擦掉 —— 图鉴滚动时游戏会在名字后面补打 0x20/0x80 填充字，
+     * 实证把「妙蛙种子」后两字削成残笔。无墨迹 ⇒ 只推进游标。 */
+    {
+        unsigned i;
+        int blank = 1;
+        for (i = 0u; i < GRID_PAIR_BYTES; ++i) {
+            uint8_t byte = gp[i];
+            if ((byte & 0x0Fu) != 0u || (byte >> 4) != 0u) {
+                blank = 0;
+                break;
+            }
+        }
+        if (blank) {
+            win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(t.rel + delta));
+            return;
+        }
+    }
+    diag_emit(1u, glyph, phase, win, &t, grid_tile(win, t.col), fg, bg);
+
+    grid_load(win, &t, p0, p1, ncols, phase, bg);
+    for (sy = 0u; sy < 16u; ++sy) {
+        for (sx = 0u; sx < 8u; ++sx) {
+            unsigned dx = phase + sx;
+            uint8_t *p = (dx >> 3) ? p1 : p0;
+            uint8_t v = grid_pair_px(gp, sx, sy);
+            /* origin 预载字模是 {15 背景 / C 主墨 / E 阴影} 三色：
+             *   options  pal9  → 15 白 / 1 橙黄 / 8 深橙
+             *   start_menu pal15 → 15 白 / 1 深灰 / 8 浅米
+             * V1~V5 的 ink-only `v ? fg : bg` 把阴影 14 也折成主墨，
+             * 笔画膨胀粘连（玩家名「ユウキ」糊成粗黑「1井」），且整片
+             * 阴影丢失让菜单比 origin 暗一档。按 nibble 语义精确还原：
+             *   0 → 窗口背景(tpl[6])；14 → E；其余(15/1) → C。
+             * 字模里绝不会出现调色板彩色 nibble，故不会重现 V1 的
+             * 蓝绿方块。 */
+            uint8_t nv = (v == 0u) ? bg
+                       : ((shadowed && v == 14u) ? sh : fg);
+            grid_pair_set(p, dx & 7u, sy, nv);
+        }
+    }
+    grid_emit(win, &t, p0, p1, ncols, delta);
+}
+
+/* =====================================================================
+ * §5 流宽度（导出给 MapNamePopup_hook.c 做居中；协议一致）
+ * ===================================================================== */
+uint32_t GetStringWidth(const uint8_t *buf, uint32_t max_bytes)
+{
+    uint32_t w = 0u;
+    uint32_t i = 0u;
+
+    if (!buf)
+        return 0u;
+    while (i < max_bytes && buf[i] != 0xFFu) {
+        if (buf[i] == 0xF7u && i + 3u < max_bytes && buf[i + 1u] == 0u) {
+            w += CHS_GLYPH_ADVANCE_PX;
+            i += 4u;
+        } else if (buf[i] >= PCS_CTRL_BASE) {
+            i += 1u;
+        } else {
+            w += CHS_GLYPH_ADVANCE_JP_PX;
+            i += 1u;
+        }
+    }
+    return w;
+}
+
+/* =====================================================================
+ * §6 控制码状态机（原版语义，绘制部分不涉及）
+ * ===================================================================== */
+typedef void (*axv_fn1)(uint32_t);
+typedef void (*axv_win_fn)(TextPrinter *);
+
+static void grid_down_arrow(TextPrinter *win)
+{
+    win_set_u16(win, WIN_DOWN_ARROW_COUNTER, 0u);
     ((axv_win_fn)(ADDR_DRAW_INITIAL_DOWN_ARROW_BODY | 1u))(win);
 }
 
-
-static int HandleExtCtrlCode(TextPrinter *win)
+static int grid_ext_ctrl(TextPrinter *win, const uint8_t *text, uint16_t next)
 {
-    const uint8_t *text = (const uint8_t *)(uintptr_t)win_u32(win, WIN_TEXT_PTR);
-    uint16_t index = win_u16(win, WIN_TEXT_INDEX);
-    uint8_t type;
-    uint8_t a1;
-
-    if (index >= 0xFFFF)
-        return 2;
-    type = text[index];
-    win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(index + 1));
+    uint8_t type = text[next];
+    uint16_t p = (uint16_t)(next + 1u);
 
     switch (type) {
     case FC_FG:
-        win_set_u8(win, WIN_COLOR_C, text[win_u16(win, WIN_TEXT_INDEX)]);
-        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(win_u16(win, WIN_TEXT_INDEX) + 1));
+        win_set_u8(win, WIN_COLOR_C, text[p]);
+        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(p + 1u));
         return 2;
     case FC_BG:
-        win_set_u8(win, WIN_COLOR_D, text[win_u16(win, WIN_TEXT_INDEX)]);
-        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(win_u16(win, WIN_TEXT_INDEX) + 1));
+        win_set_u8(win, WIN_COLOR_D, text[p]);
+        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(p + 1u));
         return 2;
     case FC_SHADOW:
-        win_set_u8(win, WIN_COLOR_E, text[win_u16(win, WIN_TEXT_INDEX)]);
-        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(win_u16(win, WIN_TEXT_INDEX) + 1));
+        win_set_u8(win, WIN_COLOR_E, text[p]);
+        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(p + 1u));
         return 2;
     case FC_ALLCOLORS:
-        a1 = text[win_u16(win, WIN_TEXT_INDEX)];
-        win_set_u8(win, WIN_COLOR_C, a1);
-        win_set_u8(win, WIN_COLOR_D, text[win_u16(win, WIN_TEXT_INDEX) + 1]);
-        win_set_u8(win, WIN_COLOR_E, text[win_u16(win, WIN_TEXT_INDEX) + 2]);
-        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(win_u16(win, WIN_TEXT_INDEX) + 3));
+        win_set_u8(win, WIN_COLOR_C, text[p]);
+        win_set_u8(win, WIN_COLOR_D, text[p + 1u]);
+        win_set_u8(win, WIN_COLOR_E, text[p + 2u]);
+        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(p + 3u));
         return 2;
     case FC_PALETTE:
-        win_set_u8(win, WIN_PALETTE, text[win_u16(win, WIN_TEXT_INDEX)]);
-        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(win_u16(win, WIN_TEXT_INDEX) + 1));
+        win_set_u8(win, WIN_PALETTE, text[p]);
+        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(p + 1u));
         return 2;
     case FC_FONT:
-        win_set_u8(win, WIN_FONTNUM_REAL, text[win_u16(win, WIN_TEXT_INDEX)]);
-        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(win_u16(win, WIN_TEXT_INDEX) + 1));
+        win_set_u8(win, WIN_FONTNUM_REAL, text[p]);
+        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(p + 1u));
         return 2;
     case FC_DEFAULTFONT: {
-        uint8_t *tpl = win_template(win);
-        win_set_u8(win, WIN_FONTNUM_REAL, tpl ? tpl[8] : 0);
+        const uint8_t *tpl = win_template(win);
+        win_set_u8(win, WIN_FONTNUM_REAL, tpl ? tpl[TPL_DEFAULT_FONT] : 0u);
+        win_set_u16(win, WIN_TEXT_INDEX, p);
         return 2;
     }
     case FC_PAUSE:
-        win_set_u8(win, WIN_DELAY, text[win_u16(win, WIN_TEXT_INDEX)]);
-        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(win_u16(win, WIN_TEXT_INDEX) + 1));
+        win_set_u8(win, WIN_DELAY, text[p]);
+        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(p + 1u));
         win_set_u16(win, WIN_STATE, AXV_STATE_PAUSE);
         return 2;
     case FC_WAITBUTTON:
+        win_set_u16(win, WIN_TEXT_INDEX, p);
         win_set_u16(win, WIN_STATE, AXV_STATE_WAIT_BUTTON);
         return 2;
     case FC_WAITSOUND:
+        win_set_u16(win, WIN_TEXT_INDEX, p);
         win_set_u16(win, WIN_STATE, AXV_STATE_WAIT_SOUND);
         return 2;
-    case FC_PLAYBGM: {
-        uint8_t lo = text[win_u16(win, WIN_TEXT_INDEX)];
-        uint8_t hi = text[win_u16(win, WIN_TEXT_INDEX) + 1];
-        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(win_u16(win, WIN_TEXT_INDEX) + 2));
-        axv_play_bgm((uint16_t)(lo | (hi << 8)));
+    case FC_PLAYBGM:
+        ((axv_fn1)(ADDR_PLAY_BGM | 1u))(
+            (uint32_t)text[p] | ((uint32_t)text[p + 1u] << 8));
+        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(p + 2u));
         return 2;
-    }
-    case FC_PLAYSE: {
-        uint8_t lo = text[win_u16(win, WIN_TEXT_INDEX)];
-        uint8_t hi = text[win_u16(win, WIN_TEXT_INDEX) + 1];
-        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(win_u16(win, WIN_TEXT_INDEX) + 2));
-        axv_play_se((uint16_t)(lo | (hi << 8)));
+    case FC_PLAYSE:
+        ((axv_fn1)(ADDR_PLAY_SE | 1u))(
+            (uint32_t)text[p] | ((uint32_t)text[p + 1u] << 8));
+        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(p + 2u));
         return 2;
-    }
-    case FC_ESCAPE: {
-        uint8_t c = text[win_u16(win, WIN_TEXT_INDEX)];
-        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(win_u16(win, WIN_TEXT_INDEX) + 1));
-        DrawGlyph(win, c);
+    case FC_ESCAPE:
+        win_set_u16(win, WIN_TEXT_INDEX, p);
         return 1;
-    }
     case FC_SHIFT_TILE_X:
         win_set_u8(win, WIN_CURSOR_TILE_X,
-                   (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X)
-                             + text[win_u16(win, WIN_TEXT_INDEX)]));
-        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(win_u16(win, WIN_TEXT_INDEX) + 1));
+                   (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + text[p]));
+        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(p + 1u));
         return 1;
     case FC_SHIFT_TILE_Y:
         win_set_u8(win, WIN_CURSOR_TILE_Y,
-                   (uint8_t)(win_u8(win, WIN_CURSOR_TILE_Y)
-                             + text[win_u16(win, WIN_TEXT_INDEX)]));
-        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(win_u16(win, WIN_TEXT_INDEX) + 1));
+                   (uint8_t)(win_u8(win, WIN_CURSOR_TILE_Y) + text[p]));
+        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(p + 1u));
         return 1;
     case FC_CLEARWINDOW:
-        axv_clear_window(win);
+        ((axv_win_fn)(ADDR_TEXT_CLEAR_WINDOW | 1u))(win);
+        win_set_u16(win, WIN_TEXT_INDEX, p);
         return 2;
     default:
+        win_set_u16(win, WIN_TEXT_INDEX, p);
         return 2;
     }
 }
 
+static int grid_control(TextPrinter *win, uint8_t c, uint16_t next)
+{
+    switch (c) {
+    case 0xFA:
+        grid_down_arrow(win);
+        win_set_u16(win, WIN_STATE, AXV_STATE_WAIT_SCROLL);
+        return 2;
+    case 0xFB:
+        grid_down_arrow(win);
+        win_set_u16(win, WIN_STATE, AXV_STATE_WAIT_CLEAR);
+        return 2;
+    case 0xFC: {
+        const uint8_t *text =
+            (const uint8_t *)(uintptr_t)win_u32(win, WIN_TEXT_PTR);
+        return grid_ext_ctrl(win, text, next);
+    }
+    case 0xFD:
+        win_set_u16(win, WIN_STATE, AXV_STATE_PLACEHOLDER);
+        return 2;
+    case 0xFE:
+        win_set_u16(win, WIN_STATE, AXV_STATE_NEWLINE);
+        return 2;
+    case 0xFF:
+        win_set_u16(win, WIN_STATE, AXV_STATE_END);
+        return 0;
+    default:
+        return 1;
+    }
+}
+
 /* =====================================================================
- * §15 主入口（原生 PrintNextChar_Hook 整函数替换）
+ * §7 唯一导出
  * ===================================================================== */
 int PrintNextChar_Hook(TextPrinter *win)
 {
-    uint32_t tptr;
     uint16_t index;
+    const uint8_t *text;
+    const uint8_t *p;
     uint8_t c;
-
-    /* tm1+font4+tilemap0 等仍交 Origin；tm2 血条缓冲要走 slot，不能整窗委托 */
-    if (scene_is_buffer_printer(win) && win_u8(win, WIN_TEXTMODE) != 2u)
-        return scene_delegate_buffer_print(win);
-
-    /* 复刻原生前 8 条指令：u16 回绕推进 + 取字符 */
-    index = win_u16(win, WIN_TEXT_INDEX);
-    win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(index + 1));
-    tptr = win_u32(win, WIN_TEXT_PTR);
-    c = *(const uint8_t *)(uintptr_t)(tptr + index);
-
-    if (c >= PCS_CTRL_BASE) {
-        switch (c) {
-        case 0xFA:
-            DrawInitialDownArrow(win);
-            win_set_u16(win, WIN_STATE, AXV_STATE_WAIT_SCROLL);
-            return 2;
-        case 0xFB:
-            DrawInitialDownArrow(win);
-            win_set_u16(win, WIN_STATE, AXV_STATE_WAIT_CLEAR);
-            return 2;
-        case 0xFC:
-            return HandleExtCtrlCode(win);
-        case 0xFD:
-            win_set_u16(win, WIN_STATE, AXV_STATE_PLACEHOLDER);
-            return 2;
-        case 0xFE:
-            win_set_u16(win, WIN_STATE, AXV_STATE_NEWLINE);
-            return 2;
-        case 0xFF:
-            win_set_u16(win, WIN_STATE, AXV_STATE_END);
-            return 0;
-        default:
-            break;
-        }
-    }
-
-    if (c == PCS_MENU_CURSOR && win_u8(win, WIN_TEXTMODE) != 2u) {
-        if (DrawMenuCursorEF(win))
-            return 1;
-    }
-
-    /* ---- 翻译链路（F9 协议 + slot 替换，src/text_translter.c）---- */
-    if (TranslateHandleChar(win, c))
-        return 1;
-
-    /* ---- 可印字符：GetGlyph → tm 分发 ---- */
-    DrawGlyph(win, c);
-    return 1;
-}
-
-/* =====================================================================
- * §16 内部出口与导出工具
- * （旧过渡出口 WaitArrow_Prepare 已折入 §14b DrawInitialDownArrow；
- *   MapNamePopup_CalcLeftPx 迁至 src/map_name_popup/MapNamePopup_hook.c）
- * ===================================================================== */
-static int DrawMenuCursorEF(TextPrinter *win)
-{
-    uint8_t buf[128];
-    uint8_t width = 8;
+    uint16_t gidx;
 
     if (!win)
         return 0;
-    if (!FontIsShadowed(win_u8(win, WIN_FONTNUM_REAL)))
+    index = win_u16(win, WIN_TEXT_INDEX);
+    text  = (const uint8_t *)(uintptr_t)win_u32(win, WIN_TEXT_PTR);
+    if (!text)
         return 0;
+    p = text + index;
+    c = *p;
 
-    if (!GetGlyph(win, PCS_MENU_CURSOR, buf, &width))
-        return 0;
+    /* 复刻原版「读一字节、index+1」；后续分支一律设置最终值，不累加。 */
+    win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(index + 1u));
 
-    /* ▶ 固定落在 0x1E0/0x1E1 两格（同字库内的常驻图标），整块 32B 直写 */
-    ChsBlitTileDirect(win, buf + 0x00, CHS_MENU_CURSOR_TILE);
-    ChsBlitTileDirect(win, buf + 0x20, CHS_MENU_CURSOR_TILE_HI);
-    UpdateTilemap_PreserveCursorX(win, CHS_MENU_CURSOR_TILE, CHS_MENU_CURSOR_TILE_HI);
-    win_set_u8(win, WIN_CURSOR_TILE_X,
-               (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
+    /* ★ 控制码必须先于任何流位置判断：EWRAM/IWRAM 动态串里的 0xFF
+     * 若被吞掉，WIN_STATE 到不了 END → RenderText 无限调用 → 输入停摆。 */
+    if (c >= PCS_CTRL_BASE) {
+        diag_ctrl(2u, c, index);
+        return grid_control(win, c, (uint16_t)(index + 1u));
+    }
+
+    if (c == 0xF7u && p[1] == 0u) {
+        gidx = (uint16_t)(GRID_LEAD_ADJUST(p[2]) * 256u + (unsigned)p[3]);
+        grid_draw_chs(win, gidx, grid_phase(text, index));
+        win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(index + 4u));
+        return 1;
+    }
+
+    grid_draw_pcs(win, c, grid_phase(text, index));
     return 1;
 }
-

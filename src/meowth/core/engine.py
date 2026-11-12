@@ -1450,6 +1450,15 @@ class TranslationEngine:
                             f"deliverable is {built.name} — close mGBA and rename",
                         )
                 self.callbacks.on_stage_change("tile", "completed")
+
+            # --- 12px 渲染：纯函数 tile 网格，无页表 ---
+            # 2026-11-11 晚：串页方案（页表 / PHYS 池 / 列内容池）整体退役。
+            # 运行时按「tile = TILE_BASE + (row&7)*62 + col*2」的纯函数直接在
+            # 原版字库区内逐像素合成，字库已在 0x09000000 由 font_patch 烙入，
+            # 构建期不再需要任何按 ROM 绝对地址建的表。
+            # 旧 install_page_table() 后置烙入阶段在此删除：它会在 0x09500000
+            # 写 4.4MB 死数据，且与新引擎的 VRAM 归属结论冲突。
+
             return built
         except Exception as e:
             self.callbacks.on_error(e)

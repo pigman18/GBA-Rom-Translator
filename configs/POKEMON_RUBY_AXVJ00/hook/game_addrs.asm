@@ -80,6 +80,10 @@ FontChsSmall                           equ 0x09100000  ; C: ADDR_FONT_CHS_SMALL
 ; 中汉库（9x11 墨迹，2026-11-02 新增第 4 槽；源 middle.bdf）
 ; 落点 0x09320000 在原版 8MB ROM 之外，且与 Sym/SlotTable/tiles 均不重叠。
 FontChsMiddle                          equ 0x09320000  ; C: ADDR_FONT_CHS_MIDDLE
+; 0x09500000 段：串页方案（2026-11-11 白天）曾在此后置烙入 4.4MB 页表，
+; 该方案因「页池盖住原版场景图块」已整体退役，新引擎是纯函数 tile 网格，
+; 构建期零页表。此常量只作历史地址登记，main.asm 不 include、C 不引用。
+PageTableVMA                           equ 0x09500000
 ; FontFunc[1] 二级分发表 / font1/4 配对表（文档参考）
 FontSubTable                           equ 0x081BB3BC  ; C: ADDR_FONT_SUBTABLE
 FontType1Map                           equ 0x081B34A8  ; C: ADDR_FONT_TYPE1_MAP

@@ -16,7 +16,7 @@ set OUT=out
 set BUILD=%OUT%\obj
 set LINK_DIR=link
 
-set CFLAGS=-mthumb -mcpu=arm7tdmi -ffreestanding -O2 -fno-builtin -Wall -Iinclude -I%SRC_ROOT% -nostdlib -c
+set CFLAGS=-mthumb -mcpu=arm7tdmi -ffreestanding -O2 -fno-builtin -Wall -Iinclude -I%SRC_ROOT% -nostdlib -c %EXTRA_CFLAGS%
 set ASFLAGS=-mthumb -mcpu=arm7tdmi -ffreestanding -x assembler-with-cpp -c
 set LDFLAGS=-mthumb -mcpu=arm7tdmi -nostdlib -T %LINK_DIR%/game.ld -Wl,-Map=%OUT%/game.map
 
@@ -31,21 +31,11 @@ echo === Compiling PrintNextChar_hook.c (JP takeover engine) ===
 if errorlevel 1 exit /b 1
 
 
-echo === Compiling text_translter.c (F9 protocol layer) ===
-%CC% %CFLAGS% %SRC_ROOT%\text\text_translter.c -o %BUILD%\text_translter.o
-if errorlevel 1 exit /b 1
-
-echo === Compiling text_scene.c (scene layout gates) ===
-%CC% %CFLAGS% %SRC_ROOT%\text\text_scene.c -o %BUILD%\text_scene.o
-if errorlevel 1 exit /b 1
-
-echo === Compiling text_render.c (shared render primitives) ===
-%CC% %CFLAGS% %SRC_ROOT%\text\text_render.c -o %BUILD%\text_render.o
-if errorlevel 1 exit /b 1
-
-
-rem reference/ 已于 2026-11-02 移除：其 5 个 ref* 符号（ref_glyph_copy /
-rem ref_fill_rect4bit / refpr_*）无任何调用者，纯死代码，占用约 8KB。
+rem 2026-11-11 晚：串页方案（页表 / PHYS 池 / 列内容池）整体退役。
+rem 运行时逻辑全部收进 PrintNextChar_hook.c + include/text_grid.h：
+rem tile 号是屏幕行列的纯函数，字库 0x09000000 由 font_patch 装入，
+rem 构建期不再生成任何页表，engine.run_full() 不再后置烙入 0x09500000。
+rem reference/ 已于 2026-11-02 移除：5 个 ref* 符号无调用者（原占约 8KB）。
 
 echo === Assembling map_name_popup\entry.s ===
 %CC% %ASFLAGS% %MAP_POPUP%\entry.s -o %BUILD%\MapNamePopup_entry.o
@@ -83,9 +73,6 @@ echo === Linking game.elf ===
 %CC% %LDFLAGS% -o %OUT%/game.elf ^
   %BUILD%/text_entry.o ^
   %BUILD%/PrintNextChar_hook.o ^
-  %BUILD%/text_translter.o ^
-  %BUILD%/text_scene.o ^
-  %BUILD%/text_render.o ^
   %BUILD%/MapNamePopup_entry.o ^
   %BUILD%/MapNamePopup_hook.o ^
   %BUILD%/UpdateNickInHealthbox_entry.o ^

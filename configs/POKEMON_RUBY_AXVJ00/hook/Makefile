@@ -28,9 +28,6 @@ LDFLAGS := -mthumb -mcpu=arm7tdmi -nostdlib -T link/game.ld -Wl,-Map=$(OUT)/game
 OBJS := \
 	$(BUILD)/text_entry.o \
 	$(BUILD)/PrintNextChar_hook.o \
-	$(BUILD)/text_translter.o \
-	$(BUILD)/text_scene.o \
-	$(BUILD)/text_render.o \
 	$(BUILD)/MapNamePopup_entry.o \
 	$(BUILD)/MapNamePopup_hook.o \
 	$(BUILD)/UpdateNickInHealthbox_entry.o \
@@ -56,18 +53,15 @@ $(BUILD)/text_entry.o: $(TEXT)/entry.s | $(BUILD)
 $(BUILD)/PrintNextChar_hook.o: $(TEXT)/PrintNextChar_hook.c | $(BUILD)
 	$(CC) $(CFLAGS) $< -o $@
 
-$(BUILD)/text_translter.o: $(TEXT)/text_translter.c | $(BUILD)
-	$(CC) $(CFLAGS) $< -o $@
+# --- 页表（构建期数据，不进 gcc）---
+# src/meowth/text_page.py → gen/page_data.asm + page_data.bin，由 armips
+# 按固定 VMA .incbin 装入 ROM 扩展区；link/game.ld 的 ROM LENGTH 仅 0x10000，
+# 不参与链接，C 侧用 text_page.h 的 PAGE_TABLE_VMA 常量只读访问（设计 §5.1 B）。
 
-$(BUILD)/text_scene.o: $(TEXT)/text_scene.c | $(BUILD)
-	$(CC) $(CFLAGS) $< -o $@
-
-$(BUILD)/text_render.o: $(TEXT)/text_render.c | $(BUILD)
-	$(CC) $(CFLAGS) $< -o $@
-
-# --- 官方移植件（reference/）---
-# 2026-11-02 移除：其 5 个 ref* 符号无任何调用者（纯死代码，原占约 8KB）。
-# 相关绘制原语已内联在 src/text/text_render.c。
+# --- 旧模块（已删除，勿复建）---
+# reference/ 5 个 ref* 符号 2026-11-02 移除；
+# text_render.c / text_scene.c / text_translter.c 2026-11-11 随串页重构删除，
+# 运行时逻辑全部收进 PrintNextChar_hook.c（F7 00 统一协议、零运行时状态）。
 
 # --- 域钩（map_name_popup / battle / pokedex / option）---
 $(BUILD)/MapNamePopup_entry.o: $(MAP_POPUP)/entry.s | $(BUILD)

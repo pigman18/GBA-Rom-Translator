@@ -117,8 +117,8 @@ tiles:
     palette: '0x0837B5C8'
     format: 4bpp
     compression: lz77_swap
-    sprite_size: 16x8
-    count: 76
+    sprite_size: 16x32
+    count: 19
     raw_size: 4864
     source: gdb_patcher
     md5: 0e28a111c3dcf3265638136ccf827561

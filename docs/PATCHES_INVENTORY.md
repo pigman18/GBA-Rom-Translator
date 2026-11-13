@@ -67,6 +67,7 @@
 | P27 | `0x0809D03C` | stub→`PrintTrainerMemo_Hook` | JMP | 训练家备忘：`性格{名}。LvN时` / `在{地}遇到。`；Lv 的 X 走 `GetStringWidth`（撤旧 MetLevel/MetDesc 清底重拼） | `PrintTrainerMemo` |
 | P28 | — | （已并入 P27） | — | 原遭遇行 Menu_PrintText 重拼废弃 | — |
 | P29 | `0x0809D256` | stub→`NameLayoutTiles_Hook`（`ceil(GetStringWidth/8)+4` 后 PrintGender） | JMP | 物种名旁 ♂/♀：替换 `StringLength` 字节当格；**保留 D274 名表字面量**（patch-table） | summary 名旁性别 |
+| P30 | `0x080EA6C8` | stub→`PokeNav_PrintMenuTip_Hook` | JMP | 领航员 tip：`Menu_BlankWindowRect(3,17,26,18)` 后再 `Menu_PrintText(str,4,17)`；修短盖长残留。right≤26 防空白字模黄条溢出边框 | JP tip 打印（美版 `sub_80EF428` 不同构） |
 
 ### F. 数据清理（置空日文残留）
 

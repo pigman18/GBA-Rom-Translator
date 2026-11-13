@@ -58,7 +58,15 @@ DexTextUnknownPoke                     equ 0x083E9688  ; C: ADDR_DEX_TEXT_UNKNOW
 
 ; --- Menu (shop/bag InitMenu ▶) ---
 Menu_PrintText                         equ 0x0806F16C  ; C: ADDR_MENU_PRINT_TEXT
+Menu_BlankWindowRect                   equ 0x0806F1D8  ; C: ADDR_MENU_BLANK_WINDOW_RECT
 DrawOptionMenuChoice                   equ 0x080889F0  ; 设置窗口选项绘制（dst[2]=style）
+
+; --- 领航员主菜单 tip（JP @0x080EA6C8；美版 sub_80EF428 不同：日版无 Align/CLEAR）---
+; 表：kind0=083B8F24 / kind1=083B8F40 / kind2=083B8F4C；Print(str,4,17)
+PokeNav_PrintMenuTip                   equ 0x080EA6C8
+PokeNav_TipTable0                      equ 0x083B8F24  ; C: ADDR_POKENAV_TIP_TABLE0
+PokeNav_TipTable1                      equ 0x083B8F40  ; C: ADDR_POKENAV_TIP_TABLE1
+PokeNav_TipTable2                      equ 0x083B8F4C  ; C: ADDR_POKENAV_TIP_TABLE2
 
 ; --- 图鉴列表页名字列（唯一来源，C 里 DEX_NAME_COLUMN 同步此值）---
 ; 原版 0x17。汉化用 0x16：名字左移一格，给四/五字名（森林蜥蜴 / 代欧奇希斯）

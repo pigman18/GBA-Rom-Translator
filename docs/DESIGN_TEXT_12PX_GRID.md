@@ -147,8 +147,9 @@ V3 拿 `win[0x0D]` 铺整列 ⇒ VRAM tile `0x16B..0x171` 主色 nibble 变成 2
 
 **重印清尾（§9.4.7）**：`cbc5ce5` 的 `clear_cols` 在网格引擎下会把开始菜单
 「同 printer 光标重绘」误判成重印，洗掉菜单行并误伤备忘第二行（2026-11-13）。
-现行引擎**暂不**在 `PrintNextChar` 清尾；领航员 tip 残留另案（需与光标/多行
-同 printer 场景隔离后再接）。
+现行引擎**暂不**在 `PrintNextChar` 清尾。领航员 tip 走场景钩 **P30**
+（`Menu_BlankWindowRect` 后再印），见
+[`research/POKENAV_TIP_RENDER.md`](research/POKENAV_TIP_RENDER.md)。
 
 ---
 

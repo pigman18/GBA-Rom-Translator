@@ -2,7 +2,6 @@
 MapName_DisplayCellLength equ 0x08800018
 UnusedPrintMonName_Hook equ 0x0880003c
 UnusedPrintDecimalNum_Hook equ 0x08800048
-SummaryScreen_PrintMetLevel_Hook equ 0x08800054
-SummaryScreen_PrintMetDesc_Hook equ 0x0880005c
-SummaryScreen_NameLayoutTiles_Hook equ 0x0880006c
-DrawOptionMenuChoice_Hook equ 0x08800078
+SummaryScreen_PrintTrainerMemo_Hook equ 0x08800054
+SummaryScreen_NameLayoutTiles_Hook equ 0x08800060
+DrawOptionMenuChoice_Hook equ 0x0880006c

@@ -47,10 +47,8 @@ StringLength                           equ 0x0800436C
 UnusedPrintMonName                     equ 0x0808DD60
 ; 图鉴身高/体重数字（UnusedPrintDecimalNum，参数 value/left/top）
 UnusedPrintDecimalNum                  equ 0x0808DDD4
-; 能力页训练家备忘 LvNのとき（AXVJ 实测，非 US 符号偏移）
-SummaryScreen_PrintMetLevel            equ 0x0809CFA0  ; C: ADDR_SUMMARY_PRINT_MET_LEVEL
-; 能力页训练家备忘遭遇行公共 Menu_PrintText（PrintTrainerMemo 内 @ 0x0809D1DE）
-SummaryScreen_PrintMetDesc             equ 0x0809D1DE  ; C: ADDR_SUMMARY_PRINT_MET_DESC
+; 能力页训练家备忘整段（AXVJ PokemonSummaryScreen_PrintTrainerMemo）
+SummaryScreen_PrintTrainerMemo         equ 0x0809D03C  ; C: ADDR_SUMMARY_PRINT_TRAINER_MEMO
 ; 能力页物种名旁性别：原 bl StringLength @ 0x0809D256（D274 名表字面量勿动）
 SummaryScreen_NameLayoutTiles          equ 0x0809D256
 SummaryScreen_NameLayoutTiles_Epilogue equ 0x0809D26E

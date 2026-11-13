@@ -16,6 +16,8 @@
 #define ADDR_CALL_VIA_R2                   0x081B12DCu
 #define ADDR_CHS_PITCH_CTRL                0x0203FF80u
 #define ADDR_CHS_PITCH_SLOTS               0x0203FF90u
+/* 训练家之眼：详情退回后 ListRedraw 需 Blank 右栏（1=待清） */
+#define ADDR_TE_LIST_NEED_BLANK            0x0203FF8Cu
 #define ADDR_COPY_GLYPH_1BPP_4BPP          0x08003830u
 #define ADDR_COPY_GLYPH_2BPP_4BPP          0x080038A0u
 #define ADDR_DEX_TEXT_UNKNOWN_POKE         0x083E9688u

@@ -74,6 +74,7 @@ PokeNav_TrainerEye_DetailEnter         equ 0x080EBF9C  ; 进详情拆说明指�
 PokeNav_TrainerEye_PrintTitle          equ 0x080EF558  ; 红条标题 DMA
 PokeNav_TrainerEye_PrintTitleSprite    equ 0x080EF43C  ; 红条标题精灵（详情）
 PokeNav_TrainerEye_SkipListRow         equ 0x080EC364  ; 进详情时列表行重画（仅一处调用）
+PokeNav_TrainerEye_ListRedraw          equ 0x080EBD2C  ; 列表重画（退详情/滚动）；钩内先 Blank 右栏
 PokeNav_TrainerEye_DetailCase4Left     equ 0x080F2402  ; case4 里 bl 左栏 EC2E0 → nop
 PokeNav_BlkPtr                         equ 0x083B4BAC  ; C: ADDR_POKENAV_BLK_PTR
 StringFill                             equ 0x080046F8  ; C: ADDR_STRING_FILL

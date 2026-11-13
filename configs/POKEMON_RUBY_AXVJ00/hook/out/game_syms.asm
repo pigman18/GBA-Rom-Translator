@@ -12,3 +12,4 @@ PokeNav_TrainerEye_PrintTitle_Hook equ 0x0880009c
 PokeNav_TrainerEye_PrintTitleSprite_Hook equ 0x088000b4
 PokeNav_TrainerEye_TitleBlit_Hook equ 0x088000a8
 PokeNav_TrainerEye_SkipListRow_Hook equ 0x088000f4
+PokeNav_TrainerEye_ListRedraw_Hook equ 0x08800100

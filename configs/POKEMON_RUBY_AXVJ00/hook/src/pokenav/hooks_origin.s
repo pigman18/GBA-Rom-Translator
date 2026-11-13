@@ -43,6 +43,12 @@
     bx r3
 .pool
 
+; --- [P36] 列表重画前 Blank 右栏（退详情后红标签残墨：作/持/自）---
+.org PokeNav_TrainerEye_ListRedraw
+    ldr r3, =(PokeNav_TrainerEye_ListRedraw_Hook | 1)
+    bx r3
+.pool
+
 ; --- [P35b] 进详情 case4 跳过左栏统计重画（bl EC2E0 → 双 nop）---
 .org PokeNav_TrainerEye_DetailCase4Left
     nop

@@ -112,7 +112,11 @@ static unsigned grid_row(TextPrinter *win)
 static uint16_t grid_tile(TextPrinter *win, unsigned col)
 {
     uint16_t tb = win_u16(win, WIN_TILE_BASE);
-    return (uint16_t)((unsigned)tb
+    /* textMode3：GetBlankTileNum = TB+1。若 arena 从 TB 起算，band0/col0
+     * 的 lower 正好是 TB+1 → 写汉字/▶ 时踩碎「空白」模板；开始菜单
+     * RedrawMenuCursor 再 Blank 把格指回 TB+1，屏上冒灰影残墨
+     *（bot：START 开→关→开→上下，残墨色 (74,74,74)=阴影灰）。 */
+    return (uint16_t)((unsigned)tb + 2u
             + (grid_row(win) & (GRID_SEG_COUNT - 1u)) * GRID_SEG_TILES
             + 2u * col);
 }
@@ -261,7 +265,7 @@ static int grid_tile_is_other_col_natural(TextPrinter *win, unsigned n,
                                           unsigned except_col)
 {
     uint16_t tb = win_u16(win, WIN_TILE_BASE);
-    unsigned base = (unsigned)tb
+    unsigned base = (unsigned)tb + 2u
         + (grid_row(win) & (GRID_SEG_COUNT - 1u)) * GRID_SEG_TILES;
     unsigned off, nat_col;
 
@@ -293,7 +297,8 @@ static uint16_t grid_tile_resolved(TextPrinter *win, unsigned col, unsigned ncol
     if (!grid_tile_taken(win, row, col, t0, used) &&
         grid_tile_vram_blank(grid_tile_base(win), t0))
         return t0;
-    for (n = win_u16(win, WIN_TILE_BASE); n < GRID_TILE_LIMIT; n += 2u) {
+    for (n = (unsigned)win_u16(win, WIN_TILE_BASE) + 2u; n < GRID_TILE_LIMIT;
+         n += 2u) {
         if (!grid_tile_free(used, n))
             continue;
         if (grid_tile_is_other_col_natural(win, n, col))

@@ -681,6 +681,10 @@ gdb:
   default: false
   cfg:
     winreg: r0
+- name: Menu_BlankWindowRect
+  address: '0x0806F1D8'
+  description: 菜单 Blank（r0=left,r1=top,r2=right,r3=bottom）；开始菜单光标擦除
+  default: false
 - name: UpdateTilemap
   address: '0x080036DC'
   description: BG 表项写入总入口（r0=win, r1=upperTile, r2=lowerTile）；定位血条区乱码：谁在哪个格写了什么 tile

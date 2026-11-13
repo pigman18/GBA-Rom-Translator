@@ -61,6 +61,9 @@ void PokeNav_TrainerEye_DetailEnter_hook_C(void)
     init(LEFT_WIN);
     blank(LEFT_L, LEFT_T, LEFT_R, LEFT_B);
 
+    /* 退回列表时 ListRedraw 见此标志再 Blank 右栏（清详情红标签残墨） */
+    *(uint8_t *)(uintptr_t)ADDR_TE_LIST_NEED_BLANK = 1u;
+
     *(uint16_t *)(void *)(blk + OFF_CNT_A) = 0u;
     *(uint16_t *)(void *)(blk + OFF_CNT_B) = 0u;
 

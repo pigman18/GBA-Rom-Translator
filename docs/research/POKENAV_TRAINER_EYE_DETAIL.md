@@ -71,7 +71,9 @@ ROM：`POKEMON_RUBY_AXVJ00_translated_new.gba`
 
 - [x] D5 正文：write_plan FF 链扩展 → 作战/持有/自我介绍中文可读。  
 - [x] D1 右栏主体：P33 Blank 窗 `0x2F` + P35 跳过列表重画 → 列表名残影基本消失。  
-- [x] D2 红条标题：TitleBlit 预填 `0x11` + Normal 两列（Middle/12px 相位曾致列表红残墨，已回退 Normal）。标签「持有的宝可梦」保留 `\CC0505`。  
+- [x] D2 红条标题：TitleBlit 预填 `0x11` + Normal 两列。标签「持有的宝可梦」保留 `\CC0505`。  
+- [x] 退回列表红残墨：详情红标签「作/持/自」（`\CC0505`）留在右栏 VRAM；**与 TitleBlit / 开始菜单无关**。P36：`DetailEnter` 置 `ADDR_TE_LIST_NEED_BLANK`，`ListRedraw` 见标志再 Blank `(13,2)–(28,15)`。bot `20261114T035049`（`_translated_new.gba`）帧 153 后 list-body 饱和红 O=0/T=0；旧 `translated.gba` 未挂 P36 仍见残墨。
+- [x] 开始菜单「残留」复查：同框 origin vs translated 内侧饱和红 **only_T=0**（边框红两侧相同）。用户截图像素亦无独立于边框的额外红墨；若仍见碎点，另开黑/灰字屑票，勿与 TE 详情残墨并案。  
 - [x] D3 左栏统计：列表印 `(1,9)/(5,11)/(1,13)/(5,15)`；bot `131` 残墨白像素在 tile13–15（「对战次数/130」）。P33 Blank 下沿 `12→16`，地点 `(1,6)` 墨在 tile5–6 不动。  
 - [x] 场景窄钩；未动全局 bg / StringCopyPad / 短语。  
 - [x] 行距 16→12（GDB `20261114T022710`）：`0x080EC060` 实测 `line=0..6 → y16=2,4,6,…`（16px）；`y12` 奇数行 `phase=4`。Normal 墨高 12 / Middle 11 / Small 8。Menu_PrintText 只吃 tile Y，真 12px 必相位叠墨（已试失败）。Middle 仍要 phase，解不了。**保持 16px + Normal**。真 12px 要 Mode2/像素行打印机。

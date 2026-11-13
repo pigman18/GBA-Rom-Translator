@@ -7,7 +7,7 @@
  *
  *   row    = (CURSOR_Y + CURSOR_TILE_Y) >> 1      ; 16px 字占上下 2 tilemap 行
  *   col    = CURSOR_X + CURSOR_TILE_X             ; 8px 列（与 GetCursorTilemapPointer 同口径）
- *   tile   = TILE_BASE + (row & 7) * 62 + col*2   ; upper, lower = upper+1
+ *   tile   = TILE_BASE + 2 + (row & 7) * 62 + col*2  ; 跳过 TB/TB+1 空白对
  *
  * 依据：
  *  - docs/POKEMON_RUBY_AXVJ00.md §9.3.3：tm1 的 [TB, TB+512) 是预载的

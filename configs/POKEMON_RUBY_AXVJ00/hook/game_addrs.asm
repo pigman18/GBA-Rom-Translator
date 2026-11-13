@@ -53,9 +53,9 @@ Menu_PrintText                         equ 0x0806F16C  ; C: ADDR_MENU_PRINT_TEXT
 DrawOptionMenuChoice                   equ 0x080889F0  ; 设置窗口选项绘制（dst[2]=style）
 
 ; --- 图鉴列表页名字列（唯一来源，C 里 DEX_NAME_COLUMN 同步此值）---
-; 原版 0x17（列23）。0x16 会与编号末位同列像素重叠（bot 实测 No00+3 压在「妙」上）。
-; 五字名宽度靠气泡右缘与 12px 步进消化，不靠左移名列。抢 tile → grid_tile_resolved。
-DEX_NAME_COLUMN                        equ 0x17
+; 原版 0x17。汉化用 0x16：名字左移一格，给四/五字名（森林蜥蜴 / 代欧奇希斯）
+; 多 8px，避免顶破列表右缘。编号末位与名首相邻；抢 tile 由 grid_tile_resolved 防。
+DEX_NAME_COLUMN                        equ 0x16
 
 ; --- Width / map-name popup ---
 ; 宽度函数定论见上方 String util 节注释（0x4B1C/0x4CC0 亦为 proximity 错猜）。

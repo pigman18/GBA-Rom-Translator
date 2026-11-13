@@ -128,6 +128,13 @@ class Charmap:
         self.char_to_bytes[" "] = bytes([0x00])
         self.bytes_to_char[0x00] = " "
         self.char_to_bytes["　"] = self._ideospace_bytes
+        # Slash: prefer Normal F7 (charmap 1E69/1E6A), never Font3 0xBA.
+        # 0xBA next to CJK looks like leftover JP kana (能力页「类型/」实证).
+        slash = self.char_to_bytes.get("/")
+        if slash is not None and len(slash) == 2:
+            self.char_to_bytes["／"] = slash
+        elif self.char_to_bytes.get("／") is not None and len(self.char_to_bytes["／"]) == 2:
+            self.char_to_bytes["/"] = self.char_to_bytes["／"]
 
     def _parse(self, path: Path):
         for line in path.read_text(encoding="utf-8").splitlines():

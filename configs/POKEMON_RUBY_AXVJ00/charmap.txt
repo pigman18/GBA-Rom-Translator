@@ -6965,6 +6965,9 @@ FF={结束}
 1E66=」
 1E67=『
 1E68=』
+# Slash via Normal F7 (not Font3 BA; BA after CJK looks like leftover JP)
+1E69=/
+1E6A=／
 1E6B=ー
 1E6C=（
 1E6D=）

@@ -53,12 +53,8 @@ Menu_PrintText                         equ 0x0806F16C  ; C: ADDR_MENU_PRINT_TEXT
 DrawOptionMenuChoice                   equ 0x080889F0  ; 设置窗口选项绘制（dst[2]=style）
 
 ; --- 图鉴列表页名字列（唯一来源，C 里 DEX_NAME_COLUMN 同步此值）---
-; ★ 2026-11-11 改回 0x17（原版值）。曾一度写成 0x16，与编号列冲突：
-;   编号串起点 19 + 3 字符 = 22，名字也从 22 起 → 两者挤在一起、中间没有
-;   那一格空隙，而破折号填充按「画到右边界」补，起点左移一格就多画一个。
-;   实测依据（bot + GDB，见 docs/AXVJ_UI_ISSUES_20261111.md §9.2）：
-;   origin 的 5 个 `CreateMonName(x=23)` 调用点全传 0x17，名字墨迹起于 px184
-;   （列23），我们传 0x16 起于 px176（列22）。
+; 原版 0x17（列23）。0x16 会与编号末位同列像素重叠（bot 实测 No00+3 压在「妙」上）。
+; 五字名宽度靠气泡右缘与 12px 步进消化，不靠左移名列。抢 tile → grid_tile_resolved。
 DEX_NAME_COLUMN                        equ 0x17
 
 ; --- Width / map-name popup ---

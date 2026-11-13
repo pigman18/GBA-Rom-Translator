@@ -250,6 +250,29 @@ static int grid_cell_points_to(TextPrinter *win, unsigned row, unsigned col, uns
     return 1;
 }
 
+/* n 是否为本行段里「别的列」的纯函数本征 tile。
+ * 图鉴列表先画编号（8px，走规避）再画名字（12px，ncols=2 不规避）：
+ * 若编号规避抢了名字列的本征 tile，tilemap 仍指过去 → 首屏「No00妙」
+ * （3 的位置显示成名字首字）；滚动清行后重画偶发躲开。禁止同段抢列。 */
+static int grid_tile_is_other_col_natural(TextPrinter *win, unsigned n,
+                                          unsigned except_col)
+{
+    uint16_t tb = win_u16(win, WIN_TILE_BASE);
+    unsigned base = (unsigned)tb
+        + (grid_row(win) & (GRID_SEG_COUNT - 1u)) * GRID_SEG_TILES;
+    unsigned off, nat_col;
+
+    if (n < base || (unsigned)n + 2u > base + GRID_SEG_TILES)
+        return 0;
+    off = (unsigned)n - base;
+    if ((off & 1u) != 0u)
+        return 0;
+    nat_col = off / 2u;
+    if (nat_col >= GRID_COLS_PER_SEG)
+        return 0;
+    return nat_col != except_col;
+}
+
 /* 解析本字真正要写的 tile。ncols>1（12px 跨列、phase=4 共享列）不迁移：
    共享列左 4px 属于前一个字，换 tile 会把它丢掉。Small 字库步进 8px，
    phase 恒为 0，所以队伍/战斗等 Small 窗口全部走得到规避。 */
@@ -270,6 +293,8 @@ static uint16_t grid_tile_resolved(TextPrinter *win, unsigned col, unsigned ncol
     for (n = win_u16(win, WIN_TILE_BASE); n < GRID_TILE_LIMIT; n += 2u) {
         if (!grid_tile_free(used, n))
             continue;
+        if (grid_tile_is_other_col_natural(win, n, col))
+            continue;                    /* 勿抢同段其它列本征 tile */
         if (grid_cell_points_to(win, row, col, n))
             return (uint16_t)n;
         if (grid_tile_vram_blank(grid_tile_base(win), n))

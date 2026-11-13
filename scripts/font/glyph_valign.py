@@ -12,6 +12,7 @@ Valign = Literal["top", "center", "bottom", "baseline"]
 # 默认贴底的句读/点号（可被 --valign / overlays 覆盖）
 DEFAULT_BOTTOM_CHARS: frozenset[str] = frozenset(
     "，。、！？：；.…‥·・,.;:!?"
+    "／/．*%＊％＋＋＝＆＃@＠×÷±"
     "､｡､"
 )
 

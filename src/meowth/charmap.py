@@ -117,7 +117,12 @@ class Charmap:
                         path = candidate
         if path is not None:
             self._parse(Path(path))
+        # punct_map fills gaps only — never clobber Normal F7 (2-byte) entries
+        # such as 1E69=/ or 1E90=・ (Font3 AF/BA after CJK looks like leftover JP).
         for ch, b in self._punct_map.items():
+            existing = self.char_to_bytes.get(ch)
+            if existing is not None and len(existing) == 2:
+                continue
             self.char_to_bytes[ch] = bytes([b])
         # Force Sym-band sentence punct to JP PCS single bytes (never F9 1E5x).
         for ch, b in _FONT3_SYM_PUNCT.items():
@@ -128,13 +133,31 @@ class Charmap:
         self.char_to_bytes[" "] = bytes([0x00])
         self.bytes_to_char[0x00] = " "
         self.char_to_bytes["　"] = self._ideospace_bytes
-        # Slash: prefer Normal F7 (charmap 1E69/1E6A), never Font3 0xBA.
-        # 0xBA next to CJK looks like leftover JP kana (能力页「类型/」实证).
-        slash = self.char_to_bytes.get("/")
-        if slash is not None and len(slash) == 2:
-            self.char_to_bytes["／"] = slash
-        elif self.char_to_bytes.get("／") is not None and len(self.char_to_bytes["／"]) == 2:
-            self.char_to_bytes["/"] = self.char_to_bytes["／"]
+        # Prefer Normal F7 for symbols that otherwise fall on Font3 JP-row
+        # (0xAB–0xBA) or drop entirely — same class as slash「类型/」实证.
+        self._prefer_f7_pair("/", "／")
+        self._prefer_f7_pair("×", "×")  # was Font3 0xB9
+        self._prefer_f7_pair("*", "＊")
+        self._prefer_f7_pair("%", "％")  # halfwidth may stay PCS; fullwidth F7
+        self._prefer_f7_pair("+", "＋")
+        self._prefer_f7_pair("=", "＝")
+        self._prefer_f7_pair("&", "＆")
+        self._prefer_f7_pair("#", "＃")
+        self._prefer_f7_pair("@", "＠")
+        self._prefer_f7_pair(".", "．")  # ． is F7; ASCII . still via normalize→。
+
+    def _prefer_f7_pair(self, ascii_ch: str, full_ch: str) -> None:
+        """If either side has a 2-byte (F7 codepoint) mapping, use it for both when useful."""
+        a = self.char_to_bytes.get(ascii_ch)
+        f = self.char_to_bytes.get(full_ch)
+        if f is not None and len(f) == 2:
+            # Fullwidth F7 wins for fullwidth char; ASCII only if it was single-byte JP-row or missing.
+            if a is None or len(a) != 2:
+                if ascii_ch in ("/", "*", "×"):
+                    self.char_to_bytes[ascii_ch] = f
+            return
+        if a is not None and len(a) == 2 and full_ch != ascii_ch:
+            self.char_to_bytes[full_ch] = a
 
     def _parse(self, path: Path):
         for line in path.read_text(encoding="utf-8").splitlines():
@@ -176,14 +199,17 @@ class Charmap:
     def encode_char(self, ch: str) -> bytes | None:
         """Encode a single character to Font Patch bytes.
 
-        Sym-band punct (，。！？、：) / space / ``punct_map`` are always
-        JP PCS single-bytes — never wrapped as F9 00 lead trail.
+        Sym-band punct (，。！？、：) stay JP PCS single-bytes.
+        Normal F7 (2-byte charmap) wins over ``punct_map`` Font3 — e.g. ・/／.
         """
         if ch == " ":
             return bytes([0x00])
+        existing = self.char_to_bytes.get(ch)
+        if existing is not None and len(existing) == 2:
+            return existing
         if ch in self._punct_map:
             return bytes([self._punct_map[ch]])
-        return self.char_to_bytes.get(ch)
+        return existing
 
     def encode_string(self, text: str) -> bytearray:
         """Encode a string to Font Patch bytes. Raises ValueError for unsupported chars."""
@@ -236,7 +262,7 @@ class Charmap:
     _CHAR_REPLACEMENTS = {
         # Keep 、 as Sym 0x3A — do not collapse to ASCII ',' (0xB8).
         "\uFF5E": "ー",   # ～ → chōon (PCS AE), not ASCII ~
-        "\u00B7": "・",   # middle dot → Font3 AF / punct_map
+        "\u00B7": "・",   # middle dot → Normal F7 1E90 (・)
         "$": "",          # dollar sign (not in charmap, strip)
     }
 

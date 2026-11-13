@@ -67,6 +67,11 @@ PokeNav_PrintMenuTip                   equ 0x080EA6C8
 PokeNav_TipTable0                      equ 0x083B8F24  ; C: ADDR_POKENAV_TIP_TABLE0
 PokeNav_TipTable1                      equ 0x083B8F40  ; C: ADDR_POKENAV_TIP_TABLE1
 PokeNav_TipTable2                      equ 0x083B8F4C  ; C: ADDR_POKENAV_TIP_TABLE2
+; 训练家之眼列表行拼接（space + class pad10 + name）；空槽填 0x11 空格
+; 左侧 bg：grid_bg 认 tpl@0x081BB7B4（id 0x25），无订址桩、无 .bss 锁
+PokeNav_TrainerEye_FormatListLine      equ 0x080F228C
+PokeNav_BlkPtr                         equ 0x083B4BAC  ; C: ADDR_POKENAV_BLK_PTR
+StringFill                             equ 0x080046F8  ; C: ADDR_STRING_FILL
 
 ; --- 图鉴列表页名字列（唯一来源，C 里 DEX_NAME_COLUMN 同步此值）---
 ; 原版 0x17。汉化用 0x16：名字左移一格，给四/五字名（森林蜥蜴 / 代欧奇希斯）

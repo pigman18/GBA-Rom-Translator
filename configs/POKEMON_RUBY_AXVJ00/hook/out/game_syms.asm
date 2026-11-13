@@ -6,3 +6,4 @@ SummaryScreen_PrintTrainerMemo_Hook equ 0x08800054
 SummaryScreen_NameLayoutTiles_Hook equ 0x08800060
 DrawOptionMenuChoice_Hook equ 0x0880006c
 PokeNav_PrintMenuTip_Hook equ 0x08800078
+PokeNav_TrainerEye_FormatListLine_Hook equ 0x08800084

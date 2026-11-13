@@ -40,10 +40,12 @@
 #define ADDR_OPT_PALETTE_OVERRIDE          0x0203FFD0u
 #define ADDR_PLAY_BGM                      0x080724ACu
 #define ADDR_PLAY_SE                       0x080724CCu
+#define ADDR_POKENAV_BLK_PTR               0x083B4BACu
 #define ADDR_POKENAV_TIP_TABLE0            0x083B8F24u
 #define ADDR_POKENAV_TIP_TABLE1            0x083B8F40u
 #define ADDR_POKENAV_TIP_TABLE2            0x083B8F4Cu
 #define ADDR_PRINT_GLYPH_TM1_ORIGIN        0x0800360Cu
+#define ADDR_STRING_FILL                   0x080046F8u
 #define ADDR_SUMMARY_PRINT_TRAINER_MEMO    0x0809D03Cu
 #define ADDR_TEXT_CLEAR_WINDOW             0x08003BA8u
 #define ADDR_UPDATE_TILEMAP                0x080036DCu

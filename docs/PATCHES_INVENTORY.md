@@ -68,6 +68,8 @@
 | P28 | — | （已并入 P27） | — | 原遭遇行 Menu_PrintText 重拼废弃 | — |
 | P29 | `0x0809D256` | stub→`NameLayoutTiles_Hook`（`ceil(GetStringWidth/8)+4` 后 PrintGender） | JMP | 物种名旁 ♂/♀：替换 `StringLength` 字节当格；**保留 D274 名表字面量**（patch-table） | summary 名旁性别 |
 | P30 | `0x080EA6C8` | stub→`PokeNav_PrintMenuTip_Hook` | JMP | 领航员 tip：`Menu_BlankWindowRect(3,17,26,18)` 后再 `Menu_PrintText(str,4,17)`；修短盖长残留。right≤26 防空白字模黄条溢出边框 | JP tip 打印（美版 `sub_80EF428` 不同构） |
+| P31 | —（原 `0x080EBA40` 订址已撤） | `grid_bg`：`tpl==0x081BB7B4` → bg=0 | LOGIC | 训练家之眼左侧透明底。**勿用 .bss 锁**（game.bin 无 RAM，bss 落 ROM 读 0xFF→全局透底） | tpl id `0x25` |
+| P32 | `0x080F228C` | stub→`PokeNav_TrainerEye_FormatListLine_Hook` | JMP | 列表行：完整拷职业后按 `GetStringWidth` 垫到 88px 再拼名；禁改全局 `StringCopyPad` | JP 列表拼接 |
 
 ### F. 数据清理（置空日文残留）
 

@@ -103,6 +103,14 @@ echo === Compiling pokenav\PokeNav_PrintMenuTip_hook.c ===
 %CC% %CFLAGS% %POKENAV%\PokeNav_PrintMenuTip_hook.c -o %BUILD%\PokeNav_PrintMenuTip_hook.o
 if errorlevel 1 exit /b 1
 
+echo === Assembling pokenav\PokeNav_TrainerEye_FormatListLine_entry.s ===
+%CC% %ASFLAGS% %POKENAV%\PokeNav_TrainerEye_FormatListLine_entry.s -o %BUILD%\PokeNav_TrainerEye_FormatListLine_entry.o
+if errorlevel 1 exit /b 1
+
+echo === Compiling pokenav\PokeNav_TrainerEye_FormatListLine_hook.c ===
+%CC% %CFLAGS% -O1 %POKENAV%\PokeNav_TrainerEye_FormatListLine_hook.c -o %BUILD%\PokeNav_TrainerEye_FormatListLine_hook.o
+if errorlevel 1 exit /b 1
+
 echo === Linking game.elf ===
 @rem text_entry.o must be FIRST: main.asm JP2CHS_Entry = GameBinAddresses = bin start.
 %CC% %LDFLAGS% -o %OUT%/game.elf ^
@@ -123,7 +131,9 @@ echo === Linking game.elf ===
   %BUILD%/DrawOptionMenuChoice_entry.o ^
   %BUILD%/DrawOptionMenuChoice_hook.o ^
   %BUILD%/PokeNav_PrintMenuTip_entry.o ^
-  %BUILD%/PokeNav_PrintMenuTip_hook.o
+  %BUILD%/PokeNav_PrintMenuTip_hook.o ^
+  %BUILD%/PokeNav_TrainerEye_FormatListLine_entry.o ^
+  %BUILD%/PokeNav_TrainerEye_FormatListLine_hook.o
 if errorlevel 1 exit /b 1
 
 echo === Generating game.bin ===
@@ -135,7 +145,7 @@ rem Stream emit: no copy-vars, no silent fallback. Missing symbol -> no line ->
 rem armips errors at use site (loud failure beats jumping to 0x08800000).
 > %OUT%\game_syms.asm (
     echo ; Auto-generated from out/game.map - do not edit
-    for %%S in (MapName_DisplayCellLength UnusedPrintMonName_Hook UnusedPrintDecimalNum_Hook SummaryScreen_PrintTrainerMemo_Hook SummaryScreen_NameLayoutTiles_Hook DrawOptionMenuChoice_Hook PokeNav_PrintMenuTip_Hook) do (
+    for %%S in (MapName_DisplayCellLength UnusedPrintMonName_Hook UnusedPrintDecimalNum_Hook SummaryScreen_PrintTrainerMemo_Hook SummaryScreen_NameLayoutTiles_Hook DrawOptionMenuChoice_Hook PokeNav_PrintMenuTip_Hook PokeNav_TrainerEye_FormatListLine_Hook) do (
         for /f "tokens=1" %%a in ('findstr /R "%%S$" %OUT%\game.map') do @echo %%S equ %%a
     )
 )

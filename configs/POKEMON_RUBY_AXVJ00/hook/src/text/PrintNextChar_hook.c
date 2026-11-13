@@ -637,10 +637,20 @@ static uint8_t grid_shadow(TextPrinter *win)
  * 预渲染字模整体不透明。写 0 会让文字 tile 透出下层 BG：
  *   V2 实证：对话「欢迎」变黑底（palette0=#000000）；
  *   V1 实证：字缝里露出地图绿/蓝条纹与残留白块。
- * win[0x0D] = backgroundColor（FC 02 可改），InitTextPrinter 从 tpl[6] 拷入。 */
+ * win[0x0D] = backgroundColor（FC 02 可改），InitTextPrinter 从 tpl[6] 拷入。
+ *
+ * 训练家之眼左侧 tpl@0x081BB7B4（id 0x25）的 tpl[6]=0xF，映成浅粉≠面板粉；
+ * 仅该模板返回透明 0。禁止用 .bss 锁：game.ld 无 RAM，bss 落 ROM 读到 0xFF
+ * 会变成「全局永远 bg=0」（标题/开始菜单透底回归）。 */
+#define TPL_POKENAV_TRAINER_EYE_LEFT  0x081BB7B4u
+
 static uint8_t grid_bg(TextPrinter *win)
 {
     const uint8_t *tpl = win_template(win);
+
+    if ((uintptr_t)tpl == TPL_POKENAV_TRAINER_EYE_LEFT)
+        return 0u;
+
     /* 预载字模的背景是**窗口模板的固定色**，不是当前绘制色。
      * GRID_DIAG 六场景实测：对话/选项/导航/开始菜单 tpl[6]=0xF(白)，
      * 图鉴/背包 tpl[6]=0(透明，露出下层气泡)，且除 FC 临时改色外

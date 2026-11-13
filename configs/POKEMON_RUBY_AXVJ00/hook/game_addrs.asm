@@ -70,6 +70,11 @@ PokeNav_TipTable2                      equ 0x083B8F4C  ; C: ADDR_POKENAV_TIP_TAB
 ; 训练家之眼列表行拼接（space + class pad10 + name）；空槽填 0x11 空格
 ; 左侧 bg：grid_bg 认 tpl@0x081BB7B4（id 0x25），无订址桩、无 .bss 锁
 PokeNav_TrainerEye_FormatListLine      equ 0x080F228C
+PokeNav_TrainerEye_DetailEnter         equ 0x080EBF9C  ; 进详情拆说明指针
+PokeNav_TrainerEye_PrintTitle          equ 0x080EF558  ; 红条标题 DMA
+PokeNav_TrainerEye_PrintTitleSprite    equ 0x080EF43C  ; 红条标题精灵（详情）
+PokeNav_TrainerEye_SkipListRow         equ 0x080EC364  ; 进详情时列表行重画（仅一处调用）
+PokeNav_TrainerEye_DetailCase4Left     equ 0x080F2402  ; case4 里 bl 左栏 EC2E0 → nop
 PokeNav_BlkPtr                         equ 0x083B4BAC  ; C: ADDR_POKENAV_BLK_PTR
 StringFill                             equ 0x080046F8  ; C: ADDR_STRING_FILL
 

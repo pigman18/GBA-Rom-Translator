@@ -777,6 +777,67 @@ def _looks_like_ptr_array(rom: bytes, site: int) -> bool:
     return False
 
 
+def _ptr_array_targets(rom: bytes, site: int) -> set[int]:
+    """含 ``site`` 的连续 u32 指针数组所指向的全部文件偏移。"""
+    s = site
+    while s >= 4:
+        w = struct.unpack_from("<I", rom, s - 4)[0]
+        if not (0x08000000 <= w < 0x0A000000):
+            break
+        s -= 4
+    out: set[int] = set()
+    p = s
+    while p + 4 <= len(rom):
+        w = struct.unpack_from("<I", rom, p)[0]
+        if not (0x08000000 <= w < 0x0A000000):
+            break
+        out.add(w - GBA_BASE)
+        p += 4
+    return out
+
+
+def _expand_ptr_array_ff_chain(
+    rom: bytes,
+    head_addr: int,
+    head_body: bytes,
+    tr_by_addr: dict[int, str],
+    stop_addrs: set[int],
+    encoder: Encoder | None,
+    game_id: str,
+    module: str,
+) -> bytes:
+    """指针数组头串：顺 FF 拼上无独立指针的后继译文（训练家之眼说明块）。
+
+    读法是 ``table[i]`` 后顺 FF 拆 3~4 段；若只 relocate 头串，持有/自我介绍
+    会变成空 ``FF``（entry0 实证）。停在下一表项目标地址。
+    """
+    blob = bytearray(head_body)
+    if not blob.endswith(b"\xFF"):
+        blob += b"\xFF"
+    end = rom.find(0xFF, head_addr, min(head_addr + 512, len(rom)))
+    if end < 0:
+        return bytes(blob)
+    p = end + 1
+    while p < len(rom) and (p - head_addr) <= 0x200:
+        if p in stop_addrs and p != head_addr:
+            break
+        end = rom.find(0xFF, p, min(p + 512, len(rom)))
+        if end < 0:
+            break
+        tr = tr_by_addr.get(p)
+        if tr:
+            enc = _encode(tr, encoder, game_id=game_id, module=module)
+            if not enc:
+                enc = bytes(rom[p : end + 1])
+            elif not enc.endswith(b"\xFF"):
+                enc += b"\xFF"
+            blob += enc
+        else:
+            blob += rom[p : end + 1]
+        p = end + 1
+    return bytes(blob)
+
+
 def _struct_table_base_bus(modules: dict[str, Any]) -> set[int]:
     """Struct 表基址（总线）。这些字面量是整表入口，禁止当单条名字 pointer 改写。"""
     out: set[int] = set()
@@ -1451,6 +1512,33 @@ def build_write_plan(
             struct_bases=protected_bases,
         )
         if ptrs:
+            # 指针数组头 + 顺 FF 读后继（训练家之眼说明）：只搬头串会丢持有/介绍。
+            # pointer_sources 可能是文件偏移（0x3B8E10）或总线（0x083B8E10）。
+            if addr is not None:
+                site_offs: list[int] = []
+                for ps in ptrs:
+                    try:
+                        v = int(str(ps), 0)
+                    except (TypeError, ValueError):
+                        continue
+                    if 0x08000000 <= v < 0x0A000000:
+                        site_offs.append(v - GBA_BASE)
+                    elif 0 <= v < len(rom):
+                        site_offs.append(v)
+                if any(_looks_like_ptr_array(rom, s) for s in site_offs):
+                    stop: set[int] = set()
+                    for s in site_offs:
+                        stop |= _ptr_array_targets(rom, s)
+                    body = _expand_ptr_array_ff_chain(
+                        rom,
+                        addr,
+                        body,
+                        tr_by_addr,
+                        stop,
+                        encoder,
+                        game_id,
+                        module,
+                    )
             rows.append({
                 "id": eid,
                 "module": module,

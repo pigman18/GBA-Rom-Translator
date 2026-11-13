@@ -78,7 +78,7 @@ schema 2 的旧批次仍是旧布局，靠 `manifest.schema` 区分。
 | `pokemon_menu` | Route118 | 队伍列表 + 查看能力 4 页 | **B08（六行同名）**、摘要页长句 | settle |
 | `bag` | Route118 | 背包 → 道具子菜单 → **「使用」说明框（2 页）** → 四口袋 → 滚到底 | **BUG 1 撞 UI**（说明框横穿列表）、**BUG 2 残留**（翻页后第 1 页字模不清） | settle |
 | `dialogue` | MauvilleCity_Mart | 柜台对话 → 商店主菜单 → 购买列表 → 告别 → 重开 | **BUG 2 残留**（同窗反复重写）、多窗口同屏 | `talk`（硬） |
-| `navigator` | Route118 | ポケナビ主菜单 5 项 + トレーナーアイ 列表 | **BUG 3 左侧背景被涂**、说明句整句重画 | settle |
+| `navigator` | Route118 | ポケナビ主菜单 5 项 + トレーナーアイ 列表 + **第一项详情** | **BUG 3 左侧背景被涂**、说明句整句重画、**详情叠字/红条乱码（调研中）** | settle |
 | `dex` | Route118 | 图鉴列表翻页 | 宝可梦名 + 分类名（最长文本之一） | settle |
 | `trainer_card` | Route118 | 训练家卡片正反面 | 标签 + 徽章图形混排（撞图形） | settle |
 | `options` | Route118 | 设置菜单 | 大量文字（相似度天然 ~0.77） | await |

@@ -7,3 +7,8 @@ SummaryScreen_NameLayoutTiles_Hook equ 0x08800060
 DrawOptionMenuChoice_Hook equ 0x0880006c
 PokeNav_PrintMenuTip_Hook equ 0x08800078
 PokeNav_TrainerEye_FormatListLine_Hook equ 0x08800084
+PokeNav_TrainerEye_DetailEnter_Hook equ 0x08800090
+PokeNav_TrainerEye_PrintTitle_Hook equ 0x0880009c
+PokeNav_TrainerEye_PrintTitleSprite_Hook equ 0x088000b4
+PokeNav_TrainerEye_TitleBlit_Hook equ 0x088000a8
+PokeNav_TrainerEye_SkipListRow_Hook equ 0x088000f4

@@ -759,7 +759,9 @@ static void grid_draw_pcs(TextPrinter *win, uint8_t glyph, unsigned phase)
      * 官方 PrintGlyph_TextMode1 @0x0800360C 反汇编：对任何 glyph 都直接
      * 调 FontSubTable[fontNum](win,glyph) 再 cursorTileX+=1，没有任何
      * 低码位特判。这里照官方行为走，让 0x01..0x1F 正常取字模。
-     * 只有 0x00（空格）保持「只推进不重绘」，与官方空白 tile 语义一致。 */
+     * 只有 0x00（空格）保持「只推进不重绘」，与官方空白 tile 语义一致。
+     * 图鉴分类行的问号擦除改在 UnusedPrintMonName 侧处理，禁止在此对
+     * 0x00 整格铺背景（会削 12px 共享列 → 列表 № 与名字之间残笔）。 */
     if (glyph == 0x00u) {
         win_set_u8(win, WIN_CURSOR_TILE_X,
                    (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));

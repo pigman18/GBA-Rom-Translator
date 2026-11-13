@@ -1,26 +1,22 @@
 /* UnusedPrintMonName_hook — 图鉴分类名行。
  *
- * 图鉴分类名和宝可梦名的文本用**直接搬运 + 改指针**，
- * 内存里的字符串本身就是 `F7 00 hi lo` 单字流。本 hook 不展开任何表 ——
- * 把分类名原样打印，宝可梦名由原版流程负责。
+ * origin（GDB 实测）：先打占位「？？？？？ポケモン」，再打右对齐 5 格分类名
+ * （`00 00 00 たね`），后缀留在占位串上。
  *
- * 唯一职责：把「分类名 + 宝可梦」拼成一条并补齐尾部，
- * 因为原版占位串是固定 76px，分类名变长后会露出残字。
+ * 中文占位已折成「？？？？？宝可梦」。对齐美版 ENGLISH：分类名 +「宝可梦」，
+ * 再按占位总宽（76px）右对齐。
+ *
+ * 前导留白：空墨槽 247 = F7 00 01 F7（lead=1→adjust 0；禁止 hi=0，
+ * GRID_LEAD_ADJUST(0) 会下溢）。走 grid_draw_chs→grid_load 铺背景。
+ * 不用 PCS 0x00（只推进不重绘；改全局 0x00 擦除会削列表共享列）。
  */
 #include "game.h"
 
 typedef void (*menu_print_t)(const uint8_t *str, uint32_t left, uint32_t top);
 
 #define OUT_MAX         96u
+#define PLACEHOLDER_PX  76
 
-/* 把一条 PCS 流展开追加到 out：
- *   F7 00 hi lo     → 原样拷贝 4 字节
- *   其它字节         → 原样拷贝（单字节）
- *   遇 0xFF 结束；遇 0x00（日文空格）结束。
- * 返回新的写入位置。
- *
- * ★ 必须按 4 字节分组：把 0xF7 当普通单字节搬走会撕裂整条流 ——
- *   图鉴「分类名 + 宝可梦」行乱码、名字空、上下翻页读到越界地址。 */
 static unsigned append_stream(uint8_t *out, unsigned i,
                               const uint8_t *stream)
 {
@@ -46,7 +42,6 @@ static unsigned append_stream(uint8_t *out, unsigned i,
     return i;
 }
 
-/* 统计一条流里的汉字数（`F7 00 hi lo` 各算 1 字）。 */
 static unsigned count_cjk(const uint8_t *stream)
 {
     const uint8_t *q = stream;
@@ -63,18 +58,6 @@ static unsigned count_cjk(const uint8_t *stream)
     return n;
 }
 
-/* 中文「宝可梦」后缀（跳板注入用）。
- *
- * 原版这条行是「分类名（右对齐 5 格）+ 占位串里的 ポケモン」，后缀来自
- * `gDexText_UnknownPoke`（`0x083E9688` = `？？？？？ポケモン`）。那个地址
- * **没有指针引用**（4 对齐 / 非对齐全扫过），管线改不到它，所以这里直接
- * 注入中文后缀，不再读 ROM 里的日文串。
- *
- * 码位由 charmap 决定：
- *   python -c "from meowth.charmap import Charmap; from pathlib import Path;
- *              print(Charmap(Path('configs/POKEMON_RUBY_AXVJ00/charmap.txt')).encode('宝可梦').hex(' '))"
- *   → f7 00 01 63 f7 00 07 d7 f7 00 09 66 ff
- */
 static const uint8_t k_suffix[] = {
     0xF7, 0x00, 0x01, 0x63,   /* 宝 */
     0xF7, 0x00, 0x07, 0xD7,   /* 可 */
@@ -88,26 +71,27 @@ void UnusedPrintMonName_hook_C(const uint8_t *name,
     uint8_t out[OUT_MAX];
     unsigned i = 0;
     unsigned ncat;
+    int body_px, pad_px, nsp, k;
 
-    /* 分类名直接就是 F7 00 单字流。 */
     ncat = count_cjk(name);
+    body_px = (int)CHS_GLYPH_ADVANCE_PX * (int)(ncat + 3u);
+    pad_px = PLACEHOLDER_PX - body_px;
+    if (pad_px < 0)
+        pad_px = 0;
+    /* 12px 步进：ceil(pad/12)，裸机忌软除法。 */
+    nsp = 0;
+    for (k = 0; k < pad_px; k += 12)
+        nsp++;
+    for (k = 0; k < nsp && i + 4u < OUT_MAX; k++) {
+        /* 空墨槽 247：F7 00 01 F7 */
+        out[i++] = 0xF7;
+        out[i++] = 0x00;
+        out[i++] = 0x01;
+        out[i++] = 0xF7;
+    }
 
     i = append_stream(out, i, name);
     i = append_stream(out, i, k_suffix);
-
-    /* 占位串整体 76px：5问号(40px)+宝可梦(33px@11px步进)。
-     * 本串 宝可梦已紧跟分类名，若分类名不足 4 字则盖不满尾部，会露出
-     * 占位串宝可梦的残字（梦）。按缺口追加 8px 空格补齐覆盖。
-     * 步进随字库走 CHS_GLYPH_ADVANCE_PX，勿写死。 */
-    {
-        int pad = 40 - (int)CHS_GLYPH_ADVANCE_PX * (int)ncat;
-        unsigned nsp, k2;
-        if (pad < 0)
-            pad = 0;
-        nsp = (unsigned)((pad + 7) / 8);
-        for (k2 = 0; k2 < nsp && i + 1u < OUT_MAX; k2++)
-            out[i++] = 0x00;
-    }
     out[i] = 0xFF;
 
     ((menu_print_t)(ADDR_MENU_PRINT_TEXT | 1u))(out, left, top);

@@ -466,6 +466,50 @@ JP_PAL_UNFADED = 0x0202E7E8     # gPlttBufferUnfaded（LoadPalette 目标 1）
 JP_PAL_DECOMP_BUF = 0x0202F0BC  # sPaletteDecompressionBuffer（LoadCompressedPalette 中转）
 
 
+@handler("UnusedPrintMonName")
+def _on_unused_print_mon_name(
+    gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]
+) -> None:
+    """图鉴分类覆盖入口：dump name 串 + left/top，对照 origin 5 格右对齐。"""
+    name = regs.get("r0", 0)
+    left = regs.get("r1", 0) & 0xFF
+    top = regs.get("r2", 0) & 0xFF
+    lr = regs.get("r14", 0) & ~1
+    data = _read_ff_text(gdb, name)
+    if not ctx._hit((name, data[:64], left, top)):
+        return
+    ctx.log(
+        f"\n[UnusedPrintMonName] name=0x{name:08X} left={left} top={top} "
+        f"LR=0x{lr:08X}"
+    )
+    ctx.log(f"  原始字节: {data[:64].hex(' ')}")
+    ctx.log(f"  内容: {ctx.text_of(data)!r}")
+
+
+@handler("Menu_PrintText")
+def _on_menu_print_text(
+    gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]
+) -> None:
+    """MenuPrint：只记 left=13/top=5（分类行）或 LR 来自 UnusedPrintMonName 一带。"""
+    buf = regs.get("r0", 0)
+    left = regs.get("r1", 0) & 0xFF
+    top = regs.get("r2", 0) & 0xFF
+    lr = regs.get("r14", 0) & ~1
+    # 分类行 CATEGORY_LEFT=13,y=5；或从 UnusedPrintMonName / 我们的 hook 返回
+    from_cat = left == 13 and top == 5
+    from_hook = (0x0808DD60 <= lr <= 0x0808DDD2) or (0x08800000 <= lr <= 0x08810000)
+    if not (from_cat or from_hook):
+        return
+    data = _read_ff_text(gdb, buf)
+    if not ctx._hit((buf, data[:64], left, top, lr)):
+        return
+    ctx.log(
+        f"\n[Menu_PrintText] buf=0x{buf:08X} left={left} top={top} LR=0x{lr:08X}"
+    )
+    ctx.log(f"  原始字节: {data[:64].hex(' ')}")
+    ctx.log(f"  内容: {ctx.text_of(data)!r}")
+
+
 @handler("InitTextPrinter")
 def _on_init_text(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
     win = regs.get("r0", 0)

@@ -593,6 +593,17 @@ texts:
       replace: false
       slot: true
 gdb:
+- name: UnusedPrintMonName
+  address: '0x0808DD60'
+  description: 图鉴分类名覆盖（r0=name, r1=left, r2=top）；对照占位串覆盖逻辑
+  cfg:
+    charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
+- name: Menu_PrintText
+  address: '0x0806F16C'
+  description: MenuPrint（r0=str, r1=left, r2=top）；分类行看 LR 过滤
+  default: false
+  cfg:
+    charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
 - name: InitTextPrinter
   address: '0x08002C68'
   description: 文本块开始（r0=win, r1=文本指针, r2=tile_base, r3=cur_x）

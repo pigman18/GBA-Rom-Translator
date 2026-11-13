@@ -6,8 +6,9 @@
  * case4：FormatListLine → PrintTitle → (list/left) → 本函数。
  * 右栏：Blank 窗 0x2F 后重打红条（标题串在 blk+0x878C）。
  *
- * 左栏：地点 (1,6) 与统计 (0,5) 同窗 0x25。整窗 Blank 会抹地点。
- * 只 Blank 立绘区 (1,8)–(11,12) 清统计残墨，保留地点行。
+ * 左栏：地点 (1,6) 与统计同窗 0x25。整窗 Blank 会抹地点。
+ * 列表统计印在 (1,9)/(5,11)/(1,13)/(5,15)；中文 16 高占两格。
+ * Blank (0,7)–(11,16)：保地点 tile6，清到对战次数/数字（bot 残墨在 tile13–15）。
  */
 #include "game.h"
 
@@ -33,11 +34,11 @@ void PokeNav_TrainerEye_PrintTitle_hook_C(uint8_t *str);
 #define RIGHT_T   2u
 #define RIGHT_R   28u
 #define RIGHT_B   15u
-/* 立绘区：地点在 (1,6)；从 y=7 起 Blank，清「注册/对战」残墨 */
+/* 立绘区：地点 (1,6) 墨在 tile5–6；从 y=7 起 Blank 到 tip 上沿 */
 #define LEFT_L    0u
 #define LEFT_T    7u
 #define LEFT_R    11u
-#define LEFT_B    12u
+#define LEFT_B    16u
 
 void PokeNav_TrainerEye_DetailEnter_hook_C(void)
 {

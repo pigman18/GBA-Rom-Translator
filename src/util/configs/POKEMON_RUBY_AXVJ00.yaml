@@ -604,6 +604,10 @@ gdb:
   default: false
   cfg:
     charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
+- name: TrainerEye_DetailLineY
+  address: '0x080EC060'
+  description: 训练家之眼详情行 Y（进入时 r3=line，r1=&scroll；原式 y=line*2+2+scroll）
+  default: false
 - name: InitTextPrinter
   address: '0x08002C68'
   description: 文本块开始（r0=win, r1=文本指针, r2=tile_base, r3=cur_x）

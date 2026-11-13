@@ -47,4 +47,4 @@
 .org PokeNav_TrainerEye_DetailCase4Left
     nop
     nop
-; 详情行距：0x080EC060 为 line*2(=16px)。12px 需像素相位，tile 共享带会叠墨，暂不改。
+; 详情行距：0x080EC060 为 line*2(=16px)。GDB 证实 12px 奇数行 phase=4 叠墨；Middle 同；保持 16px。

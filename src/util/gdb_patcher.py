@@ -490,7 +490,7 @@ def _on_unused_print_mon_name(
 def _on_menu_print_text(
     gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]
 ) -> None:
-    """MenuPrint：只记 left=13/top=5（分类行）或 LR 来自 UnusedPrintMonName 一带。"""
+    """MenuPrint：分类行 / UnusedPrintMonName / 训练家之眼详情行（LR∈EC0xx）。"""
     buf = regs.get("r0", 0)
     left = regs.get("r1", 0) & 0xFF
     top = regs.get("r2", 0) & 0xFF
@@ -498,16 +498,45 @@ def _on_menu_print_text(
     # 分类行 CATEGORY_LEFT=13,y=5；或从 UnusedPrintMonName / 我们的 hook 返回
     from_cat = left == 13 and top == 5
     from_hook = (0x0808DD60 <= lr <= 0x0808DDD2) or (0x08800000 <= lr <= 0x08810000)
-    if not (from_cat or from_hook):
+    from_te_detail = 0x080EC000 <= lr <= 0x080EC200  # 详情 line stepper 打印
+    if not (from_cat or from_hook or from_te_detail):
         return
     data = _read_ff_text(gdb, buf)
     if not ctx._hit((buf, data[:64], left, top, lr)):
         return
+    tag = "TE_detail" if from_te_detail else "Menu_PrintText"
     ctx.log(
-        f"\n[Menu_PrintText] buf=0x{buf:08X} left={left} top={top} LR=0x{lr:08X}"
+        f"\n[{tag}] buf=0x{buf:08X} left={left} top={top} "
+        f"pxY={top * 8} LR=0x{lr:08X}"
     )
     ctx.log(f"  原始字节: {data[:64].hex(' ')}")
     ctx.log(f"  内容: {ctx.text_of(data)!r}")
+
+
+@handler("TrainerEye_DetailLineY")
+def _on_te_detail_line_y(
+    gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]
+) -> None:
+    """详情行 Y：r3=line，r1=&scroll（半字）；原式 y=(line*2+2+scroll)&0x1F。"""
+    line = regs.get("r3", 0) & 0xFFFF
+    scroll_p = regs.get("r1", 0)
+    scroll = 0
+    try:
+        raw = gdb.read_mem(scroll_p, 2)
+        if raw and len(raw) >= 2:
+            scroll = int.from_bytes(raw[:2], "little")
+    except Exception:
+        pass
+    y16 = (scroll + 2 + line * 2) & 0x1F
+    y12 = ((scroll + 2) * 8 + line * 12) // 8 & 0x1F
+    phase12 = ((scroll + 2) * 8 + line * 12) & 7
+    if not ctx._hit((line, scroll, y16)):
+        return
+    ctx.log(
+        f"\n[TrainerEye_DetailLineY] line={line} scroll={scroll} "
+        f"y16={y16}(px={y16 * 8}) y12_tile={y12} phase={phase12} "
+        f"px12={(scroll + 2) * 8 + line * 12}"
+    )
 
 
 @handler("InitTextPrinter")

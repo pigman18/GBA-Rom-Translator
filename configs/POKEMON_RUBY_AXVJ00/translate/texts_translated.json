@@ -4370,12 +4370,12 @@
   {
     "status": 200,
     "original": "\\CC050E\\02\\CC050Fで かえった",
-    "translated": "在\\CC050E\\02\\CC050F得到"
+    "translated": "在\\CC050E\\02\\CC050F得到了"
   },
   {
     "status": 200,
     "original": "\\CC050E\\02\\CC050Fで であった",
-    "translated": "在\\CC050E\\02\\CC050F遇见"
+    "translated": "在\\CC050E\\02\\CC050F遇见了"
   },
   {
     "status": 200,
@@ -32540,7 +32540,7 @@
   {
     "status": 200,
     "original": "のとき",
-    "translated": "那时"
+    "translated": "时"
   },
   {
     "status": 200,
@@ -48489,7 +48489,7 @@
   {
     "status": 200,
     "original": "ケーブルこうかんに よって であった",
-    "translated": "通过连接交换遇见"
+    "translated": "通过连接交换遇见了"
   },
   {
     "status": 200,

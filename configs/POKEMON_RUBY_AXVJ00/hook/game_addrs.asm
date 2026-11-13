@@ -47,6 +47,10 @@ StringLength                           equ 0x0800436C
 UnusedPrintMonName                     equ 0x0808DD60
 ; 图鉴身高/体重数字（UnusedPrintDecimalNum，参数 value/left/top）
 UnusedPrintDecimalNum                  equ 0x0808DDD4
+; 能力页训练家备忘 LvNのとき（AXVJ 实测，非 US 符号偏移）
+SummaryScreen_PrintMetLevel            equ 0x0809CFA0  ; C: ADDR_SUMMARY_PRINT_MET_LEVEL
+; 能力页训练家备忘遭遇行公共 Menu_PrintText（PrintTrainerMemo 内 @ 0x0809D1DE）
+SummaryScreen_PrintMetDesc             equ 0x0809D1DE  ; C: ADDR_SUMMARY_PRINT_MET_DESC
 ; 图鉴「???」占位串（AC*5 + 后缀 + FA FF）
 DexTextUnknownPoke                     equ 0x083E9688  ; C: ADDR_DEX_TEXT_UNKNOWN_POKE
 

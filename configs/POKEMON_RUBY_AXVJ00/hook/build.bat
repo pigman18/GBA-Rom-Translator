@@ -11,6 +11,7 @@ set SRC_ROOT=src
 set MAP_POPUP=%SRC_ROOT%\map_name_popup
 set BATTLE=%SRC_ROOT%\battle
 set POKEDEX=%SRC_ROOT%\pokedex
+set SUMMARY=%SRC_ROOT%\summary
 set OPTION=%SRC_ROOT%\option
 set OUT=out
 set BUILD=%OUT%\obj
@@ -68,6 +69,22 @@ echo === Compiling pokedex\UnusedPrintDecimalNum_hook.c ===
 %CC% %CFLAGS% %POKEDEX%\UnusedPrintDecimalNum_hook.c -o %BUILD%\UnusedPrintDecimalNum_hook.o
 if errorlevel 1 exit /b 1
 
+echo === Assembling summary\SummaryScreen_PrintMetLevel_entry.s ===
+%CC% %ASFLAGS% %SUMMARY%\SummaryScreen_PrintMetLevel_entry.s -o %BUILD%\SummaryScreen_PrintMetLevel_entry.o
+if errorlevel 1 exit /b 1
+
+echo === Compiling summary\SummaryScreen_PrintMetLevel_hook.c ===
+%CC% %CFLAGS% %SUMMARY%\SummaryScreen_PrintMetLevel_hook.c -o %BUILD%\SummaryScreen_PrintMetLevel_hook.o
+if errorlevel 1 exit /b 1
+
+echo === Assembling summary\SummaryScreen_PrintMetDesc_entry.s ===
+%CC% %ASFLAGS% %SUMMARY%\SummaryScreen_PrintMetDesc_entry.s -o %BUILD%\SummaryScreen_PrintMetDesc_entry.o
+if errorlevel 1 exit /b 1
+
+echo === Compiling summary\SummaryScreen_PrintMetDesc_hook.c ===
+%CC% %CFLAGS% %SUMMARY%\SummaryScreen_PrintMetDesc_hook.c -o %BUILD%\SummaryScreen_PrintMetDesc_hook.o
+if errorlevel 1 exit /b 1
+
 echo === Assembling option\DrawOptionMenuChoice_entry.s ===
 %CC% %ASFLAGS% %OPTION%\DrawOptionMenuChoice_entry.s -o %BUILD%\DrawOptionMenuChoice_entry.o
 if errorlevel 1 exit /b 1
@@ -89,6 +106,10 @@ echo === Linking game.elf ===
   %BUILD%/UnusedPrintMonName_hook.o ^
   %BUILD%/UnusedPrintDecimalNum_entry.o ^
   %BUILD%/UnusedPrintDecimalNum_hook.o ^
+  %BUILD%/SummaryScreen_PrintMetLevel_entry.o ^
+  %BUILD%/SummaryScreen_PrintMetLevel_hook.o ^
+  %BUILD%/SummaryScreen_PrintMetDesc_entry.o ^
+  %BUILD%/SummaryScreen_PrintMetDesc_hook.o ^
   %BUILD%/DrawOptionMenuChoice_entry.o ^
   %BUILD%/DrawOptionMenuChoice_hook.o
 if errorlevel 1 exit /b 1
@@ -102,7 +123,7 @@ rem Stream emit: no copy-vars, no silent fallback. Missing symbol -> no line ->
 rem armips errors at use site (loud failure beats jumping to 0x08800000).
 > %OUT%\game_syms.asm (
     echo ; Auto-generated from out/game.map - do not edit
-    for %%S in (MapName_DisplayCellLength UnusedPrintMonName_Hook UnusedPrintDecimalNum_Hook DrawOptionMenuChoice_Hook) do (
+    for %%S in (MapName_DisplayCellLength UnusedPrintMonName_Hook UnusedPrintDecimalNum_Hook SummaryScreen_PrintMetLevel_Hook SummaryScreen_PrintMetDesc_Hook DrawOptionMenuChoice_Hook) do (
         for /f "tokens=1" %%a in ('findstr /R "%%S$" %OUT%\game.map') do @echo %%S equ %%a
     )
 )

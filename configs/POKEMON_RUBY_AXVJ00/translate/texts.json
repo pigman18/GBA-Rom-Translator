@@ -48573,7 +48573,7 @@
       "byte_length": 17,
       "original": "\\CC050E\\02\\CC050Fで あったようだ",
       "original_hex": "fc 05 0e fd 02 fc 05 0f 44 00 01 50 10 26 03 41 ff",
-      "translated": "",
+      "translated": "在\\CC050E\\02\\CC050F遇见的样子",
       "is_pointer_based": true,
       "pointer_sources": [
         "0x0809D22C"
@@ -123874,7 +123874,7 @@
       "byte_length": 15,
       "original": "\\CC050E\\02\\CC050Fで であった",
       "original_hex": "fc 05 0e fd 02 fc 05 0f 44 00 44 01 50 10 ff",
-      "translated": "在\\CC050E\\02\\CC050F遇见",
+      "translated": "在\\CC050E\\02\\CC050F遇见了",
       "is_pointer_based": true,
       "pointer_sources": [
         "0x0809D190"
@@ -123890,7 +123890,7 @@
       "byte_length": 15,
       "original": "\\CC050E\\02\\CC050Fで かえった",
       "original_hex": "fc 05 0e fd 02 fc 05 0f 44 00 06 04 50 10 ff",
-      "translated": "在\\CC050E\\02\\CC050F得到",
+      "translated": "在\\CC050E\\02\\CC050F得到了",
       "is_pointer_based": true,
       "pointer_sources": [
         "0x0809D168"
@@ -171871,7 +171871,7 @@
       "byte_length": 4,
       "original": "のとき",
       "original_hex": "19 14 07 ff",
-      "translated": "",
+      "translated": "时",
       "is_pointer_based": true,
       "pointer_sources": [
         "0x0809D004",

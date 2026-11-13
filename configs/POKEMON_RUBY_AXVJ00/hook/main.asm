@@ -30,6 +30,7 @@
 .include "./src/map_name_popup/hooks_origin.s"
 .include "./src/battle/hooks_origin.s"
 .include "./src/pokedex/hooks_origin.s"
+.include "./src/summary/hooks_origin.s"
 .include "./src/option/hooks_origin.s"
 
 ; ---- 纯值补丁（INS/DATA/NOP 类） ----

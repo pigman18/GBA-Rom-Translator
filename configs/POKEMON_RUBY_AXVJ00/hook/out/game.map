@@ -27,6 +27,16 @@ Discarded input sections
  .ARM.attributes
                 0x00000000       0x2a out\obj/UnusedPrintDecimalNum_hook.o
  .ARM.attributes
+                0x00000000       0x1a out\obj/SummaryScreen_PrintMetLevel_entry.o
+ .comment       0x00000000       0x46 out\obj/SummaryScreen_PrintMetLevel_hook.o
+ .ARM.attributes
+                0x00000000       0x2a out\obj/SummaryScreen_PrintMetLevel_hook.o
+ .ARM.attributes
+                0x00000000       0x20 out\obj/SummaryScreen_PrintMetDesc_entry.o
+ .comment       0x00000000       0x46 out\obj/SummaryScreen_PrintMetDesc_hook.o
+ .ARM.attributes
+                0x00000000       0x2a out\obj/SummaryScreen_PrintMetDesc_hook.o
+ .ARM.attributes
                 0x00000000       0x20 out\obj/DrawOptionMenuChoice_entry.o
  .comment       0x00000000       0x46 out\obj/DrawOptionMenuChoice_hook.o
  .ARM.attributes
@@ -50,10 +60,14 @@ LOAD out\obj/UnusedPrintMonName_entry.o
 LOAD out\obj/UnusedPrintMonName_hook.o
 LOAD out\obj/UnusedPrintDecimalNum_entry.o
 LOAD out\obj/UnusedPrintDecimalNum_hook.o
+LOAD out\obj/SummaryScreen_PrintMetLevel_entry.o
+LOAD out\obj/SummaryScreen_PrintMetLevel_hook.o
+LOAD out\obj/SummaryScreen_PrintMetDesc_entry.o
+LOAD out\obj/SummaryScreen_PrintMetDesc_hook.o
 LOAD out\obj/DrawOptionMenuChoice_entry.o
 LOAD out\obj/DrawOptionMenuChoice_hook.o
 
-.text           0x08800000     0x1364
+.text           0x08800000     0x16b4
  *entry.o(.text*)
  .text          0x08800000       0x18 out\obj/text_entry.o
                 0x08800000                EngineEntry
@@ -66,81 +80,97 @@ LOAD out\obj/DrawOptionMenuChoice_hook.o
                 0x0880003c                UnusedPrintMonName_Hook
  .text          0x08800048        0xc out\obj/UnusedPrintDecimalNum_entry.o
                 0x08800048                UnusedPrintDecimalNum_Hook
- .text          0x08800054        0xc out\obj/DrawOptionMenuChoice_entry.o
-                0x08800054                DrawOptionMenuChoice_Hook
+ .text          0x08800054        0x8 out\obj/SummaryScreen_PrintMetLevel_entry.o
+                0x08800054                SummaryScreen_PrintMetLevel_Hook
+ .text          0x0880005c       0x10 out\obj/SummaryScreen_PrintMetDesc_entry.o
+                0x0880005c                SummaryScreen_PrintMetDesc_Hook
+ .text          0x0880006c        0xc out\obj/DrawOptionMenuChoice_entry.o
+                0x0880006c                DrawOptionMenuChoice_Hook
  *entry.o(.text.*)
  *fixed_string_entry.o(.text*)
  *(.text*)
- .text          0x08800060      0xe3c out\obj/PrintNextChar_hook.o
-                0x0880073c                GetStringWidth
-                0x08800788                PrintNextChar_Hook
- .text          0x08800e9c       0x24 out\obj/MapNamePopup_hook.o
-                0x08800e9c                MapNamePopup_CalcLeftPx
- .text          0x08800ec0       0x14 out\obj/UpdateNickInHealthbox_hook.o
-                0x08800ec0                HealthboxNickCpusetCtrl
-                0x08800ec8                HealthboxNickCpusetWords
-                0x08800ecc                HealthboxNickCpusetCtrlStock
- .text          0x08800ed4      0x10c out\obj/UnusedPrintMonName_hook.o
-                0x08800f24                UnusedPrintMonName_hook_C
- .text          0x08800fe0      0x234 out\obj/UnusedPrintDecimalNum_hook.o
-                0x08800fe0                UnusedPrintDecimalNum_hook_C
- .text          0x08801214       0xc4 out\obj/DrawOptionMenuChoice_hook.o
-                0x08801214                DrawOptionMenuChoice_hook_C
+ .text          0x08800078      0xe3c out\obj/PrintNextChar_hook.o
+                0x08800754                GetStringWidth
+                0x088007a0                PrintNextChar_Hook
+ .text          0x08800eb4       0x24 out\obj/MapNamePopup_hook.o
+                0x08800eb4                MapNamePopup_CalcLeftPx
+ .text          0x08800ed8       0x14 out\obj/UpdateNickInHealthbox_hook.o
+                0x08800ed8                HealthboxNickCpusetCtrl
+                0x08800ee0                HealthboxNickCpusetWords
+                0x08800ee4                HealthboxNickCpusetCtrlStock
+ .text          0x08800eec      0x10c out\obj/UnusedPrintMonName_hook.o
+                0x08800f3c                UnusedPrintMonName_hook_C
+ .text          0x08800ff8      0x234 out\obj/UnusedPrintDecimalNum_hook.o
+                0x08800ff8                UnusedPrintDecimalNum_hook_C
+ .text          0x0880122c      0x198 out\obj/SummaryScreen_PrintMetLevel_hook.o
+                0x0880122c                SummaryScreen_PrintMetLevel_hook_C
+ .text          0x088013c4      0x1a0 out\obj/SummaryScreen_PrintMetDesc_hook.o
+                0x08801400                SummaryScreen_PrintMetDesc_hook_C
+ .text          0x08801564       0xc4 out\obj/DrawOptionMenuChoice_hook.o
+                0x08801564                DrawOptionMenuChoice_hook_C
  *(.rodata*)
- .rodata        0x088012d8       0x7c out\obj/PrintNextChar_hook.o
- .rodata        0x08801354        0xd out\obj/UnusedPrintMonName_hook.o
+ .rodata        0x08801628       0x7c out\obj/PrintNextChar_hook.o
+ .rodata        0x088016a4        0xd out\obj/UnusedPrintMonName_hook.o
  *(.rodata.*)
-                0x08801364                        . = ALIGN (0x4)
- *fill*         0x08801361        0x3 
+                0x088016b4                        . = ALIGN (0x4)
+ *fill*         0x088016b1        0x3 
 
-.data           0x08801364        0x0
- .data          0x08801364        0x0 out\obj/text_entry.o
- .data          0x08801364        0x0 out\obj/PrintNextChar_hook.o
- .data          0x08801364        0x0 out\obj/MapNamePopup_entry.o
- .data          0x08801364        0x0 out\obj/MapNamePopup_hook.o
- .data          0x08801364        0x0 out\obj/UpdateNickInHealthbox_entry.o
- .data          0x08801364        0x0 out\obj/UpdateNickInHealthbox_hook.o
- .data          0x08801364        0x0 out\obj/UnusedPrintMonName_entry.o
- .data          0x08801364        0x0 out\obj/UnusedPrintMonName_hook.o
- .data          0x08801364        0x0 out\obj/UnusedPrintDecimalNum_entry.o
- .data          0x08801364        0x0 out\obj/UnusedPrintDecimalNum_hook.o
- .data          0x08801364        0x0 out\obj/DrawOptionMenuChoice_entry.o
- .data          0x08801364        0x0 out\obj/DrawOptionMenuChoice_hook.o
+.data           0x088016b4        0x0
+ .data          0x088016b4        0x0 out\obj/text_entry.o
+ .data          0x088016b4        0x0 out\obj/PrintNextChar_hook.o
+ .data          0x088016b4        0x0 out\obj/MapNamePopup_entry.o
+ .data          0x088016b4        0x0 out\obj/MapNamePopup_hook.o
+ .data          0x088016b4        0x0 out\obj/UpdateNickInHealthbox_entry.o
+ .data          0x088016b4        0x0 out\obj/UpdateNickInHealthbox_hook.o
+ .data          0x088016b4        0x0 out\obj/UnusedPrintMonName_entry.o
+ .data          0x088016b4        0x0 out\obj/UnusedPrintMonName_hook.o
+ .data          0x088016b4        0x0 out\obj/UnusedPrintDecimalNum_entry.o
+ .data          0x088016b4        0x0 out\obj/UnusedPrintDecimalNum_hook.o
+ .data          0x088016b4        0x0 out\obj/SummaryScreen_PrintMetLevel_entry.o
+ .data          0x088016b4        0x0 out\obj/SummaryScreen_PrintMetLevel_hook.o
+ .data          0x088016b4        0x0 out\obj/SummaryScreen_PrintMetDesc_entry.o
+ .data          0x088016b4        0x0 out\obj/SummaryScreen_PrintMetDesc_hook.o
+ .data          0x088016b4        0x0 out\obj/DrawOptionMenuChoice_entry.o
+ .data          0x088016b4        0x0 out\obj/DrawOptionMenuChoice_hook.o
 
-.igot.plt       0x08801364        0x0
- .igot.plt      0x08801364        0x0 out\obj/text_entry.o
+.igot.plt       0x088016b4        0x0
+ .igot.plt      0x088016b4        0x0 out\obj/text_entry.o
 
-.glue_7         0x08801364        0x0
- .glue_7        0x08801364        0x0 linker stubs
+.glue_7         0x088016b4        0x0
+ .glue_7        0x088016b4        0x0 linker stubs
 
-.glue_7t        0x08801364        0x0
- .glue_7t       0x08801364        0x0 linker stubs
+.glue_7t        0x088016b4        0x0
+ .glue_7t       0x088016b4        0x0 linker stubs
 
-.vfp11_veneer   0x08801364        0x0
- .vfp11_veneer  0x08801364        0x0 linker stubs
+.vfp11_veneer   0x088016b4        0x0
+ .vfp11_veneer  0x088016b4        0x0 linker stubs
 
-.v4_bx          0x08801364        0x0
- .v4_bx         0x08801364        0x0 linker stubs
+.v4_bx          0x088016b4        0x0
+ .v4_bx         0x088016b4        0x0 linker stubs
 
-.iplt           0x08801364        0x0
- .iplt          0x08801364        0x0 out\obj/text_entry.o
+.iplt           0x088016b4        0x0
+ .iplt          0x088016b4        0x0 out\obj/text_entry.o
 
-.rel.dyn        0x08801364        0x0
- .rel.iplt      0x08801364        0x0 out\obj/text_entry.o
+.rel.dyn        0x088016b4        0x0
+ .rel.iplt      0x088016b4        0x0 out\obj/text_entry.o
 
-.bss            0x08801364        0x0
- .bss           0x08801364        0x0 out\obj/text_entry.o
- .bss           0x08801364        0x0 out\obj/PrintNextChar_hook.o
- .bss           0x08801364        0x0 out\obj/MapNamePopup_entry.o
- .bss           0x08801364        0x0 out\obj/MapNamePopup_hook.o
- .bss           0x08801364        0x0 out\obj/UpdateNickInHealthbox_entry.o
- .bss           0x08801364        0x0 out\obj/UpdateNickInHealthbox_hook.o
- .bss           0x08801364        0x0 out\obj/UnusedPrintMonName_entry.o
- .bss           0x08801364        0x0 out\obj/UnusedPrintMonName_hook.o
- .bss           0x08801364        0x0 out\obj/UnusedPrintDecimalNum_entry.o
- .bss           0x08801364        0x0 out\obj/UnusedPrintDecimalNum_hook.o
- .bss           0x08801364        0x0 out\obj/DrawOptionMenuChoice_entry.o
- .bss           0x08801364        0x0 out\obj/DrawOptionMenuChoice_hook.o
+.bss            0x088016b4        0x0
+ .bss           0x088016b4        0x0 out\obj/text_entry.o
+ .bss           0x088016b4        0x0 out\obj/PrintNextChar_hook.o
+ .bss           0x088016b4        0x0 out\obj/MapNamePopup_entry.o
+ .bss           0x088016b4        0x0 out\obj/MapNamePopup_hook.o
+ .bss           0x088016b4        0x0 out\obj/UpdateNickInHealthbox_entry.o
+ .bss           0x088016b4        0x0 out\obj/UpdateNickInHealthbox_hook.o
+ .bss           0x088016b4        0x0 out\obj/UnusedPrintMonName_entry.o
+ .bss           0x088016b4        0x0 out\obj/UnusedPrintMonName_hook.o
+ .bss           0x088016b4        0x0 out\obj/UnusedPrintDecimalNum_entry.o
+ .bss           0x088016b4        0x0 out\obj/UnusedPrintDecimalNum_hook.o
+ .bss           0x088016b4        0x0 out\obj/SummaryScreen_PrintMetLevel_entry.o
+ .bss           0x088016b4        0x0 out\obj/SummaryScreen_PrintMetLevel_hook.o
+ .bss           0x088016b4        0x0 out\obj/SummaryScreen_PrintMetDesc_entry.o
+ .bss           0x088016b4        0x0 out\obj/SummaryScreen_PrintMetDesc_hook.o
+ .bss           0x088016b4        0x0 out\obj/DrawOptionMenuChoice_entry.o
+ .bss           0x088016b4        0x0 out\obj/DrawOptionMenuChoice_hook.o
 
 /DISCARD/
  *(.comment)

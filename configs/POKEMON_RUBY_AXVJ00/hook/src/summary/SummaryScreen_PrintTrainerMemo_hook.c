@@ -111,11 +111,22 @@ static void finish(uint8_t *out, unsigned *i)
         out[OUT_MAX - 1u] = 0xFF;
 }
 
-/* 返回「性格{名}。」占用的 8px 格数，供同行 Lv 紧跟 */
+static void emit_color_on(uint8_t *out, unsigned *i)
+{
+    if (*i + 3u >= OUT_MAX)
+        return;
+    out[(*i)++] = 0xFC;
+    out[(*i)++] = 0x05;
+    out[(*i)++] = 0x0E;
+}
+
+/* 返回「性格{名}。」墨水格数（不计 FC），供同行 Lv 紧跟 */
 static uint32_t print_nature_line(menu_print_t print, void *mon, uint32_t left,
                                   uint32_t top)
 {
+    uint8_t plain[OUT_MAX];
     uint8_t buf[OUT_MAX];
+    unsigned pi = 0u;
     unsigned i = 0u;
     uint32_t nature;
     uint32_t px;
@@ -123,19 +134,29 @@ static uint32_t print_nature_line(menu_print_t print, void *mon, uint32_t left,
     const uint8_t *name;
     fn1_t get_nature = (fn1_t)(ADDR_GET_NATURE | 1u);
 
-    emit_f7(buf, &i, CHS_XING_HI, CHS_XING_LO);
-    emit_f7(buf, &i, CHS_GE_HI, CHS_GE_LO);
-
     nature = get_nature(mon) & 0xFFu;
     table = (const uint32_t *)ADDR_NATURE_NAMES;
     name = (const uint8_t *)table[nature];
-    emit_pcs(buf, &i, name);
 
+    /* 测宽：无 FC */
+    emit_f7(plain, &pi, CHS_XING_HI, CHS_XING_LO);
+    emit_f7(plain, &pi, CHS_GE_HI, CHS_GE_LO);
+    emit_pcs(plain, &pi, name);
+    if (pi < OUT_MAX)
+        plain[pi++] = CHAR_PERIOD;
+    finish(plain, &pi);
+
+    /* 打印：整句套 FC05 0E（origin PrintColored 后不复位，备忘窗通篇同色） */
+    emit_color_on(buf, &i);
+    emit_f7(buf, &i, CHS_XING_HI, CHS_XING_LO);
+    emit_f7(buf, &i, CHS_GE_HI, CHS_GE_LO);
+    emit_pcs(buf, &i, name);
     if (i < OUT_MAX)
         buf[i++] = CHAR_PERIOD;
     finish(buf, &i);
     print(buf, left, top);
-    px = GetStringWidth(buf, OUT_MAX);
+
+    px = GetStringWidth(plain, OUT_MAX);
     return (px + CHS_GLYPH_ADVANCE_JP_PX - 1u) / CHS_GLYPH_ADVANCE_JP_PX;
 }
 
@@ -210,7 +231,17 @@ static void print_met_level_inline(menu_print_t print, uint32_t left,
     out[i++] = CHS_SHI_LO;
     out[i] = 0xFF;
     x = (left + nature_tiles) & 0xFFu;
-    print(out, x, top);
+    /* 单独 Menu_PrintText 需再带色，否则回默认黑 */
+    {
+        uint8_t colored[28];
+        unsigned ci = 0u;
+        unsigned k;
+        emit_color_on(colored, &ci);
+        for (k = 0u; k < i && ci + 1u < 28u; k++)
+            colored[ci++] = out[k];
+        colored[ci] = 0xFF;
+        print(colored, x, top);
+    }
 }
 
 static void print_met_line_loc(menu_print_t print, uint32_t left, uint32_t top,
@@ -223,8 +254,8 @@ static void print_met_line_loc(menu_print_t print, uint32_t left, uint32_t top,
     copy_loc((uint8_t *)ADDR_GSTRING_VAR1, loc);
     trim_gstring_var1();
 
+    emit_color_on(out, &i);
     emit_f7(out, &i, CHS_ZAI_HI, CHS_ZAI_LO);
-    /* 不夹 FC 着色：Menu_PrintText 路径下 FC 易变成空格格 */
     emit_pcs(out, &i, (const uint8_t *)ADDR_GSTRING_VAR1);
     emit_f7(out, &i, CHS_YU_HI, CHS_YU_LO);
     emit_f7(out, &i, CHS_DAO_HI, CHS_DAO_LO);

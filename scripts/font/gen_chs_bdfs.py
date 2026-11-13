@@ -22,9 +22,15 @@ Raster path（2026-11-10 定案 — **点阵优先，矢量只兜底**）:
 
 尺寸仍只取 FireRed metrics（font.config.json），不导出 FR 字形。
 
+垂直对齐（``place_ink`` / ``--valign``）:
+  - 默认：句读（，。！？…）``bottom``，其余汉字 ``center``（「一」居中）
+  - 覆盖：``--valign '，=bottom;一=center'``
+  - 只重打标点：``--chars '，。、！？：；' --only normal``
+
 Usage:
-  python scripts/gen_chs_bdfs.py
-  python scripts/gen_chs_bdfs.py --fonts "C:/Windows/Fonts/Noto Sans SC (TrueType).otf"
+  python scripts/font/gen_chs_bdfs.py
+  python scripts/font/gen_chs_bdfs.py --chars '，。、！？：；' --only normal
+  python scripts/font/gen_chs_bdfs.py --fonts "C:/Windows/Fonts/Noto Sans SC (TrueType).otf"
 """
 from __future__ import annotations
 
@@ -278,8 +284,15 @@ def place_ink(
     ink_w: int,
     ink_h: int,
     pad_top: int,
+    valign: str = "center",
 ) -> Image.Image | None:
-    """Crop ink, NEAREST-downscale only if larger than ink, place in 16×16."""
+    """Crop ink, NEAREST-downscale only if larger than ink, place in 16×16.
+
+    ``valign``（墨迹框内垂直方向）:
+      - ``center``：居中（默认；「一」等矮字）
+      - ``bottom``：贴墨迹框底（句读 ，。！？）
+      - ``top``：贴墨迹框顶
+    """
     # 0=ink / 255=bg：PIL getbbox 看「非 0」，全墨字（「一」）会是整幅 0 → None。
     # 必须先反成墨=255 再取 bbox。
     mask = bw.point(lambda v: 255 if v < 128 else 0)
@@ -301,7 +314,12 @@ def place_ink(
         return None
     cell = Image.new("L", (SLOT, SLOT), 255)
     ox = max(0, (ink_w - tw) // 2)
-    oy = pad_top + max(0, (ink_h - th) // 2)
+    if valign == "bottom":
+        oy = pad_top + max(0, ink_h - th)
+    elif valign == "top":
+        oy = pad_top
+    else:
+        oy = pad_top + max(0, (ink_h - th) // 2)
     if oy + th > SLOT:
         oy = max(0, SLOT - th)
     if ox + tw > SLOT:
@@ -367,6 +385,7 @@ def rasterize_glyph(
     ink_h: int,
     pad_top: int,
     min_ink: int,
+    valign: str = "center",
 ) -> tuple[list[str], str] | None:
     """FT_MONO near ink_h — first priority face with OK score wins."""
     # 绝不试 ink_h+1：Noto 在 +1 时常挤出底边满宽伪横（「宝」@mono14）
@@ -381,14 +400,16 @@ def rasterize_glyph(
             raw = ft_bitmap_glyph(face, ch, px_size)
             if raw is None:
                 continue
-            cell = place_ink(raw, ink_w=ink_w, ink_h=ink_h, pad_top=pad_top)
+            cell = place_ink(
+                raw, ink_w=ink_w, ink_h=ink_h, pad_top=pad_top, valign=valign
+            )
             if cell is None:
                 continue
             ink_n = sum(1 for y in range(SLOT) for x in range(SLOT)
                         if cell.getpixel((x, y)) < 128)
             if ink_n < min_ink:
                 continue
-            return cell_to_rows(cell), f"{tag}@bmp{px_size}"
+            return cell_to_rows(cell), f"{tag}@bmp{px_size}/{valign}"
 
     for tag, face in faces:
         local: tuple[float, Image.Image, str] | None = None
@@ -400,7 +421,9 @@ def rasterize_glyph(
             ):
                 if raw is None:
                     continue
-                cell = place_ink(raw, ink_w=ink_w, ink_h=ink_h, pad_top=pad_top)
+                cell = place_ink(
+                    raw, ink_w=ink_w, ink_h=ink_h, pad_top=pad_top, valign=valign
+                )
                 if cell is None:
                     continue
                 ink_n = sum(
@@ -412,7 +435,7 @@ def rasterize_glyph(
                 if ink_n < min_ink:
                     continue
                 sc = score_cell(cell, ink_w, ink_h, pad_top, px_size=px_size)
-                label = f"{tag}@{variant}{px_size}"
+                label = f"{tag}@{variant}{px_size}/{valign}"
                 if local is None or sc > local[0]:
                     local = (sc, cell, label)
         # Face order = priority (Noto → … → 宋体). First OK face wins.
@@ -424,15 +447,7 @@ def rasterize_glyph(
     if best is None:
         return None
     _, cell, label = best
-    px = cell.load()
-    rows: list[str] = []
-    for y in range(SLOT):
-        buf = bytearray(2)
-        for x in range(SLOT):
-            if px[x, y] < 128:
-                buf[x // 8] |= 0x80 >> (x % 8)
-        rows.append(buf.hex().upper())
-    return rows, label
+    return cell_to_rows(cell), label
 
 
 def backup_bdf(path: Path) -> Path | None:
@@ -497,13 +512,51 @@ def write_bdf(
     out.write_text("\n".join(lines), encoding="utf-8")
 
 
+def _load_existing_bdf_rows(path: Path) -> dict[int, tuple[list[str], str]]:
+    """Parse an existing BDF into {encoding: (hex_rows, tag)} for merge."""
+    if not path.is_file():
+        return {}
+    text = path.read_text(encoding="utf-8", errors="replace").splitlines()
+    out: dict[int, tuple[list[str], str]] = {}
+    i = 0
+    n = len(text)
+    while i < n:
+        line = text[i].strip()
+        if line.startswith("STARTCHAR"):
+            enc = -1
+            tag = "keep"
+            rows: list[str] = []
+            i += 1
+            in_bitmap = False
+            while i < n and not text[i].strip().startswith("ENDCHAR"):
+                l = text[i].strip()
+                if l.startswith("ENCODING"):
+                    enc = int(l.split()[1])
+                elif l.startswith("COMMENT") and "from " in l:
+                    tag = l.split("from ", 1)[-1].strip().strip('"')
+                elif l == "BITMAP":
+                    in_bitmap = True
+                elif in_bitmap and l and all(c in "0123456789ABCDEFabcdef" for c in l):
+                    rows.append(l.upper())
+                i += 1
+            if enc > 0 and len(rows) == SLOT:
+                out[enc] = (rows, tag)
+        i += 1
+    return out
+
+
 def gen_one(
     name: str,
     spec: dict,
     chars: list[str],
     font_files: list[Path],
     out_dir: Path,
+    *,
+    valign_overrides: dict | None = None,
+    merge_existing: bool = False,
 ) -> tuple[Path, int, int]:
+    from glyph_valign import resolve_valign
+
     ink_w = int(spec["ink_w"])
     ink_h = int(spec["ink_h"])
     pad_top = int(spec["pad_top"])
@@ -518,13 +571,23 @@ def gen_one(
         raise SystemExit(f"no FreeType faces loaded for {name}")
     print(f"  faces: {', '.join(t for t, _ in faces[:8])}{'…' if len(faces) > 8 else ''}")
 
-    min_ink_default = 4 if max(ink_w, ink_h) <= 9 else 8
     filled: dict[int, tuple[list[str], str]] = {}
+    order: list[str] = list(chars)
+    if merge_existing:
+        filled.update(_load_existing_bdf_rows(out if not bak else bak))
+        # keep prior char order when merging
+        prior = [chr(e) for e in sorted(filled) if chr(e) not in chars]
+        order = prior + [c for c in chars if c not in prior]
+
+    min_ink_default = 4 if max(ink_w, ink_h) <= 9 else 8
     failed: list[str] = []
+    valign_counts: dict[str, int] = {}
     for i, ch in enumerate(chars):
         # 标点/符号墨迹少，阈值放宽
         o = ord(ch)
         min_ink = 2 if o < 0x80 or not (0x4E00 <= o <= 0x9FFF) else min_ink_default
+        valign = resolve_valign(ch, valign_overrides)
+        valign_counts[valign] = valign_counts.get(valign, 0) + 1
         got = rasterize_glyph(
             ch,
             faces,
@@ -532,6 +595,7 @@ def gen_one(
             ink_h=ink_h,
             pad_top=pad_top,
             min_ink=min_ink,
+            valign=valign,
         )
         if got is None:
             failed.append(ch)
@@ -542,7 +606,7 @@ def gen_one(
 
     write_bdf(
         out,
-        chars,
+        order,
         filled,
         name=name.capitalize(),
         ink_w=ink_w,
@@ -552,7 +616,8 @@ def gen_one(
     )
     print(
         f"  wrote {out.relative_to(ROOT)}  glyphs={len(filled)}  "
-        f"failed={len(failed)}  ink={ink_w}x{ink_h} pad_top={pad_top}"
+        f"failed={len(failed)}  ink={ink_w}x{ink_h} pad_top={pad_top}  "
+        f"valign={valign_counts}"
     )
     if failed[:30]:
         print(f"  failed sample: {''.join(failed[:40])}")
@@ -572,9 +637,27 @@ def main() -> int:
         nargs="*",
         default=None,
     )
+    ap.add_argument(
+        "--valign",
+        default="",
+        help="覆盖垂直对齐，如 '，=bottom;。=bottom;一=center' "
+             "（默认：句读贴底，其余居中）",
+    )
+    ap.add_argument(
+        "--chars",
+        default="",
+        help="只重生成这些字符并 merge 进已有 BDF（如 '，。、！？：；'）",
+    )
     a = ap.parse_args()
 
-    if not a.translated.is_file():
+    from glyph_valign import parse_valign_map
+
+    try:
+        valign_overrides = parse_valign_map(a.valign)
+    except ValueError as e:
+        raise SystemExit(f"error: --valign: {e}") from e
+
+    if not a.translated.is_file() and not a.chars:
         raise SystemExit(f"missing {a.translated}")
 
     slots = load_slots_from_font_config(a.font_config)
@@ -583,9 +666,22 @@ def main() -> int:
     if not font_files:
         raise SystemExit("no outline fonts found")
 
-    chars = collect_charset(a.translated, a.charmap)
-    cjk = sum(1 for c in chars if 0x4E00 <= ord(c) <= 0x9FFF)
-    print(f"charset: {len(chars)} (CJK {cjk}) from {a.translated.name}")
+    if a.chars:
+        # 去重保序
+        seen: dict[str, None] = {}
+        for ch in a.chars:
+            if not ch.isspace():
+                seen[ch] = None
+        chars = list(seen)
+        merge = True
+        print(f"charset: {len(chars)} (partial --chars) {''.join(chars)}")
+    else:
+        chars = collect_charset(a.translated, a.charmap)
+        merge = False
+        cjk = sum(1 for c in chars if 0x4E00 <= ord(c) <= 0x9FFF)
+        print(f"charset: {len(chars)} (CJK {cjk}) from {a.translated.name}")
+    if valign_overrides:
+        print(f"valign overrides: {valign_overrides}")
     print(f"outline fonts ({len(font_files)}):")
     for f in font_files:
         print(f"  {f}")
@@ -593,8 +689,16 @@ def main() -> int:
     names = list(a.only) if a.only else ["normal", "middle", "small"]
     for name in names:
         print(f"=== {name} ===")
-        gen_one(name, slots[name], chars, font_files, a.out_dir)
-    print("done (FT_MONO + NotoSansSC-first; metrics-only sizes)")
+        gen_one(
+            name,
+            slots[name],
+            chars,
+            font_files,
+            a.out_dir,
+            valign_overrides=valign_overrides or None,
+            merge_existing=merge,
+        )
+    print("done (valign: punct=bottom, CJK=center; metrics-only sizes)")
     return 0
 
 

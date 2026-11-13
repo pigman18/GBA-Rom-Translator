@@ -130,8 +130,15 @@ def bdf_to_ink(
     *,
     pad_top: int = 0,
     center_x: bool = False,
+    valign: str = "baseline",
 ) -> bytearray:
     """Rasterize BDF into ``ink_w`` x ``ink_h`` ink (1=ink).
+
+    ``valign``（墨迹框内）:
+      - ``baseline``（默认）：按 BDF ascent/bbx_y 基线放置（「一」等矮字）
+      - ``center``：墨迹 bbox 在框内垂直居中
+      - ``bottom``：贴框底（句读 ，。！？）
+      - ``top``：贴框顶
 
     **基线对齐**（2026-11-11 修）：之前把墨迹 bbox 的左上角贴到 ink(0,0)，
     ``font_ascent`` / ``bbx_y`` 全被忽略 —— 等于所有字「按墨迹顶对齐」。
@@ -172,18 +179,36 @@ def bdf_to_ink(
     bw = max_x - min_x + 1
     bh = max_y - min_y + 1
 
-    em_top = font_ascent - (bbx_y + bbx_h) if font_ascent else 0
-    shift = em_top - pad_top
-    if bw > ink_w or bh > ink_h:
-        shift = max(0, shift)
-    # 基线 shift 必须落在「整条墨迹还在框内」的区间，否则满格字会被裁。
-    # 满格字（bh 接近 ink_h）本来就装不下，这时退回**顶部对齐**
-    # （shift = -min_y，= 改动前的行为），只给「一/二/三」这类矮字用基线。
-    lo, hi = -min_y, ink_h - 1 - max_y
-    if lo <= hi:
-        shift = max(lo, min(hi, shift))
-    else:
+    if valign == "bottom":
+        shift = (ink_h - bh) - min_y
+    elif valign == "center":
+        shift = (ink_h - bh) // 2 - min_y
+    elif valign == "top":
         shift = -min_y
+    else:
+        em_top = font_ascent - (bbx_y + bbx_h) if font_ascent else 0
+        shift = em_top - pad_top
+        if bw > ink_w or bh > ink_h:
+            shift = max(0, shift)
+        # 基线 shift 必须落在「整条墨迹还在框内」的区间，否则满格字会被裁。
+        # 满格字（bh 接近 ink_h）本来就装不下，这时退回**顶部对齐**
+        # （shift = -min_y，= 改动前的行为），只给「一/二/三」这类矮字用基线。
+        lo, hi = -min_y, ink_h - 1 - max_y
+        if lo <= hi:
+            shift = max(lo, min(hi, shift))
+        else:
+            shift = -min_y
+
+    if valign in ("bottom", "center", "top"):
+        lo, hi = -min_y, ink_h - 1 - max_y
+        if lo <= hi:
+            shift = max(lo, min(hi, shift))
+        else:
+            shift = -min_y if valign == "top" else (
+                (ink_h - bh) // 2 - min_y if valign == "center" else (ink_h - bh) - min_y
+            )
+            # 装不下时尽量贴目标边
+            shift = max(-min_y, min(ink_h - bh - min_y, shift))
 
     ox = 0
     if center_x and bw < ink_w:
@@ -367,32 +392,42 @@ def build_sym_bank(
     ink_w: int = 8,
     ink_h: int = 12,
     pad_top: int = 2,
+    valign_overrides: dict | None = None,
 ) -> bytearray:
     """句读标点小库：8x16 4bpp，64B/字。
 
-    hook 侧 ``text_translter.c:37-49`` 对 ``0x36..0x3E`` 按 **64B/字** 取址、
-    只画 8px 宽。之前这个槽复用「整张 charmap 从第 0 字起」的 16x16 缓冲、
-    再硬截 576B，里面其实是「啊/阿/埃/挨」的前半 —— 所有句读标点于是都变成
-    汉字残片（`！` 画成「挨」左半，看着像 `]`）。
+    hook 侧对 ``0x36..0x3E`` 按 **64B/字** 取址、只画 8px 宽。
+    句读默认 ``valign=bottom``（贴墨迹框底）；可用 overrides 改单字。
     """
+    _scripts = Path(__file__).resolve().parent
+    if str(_scripts) not in sys.path:
+        sys.path.insert(0, str(_scripts))
+    from font.glyph_valign import resolve_valign
+
     buf = bytearray(SYM_BYTES_PER_GLYPH * len(chars))
-    top = max(0, (16 - ink_h) // 2)
     for i, ch in enumerate(chars):
         enc = ord(ch)
         if enc not in bdf_glyphs:
             print(f"  [sym] 缺字 {ch!r}，留空槽")
             continue
         bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y = bdf_glyphs[enc]
+        valign = resolve_valign(ch, valign_overrides, default="bottom")
         ink = bdf_to_ink(
             bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y, font_ascent,
             ink_w=ink_w, ink_h=ink_h, pad_top=pad_top, center_x=True,
+            valign=valign,
         )
+        # 墨迹缓冲已按 valign 排好；槽内从 pad_top 起铺（勿再整体居中）
+        top = pad_top
+        if top + ink_h > 16:
+            top = max(0, 16 - ink_h)
         px = bytearray(ink_w * 16)
         for y in range(ink_h):
             for x in range(ink_w):
                 if ink[y * ink_w + x]:
                     px[(y + top) * ink_w + x] = 15
         buf[i * SYM_BYTES_PER_GLYPH:(i + 1) * SYM_BYTES_PER_GLYPH] = pack_8x16_4bpp(px)
+        print(f"  [sym] {ch!r} valign={valign}")
     return buf
 
 

@@ -13,8 +13,8 @@
  * 没有分配器、没有水位、没有回收、没有场景门控、没有页表、没有 EWRAM 相位表。
  * 全部 tile 落在原版自己的 [TB, TB+0x1F0) 预载字库区内，不碰 UI 图标。
  *
- * 重印清尾（§9.4.7）：中文 arena 游戏 FillWindow 清不到；同 printer + index 回退
- * + 起点回原处才 clear_cols。状态表在 EWRAM（非相位表），见 §3b。
+ * 重印清尾：cbc5ce5 的 clear_cols 在网格引擎 + 开始菜单同 printer 同 seg 下会
+ * 把光标重绘误判成重印，洗掉整行菜单字并误伤备忘第二行；暂不在此层清尾。
  *
  * ── 协议（用户口径）───────────────────────────────────────────────────
  * 全局统一 `F7 00 hi lo`。流里只有：
@@ -663,129 +663,6 @@ static void grid_pair_fill(uint8_t *p, uint8_t bg)
 }
 
 /* =====================================================================
- * §3b 重印清尾（迁自 cbc5ce5 text_render.c，网格坐标版）
- *
- * 419cd30 退役 page/PHYS 时丢掉；领航员底栏 / 背包说明翻页再发。
- * 判据必须三条件同时成立（docs/POKEMON_RUBY_AXVJ00.md §9.4.7）。
- * ===================================================================== */
-#ifdef GRID_DIAG
-/* DIAG 占 0x0203E000..+0x1000；状态表挪到其后，避免互踩 */
-#define REPRINT_STATE_ADDR  0x0203F200u
-#else
-#define REPRINT_STATE_ADDR  0x0203E000u
-#endif
-#define REPRINT_SLOTS       32u
-
-struct ReprintState {
-    uint32_t key;     /* tile 池基址（物理资源，非 win/模板指针） */
-    uint32_t lwin;    /* 上次 printer；跨实例永不清 */
-    uint16_t lidx;    /* 上次 TEXT_INDEX；回退才算重印 */
-    uint8_t  seg;     /* (CY+CTY)>>1 & 7 */
-    uint8_t  hstart;  /* 本段上次起始绝对列 */
-    uint8_t  hend;    /* 本段上次结束绝对列（开区间） */
-    uint8_t  used;
-};
-
-static struct ReprintState *reprint_tab(void)
-{
-    return (struct ReprintState *)(uintptr_t)REPRINT_STATE_ADDR;
-}
-
-static struct ReprintState *reprint_slot(uint32_t key)
-{
-    struct ReprintState *tab = reprint_tab();
-    unsigned i;
-    unsigned free_slot = REPRINT_SLOTS;
-
-    if (key == 0u)
-        key = 1u;
-    for (i = 0u; i < REPRINT_SLOTS; i++) {
-        if (tab[i].used && tab[i].key == key)
-            return &tab[i];
-        if (!tab[i].used && free_slot == REPRINT_SLOTS)
-            free_slot = i;
-    }
-    if (free_slot == REPRINT_SLOTS)
-        free_slot = (unsigned)((key >> 6) & (REPRINT_SLOTS - 1u));
-    tab[free_slot].key = key;
-    tab[free_slot].lwin = 0u;
-    tab[free_slot].lidx = 0u;
-    tab[free_slot].seg = 0xFFu;
-    tab[free_slot].hstart = 0u;
-    tab[free_slot].hend = 0u;
-    tab[free_slot].used = 1u;
-    return &tab[free_slot];
-}
-
-/* 把本行段 [from, to) 绝对列上下 tile 铺成背景（上界封 31 列）。 */
-static void clear_cols(TextPrinter *win, const GridTarget *t,
-                       unsigned from, unsigned to, uint8_t bg)
-{
-    uint32_t tmp[GRID_PAIR_BYTES / 4u];
-    uint8_t *p = (uint8_t *)(void *)tmp;
-    unsigned c;
-
-    if (to > GRID_COLS_PER_SEG)
-        to = GRID_COLS_PER_SEG;
-    if (from >= to)
-        return;
-    grid_pair_fill(p, bg);
-
-    for (c = from; c < to; c++) {
-        if (!t->buffered) {
-            uint16_t tu = grid_tile(win, c);
-
-            if ((unsigned)tu + 2u > GRID_TILE_LIMIT)
-                continue;
-            grid_pair_store(p, t->base + 32u * (unsigned)tu);
-        } else {
-            if (c < t->cx)
-                continue;
-            grid_pair_store(p,
-                t->base + (uint32_t)(c - t->cx) * GRID_PAIR_BYTES);
-        }
-    }
-}
-
-/* 画每个字之前：同 printer + index 回退 + 起点回原处 → 清旧尾巴。 */
-static void grid_reprint_before(TextPrinter *win, const GridTarget *t,
-                                uint8_t bg)
-{
-    struct ReprintState *st = reprint_slot(t->base);
-    uint32_t wkey = (uint32_t)(uintptr_t)win;
-    uint16_t ti = win_u16(win, WIN_TEXT_INDEX);
-    unsigned seg = grid_row(win) & (GRID_SEG_COUNT - 1u);
-    unsigned col = t->col;
-
-    if (st->seg != (uint8_t)seg) {
-        st->seg = (uint8_t)seg;
-        st->hstart = (uint8_t)col;
-        st->hend = (uint8_t)col;
-    } else if (st->lwin == wkey && ti < st->lidx && st->lidx > 2u
-               && col <= (unsigned)st->hstart + 1u) {
-        /* 从旧起点清到旧右界（含前导空格盖住的列）；勿用当前 col，
-         * 否则「   详细…」在空格推进后再画字时已偏右，左侧「查」擦不掉。 */
-        clear_cols(win, t, (unsigned)st->hstart, (unsigned)st->hend, bg);
-        st->hstart = (uint8_t)col;
-        st->hend = (uint8_t)col;
-    }
-    st->lwin = wkey;
-    st->lidx = ti;
-}
-
-/* 画完一字后：扩展本段已绘右界，供下次重印决定清多长。 */
-static void grid_reprint_after(const GridTarget *t, unsigned ncols)
-{
-    struct ReprintState *st = reprint_slot(t->base);
-    unsigned end = t->col + ncols;
-
-    if (end > GRID_COLS_PER_SEG)
-        end = GRID_COLS_PER_SEG;
-    if (end > (unsigned)st->hend)
-        st->hend = (uint8_t)end;
-}
-
-/* =====================================================================
  * §4 两个绘制入口
  * ===================================================================== */
 /* 按 fontNum 选中文 BDF 字库。
@@ -835,7 +712,6 @@ static void grid_draw_chs(TextPrinter *win, uint16_t gidx, unsigned phase)
     fg = grid_fg(win);
     bg = grid_bg(win);
     sh = grid_shadow(win);
-    grid_reprint_before(win, &t, bg);
     diag_emit(0u, gidx, phase, win, &t, grid_tile(win, t.col), fg, bg);
 
     grid_load(win, &t, p0, p1, ncols, phase, bg);
@@ -867,7 +743,6 @@ static void grid_draw_chs(TextPrinter *win, uint16_t gidx, unsigned phase)
         }
     }
     grid_emit(win, &t, p0, p1, ncols, delta);
-    grid_reprint_after(&t, ncols);
 }
 
 /* PCS 单字节：句读 0x36..0x3E 读 CHS Sym（与 Wokann 增益版同构）；
@@ -915,11 +790,7 @@ static void grid_draw_pcs(TextPrinter *win, uint8_t glyph, unsigned phase)
      * 只有 0x00（空格）保持「只推进不重绘」，与官方空白 tile 语义一致。
      * 图鉴分类行的问号擦除改在 UnusedPrintMonName 侧处理，禁止在此对
      * 0x00 整格铺背景（会削 12px 共享列 → 列表 № 与名字之间残笔）。 */
-    /* 前导 0x00 只推进不重绘，但仍须跑重印检测：领航员 tip 译文以空格
-     * 缩进，若等第一个汉字再判，col 已 > hstart+1，清尾整段跳过。 */
     if (glyph == 0x00u) {
-        if (grid_setup(win, &t))
-            grid_reprint_before(win, &t, grid_bg(win));
         win_set_u8(win, WIN_CURSOR_TILE_X,
                    (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
         return;
@@ -933,7 +804,6 @@ static void grid_draw_pcs(TextPrinter *win, uint8_t glyph, unsigned phase)
     fg = grid_fg(win);
     bg = grid_bg(win);
     sh = grid_shadow(win);
-    grid_reprint_before(win, &t, bg);
     from_sym = grid_pcs_is_sym(glyph);
     if (from_sym) {
         /* Sym：8×16 4bpp 连续 64B（上 32 + 下 32），墨迹 nibble=15。
@@ -1006,7 +876,6 @@ static void grid_draw_pcs(TextPrinter *win, uint8_t glyph, unsigned phase)
         }
     }
     grid_emit(win, &t, p0, p1, ncols, delta);
-    grid_reprint_after(&t, ncols);
 }
 
 /* =====================================================================

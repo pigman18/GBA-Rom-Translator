@@ -223,19 +223,13 @@ class Charmap:
         "abcdefghijklmnopqrstuvwxyz",
     )
 
-    # Characters to replace with charmap-safe alternatives
+    # Characters to replace with charmap-safe alternatives.
+    # Do NOT collapse 《》“”‘’—– — they already have F7 slots in charmap
+    # (1E74–1E8F); sanitizing them to ASCII '"'/"'"/"-" made encode drop them.
     _CHAR_REPLACEMENTS = {
-        "\u2014": "-",    # em dash → hyphen
-        "\u2013": "-",    # en dash → hyphen
-        "\u2018": "'",    # left single quote
-        "\u2019": "'",    # right single quote
-        "\u201C": "\"",   # left double quote (will be skipped if not in charmap)
-        "\u201D": "\"",   # right double quote
-        "\u300A": "\"",   # 《 → "
-        "\u300B": "\"",   # 》 → "
         # Keep 、 as Sym 0x3A — do not collapse to ASCII ',' (0xB8).
         "\uFF5E": "ー",   # ～ → chōon (PCS AE), not ASCII ~
-        "\u00B7": "・",   # middle dot → Font3 AF
+        "\u00B7": "・",   # middle dot → Font3 AF / punct_map
         "$": "",          # dollar sign (not in charmap, strip)
     }
 

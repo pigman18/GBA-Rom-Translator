@@ -16,7 +16,8 @@
  * ── 协议（用户口径）───────────────────────────────────────────────────
  * 全局统一 `F7 00 hi lo`。流里只有：
  *   F7 00 hi lo   4B / 12px   → 0x09000000 字库，gidx = lead_adjust(hi)*256+lo
- *   PCS 单字节    1B / 8px    → 原版 GetGlyphTilePointers + 1bpp→4bpp 现场展开
+ *   PCS 单字节    1B / 8px    → 0x36..0x3E 走 CHS Sym@0x091E0000（64B/字）；
+ *                               其余走原版 GetGlyphTilePointers 现场展开
  *   FA..FF 控制码             → 原版状态机
  *
  * ── hook 链与 lr 契约 ─────────────────────────────────────────────────
@@ -338,12 +339,6 @@ static unsigned grid_phase_adv(const uint8_t *text, uint16_t index, unsigned adv
         ++i;
     }
     return w & 7u;
-}
-
-/* 12px（Normal）默认；Small 场景由调用方传 8。 */
-static unsigned grid_phase(const uint8_t *text, uint16_t index)
-{
-    return grid_phase_adv(text, index, CHS_GLYPH_ADVANCE_PX);
 }
 
 /* 按窗口字体号选宽度算相位（Small 窗必须用 8，否则整行错位）。 */
@@ -722,8 +717,15 @@ static void grid_draw_chs(TextPrinter *win, uint16_t gidx, unsigned phase)
     grid_emit(win, &t, p0, p1, ncols, delta);
 }
 
-/* PCS 单字节：原版字模现场展开到栈上 64B（不引用预载日文字库，
+/* PCS 单字节：句读 0x36..0x3E 读 CHS Sym（与 Wokann 增益版同构）；
+ * 其余从原版 Font 取模展开到栈上 64B（不引用预载日文字库区，
  * 因为 [TB, TB+512) 已被本引擎按屏幕列接管），再按 phase 贴进网格。 */
+static int grid_pcs_is_sym(uint8_t glyph)
+{
+    return glyph >= SYM_GLYPH_BASE
+        && (unsigned)(glyph - SYM_GLYPH_BASE) < SYM_GLYPH_COUNT;
+}
+
 static void grid_draw_pcs(TextPrinter *win, uint8_t glyph, unsigned phase)
 {
     GridTarget t;
@@ -737,6 +739,7 @@ static void grid_draw_pcs(TextPrinter *win, uint8_t glyph, unsigned phase)
     uint8_t fn;
     uint8_t fg, bg, sh;
     int shadowed;
+    int from_sym;
     unsigned sx, sy, ncols, delta;
 
     ncols = (phase + CHS_GLYPH_ADVANCE_JP_PX + 7u) >> 3;  /* 1 或 2 */
@@ -771,23 +774,35 @@ static void grid_draw_pcs(TextPrinter *win, uint8_t glyph, unsigned phase)
     fg = grid_fg(win);
     bg = grid_bg(win);
     sh = grid_shadow(win);
-    shadowed = FontIsShadowed(fn);
-    GetGlyphTilePointers_Origin(fn, glyph, &up, &lo);
-    if (!up || !lo) {
-        win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(t.rel + delta));
-        return;
-    }
-    if (shadowed) {
-        /* font3/4/5：32B/tile 的 4bpp-index 字模，nibble 语义
-         *   0 = 背景(D) / 14 = 阴影(E) / 15 = 主墨(C)  ← FONT_12PX_DRAW.md
-         * 原样保留，交给下面的三色重映射，绝不 ink-only 归一。 */
-        grid_copy32(gp, up);
-        grid_copy32(gp + 32u, lo);
+    from_sym = grid_pcs_is_sym(glyph);
+    if (from_sym) {
+        /* Sym：8×16 4bpp 连续 64B（上 32 + 下 32），墨迹 nibble=15。
+         * 与 Font3 阴影字模不同，无 14 号阴影层 → 按非 shadowed 重映射。 */
+        const uint8_t *sym = (const uint8_t *)(uintptr_t)(
+            ADDR_FONT_CHS_SYM
+            + (uint32_t)(glyph - SYM_GLYPH_BASE) * GRID_PAIR_BYTES);
+        shadowed = 0;
+        grid_copy32(gp, sym);
+        grid_copy32(gp + 32u, sym + 32u);
     } else {
-        /* font0/1/2/6：1bpp 8B/tile，原版展开函数 r2=「1 时色」r3=「0 时色」。
-         * 传 (1,0) 只作墨迹标记，颜色由重映射统一决定。 */
-        CopyGlyph1bppTo4bpp_Origin(up, gp, 1u, 0u);
-        CopyGlyph1bppTo4bpp_Origin(lo, gp + 32u, 1u, 0u);
+        shadowed = FontIsShadowed(fn);
+        GetGlyphTilePointers_Origin(fn, glyph, &up, &lo);
+        if (!up || !lo) {
+            win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(t.rel + delta));
+            return;
+        }
+        if (shadowed) {
+            /* font3/4/5：32B/tile 的 4bpp-index 字模，nibble 语义
+             *   0 = 背景(D) / 14 = 阴影(E) / 15 = 主墨(C)  ← FONT_12PX_DRAW.md
+             * 原样保留，交给下面的三色重映射，绝不 ink-only 归一。 */
+            grid_copy32(gp, up);
+            grid_copy32(gp + 32u, lo);
+        } else {
+            /* font0/1/2/6：1bpp 8B/tile，原版展开函数 r2=「1 时色」r3=「0 时色」。
+             * 传 (1,0) 只作墨迹标记，颜色由重映射统一决定。 */
+            CopyGlyph1bppTo4bpp_Origin(up, gp, 1u, 0u);
+            CopyGlyph1bppTo4bpp_Origin(lo, gp + 32u, 1u, 0u);
+        }
     }
     /* 空白/填充字形：原版 tm1 只把表项指到预载的空白 tile，**不重绘 VRAM**。
      * 本引擎若照常整列铺背景，会把 phase=4 共享列里前一个 12px 汉字的
@@ -1022,6 +1037,6 @@ int PrintNextChar_Hook(TextPrinter *win)
         return 1;
     }
 
-    grid_draw_pcs(win, c, grid_phase(text, index));
+    grid_draw_pcs(win, c, grid_phase_for(win, text, index));
     return 1;
 }

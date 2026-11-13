@@ -155857,7 +155857,7 @@
       "byte_length": 13,
       "original": "\\CC0505もってる ポケモン",
       "original_hex": "fc 05 05 23 50 13 29 00 9f 59 73 7e ff",
-      "translated": "持有的宝可梦",
+      "translated": "\\CC0505持有的宝可梦",
       "is_pointer_based": true,
       "pointer_sources": [
         "0x080EC0D8"

@@ -71,7 +71,7 @@
 | P31 | —（原 `0x080EBA40` 订址已撤） | `grid_bg`：`tpl==0x081BB7B4` → bg=0 | LOGIC | 训练家之眼左侧透明底。**勿用 .bss 锁**（game.bin 无 RAM，bss 落 ROM 读 0xFF→全局透底） | tpl id `0x25` |
 | P32 | `0x080F228C` | stub→`PokeNav_TrainerEye_FormatListLine_Hook` | JMP | 列表行：完整拷职业后按 `GetStringWidth` 垫到 88px 再拼名；禁改全局 `StringCopyPad` | JP 列表拼接 |
 | P33 | `0x080EBF9C` | stub→`PokeNav_TrainerEye_DetailEnter_Hook` | JMP | 进详情：Blank 右栏窗 `0x2F`(13,2)–(28,15) → 重打标题 → 拆说明指针；左栏 Blank `(0,7)–(11,16)` 清列表统计残墨（保地点 y=6 tile5–6） | JP `sub` 拆 `0x083B8E10` 说明块 |
-| P34 | `0x080EF558` | stub→`PokeNav_TrainerEye_PrintTitle_Hook` | JMP | 红条 DMA：TitleBlit 预填 `0x11` 红底、墨 `0xF`、F7 两列、4 列/档 `+0x100` 再 DMA | JP 红条 PCS blit |
+| P34 | `0x080EF558` | stub→`PokeNav_TrainerEye_PrintTitle_Hook` | JMP | 红条 DMA：TitleBlit 预填 `0x11`、墨 `0xF`、Middle 字库 + 12px 水平相位贴 dest | JP 红条 PCS blit |
 | P34b | `0x080EF43C` | stub→`PrintTitleSprite_Hook` | JMP | 红条精灵路径：TitleBlit 后回 `EF45C` | 同左 |
 | P35 | `0x080EC364` | stub→`SkipListRow_Hook`（空返回） | JMP | 进详情跳过列表行重画（仅 F23FC 调用） | JP list redraw |
 | P35b | `0x080F2402` | `nop; nop`（原 `bl EC2E0`） | NOP | 进详情跳过左栏统计重画 | JP left stats |

@@ -63,6 +63,10 @@
 |---|---|---|---|---|---|
 | P07 | `0x0808DD60` | `ldr r3,=(UnusedPrintMonName_Hook\|1); bx r3`（4B+pool） | JMP | 图鉴条目屏分类名行：拼接分类+宝可梦短语流一次性打印 | `src/pokedex.c` 条目页分类名行打印（美版为静态函数，AXVJ 自命名 UnusedPrintMonName） |
 | P08 | `0x080889F0` | `push {r3}; ldr r3,=(DrawOptionMenuChoice_Hook\|1); bx r3`（6B+pool） | JMP | 设置窗口选项高亮：改为调色板/前景色覆盖变量 | `src/option.c` `DrawOptionMenuChoice()` |
+| P26 | `0x0808DDD4` | `ldr r3,=(UnusedPrintDecimalNum_Hook\|1); bx r3` | JMP | 图鉴身高/体重：清占位后按 12px 右齐印数字+单位 | `UnusedPrintDecimalNum` |
+| P27 | `0x0809CFA0` | `ldr r4,=(SummaryScreen_PrintMetLevel_Hook\|1); bx r4` | JMP | 训练家备忘 LvN时：勿用字节偏移，右缘对齐后一次打印 | summary PrintMetLevel |
+| P28 | `0x0809D1DE` | stub→`PrintMetDesc_Hook` | JMP | 训练家备忘遭遇行：拼「在+FD02+遇见了」 | PrintTrainerMemo 公共打印点 |
+| P29 | `0x0809D256` | stub→`NameLayoutTiles_Hook`（`ceil(GetStringWidth/8)+4` 后 PrintGender） | JMP | 物种名旁 ♂/♀：替换 `StringLength` 字节当格；**保留 D274 名表字面量**（patch-table） | summary 名旁性别 |
 
 ### F. 数据清理（置空日文残留）
 
@@ -93,6 +97,7 @@
 3. **P09~P12 是同一事务**：初始宠 label 四处改动必须同时存在，拆分时归并为一节。
 4. **P19~P23 共用一个常量**：DEX_NAME_COLUMN 定义在 game_addrs.asm，改值即可全局调整。
 5. 死代码：旧引擎死代码 GetGlyphWidthHook / GetStringWidthChinese 已随 2026-08-24 收敛彻底消失（text.c 内部化后 nm 无残留）；现存 HealthboxNickCpuset*（仅导出常量，占 game.bin 空间不影响运行）。
+6. **日版无原生 GetGlyphWidth/GetStringWidth（已定论，勿再订 0x4228/0x4530）**；`game.bin` 已导出 `GetStringWidth()`（F7=12px、JP=8px）。**不能**全局替换 `StringLength`（缓冲区/拷贝仍要字节语义）。布局类「`StringLength`→当 tile 宽」站点（地图名 / 图鉴占位 / 备忘 Lv / 名旁性别…）逐点改走 `GetStringWidth` 或域内 hook——P04/P26/P27/P29 即此模式；遇新错位先搜 `bl StringLength` 后接加减格。
 
 ## 4. 已实施的拆分结构（2026-08-22；2026-11-02 校正为现状）
 

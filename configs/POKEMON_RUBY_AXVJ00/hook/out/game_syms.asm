@@ -4,4 +4,5 @@ UnusedPrintMonName_Hook equ 0x0880003c
 UnusedPrintDecimalNum_Hook equ 0x08800048
 SummaryScreen_PrintMetLevel_Hook equ 0x08800054
 SummaryScreen_PrintMetDesc_Hook equ 0x0880005c
-DrawOptionMenuChoice_Hook equ 0x0880006c
+SummaryScreen_NameLayoutTiles_Hook equ 0x0880006c
+DrawOptionMenuChoice_Hook equ 0x08800078

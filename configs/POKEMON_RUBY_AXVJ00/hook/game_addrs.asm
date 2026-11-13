@@ -51,6 +51,10 @@ UnusedPrintDecimalNum                  equ 0x0808DDD4
 SummaryScreen_PrintMetLevel            equ 0x0809CFA0  ; C: ADDR_SUMMARY_PRINT_MET_LEVEL
 ; 能力页训练家备忘遭遇行公共 Menu_PrintText（PrintTrainerMemo 内 @ 0x0809D1DE）
 SummaryScreen_PrintMetDesc             equ 0x0809D1DE  ; C: ADDR_SUMMARY_PRINT_MET_DESC
+; 能力页物种名旁性别：原 bl StringLength @ 0x0809D256（D274 名表字面量勿动）
+SummaryScreen_NameLayoutTiles          equ 0x0809D256
+SummaryScreen_NameLayoutTiles_Epilogue equ 0x0809D26E
+SummaryScreen_PrintGender              equ 0x0809D278
 ; 图鉴「???」占位串（AC*5 + 后缀 + FA FF）
 DexTextUnknownPoke                     equ 0x083E9688  ; C: ADDR_DEX_TEXT_UNKNOWN_POKE
 

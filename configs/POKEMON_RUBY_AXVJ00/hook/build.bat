@@ -60,6 +60,14 @@ echo === Compiling pokedex\UnusedPrintMonName_hook.c ===
 %CC% %CFLAGS% %POKEDEX%\UnusedPrintMonName_hook.c -o %BUILD%\UnusedPrintMonName_hook.o
 if errorlevel 1 exit /b 1
 
+echo === Assembling pokedex\UnusedPrintDecimalNum_entry.s ===
+%CC% %ASFLAGS% %POKEDEX%\UnusedPrintDecimalNum_entry.s -o %BUILD%\UnusedPrintDecimalNum_entry.o
+if errorlevel 1 exit /b 1
+
+echo === Compiling pokedex\UnusedPrintDecimalNum_hook.c ===
+%CC% %CFLAGS% %POKEDEX%\UnusedPrintDecimalNum_hook.c -o %BUILD%\UnusedPrintDecimalNum_hook.o
+if errorlevel 1 exit /b 1
+
 echo === Assembling option\DrawOptionMenuChoice_entry.s ===
 %CC% %ASFLAGS% %OPTION%\DrawOptionMenuChoice_entry.s -o %BUILD%\DrawOptionMenuChoice_entry.o
 if errorlevel 1 exit /b 1
@@ -79,6 +87,8 @@ echo === Linking game.elf ===
   %BUILD%/UpdateNickInHealthbox_hook.o ^
   %BUILD%/UnusedPrintMonName_entry.o ^
   %BUILD%/UnusedPrintMonName_hook.o ^
+  %BUILD%/UnusedPrintDecimalNum_entry.o ^
+  %BUILD%/UnusedPrintDecimalNum_hook.o ^
   %BUILD%/DrawOptionMenuChoice_entry.o ^
   %BUILD%/DrawOptionMenuChoice_hook.o
 if errorlevel 1 exit /b 1
@@ -92,7 +102,7 @@ rem Stream emit: no copy-vars, no silent fallback. Missing symbol -> no line ->
 rem armips errors at use site (loud failure beats jumping to 0x08800000).
 > %OUT%\game_syms.asm (
     echo ; Auto-generated from out/game.map - do not edit
-    for %%S in (MapName_DisplayCellLength UnusedPrintMonName_Hook DrawOptionMenuChoice_Hook) do (
+    for %%S in (MapName_DisplayCellLength UnusedPrintMonName_Hook UnusedPrintDecimalNum_Hook DrawOptionMenuChoice_Hook) do (
         for /f "tokens=1" %%a in ('findstr /R "%%S$" %OUT%\game.map') do @echo %%S equ %%a
     )
 )

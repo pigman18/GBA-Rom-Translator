@@ -34,6 +34,8 @@ OBJS := \
 	$(BUILD)/UpdateNickInHealthbox_hook.o \
 	$(BUILD)/UnusedPrintMonName_entry.o \
 	$(BUILD)/UnusedPrintMonName_hook.o \
+	$(BUILD)/UnusedPrintDecimalNum_entry.o \
+	$(BUILD)/UnusedPrintDecimalNum_hook.o \
 	$(BUILD)/DrawOptionMenuChoice_entry.o \
 	$(BUILD)/DrawOptionMenuChoice_hook.o
 
@@ -98,7 +100,7 @@ $(OUT)/game.bin: $(OUT)/game.elf
 # 缺失符号该行不生成，armips 在使用处直接报错。
 $(OUT)/game_syms.asm: $(OUT)/game.map
 	@printf '; Auto-generated from out/game.map - do not edit\n' > $@; \
-	for s in MapName_DisplayCellLength UnusedPrintMonName_Hook DrawOptionMenuChoice_Hook; do \
+	for s in MapName_DisplayCellLength UnusedPrintMonName_Hook UnusedPrintDecimalNum_Hook DrawOptionMenuChoice_Hook; do \
 		addr=`tr -d '\r' < $(OUT)/game.map | grep -E "$$s$$" | awk '{print $$1}'`; \
 		if [ -n "$$addr" ]; then printf '%s equ %s\n' "$$s" "$$addr" >> $@; fi; \
 	done

@@ -45,6 +45,8 @@ StringLength                           equ 0x0800436C
 
 ; --- 图鉴分类名行（UnusedPrintMonName，参数 name/left/top）---
 UnusedPrintMonName                     equ 0x0808DD60
+; 图鉴身高/体重数字（UnusedPrintDecimalNum，参数 value/left/top）
+UnusedPrintDecimalNum                  equ 0x0808DDD4
 ; 图鉴「???」占位串（AC*5 + 后缀 + FA FF）
 DexTextUnknownPoke                     equ 0x083E9688  ; C: ADDR_DEX_TEXT_UNKNOWN_POKE
 

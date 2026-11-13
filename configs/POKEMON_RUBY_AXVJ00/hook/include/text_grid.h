@@ -47,6 +47,11 @@
 
 #define GRID_PAIR_BYTES     64u   /* 一列 = 上 tile 32B + 下 tile 32B */
 
+/* tile 冲突规避用：本窗 tilemap 的扫描范围与 tile 号位宽。
+ * 32×32 是 GBA 文本窗的标准表（含 0x1F0 光标槽），tile 号 10 bit。 */
+#define GRID_TILEMAP_W      32u
+#define GRID_TILE_BITS      1024u
+
 /* F7 00 hi lo 的 hi 是 charmap 原始 lead（1..5/7..26/28..30），
  * 字库槽号 = lead_adjust(hi)*256 + lo（scripts/build_chinese_font.py::glyph_index）。
  * 实证：最终 ROM 里 160,998 个 F7 token 的 hi 分布含 28/29/30，

@@ -113,6 +113,170 @@ static uint16_t grid_tile(TextPrinter *win, unsigned col)
             + 2u * col);
 }
 
+/* ---------------------------------------------------------------------
+ * tile 冲突规避（2026-11-13 实测定案）
+ *
+ * 原版 tm1 按**字形槽号**分配（tile = TB + 2*glyph），所以预载的 UI 图形
+ * 与文本永远不会互踩。本引擎按**屏幕位置**分配（row/col 纯函数），于是
+ * 「窗口 charBase 里同时躺着别的图形」时必然撞车：
+ *
+ *   队伍菜单 row5 段 = 0x137..0x175；游戏把「麻痹」椭圆预载在 tile
+ *   0x156..0x159（tilemap (5..8,6)，pal 11）。右侧列表第 4 格的昵称
+ *   落在 col 16..19 → 正好是 0x157/0x159/0x15B/0x15D，把椭圆三个 tile
+ *   改写成汉字笔画，实机表现为「黄竖条 + 红碎字、椭圆整段消失」。
+ *
+ * 判据（不是地址白名单）：写之前扫一遍**本窗口自己的 tilemap**，
+ * 若目标 tile 已被「不属于本格」的格子引用 ⇒ 换一对没人引用的 tile
+ * 承载，并把本格指向它。没有状态、没有分配器水位；只有「这一格现在
+ * 能不能用」的即时判断，所以图形没了自然又回到纯函数 tile。
+ * ------------------------------------------------------------------- */
+/* 本窗字库基址（与 grid_setup 同一口径：tpl+0x0C 或 tm2 缓冲）。 */
+static uint32_t grid_tile_base(TextPrinter *win)
+{
+    const uint8_t *tpl = win_template(win);
+
+    if (win_u8(win, WIN_TEXTMODE) == 2u
+        || (tpl != 0 && win_u32(tpl, TPL_TILEMAP) == 0u))
+        return win_u32(win, WIN_TILE_DATA);
+    return tpl ? *(const uint32_t *)(const void *)(tpl + TPL_TILE_DATA) : 0u;
+}
+
+static uint16_t grid_tilemap_entry(const uint16_t *map, unsigned x, unsigned y)
+{
+    return (uint16_t)(map[y * GRID_TILEMAP_W + x] & 0x3FFu);
+}
+
+/* 本格自己的两个表项（上/下 tile 行）；这两项不算「别人在用」。 */
+static int grid_cell_own(const uint16_t *map, unsigned row, unsigned col,
+                         unsigned x, unsigned y)
+{
+    unsigned ty = (row & (GRID_SEG_COUNT - 1u)) * 2u;
+
+    if (x != col)
+        return 0;
+    return y == ty || y == ty + 1u;
+}
+
+/* 收集本窗 tilemap 已被占用的 tile（排除本格自身）。返回 1 表示 t0/t0+1
+   已被别人引用。 */
+static int grid_tile_taken(TextPrinter *win, unsigned row, unsigned col,
+                           uint16_t t0, uint32_t *used)
+{
+    const uint8_t *tpl = win_template(win);
+    const uint16_t *map;
+    unsigned x, y, i;
+
+    for (i = 0u; i < GRID_TILE_BITS / 32u; ++i)
+        used[i] = 0u;
+    if (!tpl)
+        return 0;
+    map = (const uint16_t *)(const void *)(uintptr_t)win_u32(tpl, TPL_TILEMAP);
+    if (!map)
+        return 0;
+
+    for (y = 0u; y < GRID_TILEMAP_W; ++y) {
+        for (x = 0u; x < GRID_TILEMAP_W; ++x) {
+            unsigned v;
+            if (grid_cell_own(map, row, col, x, y))
+                continue;
+            v = grid_tilemap_entry(map, x, y);
+            if (v < GRID_TILE_BITS)
+                used[v >> 5] |= 1u << (v & 31u);
+        }
+    }
+    if (t0 >= GRID_TILE_BITS)
+        return 0;
+    if (used[t0 >> 5] & (1u << (t0 & 31u)))
+        return 1;
+    if (t0 + 1u < GRID_TILE_BITS &&
+        (used[(t0 + 1u) >> 5] & (1u << ((t0 + 1u) & 31u))))
+        return 1;
+    return 0;
+}
+
+static int grid_tile_free(const uint32_t *used, unsigned n)
+{
+    if (n + 1u >= GRID_TILE_LIMIT || n + 1u >= GRID_TILE_BITS)
+        return 0;
+    if (used[n >> 5] & (1u << (n & 31u)))
+        return 0;
+    if (used[(n + 1u) >> 5] & (1u << ((n + 1u) & 31u)))
+        return 0;
+    return 1;
+}
+
+/* 预载图形判定：VRAM 里这一对 tile 已经**有内容**，而本格 tilemap 还
+ * 没指向它 ⇒ 它是游戏预载的图形（如麻痹椭圆的 0x15A..0x15E）。
+ * 这些 tile 在 tilemap 里暂时没有引用项（图形是在文本之后才挂上去的），
+ * 单靠「被引用」判不出来，必须看 VRAM 本体。
+ *
+ * 反例（2026-11-13 第一次修复只查 tilemap）：0x157/0x158/0x159 因为
+ * 椭圆已挂表而被避开，但同段 0x15B/0x15D 还没挂表，被当成空闲拿走，
+ * 结果椭圆右半仍是汉字碎笔画。 */
+static int grid_tile_vram_blank(uint32_t base, unsigned n)
+{
+    const volatile uint32_t *p =
+        (const volatile uint32_t *)(uintptr_t)(base + 32u * n);
+    unsigned i;
+
+    for (i = 0u; i < 8u; ++i) {
+        if (p[i] != 0u)
+            return 0;
+    }
+    return 1;
+}
+
+/* 本格 tilemap 的两个表项是否已经指向 n（说明这对 tile 就是本格上次
+ * 写的，可以原地重用，不算「别人的」）。 */
+static int grid_cell_points_to(TextPrinter *win, unsigned row, unsigned col, unsigned n)
+{
+    const uint8_t *tpl = win_template(win);
+    const uint16_t *map;
+    unsigned ty;
+
+    if (!tpl)
+        return 0;
+    map = (const uint16_t *)(const void *)(uintptr_t)win_u32(tpl, TPL_TILEMAP);
+    if (!map || col >= GRID_TILEMAP_W)
+        return 0;
+    ty = (row & (GRID_SEG_COUNT - 1u)) * 2u;
+    if (ty + 1u >= GRID_TILEMAP_W)
+        return 0;
+    if (grid_tilemap_entry(map, col, ty) != n)
+        return 0;
+    if (grid_tilemap_entry(map, col, ty + 1u) != n + 1u)
+        return 0;
+    return 1;
+}
+
+/* 解析本字真正要写的 tile。ncols>1（12px 跨列、phase=4 共享列）不迁移：
+   共享列左 4px 属于前一个字，换 tile 会把它丢掉。Small 字库步进 8px，
+   phase 恒为 0，所以队伍/战斗等 Small 窗口全部走得到规避。 */
+static uint16_t grid_tile_resolved(TextPrinter *win, unsigned col, unsigned ncols)
+{
+    uint32_t used[GRID_TILE_BITS / 32u];
+    uint16_t t0 = grid_tile(win, col);
+    unsigned row = grid_row(win);
+    unsigned n;
+
+    if (ncols != 1u || win_u8(win, WIN_TEXTMODE) == 2u)
+        return t0;
+    if (grid_cell_points_to(win, row, col, t0))
+        return t0;                       /* 本格自己的旧 tile，可重用 */
+    if (!grid_tile_taken(win, row, col, t0, used) &&
+        grid_tile_vram_blank(grid_tile_base(win), t0))
+        return t0;
+    for (n = win_u16(win, WIN_TILE_BASE); n < GRID_TILE_LIMIT; n += 2u) {
+        if (!grid_tile_free(used, n))
+            continue;
+        if (grid_cell_points_to(win, row, col, n))
+            return (uint16_t)n;
+        if (grid_tile_vram_blank(grid_tile_base(win), n))
+            return (uint16_t)n;
+    }
+    return t0;                     /* 整段都满：退回纯函数 tile（宁缺不脏） */
+}
+
 /* 12px 相位：从串首（或最近换行 / 清窗口）到 index 累计像素，取低 3 位。
  * 零 EWRAM 状态 —— 原版 tm0 用 TILE_OFFSET 累加器，这里连累加器都不要。
  * FC 参数必须按类型跳过，否则颜色/字体号字节会被误当成 PCS 或 F7 前缀。 */
@@ -358,7 +522,7 @@ static void grid_emit(TextPrinter *win, GridTarget *t,
     uint16_t t0;
 
     if (!t->buffered) {
-        t0 = grid_tile(win, t->col);
+        t0 = grid_tile_resolved(win, t->col, ncols);
         if ((unsigned)t0 + 2u * (ncols - 1u) + 2u > GRID_TILE_LIMIT) {
             diag_ctrl(3u, (uint32_t)t0, 0u);
             win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(t->rel + delta));

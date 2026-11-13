@@ -35,7 +35,7 @@ JMP_HOOKS = [
     ("P04 MapNamePopup", 0x0809F67E, "MapName_DisplayCellLength"),
     ("P07 UnusedPrintMonName", 0x0808DD60, "UnusedPrintMonName_Hook"),
     ("P08 DrawOptionMenuChoice", 0x080889F0, "DrawOptionMenuChoice_Hook"),
-    ("P25 InitWindowTileData", 0x08002A50, "InitWindowTileData_Entry"),
+    ("P26 UnusedPrintDecimalNum", 0x0808DDD4, "UnusedPrintDecimalNum_Hook"),
 ]
 NICK_POOLS = [("P03 Main", 0x08042C38), ("P03 Alt1", 0x08041760), ("P03 Alt2", 0x08042620)]
 

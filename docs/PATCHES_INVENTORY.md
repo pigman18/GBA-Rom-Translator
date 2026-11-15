@@ -77,7 +77,9 @@
 | P36 | `0x080EBD2C` | stub→`ListRedraw_Hook`（按行 Blank；详情退回整栏+左栏重印） | JMP | 每行只 Blank `(13,y)–(28,y+1)`（不 band scrub）。`NEED_BLANK`：整右栏 Blank + 一次 list arena scrub + origin 左栏三件套（`EB9C0` 地点 / `EBA40(0)` 标签 / `EC2E0` 数字）。修退详情丢地点、换项丢「对战次数」、列表红残墨 | JP `ListRedraw` |
 | P35b | `0x080F2402` | `nop; nop`（原 `bl EC2E0`） | NOP | 进详情跳过左栏统计重画 | JP left stats |
 | ~~P37~~ | `0x080A0BF4` | （已移除，ROM 保持原版） | ~~JMP~~ | **已撤**：整段 scrub 与背包图同 charBase → 切页撞 UI / 列表空窗。撞字改 `PrintNextChar` `grid_tile_is_other_col_natural` **全 band** 本征保留（方案 B）。ID 不复用 | — |
-| P38 | `0x080A0770` | （暂撤） | — | 曾试 `left≥0x13` 躲 No.，但 r2 兼作组串宽/Print 左缘，招式名整行不印；另案再挂 | JP TM helper |
+| P38 | `0x080A0A52` / `0x080A0BA8` | `mov r2,0x10`（与原版同） | INS | TM/浆果名 left：曾试 0x13/0x11 躲 BG「No」，空隙过大；回到 0x10。框底/数量列裁切见 PrintNextChar | JP `Bag_PrintTMName` 两处 BL |
+| P39 | `0x080A0AF2` | `cmp r0,#7` | INS | 可见行上限；`write_plan._copy_limit_patches` 曾把附近 `cmp #7` 误扩成 `#0x1F`（已改为仅 `bls` 环），双保险钉回 8 行 | JP TM 抽屉循环 |
+| ~~P38a~~ | `0x080A0770` | （已撤） | — | 曾试入口 trampoline `left≥0x13`；r2 双用途导致招式名不印。改 P38 调用点 INS | — |
 
 ### F. 数据清理（置空日文残留）
 

@@ -430,6 +430,14 @@ def _copy_limit_patches(
             # 只改 cmp 复制上限。不改 movs：摘要页等处 movs r3,#9 常是
             # 打印坐标/宽度（后接 bl），当成 len 改成 new_stride-1 会让特性名空白。
             if (b1 & 0xF8) == 0x28 and lo <= b0 <= hi and b0 < new_lim:
+                # 必须后接 bls 回跳（拷贝/清零环）。bhi/bhs 常见于 UI
+                # 「可见行数」上限——背包 TM 抽屉 cmp r0,#7 / bhi 曾被误扩成
+                # #0x1F，Y≥18 多画 BG「No.」渗出黄框。
+                if off + 3 >= len(rom):
+                    continue
+                h2 = rom[off + 2] | (rom[off + 3] << 8)
+                if (h2 & 0xFF00) != 0xD900:
+                    continue
                 seen.add(off)
                 out.append({
                     "off": f"0x{off:X}",

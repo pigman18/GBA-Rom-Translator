@@ -161,8 +161,8 @@ TM 侧同窗：串如 `０５吼叫` / `４７钢翼`（编号进文本）；`cu
 |---|----|------|------|
 | **A** | 引擎 | 12px（`ncols>1`）也走占用检测；迁移时处理 phase=4 共享列（先整字迁或先 blank 再打） | 动 `PrintNextChar`；需回归队伍/图鉴/开始菜单/TE |
 | **B** | 引擎 | 8px 规避禁止迁入「其它行 band 的本征 tile」（扩展 `grid_tile_is_other_col_natural` → 全 band） | 改动面小于 A；可能规避失败回退本征仍撞预载图 |
-| **B** | 引擎 | **已实施**：① `grid_tile_is_other_col_natural` 全 8 band；② `grid_cell_own`/`points_to` 用真实光标 Y（禁 `(row&7)*2`）；③ 12px 若本征 tile 已被其它格占用则跳过写入（防 y=18 别名踩 y=2） | 动 `PrintNextChar` |
-| **C** | 场景钩 | **已撤 P37**：scrub 同 charBase → 切页撞 UI、空列表。P38 仍撤 | 单点补丁证实有害 |
+| **B** | 引擎 | **已实施**：① 全 band 本征保留；② own/points_to 用真实光标 Y；③ 12px 占用则跳过；④ 背包列表 Y≥18 / 12px 占到 col≥26 不写 | 动 `PrintNextChar` |
+| **C** | 场景钩 | **已撤 P37**。**P38 INS**：调用点 left `0x10→0x13`（躲开 BG No.） | 不用入口 trampoline |
 | **D** | 场景钩 | 数量改回与名同一 Align 串（贴近美版）并加宽 | 改日版流程/串布局，偏重；且不消 tile 公式碰撞 |
 | **E** | 禁止 | 改「学习装置」等译文缩短；改 `0x00` 全局铺背景；关 12px | 违规 |
 

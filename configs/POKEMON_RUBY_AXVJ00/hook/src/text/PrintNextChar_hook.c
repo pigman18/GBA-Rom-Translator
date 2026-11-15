@@ -563,13 +563,27 @@ static void diag_ctrl(unsigned tag, unsigned code, uint16_t index)
 }
 #endif
 
+/* 背包列表 tpl（GDB）；列表内底在 tile Y=16/17，Y≥18 是框底/箭头带。 */
+#define BAG_LIST_TEMPLATE 0x081BB544u
+
+static int grid_is_bag_list(TextPrinter *win)
+{
+    const uint8_t *tpl = win_template(win);
+
+    return tpl != 0
+        && (((uintptr_t)tpl & ~1u) == (uintptr_t)BAG_LIST_TEMPLATE);
+}
+
 /* 把两列 64B 写回 VRAM/缓冲，并给每列写一次 tilemap 表项。
  * 非缓冲时若 tile 号会越过 0x1F0（UI 图标段）→ 整字不写，只推进游标。
  *
  * 12px（ncols>1）不能迁 tile（phase=4 共享列）；若本征对已被**其它
  * tilemap 格**占用（典型：row&7 别名让 y=18 与 y=2 抢 band1），再写会
  * 把上一行墨迹踩成「钢翼机关枪 / 闭背包」类串行。此时只推进游标、不写
- * VRAM/表项 —— 溢出行宁可缺字，也不毁已占用行。 */
+ * VRAM/表项 —— 溢出行宁可缺字，也不毁已占用行。
+ *
+ * 背包列表 Y≥18：原版列表底在 16；写到 18 会渗黄框外并踩背包图 tile
+ *（切招式页再切回撞 UI）。只推进、不写。 */
 static void grid_emit(TextPrinter *win, GridTarget *t,
                       const uint8_t *p0, const uint8_t *p1,
                       unsigned ncols, unsigned delta)
@@ -579,6 +593,15 @@ static void grid_emit(TextPrinter *win, GridTarget *t,
     uint32_t used[GRID_TILE_BITS / 32u];
 
     if (!t->buffered) {
+        /* 背包列表：Y≥18 渗框底；12px 若本字会占到 col≥26（×/数量起点）
+         * 则不写（ncols=2 时 col=25 已占 25+26）。8px ×/数字仍写。 */
+        if (grid_is_bag_list(win)
+            && (grid_cursor_ty(win) >= 18u
+                || (ncols > 1u
+                    && t->col + (ncols - 1u) >= 26u))) {
+            win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(t->rel + delta));
+            return;
+        }
         t0 = grid_tile_resolved(win, t->col, ncols);
         if ((unsigned)t0 + 2u * (ncols - 1u) + 2u > GRID_TILE_LIMIT) {
             diag_ctrl(3u, (uint32_t)t0, 0u);

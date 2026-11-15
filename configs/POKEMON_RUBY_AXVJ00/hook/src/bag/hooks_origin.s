@@ -1,8 +1,17 @@
 ; =============================================================================
-; src/bag/hooks_origin.s — 背包场景钩（已撤）
-;
-; P37 口袋总绘 scrub：清 [TB+2,0x1F0) 时与背包图同 charBase → 切页撞 UI、
-; 列表空窗。根因改走 PrintNextChar grid_tile_resolved 全 band 本征保留
-; （方案 B，见 docs/research/BAG_LIST_TILE_COLLISION.md）。
-; P38 TM left 右移：r2 双用途，暂撤。
+; src/bag/hooks_origin.s — 背包列表
+; P37 已撤。P38：left=原版 0x10（0x13/0x11 空隙过大）。
+; P39：可见行 cmp #7 防 write_plan 误扩（曾 #0x1F → 框外多画 No.）。
 ; =============================================================================
+
+; TM 抽屉 Print left @0x080A0A52
+.org 0x080A0A52
+    mov r2, 0x10
+
+; TM 抽屉可见行上限 @0x080A0AF2（cmp r0,#7 / bhi）
+.org 0x080A0AF2
+    cmp r0, #7
+
+; 浆果等第二调用 @0x080A0BA8
+.org 0x080A0BA8
+    mov r2, 0x10

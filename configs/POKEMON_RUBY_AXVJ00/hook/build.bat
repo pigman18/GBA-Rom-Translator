@@ -157,7 +157,7 @@ if errorlevel 1 exit /b 1
 
 echo === Linking game.elf ===
 @rem text_entry.o must be FIRST: main.asm JP2CHS_Entry = GameBinAddresses = bin start.
-@rem bag P37 已撤：撞字改 PrintNextChar 全 band 本征保留（见 BAG_LIST_TILE_COLLISION.md）。
+@rem bag：P38 left=0x10、P39 cmp#7（hooks_origin.s）；列表裁切见 PrintNextChar。
 %CC% %LDFLAGS% -o %OUT%/game.elf ^
   %BUILD%/text_entry.o ^
   %BUILD%/PrintNextChar_hook.o ^

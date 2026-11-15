@@ -41,6 +41,7 @@
 .include "./patches/initialpoke.asm"
 .include "./patches/pokedex.asm"
 .include "./patches/start_menu.asm"
+.include "./patches/save_menu.asm"
 
 ; ---- C 文本引擎（jp2chs 全面接管）/ 字库 / slot 表 ----
 .org GameBinAddresses

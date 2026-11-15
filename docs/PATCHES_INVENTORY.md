@@ -80,6 +80,7 @@
 | P38 | `0x080A0A52` / `0x080A0BA8` | `mov r2,0x10`（与原版同） | INS | TM/浆果名 left：曾试 0x13/0x11 躲 BG「No」，空隙过大；回到 0x10。框底/数量列裁切见 PrintNextChar | JP `Bag_PrintTMName` 两处 BL |
 | P39 | `0x080A0AF2` | `cmp r0,#7` | INS | 可见行上限；`write_plan._copy_limit_patches` 曾把附近 `cmp #7` 误扩成 `#0x1F`（已改为仅 `bls` 环），双保险钉回 8 行 | JP TM 抽屉循环 |
 | ~~P38a~~ | `0x080A0770` | （已撤） | — | 曾试入口 trampoline `left≥0x13`；r2 双用途导致招式名不印。改 P38 调用点 INS | — |
+| P40 | `0x08091312`/`324`/`34E`；`0x0809140A`/`41C`/`446`；`0x08091456`/`468`/`492` | `sub/add sp,#16` + `mov r2,#16` | INS | 存档信息框玩家/图鉴/时间标签：原 8B 栈+CopyLen7/8 截断 9B F7 → 无 FF 跑飞铺砖；徽章本已 16/9 不动 | JP `PrintSave*` memcpy 窗 |
 
 ### F. 数据清理（置空日文残留）
 

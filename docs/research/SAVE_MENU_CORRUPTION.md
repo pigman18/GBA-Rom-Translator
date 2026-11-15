@@ -317,9 +317,10 @@ YesNo「是/否」略压扁：2 行菜单行距按 8px 格，12px 墨水偏紧�
 | run | 结论 |
 |-----|------|
 | `.../bot/save/20261115T173227_179887/` `020.png` | 底框全文「要把至今为止的活跃表现 / 记录到宝可梦报告里吗？」**可读**；信息框标签仍正常 |
-| 残留 | 底框右上角偶发碎点（L1 末字靠近 YesNo 右缘）；是/否仍略扁 — 未改 YesNo 坐标 / 未改译 |
+| 残留（旧） | 底框右上角偶发碎点；是/否仍略扁 — 未改 YesNo 坐标 / 未改译 |
+| 碎点修复 | 对话 FE/FF：`left=cx+ceil(本行px/8)` → `BlankWindowRect(..,26,..)`（禁 CURSOR_TILE_X / right=28） |
 
-**bot verdict（confirm 帧）**：缺字 **PASS**；右缘碎点 / YesNo 扁 **NOTE**。
+**bot verdict（confirm 帧，§9）**：缺字 **PASS**；右缘碎点当时 **NOTE**（见 blank_rest 后复验）。
 
 ## 10. 开始菜单「保存→退出」+ band 收窄（2026-11-15）
 
@@ -350,7 +351,7 @@ Menu_PrintItems(23, 2, n, table)   @0x0806FBBC
 
 1. **band0→band6** 仅当 `CURSOR_X < 20`（对话左缘≈4；开始菜单 x≈23；YesNo≈20）。
 2. 对话 `find_free` 失败回退写本征：同样限 `CURSOR_X < 20`。
-3. 对话 FE/FF：`Menu_BlankWindowRect` 清光标以右到 x=28（抑行尾预载假名残片）。
+3. 对话 FE/FF：按本行像素宽起 `Menu_BlankWindowRect` 到 x=26（抑行尾预载假名；勿 CURSOR_TILE_X / 勿 28）。
 
 **P41**：徽章后缀 CopyLen 2→5、栈 16→24、池→`SuffixGe`「个」。
 
@@ -364,4 +365,5 @@ Menu_PrintItems(23, 2, n, table)   @0x0806FBBC
 | run | 结论 |
 |-----|------|
 | `.../bot/start_menu/20261115T180834_491109/` `042.png` | **保存**≠退出；八项可读 |
-| `.../bot/save/20261115T180817_609007/` `020.png` | 徽章 **5个**；底框全文可读；右缘碎点仍 **NOTE** |
+| `.../bot/save/20261115T180817_609007/` `020.png` | 徽章 **5个**；底框全文可读；右缘碎点仍 **NOTE**（旧） |
+| `.../bot/save/20261115T212019_564984/` `020.png` | 徽章 **5个**；底框全文；L1 右缘假名碎点 **已清**（tile21–25） |

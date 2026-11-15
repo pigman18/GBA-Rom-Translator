@@ -14,7 +14,8 @@
  * 全部 tile 落在原版自己的 [TB, TB+0x1F0) 预载字库区内，不碰 UI 图标。
  *
  * 重印清尾：cbc5ce5 的 clear_cols 在网格引擎 + 开始菜单同 printer 同 seg 下会
- * 把光标重绘误判成重印，洗掉整行菜单字并误伤备忘第二行；暂不在此层清尾。
+ * 把光标重绘误判成重印，洗掉整行菜单字并误伤备忘第二行；禁全局 clear_cols。
+ * 对话 FE/FF 仅左缘用像素宽 Blank 到 right=26（清预载假名碎点，勿 CURSOR_TILE_X）。
  *
  * ── 协议（用户口径）───────────────────────────────────────────────────
  * 全局统一 `F7 00 hi lo`。流里只有：
@@ -1129,6 +1130,139 @@ static int grid_ext_ctrl(TextPrinter *win, const uint8_t *text, uint16_t next)
     }
 }
 
+/* 行首→end（不含 end）的本行像素宽；遇 FE/FB 归零续扫（多行取末行）。
+ * F7 用与绘制相同的 adv。勿用 CURSOR_TILE_X 推 Blank 起点。 */
+static unsigned grid_width_before(const uint8_t *text, uint16_t end,
+                                  unsigned adv)
+{
+    unsigned w = 0u;
+    uint16_t i = 0u;
+
+    if (!text)
+        return 0u;
+    while (i < end) {
+        uint8_t c = text[i];
+        if (c == 0xFFu)
+            break;
+        if (c == 0xFEu || c == 0xFBu) {
+            w = 0u;
+            ++i;
+            continue;
+        }
+        if (c == 0xFCu) {
+            uint8_t type = (i + 1u < end) ? text[i + 1u] : 0u;
+            if (type == FC_CLEARWINDOW)
+                w = 0u;
+            i = (uint16_t)(i + 2u + fc_arg_count(type));
+            continue;
+        }
+        if (c == 0xF7u && i + 1u < end && text[i + 1u] == 0u) {
+            w += adv;
+            i = (uint16_t)(i + 4u);
+            continue;
+        }
+        if (c >= PCS_CTRL_BASE) {
+            ++i;
+            continue;
+        }
+        w += CHS_GLYPH_ADVANCE_JP_PX;
+        ++i;
+    }
+    return w;
+}
+
+/* 共享列：本行已绘到 px 时，该列左 (px&7) 是末字墨，右半可能仍是预载假名。
+ * 只把 x∈[px&7, 8) 铺成窗背景，不碰左侧墨（避免 Blank 整列削半字）。 */
+static void grid_clear_tail_pixels(TextPrinter *win, unsigned abs_col,
+                                   unsigned from_x, uint8_t bg)
+{
+    const uint8_t *tpl = win_template(win);
+    const uint16_t *map;
+    uint32_t base;
+    uint16_t t0;
+    uint8_t pair[GRID_PAIR_BYTES];
+    unsigned x, y, ty;
+
+    if (from_x >= 8u || abs_col >= GRID_COLS_PER_SEG || !tpl)
+        return;
+    base = grid_tile_base(win);
+    if (!base)
+        return;
+    map = (const uint16_t *)(const void *)(uintptr_t)win_u32(tpl, TPL_TILEMAP);
+    ty = grid_cursor_ty(win);
+    t0 = grid_tile(win, abs_col);
+    if (map && abs_col < GRID_TILEMAP_W && ty < GRID_TILEMAP_W) {
+        unsigned v = grid_tilemap_entry(map, abs_col, ty);
+        if (v != 0u && v < GRID_TILE_LIMIT)
+            t0 = (uint16_t)v;
+    }
+    if ((unsigned)t0 + 2u > GRID_TILE_LIMIT)
+        return;
+    grid_pair_load(pair, base + 32u * t0);
+    for (y = 0u; y < 16u; ++y)
+        for (x = from_x; x < 8u; ++x)
+            grid_pair_set(pair, x, y, bg);
+    grid_pair_store(pair, base + 32u * t0);
+}
+
+/* 对话底框：12px 行比日文短时，行尾 tilemap 可能仍指预载假名 → 碎点。
+ * FE/FF：按本行像素宽清共享列右半 + 本窗 tilemap 从 ceil 列到 26（仅左缘对话）。
+ *
+ * ★ 勿从 CURSOR_TILE_X 整列 Blank（12px 共享列会被削半字）。
+ * ★ 勿 right=28（越界像补空格；对齐 tip P30）。
+ * ★ cx≤1：队伍脚注原版已 Erase，再 Blank 啃红框。
+ * ★ 直接改本窗 tilemap：Menu_BlankWindowRect 走 gMenuWindow，存档确认时
+ *   可能已切到 YesNo，清不到底框。 */
+static void grid_blank_rest_dialogue_line(TextPrinter *win)
+{
+    unsigned left;
+    unsigned top;
+    unsigned cx = win_u8(win, WIN_CURSOR_X);
+    unsigned right = 26u;
+    unsigned adv;
+    unsigned px;
+    unsigned x, y;
+    uint16_t at;
+    uint16_t blank;
+    const uint8_t *text;
+    const uint8_t *tpl;
+    uint16_t *map;
+    typedef void (*blank_fn)(uint32_t, uint32_t, uint32_t, uint32_t);
+
+    if (cx <= 1u || cx >= 20u || grid_cursor_ty(win) < 14u)
+        return;
+    /* 入口已把 TEXT_INDEX 推过 FE/FF；量宽到控制码下标 = at-1。 */
+    at = win_u16(win, WIN_TEXT_INDEX);
+    text = (const uint8_t *)(uintptr_t)win_u32(win, WIN_TEXT_PTR);
+    adv = (win_u8(win, WIN_FONTNUM_REAL) == 2u
+           || win_u8(win, WIN_FONTNUM_REAL) == 4u)
+              ? CHS_GLYPH_ADVANCE_SMALL
+              : (unsigned)CHS_GLYPH_ADVANCE_PX;
+    px = (at > 0u) ? grid_width_before(text, (uint16_t)(at - 1u), adv) : 0u;
+    top = grid_cursor_ty(win);
+    if ((px & 7u) != 0u)
+        grid_clear_tail_pixels(win, cx + (px >> 3), px & 7u, grid_bg(win));
+    left = cx + ((px + 7u) >> 3);
+    if (left >= right)
+        return;
+
+    tpl = win_template(win);
+    map = tpl ? (uint16_t *)(void *)(uintptr_t)win_u32(tpl, TPL_TILEMAP) : 0;
+    blank = (uint16_t)(win_u16(win, WIN_TILE_BASE) + 1u); /* GetBlankTileNum */
+    if (map) {
+        for (y = top; y <= top + 1u && y < GRID_TILEMAP_W; ++y) {
+            for (x = left; x <= right && x < GRID_TILEMAP_W; ++x) {
+                uint16_t e = map[y * GRID_TILEMAP_W + x];
+                map[y * GRID_TILEMAP_W + x] =
+                    (uint16_t)((e & 0xFC00u) | (blank & 0x3FFu));
+            }
+        }
+    }
+    /* tip 同款：若 gMenuWindow 仍是底框则再清一次；已切 YesNo 则无害 */
+    ((blank_fn)(ADDR_MENU_BLANK_WINDOW_RECT | 1u))(
+        left, top, right, top + 1u);
+}
+
 static int grid_control(TextPrinter *win, uint8_t c, uint16_t next)
 {
     switch (c) {
@@ -1149,9 +1283,11 @@ static int grid_control(TextPrinter *win, uint8_t c, uint16_t next)
         win_set_u16(win, WIN_STATE, AXV_STATE_PLACEHOLDER);
         return 2;
     case 0xFE:
+        grid_blank_rest_dialogue_line(win);
         win_set_u16(win, WIN_STATE, AXV_STATE_NEWLINE);
         return 2;
     case 0xFF:
+        grid_blank_rest_dialogue_line(win);
         win_set_u16(win, WIN_STATE, AXV_STATE_END);
         return 0;
     default:

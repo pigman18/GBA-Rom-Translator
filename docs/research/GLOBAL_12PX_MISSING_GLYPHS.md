@@ -113,7 +113,7 @@ Menu_PrintText(gPokedexEntries[dexNum].descriptionPage1, 2, 13);
 | 12px 占用 → **仅背包 skip** | `grid_is_bag_list` | 图鉴**不再**因占用跳字（训练家修复点） |
 | 12px 占用 → **仅对话 find_free** | ty≥14 且 cx<20 | 图鉴多半不走；占用时 **直接写本征** |
 | `GRID_TILE_LIMIT=0x1F0` 则整字不写 | 全局 | 高 band / 宽行可能静默缺字 |
-| FE/FF **无** `blank_rest` | — | 行尾预载假名/碎点可残留（存档 L1 NOTE） |
+| FE/FF 对话 `blank_rest`：像素宽起 Blank→right=26 | 仅 ty≥14 且 1&lt;cx&lt;20 | 清预载假名碎点；禁 CURSOR_TILE_X / right=28 |
 | `0x00` 只推进不重绘 | 全局 | 短清长依赖 Blank/重打，不靠空格擦 VRAM |
 
 训练家列表「暂时好了」= 去掉**全局 skip** 的直接收益。  
@@ -142,7 +142,7 @@ Menu_PrintText(gPokedexEntries[dexNum].descriptionPage1, 2, 13);
 | 场景 | 已观察 | 与本轮关系 |
 |------|--------|------------|
 | 训练家列表 | 曾全局 skip → 缺字串行；现写本征后用户称暂时好 | 对比基线 |
-| 存档底框 | L2 曾 skip；现 band+对话 find_free；L1 右缘碎点仍在 | 用户截图 |
+| 存档底框 | L2 曾 skip；现 band+对话 find_free；L1 碎点用像素宽 Blank | 用户截图 → 已修 |
 | **图鉴说明** | L1 头被 L3 墨替换 + 前段缺字 | **本轮主证** |
 | 背包列表 | 占用 skip + Y/col 裁切（有意） | 勿把图鉴方案做成全局 skip |
 | 对话剧情 | 同底框几何 | 回归必测 |
@@ -182,7 +182,7 @@ Menu_PrintText(gPokedexEntries[dexNum].descriptionPage1, 2, 13);
 | 图鉴说明 L3 | 0→**5** | 写入 band5 |
 | 开始菜单退出 | cx≥20 不映 | 不变 |
 
-未做：全局 find_free / blank_rest / 改译文。行尾碎点（存档 L1）仍为 NOTE。
+另做（2026-11-15 续）：对话 FE/FF **像素宽** `Menu_BlankWindowRect(left..26)`（`left=cx+ceil(px/8)`），修存档 L1 右缘碎点；不改译文/协议。
 
 ---
 
@@ -191,8 +191,10 @@ Menu_PrintText(gPokedexEntries[dexNum].descriptionPage1, 2, 13);
 - [x] origin 几何钉死（Print @ (2,13)）
 - [x] H1 几何证实 + band5 修复
 - [x] bot `_probe_dex_venusaur/20261115T205829_298402` `059`：L1=`据说，充足的营养和阳光会让它的`（不再被 L3 盖）
-- [x] bot `save/20261115T205615_587610`：信息框正常；底框全文可读；L1 右缘碎点仍 NOTE
-- [x] bot `navigator`：已跑采集（无改列表逻辑）
+- [x] bot `save/20261115T205615_587610`：信息框正常；底框全文可读；L1 右缘碎点仍 NOTE（旧）
+- [x] bot `save/20261115T212019_564984`：confirm 帧 L1 右缘假名碎点已清（tile21–25 非白像素 0；旧 run 同区有墨）；正文完整；信息框/是否正常
+- [x] bot `_probe_dex_venusaur/20261115T212159_725825` `059`：L1 仍「据说，充足…」
+- [x] bot `navigator/20261115T212228_214706`：训练家列表仍有中文职业/名（无空白串行回归）
 
 ---
 

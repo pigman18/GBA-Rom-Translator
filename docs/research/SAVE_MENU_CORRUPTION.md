@@ -14,8 +14,8 @@
 | 左上信息框 · 地点 | **正常**（紫堇市） |
 | 左上 · 玩家/徽章/图鉴/时间标签 | **乱码**：夹杂假名 `あ` / `ちけくえ`；可见「徽章5**こ**」「图鉴あ」「时鉴け」等 |
 | 右侧大片 | **严重铺砖**：白底字块反复盖住野外地图（VRAM/tilemap 渗漏） |
-| 底部确认句 | 中文大体在，但 bot 帧见断行/缺字（「…的活 / …可梦报告里吗？」）——可能另有窗宽/换行问题，次于左上跑飞 |
-| 是/否 | **正常** |
+| 底部确认句 | P40 后仍缺字；§9 定为 band 别名 + 12px skip（已修） |
+| 是/否 | 中文可读；略扁（NOTE） |
 
 已有 bot 场景：`bot/scenes/POKEMON_RUBY_AXVJ00/save.lua`  
 路径：野外 → START → 第 6 项「レポート」→ A → `save_confirm` 截图 → 选「否」退出。  
@@ -274,5 +274,94 @@ PCS 对照：`あ=0x01`、`ち=0x11`、`け=0x09`、`く=0x0B`、`え=0x04` —�
 ## 8. 修复记录（2026-11-15）
 
 **已做（用户指定）**：`patches/save_menu.asm` **P40** — 玩家/图鉴/时间三处 `sub sp,#8→#16`、`CopyLen→#16`、`add sp,#16`。徽章不动。时间订址：`0x08091456/468/492`（曾偏 +2 已纠）。  
-**未做**：「こ」→「个」、底框断行缺字、数值右对齐间距。  
+**未做**：「こ」→「个」、数值右对齐间距。  
 **验收 bot**：`work/.../bot/save/20261115T165747_569810/` `020.png` — 标签「玩家/徽章/图鉴/时间」可读，右屏铺砖消失；底框仍见「…的活 / …可梦报告」断行。
+
+## 9. 底框缺字 / YesNo（2026-11-15 续）
+
+### 9.1 Origin 路径（符号 + pret 对照 + 反汇编）
+
+| 项 | JP | 备注 |
+|----|-----|------|
+| `DisplaySaveMessageWithCallback` | 符号 `0x0806ED70` **UNVERIFIED**（该址像 DMA 清屏中段） | 真入口需经 `SaveDialogCB_DisplayConfirmMessage` 链追；美版逻辑见 pret |
+| 确认句打印 | `Menu_DisplayDialogueFrame` @ `0x0806F318` → `MenuPrintMessageDefaultCoords` @ `0x0806F360` | 坐标 **(4, 15)**（`mov r3,#4` / `str #0xF`） |
+| YesNo | pret：`DisplayYesNoMenu(20, 8, 1)` → 框 `(20,8)–(26,13)` | `HideSaveDialog` = `Menu_EraseWindowRect(20,8,26,13)` |
+| FE 换行 | `RunTextPrinter`：`win[0x1B]=0`；`win[0x1D]+=2` | 与 hook `WIN_CURSOR_TILE_X/Y` 一致 |
+
+ROM 译文完整（确认句 11+10 个 F7 + `3D`？ + FF；指针站 `0x0806EAE8` → reloc）。
+
+### 9.2 根因（bot `020` tilemap + VRAM）
+
+**不是** YesNo 地理盖住底框正文（YesNo 行 8–13，正文行 15–18）。  
+**是** 12px 网格 `tile = TB+2+(row&7)*62+2*col` 的 **band 别名**：
+
+1. 信息框地名印在 screen **y=1** → `grid_row=0` → **band0**，本征 tile `0x05..0x13`。  
+2. 对话 L2 在 y=15+2 → `grid_row=8` → **band0**，同号本征。  
+3. `grid_emit` 对 `ncols>1`：本征已被其它格引用 → **只推进游标、不写** → L2 前段「记录到宝」全 skip；L1 末段则因邻列预清占住 `t0+1` 同样 skip。  
+4. 屏上表现为「…的活 / ……可梦报告里吗？」（缺 FE 两侧一段）。
+
+Saving 句无 YesNo 也缺字 → 进一步证明主因是 **FE/band 别名 + 12px skip**，不是 YesNo 擦窗。
+
+YesNo「是/否」略压扁：2 行菜单行距按 8px 格，12px 墨水偏紧；次要。
+
+### 9.3 修复（未改 lexicon）
+
+`PrintNextChar_hook.c`：
+
+1. **`grid_band`**：对话区（`cursor_ty ≥ 14` 且 `CURSOR_X<20`）的 band0 **改映 band5**（信息框 band0–4；曾误用 band6，与图鉴说明 L1@y=13 相撞，见 `GLOBAL_12PX_MISSING_GLYPHS.md`）。  
+2. **12px 占用**：优先 `find_free` 迁移；对话区迁不到则 **回退写本征**（与 Small 一致），避免再整段 skip。  
+3. **`grid_load` phase>0**：从 **tilemap 实指** 读共享列左 4px（迁移后不能再信公式本征号）。
+
+### 9.4 验收
+
+| run | 结论 |
+|-----|------|
+| `.../bot/save/20261115T173227_179887/` `020.png` | 底框全文「要把至今为止的活跃表现 / 记录到宝可梦报告里吗？」**可读**；信息框标签仍正常 |
+| 残留 | 底框右上角偶发碎点（L1 末字靠近 YesNo 右缘）；是/否仍略扁 — 未改 YesNo 坐标 / 未改译 |
+
+**bot verdict（confirm 帧）**：缺字 **PASS**；右缘碎点 / YesNo 扁 **NOTE**。
+
+## 10. 开始菜单「保存→退出」+ band 收窄（2026-11-15）
+
+### 10.1 打印路径
+
+```
+BuildStartMenuActions_Normal → 表 @0x0835089C {text,cb}×N
+InitStartMenuMultistep → Menu_DrawStdWindowFrame(22,1,…)
+Menu_PrintItems(23, 2, n, table)   @0x0806FBBC
+  → 每项 Menu_PrintText(str, 23, 2+2*i)
+```
+
+| 项 | y | grid_row | band(自然) |
+|----|---|----------|------------|
+| レポート/保存 | 12 | 6 | 6 |
+| とじる/退出 | 16 | 8 | **0** |
+
+指针/译文均正确（保存 `0x0941D378` ≠ 退出 `0x0941D3C0`）。
+
+### 10.2 根因
+
+§9 `grid_band`：`band==0 && cursor_ty≥14` → **一律**映 band6。  
+退出在 y=16 被映到 band6，与保存本征撞车 → 保存行显示「退出」。
+
+### 10.3 修复
+
+`PrintNextChar_hook.c`：
+
+1. **band0→band6** 仅当 `CURSOR_X < 20`（对话左缘≈4；开始菜单 x≈23；YesNo≈20）。
+2. 对话 `find_free` 失败回退写本征：同样限 `CURSOR_X < 20`。
+3. 对话 FE/FF：`Menu_BlankWindowRect` 清光标以右到 x=28（抑行尾预载假名残片）。
+
+**P41**：徽章后缀 CopyLen 2→5、栈 16→24、池→`SuffixGe`「个」。
+
+### 10.4 「图鉴左偏」
+
+- 开始菜单：光标在首项时 ▶ 墨迹被误当成字起点；光标移走后与其它项 **同 x**（origin 同）。
+- 存档信息框：四标签 first_ink_x 相同；「图」左边竖墨更重，观感偏左（字形，非错位）。
+
+### 10.5 验收 bot
+
+| run | 结论 |
+|-----|------|
+| `.../bot/start_menu/20261115T180834_491109/` `042.png` | **保存**≠退出；八项可读 |
+| `.../bot/save/20261115T180817_609007/` `020.png` | 徽章 **5个**；底框全文可读；右缘碎点仍 **NOTE** |

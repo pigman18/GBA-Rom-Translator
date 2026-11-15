@@ -26,3 +26,9 @@ bot：`_probe_start_reopen`（`work/.../bot/_probe_start_reopen/`）。
 
 `grid_tile` / 规避扫描从 `TB+2` 起，永不写 `TB`/`TB+1`。  
 bot `20261114T042631`：新灰屑 29 = origin 29（仅当前光标）。
+
+## 保存项显示成「退出」（2026-11-15）
+
+指针/译文正确。根因：对话 band0→band6（`cursor_ty≥14`）把「とじる」(y=16) 映到与「レポート」(y=12, band6) 同槽。  
+修复：remap / 对话回退仅 `CURSOR_X < 20`。详见 `SAVE_MENU_CORRUPTION.md` §10。  
+bot：`work/.../bot/start_menu/20261115T180834_491109/`。

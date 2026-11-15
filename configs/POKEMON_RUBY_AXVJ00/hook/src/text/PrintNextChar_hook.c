@@ -154,11 +154,20 @@ static uint16_t grid_tilemap_entry(const uint16_t *map, unsigned x, unsigned y)
     return (uint16_t)(map[y * GRID_TILEMAP_W + x] & 0x3FFu);
 }
 
+/* 光标所在 tilemap 行（与 UpdateTilemap 同口径）。
+ * 禁止用 (row&7)*2：row≥8 时会把「本格」误判到 y=0/1（背包图一带），
+ * 规避/占用扫描与真实写点错位 → 底行/切页撞 UI。 */
+static unsigned grid_cursor_ty(TextPrinter *win)
+{
+    return (unsigned)win_u8(win, WIN_CURSOR_Y)
+         + (unsigned)win_u8(win, WIN_CURSOR_TILE_Y);
+}
+
 /* 本格自己的两个表项（上/下 tile 行）；这两项不算「别人在用」。 */
-static int grid_cell_own(const uint16_t *map, unsigned row, unsigned col,
+static int grid_cell_own(TextPrinter *win, unsigned col,
                          unsigned x, unsigned y)
 {
-    unsigned ty = (row & (GRID_SEG_COUNT - 1u)) * 2u;
+    unsigned ty = grid_cursor_ty(win);
 
     if (x != col)
         return 0;
@@ -167,7 +176,7 @@ static int grid_cell_own(const uint16_t *map, unsigned row, unsigned col,
 
 /* 收集本窗 tilemap 已被占用的 tile（排除本格自身）。返回 1 表示 t0/t0+1
    已被别人引用。 */
-static int grid_tile_taken(TextPrinter *win, unsigned row, unsigned col,
+static int grid_tile_taken(TextPrinter *win, unsigned col,
                            uint16_t t0, uint32_t *used)
 {
     const uint8_t *tpl = win_template(win);
@@ -185,7 +194,7 @@ static int grid_tile_taken(TextPrinter *win, unsigned row, unsigned col,
     for (y = 0u; y < GRID_TILEMAP_W; ++y) {
         for (x = 0u; x < GRID_TILEMAP_W; ++x) {
             unsigned v;
-            if (grid_cell_own(map, row, col, x, y))
+            if (grid_cell_own(win, col, x, y))
                 continue;
             v = grid_tilemap_entry(map, x, y);
             if (v < GRID_TILE_BITS)
@@ -236,7 +245,7 @@ static int grid_tile_vram_blank(uint32_t base, unsigned n)
 
 /* 本格 tilemap 的两个表项是否已经指向 n（说明这对 tile 就是本格上次
  * 写的，可以原地重用，不算「别人的」）。 */
-static int grid_cell_points_to(TextPrinter *win, unsigned row, unsigned col, unsigned n)
+static int grid_cell_points_to(TextPrinter *win, unsigned col, unsigned n)
 {
     const uint8_t *tpl = win_template(win);
     const uint16_t *map;
@@ -247,7 +256,7 @@ static int grid_cell_points_to(TextPrinter *win, unsigned row, unsigned col, uns
     map = (const uint16_t *)(const void *)(uintptr_t)win_u32(tpl, TPL_TILEMAP);
     if (!map || col >= GRID_TILEMAP_W)
         return 0;
-    ty = (row & (GRID_SEG_COUNT - 1u)) * 2u;
+    ty = grid_cursor_ty(win);
     if (ty + 1u >= GRID_TILEMAP_W)
         return 0;
     if (grid_tilemap_entry(map, col, ty) != n)
@@ -257,27 +266,42 @@ static int grid_cell_points_to(TextPrinter *win, unsigned row, unsigned col, uns
     return 1;
 }
 
-/* n 是否为本行段里「别的列」的纯函数本征 tile。
- * 图鉴列表先画编号（8px，走规避）再画名字（12px，ncols=2 不规避）：
- * 若编号规避抢了名字列的本征 tile，tilemap 仍指过去 → 首屏「No00妙」
- * （3 的位置显示成名字首字）；滚动清行后重画偶发躲开。禁止同段抢列。 */
+/* n 是否为**任一 band**里「别的列」的纯函数本征 tile。
+ *
+ * 图鉴：同 band 内编号（8px 规避）抢名字列本征 →「No00妙」。
+ * 背包：只禁同 band 时，× 会迁到其它行 band 的本征槽；该行 12px 再按
+ * 公式写回同一 tile → 数量位撞字（docs/research/BAG_LIST_TILE_COLLISION.md）。
+ *
+ * 公式区 [TB+2, TB+2+8*62) 内每个偶对都是某 (band,col) 的本征槽；
+ * 8px 规避不得占用「非本格」的本征对。规避失败则回退本征（见 resolved 末尾）。 */
 static int grid_tile_is_other_col_natural(TextPrinter *win, unsigned n,
                                           unsigned except_col)
 {
     uint16_t tb = win_u16(win, WIN_TILE_BASE);
-    unsigned base = (unsigned)tb + 2u
-        + (grid_row(win) & (GRID_SEG_COUNT - 1u)) * GRID_SEG_TILES;
-    unsigned off, nat_col;
+    unsigned arena = (unsigned)tb + 2u;
+    unsigned off, band, rem, nat_col, cur_band;
 
-    if (n < base || (unsigned)n + 2u > base + GRID_SEG_TILES)
+    if (n < arena || (unsigned)n + 1u >= GRID_TILE_LIMIT)
         return 0;
-    off = (unsigned)n - base;
+    off = (unsigned)n - arena;
     if ((off & 1u) != 0u)
         return 0;
-    nat_col = off / 2u;
+    if (off >= GRID_SEG_COUNT * GRID_SEG_TILES)
+        return 0;
+    /* 62 非整幂：用减代除，避免链入 __aeabi_uidiv */
+    band = 0u;
+    rem = off;
+    while (rem >= GRID_SEG_TILES) {
+        rem -= GRID_SEG_TILES;
+        band++;
+    }
+    nat_col = rem >> 1;
     if (nat_col >= GRID_COLS_PER_SEG)
         return 0;
-    return nat_col != except_col;
+    cur_band = grid_row(win) & (GRID_SEG_COUNT - 1u);
+    if (band == cur_band && nat_col == except_col)
+        return 0;                    /* 本格本征，允许 */
+    return 1;
 }
 
 /* 解析本字真正要写的 tile。ncols>1（12px 跨列、phase=4 共享列）不迁移：
@@ -287,14 +311,13 @@ static uint16_t grid_tile_resolved(TextPrinter *win, unsigned col, unsigned ncol
 {
     uint32_t used[GRID_TILE_BITS / 32u];
     uint16_t t0 = grid_tile(win, col);
-    unsigned row = grid_row(win);
     unsigned n;
 
     if (ncols != 1u || win_u8(win, WIN_TEXTMODE) == 2u)
         return t0;
-    if (grid_cell_points_to(win, row, col, t0))
+    if (grid_cell_points_to(win, col, t0))
         return t0;                       /* 本格自己的旧 tile，可重用 */
-    if (!grid_tile_taken(win, row, col, t0, used) &&
+    if (!grid_tile_taken(win, col, t0, used) &&
         grid_tile_vram_blank(grid_tile_base(win), t0))
         return t0;
     for (n = (unsigned)win_u16(win, WIN_TILE_BASE) + 2u; n < GRID_TILE_LIMIT;
@@ -302,8 +325,8 @@ static uint16_t grid_tile_resolved(TextPrinter *win, unsigned col, unsigned ncol
         if (!grid_tile_free(used, n))
             continue;
         if (grid_tile_is_other_col_natural(win, n, col))
-            continue;                    /* 勿抢同段其它列本征 tile */
-        if (grid_cell_points_to(win, row, col, n))
+            continue;                    /* 勿抢其它 (band,col) 本征 tile */
+        if (grid_cell_points_to(win, col, n))
             return (uint16_t)n;
         if (grid_tile_vram_blank(grid_tile_base(win), n))
             return (uint16_t)n;
@@ -541,13 +564,19 @@ static void diag_ctrl(unsigned tag, unsigned code, uint16_t index)
 #endif
 
 /* 把两列 64B 写回 VRAM/缓冲，并给每列写一次 tilemap 表项。
- * 非缓冲时若 tile 号会越过 0x1F0（UI 图标段）→ 整字不写，只推进游标。 */
+ * 非缓冲时若 tile 号会越过 0x1F0（UI 图标段）→ 整字不写，只推进游标。
+ *
+ * 12px（ncols>1）不能迁 tile（phase=4 共享列）；若本征对已被**其它
+ * tilemap 格**占用（典型：row&7 别名让 y=18 与 y=2 抢 band1），再写会
+ * 把上一行墨迹踩成「钢翼机关枪 / 闭背包」类串行。此时只推进游标、不写
+ * VRAM/表项 —— 溢出行宁可缺字，也不毁已占用行。 */
 static void grid_emit(TextPrinter *win, GridTarget *t,
                       const uint8_t *p0, const uint8_t *p1,
                       unsigned ncols, unsigned delta)
 {
     unsigned c;
     uint16_t t0;
+    uint32_t used[GRID_TILE_BITS / 32u];
 
     if (!t->buffered) {
         t0 = grid_tile_resolved(win, t->col, ncols);
@@ -555,6 +584,12 @@ static void grid_emit(TextPrinter *win, GridTarget *t,
             diag_ctrl(3u, (uint32_t)t0, 0u);
             win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(t->rel + delta));
             return;                                   /* 保护 UI 图标，宁可不显示 */
+        }
+        if (ncols > 1u
+            && !grid_cell_points_to(win, t->col, t0)
+            && grid_tile_taken(win, t->col, t0, used)) {
+            win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(t->rel + delta));
+            return;
         }
         grid_pair_store(p0, t->base + 32u * t0);
         if (ncols > 1u)

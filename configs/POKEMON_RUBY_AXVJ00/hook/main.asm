@@ -33,6 +33,7 @@
 .include "./src/summary/hooks_origin.s"
 .include "./src/option/hooks_origin.s"
 .include "./src/pokenav/hooks_origin.s"
+; bag hooks_origin.s 已空（P37 撤）；勿再 .include
 
 ; ---- 纯值补丁（INS/DATA/NOP 类） ----
 .include "./patches/player.asm"

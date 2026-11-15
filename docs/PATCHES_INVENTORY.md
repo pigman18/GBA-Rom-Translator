@@ -76,6 +76,8 @@
 | P35 | `0x080EC364` | stub→`SkipListRow_Hook`（空返回） | JMP | 进详情跳过列表行重画（仅 F23FC 调用） | JP list redraw |
 | P36 | `0x080EBD2C` | stub→`ListRedraw_Hook`（按行 Blank；详情退回整栏+左栏重印） | JMP | 每行只 Blank `(13,y)–(28,y+1)`（不 band scrub）。`NEED_BLANK`：整右栏 Blank + 一次 list arena scrub + origin 左栏三件套（`EB9C0` 地点 / `EBA40(0)` 标签 / `EC2E0` 数字）。修退详情丢地点、换项丢「对战次数」、列表红残墨 | JP `ListRedraw` |
 | P35b | `0x080F2402` | `nop; nop`（原 `bl EC2E0`） | NOP | 进详情跳过左栏统计重画 | JP left stats |
+| ~~P37~~ | `0x080A0BF4` | （已移除，ROM 保持原版） | ~~JMP~~ | **已撤**：整段 scrub 与背包图同 charBase → 切页撞 UI / 列表空窗。撞字改 `PrintNextChar` `grid_tile_is_other_col_natural` **全 band** 本征保留（方案 B）。ID 不复用 | — |
+| P38 | `0x080A0770` | （暂撤） | — | 曾试 `left≥0x13` 躲 No.，但 r2 兼作组串宽/Print 左缘，招式名整行不印；另案再挂 | JP TM helper |
 
 ### F. 数据清理（置空日文残留）
 

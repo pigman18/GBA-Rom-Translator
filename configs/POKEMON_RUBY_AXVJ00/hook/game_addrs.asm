@@ -82,6 +82,10 @@ PokeNav_TrainerEye_PrintLeftStats      equ 0x080EC2E0  ; 左栏统计 r0=sel
 PokeNav_BlkPtr                         equ 0x083B4BAC  ; C: ADDR_POKENAV_BLK_PTR
 StringFill                             equ 0x080046F8  ; C: ADDR_STRING_FILL
 
+; --- 背包列表（地址备查；P37/P38 已撤，改 PrintNextChar 网格，见 BAG_LIST_TILE_COLLISION.md）---
+Bag_RedrawPocket                      equ 0x080A0BF4  ; 口袋总绘跳转 items/key/TM/berry
+Bag_PrintTMName                       equ 0x080A0770  ; TM/浆果名 Print helper（r2=left）
+
 ; --- 图鉴列表页名字列（唯一来源，C 里 DEX_NAME_COLUMN 同步此值）---
 ; 原版 0x17。汉化用 0x16：名字左移一格，给四/五字名（森林蜥蜴 / 代欧奇希斯）
 ; 多 8px，避免顶破列表右缘。编号末位与名首相邻；抢 tile 由 grid_tile_resolved 防。

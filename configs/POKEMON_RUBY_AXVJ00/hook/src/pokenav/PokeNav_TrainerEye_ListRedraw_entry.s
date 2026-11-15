@@ -15,6 +15,7 @@ PokeNav_TrainerEye_ListRedraw_Hook:
     push {r4, r5, lr}
     adds r4, r0, #0
     adds r5, r1, #0
+    /* r0=index r1=y — 按行 Blank */
     bl PokeNav_TrainerEye_ListBlank_C
     adds r0, r4, #0
     adds r1, r5, #0

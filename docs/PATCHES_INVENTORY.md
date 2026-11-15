@@ -70,11 +70,11 @@
 | P30 | `0x080EA6C8` | stub→`PokeNav_PrintMenuTip_Hook` | JMP | 领航员 tip：`Menu_BlankWindowRect(3,17,26,18)` 后再 `Menu_PrintText(str,4,17)`；修短盖长残留。right≤26 防空白字模黄条溢出边框 | JP tip 打印（美版 `sub_80EF428` 不同构） |
 | P31 | —（原 `0x080EBA40` 订址已撤） | `grid_bg`：`tpl==0x081BB7B4` → bg=0 | LOGIC | 训练家之眼左侧透明底。**勿用 .bss 锁**（game.bin 无 RAM，bss 落 ROM 读 0xFF→全局透底） | tpl id `0x25` |
 | P32 | `0x080F228C` | stub→`PokeNav_TrainerEye_FormatListLine_Hook` | JMP | 列表行：完整拷职业后按 `GetStringWidth` 垫到 88px 再拼名；禁改全局 `StringCopyPad` | JP 列表拼接 |
-| P33 | `0x080EBF9C` | stub→`PokeNav_TrainerEye_DetailEnter_Hook` | JMP | 进详情：Blank 右栏窗 `0x2F`(13,2)–(28,15) → 重打标题 → 拆说明指针；左栏 Blank `(0,7)–(11,16)` 清列表统计残墨（保地点 y=6 tile5–6） | JP `sub` 拆 `0x083B8E10` 说明块 |
-| P34 | `0x080EF558` | stub→`PokeNav_TrainerEye_PrintTitle_Hook` | JMP | 红条 DMA：TitleBlit 预填 `0x11` 红底、墨 `0xF`、Normal F7 两列、4 列/档 | JP 红条 PCS blit |
+| P33 | `0x080EBF9C` | stub→`PokeNav_TrainerEye_DetailEnter_Hook` | JMP | 进详情：Blank 右栏 `0x2F` + scrub 列表 arena → 重打标题；左栏 Blank `(0,7)–(11,16)`（保地点）。清列表字模，避免详情行隙透名单 | JP `sub` 拆 `0x083B8E10` 说明块 |
+| P34 | `0x080EF558` | stub→`PokeNav_TrainerEye_PrintTitle_Hook` | JMP | 红条 DMA：TitleBlit 预填 `0x11`、墨 `0xF`、Normal、**12px 步进（8+4）** | JP 红条 PCS blit |
 | P34b | `0x080EF43C` | stub→`PrintTitleSprite_Hook` | JMP | 红条精灵路径：TitleBlit 后回 `EF45C` | 同左 |
 | P35 | `0x080EC364` | stub→`SkipListRow_Hook`（空返回） | JMP | 进详情跳过列表行重画（仅 F23FC 调用） | JP list redraw |
-| P36 | `0x080EBD2C` | stub→`ListRedraw_Hook`（Blank 右栏后回原版） | JMP | 列表重画前 Blank `(13,2)–(28,15)`，清详情退回后红标签残墨（作/持/自） | JP `ListRedraw` |
+| P36 | `0x080EBD2C` | stub→`ListRedraw_Hook`（按行 Blank；详情退回整栏+左栏重印） | JMP | 每行只 Blank `(13,y)–(28,y+1)`（不 band scrub）。`NEED_BLANK`：整右栏 Blank + 一次 list arena scrub + origin 左栏三件套（`EB9C0` 地点 / `EBA40(0)` 标签 / `EC2E0` 数字）。修退详情丢地点、换项丢「对战次数」、列表红残墨 | JP `ListRedraw` |
 | P35b | `0x080F2402` | `nop; nop`（原 `bl EC2E0`） | NOP | 进详情跳过左栏统计重画 | JP left stats |
 
 ### F. 数据清理（置空日文残留）

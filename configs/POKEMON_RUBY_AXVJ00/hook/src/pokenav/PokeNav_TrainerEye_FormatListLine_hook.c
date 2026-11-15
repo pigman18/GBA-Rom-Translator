@@ -24,6 +24,8 @@ typedef void (*string_fill_t)(uint8_t *dest, uint32_t fill, uint32_t n);
 #define CLASS_STRIDE     0x2Cu
 #define TRAINER_STRIDE   0x20u
 #define CLASS_COL_PX     88u   /* 前导空格 8px + 10 格 ×8 */
+/* 右栏约 (13..28)×8px；整行垫满才能靠空格/Blank 短清长 */
+#define LINE_COL_PX      120u
 #define LINE_MAX         60u
 #define EMPTY_SPACES     0x20u /* 原 0x11；加长以免短清长残 */
 
@@ -101,6 +103,12 @@ void PokeNav_TrainerEye_FormatListLine_hook_C(uint8_t *dest, uint32_t index)
     }
 
     di = copy_pcs(dest, di, name_str, LINE_MAX);
+    /* 名后继续垫 0x00 到整行宽：配合 ListRedraw 行 Blank，避免短名留长名尾 */
+    while (GetStringWidth(dest, LINE_MAX) < LINE_COL_PX &&
+           di + 2u < LINE_MAX) {
+        dest[di++] = 0x00;
+        dest[di] = 0xFF;
+    }
     if (di < LINE_MAX)
         dest[di] = 0xFF;
     else

@@ -68,14 +68,17 @@ PokeNav_TipTable0                      equ 0x083B8F24  ; C: ADDR_POKENAV_TIP_TAB
 PokeNav_TipTable1                      equ 0x083B8F40  ; C: ADDR_POKENAV_TIP_TABLE1
 PokeNav_TipTable2                      equ 0x083B8F4C  ; C: ADDR_POKENAV_TIP_TABLE2
 ; 训练家之眼列表行拼接（space + class pad10 + name）；空槽填 0x11 空格
-; 左侧 bg：grid_bg 认 tpl@0x081BB7B4（id 0x25），无订址桩、无 .bss 锁
+; 左侧 bg：grid_bg 认 tpl@0x081BB7B4；左栏打印 Init(0x25)（EC2E0/EBA1C）
 PokeNav_TrainerEye_FormatListLine      equ 0x080F228C
 PokeNav_TrainerEye_DetailEnter         equ 0x080EBF9C  ; 进详情拆说明指针
 PokeNav_TrainerEye_PrintTitle          equ 0x080EF558  ; 红条标题 DMA
 PokeNav_TrainerEye_PrintTitleSprite    equ 0x080EF43C  ; 红条标题精灵（详情）
 PokeNav_TrainerEye_SkipListRow         equ 0x080EC364  ; 进详情时列表行重画（仅一处调用）
-PokeNav_TrainerEye_ListRedraw          equ 0x080EBD2C  ; 列表重画（退详情/滚动）；钩内先 Blank 右栏
+PokeNav_TrainerEye_ListRedraw          equ 0x080EBD2C  ; 列表重画；NEED_BLANK 时左栏重印
 PokeNav_TrainerEye_DetailCase4Left     equ 0x080F2402  ; case4 里 bl 左栏 EC2E0 → nop
+PokeNav_TrainerEye_PrintLocation       equ 0x080EB9C0  ; 左栏地点
+PokeNav_TrainerEye_PrintLeftLabels     equ 0x080EBA40  ; 左栏标签 r0=mode
+PokeNav_TrainerEye_PrintLeftStats      equ 0x080EC2E0  ; 左栏统计 r0=sel
 PokeNav_BlkPtr                         equ 0x083B4BAC  ; C: ADDR_POKENAV_BLK_PTR
 StringFill                             equ 0x080046F8  ; C: ADDR_STRING_FILL
 

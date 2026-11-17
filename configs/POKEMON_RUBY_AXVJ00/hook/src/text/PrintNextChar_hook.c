@@ -118,6 +118,35 @@ static unsigned grid_cursor_ty(TextPrinter *win)
          + (unsigned)win_u8(win, WIN_CURSOR_TILE_Y);
 }
 
+/* 背包列表窗模板（GDB 实测）。定义提前到 grid_band 之前，因为
+ * band 重映必须排除背包窗 —— 见 grid_band 注释。 */
+#define BAG_LIST_TEMPLATE 0x081BB544u
+
+static int grid_is_bag_list(TextPrinter *win)
+{
+    const uint8_t *tpl = win_template(win);
+
+    return tpl != 0
+        && (((uintptr_t)tpl & ~1u) == (uintptr_t)BAG_LIST_TEMPLATE);
+}
+
+/* 宝可梦详情（summary）窗模板（GDB 实测，2026-11-17）。
+ * 这些窗 tb=0/1、cursorX 到 25、cursor_ty 到 14/16，会被「左缘对话」判据
+ * 误命中；底框行尾清理必须跳过它们，否则特性说明/性格说明整段被清空。
+ * 新模板出现时在此追加即可（判据是模板地址，不是行为猜测）。 */
+static int grid_is_summary_win(TextPrinter *win)
+{
+    const uint8_t *tpl = win_template(win);
+    uintptr_t a;
+
+    if (!tpl)
+        return 0;
+    a = (uintptr_t)tpl & ~1u;
+    return a == 0x0843e5fcu      /* summary 左栏/状态条 */
+        || a == 0x08428964u      /* summary 右栏正文（特性/性格说明） */
+        || a == 0x081bb43cu;     /* summary 正文 tm=1 TB=1（GDB: ty=14/16） */
+}
+
 /* row&7 段号。对话底框 L2（y≈17 → band0）与存档信息框地名（y=1 → band0）
  * 撞本征。底框 band0 改映 **band5**（信息框行 y=1/3/5/7/9 → band0..4）。
  *
@@ -126,11 +155,22 @@ static unsigned grid_cursor_ty(TextPrinter *win)
  *   「慰人心。」盖住「据说,充足…」（GLOBAL_12PX_MISSING_GLYPHS.md）。
  *
  * ★ 仅左缘（CURSOR_X < 20）：开始菜单「退出」y=16 若也映会踩「保存」。
- *   对话左缘≈4；图鉴说明 left=2；开始菜单 x≈23；YesNo 左≈20。 */
+ *   对话左缘≈4；图鉴说明 left=2；开始菜单 x≈23；YesNo 左≈20。
+ *
+ * ★★ 必须排除背包列表窗（2026-11-17 实测定案）：
+ *   背包列表窗 tb=0、cursorX=0、cursor_ty 到 16/18，同时满足
+ *   「band0 + ty>=14 + CURSOR_X<20」⇒ 被误重映到 band5，
+ *   tile 号整体 +310 撞进黄框/图块区，实机表现为**列表整行名字空白**
+ *   （帧 003 开包第一屏即出现，光标还在第 1 行；第 7/8 行最明显）。
+ *   bot 实测窗状态：`tpl=081BB544 TB=0 cx=0 cy=16 cty=0 ty=16`、
+ *   `cy=17 cty=1 ty=18` ⇒ band_remap_hit=True。
+ *   背包的行号语义由 `grid_emit` 的 bag 分支单独处理，不走 band 重映。 */
 static unsigned grid_band(TextPrinter *win)
 {
     unsigned band = grid_row(win) & (GRID_SEG_COUNT - 1u);
 
+    if (grid_is_bag_list(win))
+        return band;                     /* 背包列表：禁止 band 重映 */
     if (band == 0u && grid_cursor_ty(win) >= 14u
         && win_u8(win, WIN_CURSOR_X) < 20u)
         return 5u;
@@ -594,16 +634,8 @@ static void diag_ctrl(unsigned tag, unsigned code, uint16_t index)
 }
 #endif
 
-/* 背包列表 tpl（GDB）；列表内底在 tile Y=16/17，Y≥18 是框底/箭头带。 */
-#define BAG_LIST_TEMPLATE 0x081BB544u
-
-static int grid_is_bag_list(TextPrinter *win)
-{
-    const uint8_t *tpl = win_template(win);
-
-    return tpl != 0
-        && (((uintptr_t)tpl & ~1u) == (uintptr_t)BAG_LIST_TEMPLATE);
-}
+/* 背包列表 tpl（GDB）；列表内底在 tile Y=16/17，Y≥18 是框底/箭头带。
+ * 定义与 grid_is_bag_list() 已上移到 grid_band 之前（band 重映要排除背包）。 */
 
 /* 把两列 64B 写回 VRAM/缓冲，并给每列写一次 tilemap 表项。
  * 非缓冲时若 tile 号会越过 0x1F0（UI 图标段）→ 整字不写，只推进游标。
@@ -1230,6 +1262,27 @@ static void grid_blank_rest_dialogue_line(TextPrinter *win)
     typedef void (*blank_fn)(uint32_t, uint32_t, uint32_t, uint32_t);
 
     if (cx <= 1u || cx >= 20u || grid_cursor_ty(win) < 14u)
+        return;
+    /* ★ 只对**真正的底框对话窗**清行尾（2026-11-17 实测定案）。
+     *
+     * 原条件「cx∈(1,20) && ty≥14」把一批非对话窗也放进来了：
+     *   - 背包列表窗 tb=0/cx=0/ty=16..18 → 每行名字被整段 Blank（已加排除）
+     *   - 宝可梦详情（summary）窗：GDB 实测 tpl=0843e5fc/08428964/081bb43c
+     *     也会命中该条件
+     *
+     * 真对话底框特征：TB 恒为 0（InitTextPrinter 模板 TB=0），且 cx 在
+     * 左缘、ty≥14。summary/背包的 TB 是 0/1 但模板不同，一律排除。
+     *
+     * ⚠️ 注意（2026-11-17 实测澄清）：summary 页「特性说明/备忘行缺字」
+     *   **不是本函数造成的**。把本函数整个 return 掉重编，该行 tilemap
+     *   只从 001 变 000、一个字都没多出来；且 926d09e 与 4c9b9bf 两版
+     *   该行 VRAM 逐字节相同。真正原因在
+     *   `SummaryScreen_PrintTrainerMemo_hook.c::print_met_line_loc()`，
+     *   它把「在」/地点/「遇到。」拆成三次 Menu_PrintText 打印。
+     *   这里的排除仅作防御，不要拿它当该 bug 的修复。 */
+    if (grid_is_bag_list(win))
+        return;
+    if (grid_is_summary_win(win))
         return;
     /* 入口已把 TEXT_INDEX 推过 FE/FF；量宽到控制码下标 = at-1。 */
     at = win_u16(win, WIN_TEXT_INDEX);

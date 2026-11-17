@@ -14,8 +14,7 @@
  * 全部 tile 落在原版自己的 [TB, TB+0x1F0) 预载字库区内，不碰 UI 图标。
  *
  * 重印清尾：cbc5ce5 的 clear_cols 在网格引擎 + 开始菜单同 printer 同 seg 下会
- * 把光标重绘误判成重印，洗掉整行菜单字并误伤备忘第二行；禁全局 clear_cols。
- * 对话 FE/FF 仅左缘用像素宽 Blank 到 right=26（清预载假名碎点，勿 CURSOR_TILE_X）。
+ * 把光标重绘误判成重印，洗掉整行菜单字并误伤备忘第二行；暂不在此层清尾。
  *
  * ── 协议（用户口径）───────────────────────────────────────────────────
  * 全局统一 `F7 00 hi lo`。流里只有：
@@ -110,73 +109,6 @@ static unsigned grid_row(TextPrinter *win)
             + (unsigned)win_u8(win, WIN_CURSOR_TILE_Y)) >> 1;
 }
 
-/* 光标所在 tilemap 行（与 UpdateTilemap 同口径）。
- * 禁止用 (row&7)*2：row≥8 时会把「本格」误判到 y=0/1（背包图一带）。 */
-static unsigned grid_cursor_ty(TextPrinter *win)
-{
-    return (unsigned)win_u8(win, WIN_CURSOR_Y)
-         + (unsigned)win_u8(win, WIN_CURSOR_TILE_Y);
-}
-
-/* 背包列表窗模板（GDB 实测）。定义提前到 grid_band 之前，因为
- * band 重映必须排除背包窗 —— 见 grid_band 注释。 */
-#define BAG_LIST_TEMPLATE 0x081BB544u
-
-static int grid_is_bag_list(TextPrinter *win)
-{
-    const uint8_t *tpl = win_template(win);
-
-    return tpl != 0
-        && (((uintptr_t)tpl & ~1u) == (uintptr_t)BAG_LIST_TEMPLATE);
-}
-
-/* 宝可梦详情（summary）窗模板（GDB 实测，2026-11-17）。
- * 这些窗 tb=0/1、cursorX 到 25、cursor_ty 到 14/16，会被「左缘对话」判据
- * 误命中；底框行尾清理必须跳过它们，否则特性说明/性格说明整段被清空。
- * 新模板出现时在此追加即可（判据是模板地址，不是行为猜测）。 */
-static int grid_is_summary_win(TextPrinter *win)
-{
-    const uint8_t *tpl = win_template(win);
-    uintptr_t a;
-
-    if (!tpl)
-        return 0;
-    a = (uintptr_t)tpl & ~1u;
-    return a == 0x0843e5fcu      /* summary 左栏/状态条 */
-        || a == 0x08428964u      /* summary 右栏正文（特性/性格说明） */
-        || a == 0x081bb43cu;     /* summary 正文 tm=1 TB=1（GDB: ty=14/16） */
-}
-
-/* row&7 段号。对话底框 L2（y≈17 → band0）与存档信息框地名（y=1 → band0）
- * 撞本征。底框 band0 改映 **band5**（信息框行 y=1/3/5/7/9 → band0..4）。
- *
- * ★ 禁止再映 band6：图鉴说明 Menu_PrintText(..., left=2, top=13)
- *   L1 y=13→band6，L3 y=17→band0；若映到 6 则 L3 踩 L1 → 屏上
- *   「慰人心。」盖住「据说,充足…」（GLOBAL_12PX_MISSING_GLYPHS.md）。
- *
- * ★ 仅左缘（CURSOR_X < 20）：开始菜单「退出」y=16 若也映会踩「保存」。
- *   对话左缘≈4；图鉴说明 left=2；开始菜单 x≈23；YesNo 左≈20。
- *
- * ★★ 必须排除背包列表窗（2026-11-17 实测定案）：
- *   背包列表窗 tb=0、cursorX=0、cursor_ty 到 16/18，同时满足
- *   「band0 + ty>=14 + CURSOR_X<20」⇒ 被误重映到 band5，
- *   tile 号整体 +310 撞进黄框/图块区，实机表现为**列表整行名字空白**
- *   （帧 003 开包第一屏即出现，光标还在第 1 行；第 7/8 行最明显）。
- *   bot 实测窗状态：`tpl=081BB544 TB=0 cx=0 cy=16 cty=0 ty=16`、
- *   `cy=17 cty=1 ty=18` ⇒ band_remap_hit=True。
- *   背包的行号语义由 `grid_emit` 的 bag 分支单独处理，不走 band 重映。 */
-static unsigned grid_band(TextPrinter *win)
-{
-    unsigned band = grid_row(win) & (GRID_SEG_COUNT - 1u);
-
-    if (grid_is_bag_list(win))
-        return band;                     /* 背包列表：禁止 band 重映 */
-    if (band == 0u && grid_cursor_ty(win) >= 14u
-        && win_u8(win, WIN_CURSOR_X) < 20u)
-        return 5u;
-    return band;
-}
-
 static uint16_t grid_tile(TextPrinter *win, unsigned col)
 {
     uint16_t tb = win_u16(win, WIN_TILE_BASE);
@@ -185,7 +117,7 @@ static uint16_t grid_tile(TextPrinter *win, unsigned col)
      * RedrawMenuCursor 再 Blank 把格指回 TB+1，屏上冒灰影残墨
      *（bot：START 开→关→开→上下，残墨色 (74,74,74)=阴影灰）。 */
     return (uint16_t)((unsigned)tb + 2u
-            + grid_band(win) * GRID_SEG_TILES
+            + (grid_row(win) & (GRID_SEG_COUNT - 1u)) * GRID_SEG_TILES
             + 2u * col);
 }
 
@@ -220,6 +152,15 @@ static uint32_t grid_tile_base(TextPrinter *win)
 static uint16_t grid_tilemap_entry(const uint16_t *map, unsigned x, unsigned y)
 {
     return (uint16_t)(map[y * GRID_TILEMAP_W + x] & 0x3FFu);
+}
+
+/* 光标所在 tilemap 行（与 UpdateTilemap 同口径）。
+ * 禁止用 (row&7)*2：row≥8 时会把「本格」误判到 y=0/1（背包图一带），
+ * 规避/占用扫描与真实写点错位 → 底行/切页撞 UI。 */
+static unsigned grid_cursor_ty(TextPrinter *win)
+{
+    return (unsigned)win_u8(win, WIN_CURSOR_Y)
+         + (unsigned)win_u8(win, WIN_CURSOR_TILE_Y);
 }
 
 /* 本格自己的两个表项（上/下 tile 行）；这两项不算「别人在用」。 */
@@ -357,14 +298,16 @@ static int grid_tile_is_other_col_natural(TextPrinter *win, unsigned n,
     nat_col = rem >> 1;
     if (nat_col >= GRID_COLS_PER_SEG)
         return 0;
-    cur_band = grid_band(win);
+    cur_band = grid_row(win) & (GRID_SEG_COUNT - 1u);
     if (band == cur_band && nat_col == except_col)
         return 0;                    /* 本格本征，允许 */
     return 1;
 }
 
 /* 在 used 位图里找一对空闲 tile（不抢其它列本征、优先 VRAM 空白）。
- * 找不到返回 0xFFFF。used 须已由 grid_tile_taken 填好。 */
+ * 找不到返回 0xFFFF。used 须已由 grid_tile_taken 填好。
+ * 从 grid_tile_resolved 内联循环拆出，供 grid_emit 的对话分支复用
+ * （训练家列表 12px 本征被占时迁址；2026-11-17 bd8540c 的一部分）。 */
 static uint16_t grid_tile_find_free(TextPrinter *win, unsigned col,
                                     const uint32_t *used)
 {
@@ -376,7 +319,7 @@ static uint16_t grid_tile_find_free(TextPrinter *win, unsigned col,
         if (!grid_tile_free(used, n))
             continue;
         if (grid_tile_is_other_col_natural(win, n, col))
-            continue;
+            continue;                    /* 勿抢其它 (band,col) 本征 tile */
         if (grid_cell_points_to(win, col, n))
             return (uint16_t)n;
         if (grid_tile_vram_blank(base, n))
@@ -385,9 +328,9 @@ static uint16_t grid_tile_find_free(TextPrinter *win, unsigned col,
     return 0xFFFFu;
 }
 
-/* 解析本字真正要写的 tile。
- * Small（ncols==1）本征被占 → 迁到空闲对。
- * 12px（ncols>1）本征路径仍返回公式 tile；若已被占，由 grid_emit 再处理。 */
+/* 解析本字真正要写的 tile。ncols>1（12px 跨列、phase=4 共享列）不迁移：
+   共享列左 4px 属于前一个字，换 tile 会把它丢掉。Small 字库步进 8px，
+   phase 恒为 0，所以队伍/战斗等 Small 窗口全部走得到规避。 */
 static uint16_t grid_tile_resolved(TextPrinter *win, unsigned col, unsigned ncols)
 {
     uint32_t used[GRID_TILE_BITS / 32u];
@@ -402,7 +345,7 @@ static uint16_t grid_tile_resolved(TextPrinter *win, unsigned col, unsigned ncol
         grid_tile_vram_blank(grid_tile_base(win), t0))
         return t0;
     alt = grid_tile_find_free(win, col, used);
-    return (alt != 0xFFFFu) ? alt : t0;
+    return (alt != 0xFFFFu) ? alt : t0;   /* 整段都满：退回纯函数 tile */
 }
 
 /* 12px 相位：从串首（或最近换行 / 清窗口）到 index 累计像素，取低 3 位。
@@ -634,22 +577,27 @@ static void diag_ctrl(unsigned tag, unsigned code, uint16_t index)
 }
 #endif
 
-/* 背包列表 tpl（GDB）；列表内底在 tile Y=16/17，Y≥18 是框底/箭头带。
- * 定义与 grid_is_bag_list() 已上移到 grid_band 之前（band 重映要排除背包）。 */
+/* 背包列表 tpl（GDB）；列表内底在 tile Y=16/17，Y≥18 是框底/箭头带。 */
+#define BAG_LIST_TEMPLATE 0x081BB544u
+
+static int grid_is_bag_list(TextPrinter *win)
+{
+    const uint8_t *tpl = win_template(win);
+
+    return tpl != 0
+        && (((uintptr_t)tpl & ~1u) == (uintptr_t)BAG_LIST_TEMPLATE);
+}
 
 /* 把两列 64B 写回 VRAM/缓冲，并给每列写一次 tilemap 表项。
  * 非缓冲时若 tile 号会越过 0x1F0（UI 图标段）→ 整字不写，只推进游标。
  *
- * 背包列表专属（勿扩到对话/训练家列表）：
- * - Y≥18 / 12px col≥26：渗框或踩数量列 → 只推进
- * - 12px 本征已被占（band 别名）：只推进，禁止 find_free（迁 tile 会
- *   让切页/切回空白错位）
+ * 12px（ncols>1）不能迁 tile（phase=4 共享列）；若本征对已被**其它
+ * tilemap 格**占用（典型：row&7 别名让 y=18 与 y=2 抢 band1），再写会
+ * 把上一行墨迹踩成「钢翼机关枪 / 闭背包」类串行。此时只推进游标、不写
+ * VRAM/表项 —— 溢出行宁可缺字，也不毁已占用行。
  *
- * 其它窗：
- * - 对话底框（ty≥14 且 CURSOR_X<20）：本征被占 → find_free；失败仍写本征
- *   （靠 grid_band 躲开信息框）。禁止对训练家列表/菜单做 find_free，
- *   否则字迁离本征后相位共享列错乱、列对齐崩。
- * - 其余（训练家列表等）：直接写本征。曾全局 skip → 缺「家」串行。 */
+ * 背包列表 Y≥18：原版列表底在 16；写到 18 会渗黄框外并踩背包图 tile
+ *（切招式页再切回撞 UI）。只推进、不写。 */
 static void grid_emit(TextPrinter *win, GridTarget *t,
                       const uint8_t *p0, const uint8_t *p1,
                       unsigned ncols, unsigned delta)
@@ -1162,160 +1110,6 @@ static int grid_ext_ctrl(TextPrinter *win, const uint8_t *text, uint16_t next)
     }
 }
 
-/* 行首→end（不含 end）的本行像素宽；遇 FE/FB 归零续扫（多行取末行）。
- * F7 用与绘制相同的 adv。勿用 CURSOR_TILE_X 推 Blank 起点。 */
-static unsigned grid_width_before(const uint8_t *text, uint16_t end,
-                                  unsigned adv)
-{
-    unsigned w = 0u;
-    uint16_t i = 0u;
-
-    if (!text)
-        return 0u;
-    while (i < end) {
-        uint8_t c = text[i];
-        if (c == 0xFFu)
-            break;
-        if (c == 0xFEu || c == 0xFBu) {
-            w = 0u;
-            ++i;
-            continue;
-        }
-        if (c == 0xFCu) {
-            uint8_t type = (i + 1u < end) ? text[i + 1u] : 0u;
-            if (type == FC_CLEARWINDOW)
-                w = 0u;
-            i = (uint16_t)(i + 2u + fc_arg_count(type));
-            continue;
-        }
-        if (c == 0xF7u && i + 1u < end && text[i + 1u] == 0u) {
-            w += adv;
-            i = (uint16_t)(i + 4u);
-            continue;
-        }
-        if (c >= PCS_CTRL_BASE) {
-            ++i;
-            continue;
-        }
-        w += CHS_GLYPH_ADVANCE_JP_PX;
-        ++i;
-    }
-    return w;
-}
-
-/* 共享列：本行已绘到 px 时，该列左 (px&7) 是末字墨，右半可能仍是预载假名。
- * 只把 x∈[px&7, 8) 铺成窗背景，不碰左侧墨（避免 Blank 整列削半字）。 */
-static void grid_clear_tail_pixels(TextPrinter *win, unsigned abs_col,
-                                   unsigned from_x, uint8_t bg)
-{
-    const uint8_t *tpl = win_template(win);
-    const uint16_t *map;
-    uint32_t base;
-    uint16_t t0;
-    uint8_t pair[GRID_PAIR_BYTES];
-    unsigned x, y, ty;
-
-    if (from_x >= 8u || abs_col >= GRID_COLS_PER_SEG || !tpl)
-        return;
-    base = grid_tile_base(win);
-    if (!base)
-        return;
-    map = (const uint16_t *)(const void *)(uintptr_t)win_u32(tpl, TPL_TILEMAP);
-    ty = grid_cursor_ty(win);
-    t0 = grid_tile(win, abs_col);
-    if (map && abs_col < GRID_TILEMAP_W && ty < GRID_TILEMAP_W) {
-        unsigned v = grid_tilemap_entry(map, abs_col, ty);
-        if (v != 0u && v < GRID_TILE_LIMIT)
-            t0 = (uint16_t)v;
-    }
-    if ((unsigned)t0 + 2u > GRID_TILE_LIMIT)
-        return;
-    grid_pair_load(pair, base + 32u * t0);
-    for (y = 0u; y < 16u; ++y)
-        for (x = from_x; x < 8u; ++x)
-            grid_pair_set(pair, x, y, bg);
-    grid_pair_store(pair, base + 32u * t0);
-}
-
-/* 对话底框：12px 行比日文短时，行尾 tilemap 可能仍指预载假名 → 碎点。
- * FE/FF：按本行像素宽清共享列右半 + 本窗 tilemap 从 ceil 列到 26（仅左缘对话）。
- *
- * ★ 勿从 CURSOR_TILE_X 整列 Blank（12px 共享列会被削半字）。
- * ★ 勿 right=28（越界像补空格；对齐 tip P30）。
- * ★ cx≤1：队伍脚注原版已 Erase，再 Blank 啃红框。
- * ★ 直接改本窗 tilemap：Menu_BlankWindowRect 走 gMenuWindow，存档确认时
- *   可能已切到 YesNo，清不到底框。 */
-static void grid_blank_rest_dialogue_line(TextPrinter *win)
-{
-    unsigned left;
-    unsigned top;
-    unsigned cx = win_u8(win, WIN_CURSOR_X);
-    unsigned right = 26u;
-    unsigned adv;
-    unsigned px;
-    unsigned x, y;
-    uint16_t at;
-    uint16_t blank;
-    const uint8_t *text;
-    const uint8_t *tpl;
-    uint16_t *map;
-    typedef void (*blank_fn)(uint32_t, uint32_t, uint32_t, uint32_t);
-
-    if (cx <= 1u || cx >= 20u || grid_cursor_ty(win) < 14u)
-        return;
-    /* ★ 只对**真正的底框对话窗**清行尾（2026-11-17 实测定案）。
-     *
-     * 原条件「cx∈(1,20) && ty≥14」把一批非对话窗也放进来了：
-     *   - 背包列表窗 tb=0/cx=0/ty=16..18 → 每行名字被整段 Blank（已加排除）
-     *   - 宝可梦详情（summary）窗：GDB 实测 tpl=0843e5fc/08428964/081bb43c
-     *     也会命中该条件
-     *
-     * 真对话底框特征：TB 恒为 0（InitTextPrinter 模板 TB=0），且 cx 在
-     * 左缘、ty≥14。summary/背包的 TB 是 0/1 但模板不同，一律排除。
-     *
-     * ⚠️ 注意（2026-11-17 实测澄清）：summary 页「特性说明/备忘行缺字」
-     *   **不是本函数造成的**。把本函数整个 return 掉重编，该行 tilemap
-     *   只从 001 变 000、一个字都没多出来；且 926d09e 与 4c9b9bf 两版
-     *   该行 VRAM 逐字节相同。真正原因在
-     *   `SummaryScreen_PrintTrainerMemo_hook.c::print_met_line_loc()`，
-     *   它把「在」/地点/「遇到。」拆成三次 Menu_PrintText 打印。
-     *   这里的排除仅作防御，不要拿它当该 bug 的修复。 */
-    if (grid_is_bag_list(win))
-        return;
-    if (grid_is_summary_win(win))
-        return;
-    /* 入口已把 TEXT_INDEX 推过 FE/FF；量宽到控制码下标 = at-1。 */
-    at = win_u16(win, WIN_TEXT_INDEX);
-    text = (const uint8_t *)(uintptr_t)win_u32(win, WIN_TEXT_PTR);
-    adv = (win_u8(win, WIN_FONTNUM_REAL) == 2u
-           || win_u8(win, WIN_FONTNUM_REAL) == 4u)
-              ? CHS_GLYPH_ADVANCE_SMALL
-              : (unsigned)CHS_GLYPH_ADVANCE_PX;
-    px = (at > 0u) ? grid_width_before(text, (uint16_t)(at - 1u), adv) : 0u;
-    top = grid_cursor_ty(win);
-    if ((px & 7u) != 0u)
-        grid_clear_tail_pixels(win, cx + (px >> 3), px & 7u, grid_bg(win));
-    left = cx + ((px + 7u) >> 3);
-    if (left >= right)
-        return;
-
-    tpl = win_template(win);
-    map = tpl ? (uint16_t *)(void *)(uintptr_t)win_u32(tpl, TPL_TILEMAP) : 0;
-    blank = (uint16_t)(win_u16(win, WIN_TILE_BASE) + 1u); /* GetBlankTileNum */
-    if (map) {
-        for (y = top; y <= top + 1u && y < GRID_TILEMAP_W; ++y) {
-            for (x = left; x <= right && x < GRID_TILEMAP_W; ++x) {
-                uint16_t e = map[y * GRID_TILEMAP_W + x];
-                map[y * GRID_TILEMAP_W + x] =
-                    (uint16_t)((e & 0xFC00u) | (blank & 0x3FFu));
-            }
-        }
-    }
-    /* tip 同款：若 gMenuWindow 仍是底框则再清一次；已切 YesNo 则无害 */
-    ((blank_fn)(ADDR_MENU_BLANK_WINDOW_RECT | 1u))(
-        left, top, right, top + 1u);
-}
-
 static int grid_control(TextPrinter *win, uint8_t c, uint16_t next)
 {
     switch (c) {
@@ -1336,11 +1130,9 @@ static int grid_control(TextPrinter *win, uint8_t c, uint16_t next)
         win_set_u16(win, WIN_STATE, AXV_STATE_PLACEHOLDER);
         return 2;
     case 0xFE:
-        grid_blank_rest_dialogue_line(win);
         win_set_u16(win, WIN_STATE, AXV_STATE_NEWLINE);
         return 2;
     case 0xFF:
-        grid_blank_rest_dialogue_line(win);
         win_set_u16(win, WIN_STATE, AXV_STATE_END);
         return 0;
     default:

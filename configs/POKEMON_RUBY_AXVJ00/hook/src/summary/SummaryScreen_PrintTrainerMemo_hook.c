@@ -128,11 +128,25 @@ static void emit_fg(uint8_t *out, unsigned *i, uint8_t color)
     out[(*i)++] = color;
 }
 
-static uint32_t str_tiles(const uint8_t *plain)
+/* plain 必须以 FF 结尾；max 必须传**该缓冲自己的容量**，不能一律传 OUT_MAX。
+ *
+ * ★ 2026-11-17 实测定案（特性说明「在 101号道路 遇到。」缺尾巴）：
+ *   原来一律 GetStringWidth(plain, OUT_MAX=96)。而 print_met_line_loc()
+ *   里的 zai 是 `uint8_t zai[8]`，只装 F7 00 0F E6 FF 共 5 字节。
+ *   传 96 会让 GetStringWidth 越过 zai 继续读相邻栈变量，宽度算成 3 格
+ *   （应为 2 格）⇒ 后面两段 x 全部右移 ⇒ 末尾「遇到。」被挤出右边界。
+ *   GDB 实测该行 Menu_PrintText 三次调用 left=11/14/17，
+ *   差值 3/3 而不是正确的 2/2。 */
+static uint32_t str_tiles_n(const uint8_t *plain, uint32_t max)
 {
-    uint32_t px = GetStringWidth(plain, OUT_MAX);
+    uint32_t px = GetStringWidth(plain, max);
 
     return (px + CHS_GLYPH_ADVANCE_JP_PX - 1u) / CHS_GLYPH_ADVANCE_JP_PX;
+}
+
+static uint32_t str_tiles(const uint8_t *plain)
+{
+    return str_tiles_n(plain, OUT_MAX);
 }
 
 static void print_colored(menu_print_t print, const uint8_t *body, uint8_t color,
@@ -190,12 +204,12 @@ static uint32_t print_nature_line(menu_print_t print, void *mon, uint32_t left,
 
     /* 分次：性格(正文) → 名(高亮) → 。(正文)，避免同串改色染邻列 */
     print_colored(print, label, FG_BODY, left, top);
-    x = (left + str_tiles(label)) & 0xFFu;
+    x = (left + str_tiles_n(label, sizeof label)) & 0xFFu;
     print_colored(print, namebuf, FG_HI, x, top);
-    x = (x + str_tiles(namebuf)) & 0xFFu;
+    x = (x + str_tiles_n(namebuf, sizeof namebuf)) & 0xFFu;
     print_colored(print, period, FG_BODY, x, top);
 
-    return str_tiles(plain);
+    return str_tiles_n(plain, sizeof plain);
 }
 
 static const uint8_t k_trade_met[] = {
@@ -300,9 +314,9 @@ static void print_met_line_loc(menu_print_t print, uint32_t left, uint32_t top,
     finish(tail, &ti);
 
     print_colored(print, zai, FG_BODY, left, top);
-    x = (left + str_tiles(zai)) & 0xFFu;
+    x = (left + str_tiles_n(zai, sizeof zai)) & 0xFFu;
     print_colored(print, locbuf, FG_HI, x, top);
-    x = (x + str_tiles(locbuf)) & 0xFFu;
+    x = (x + str_tiles_n(locbuf, sizeof locbuf)) & 0xFFu;
     print_colored(print, tail, FG_BODY, x, top);
 }
 

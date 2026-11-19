@@ -144,11 +144,6 @@ static uint32_t str_tiles_n(const uint8_t *plain, uint32_t max)
     return (px + CHS_GLYPH_ADVANCE_JP_PX - 1u) / CHS_GLYPH_ADVANCE_JP_PX;
 }
 
-static uint32_t str_tiles(const uint8_t *plain)
-{
-    return str_tiles_n(plain, OUT_MAX);
-}
-
 static void print_colored(menu_print_t print, const uint8_t *body, uint8_t color,
                           uint32_t left, uint32_t top)
 {

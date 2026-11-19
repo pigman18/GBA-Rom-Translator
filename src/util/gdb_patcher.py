@@ -539,6 +539,61 @@ def _on_te_detail_line_y(
     )
 
 
+@handler("TE_PrintLocation_flag")
+def _on_te_print_location_flag(
+    gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]
+) -> None:
+    """进详情 PrintLocation 分指点：读左栏地点 tile 带(0x81..0x8E)有墨数。
+
+    BUG-A 取证用：origin 进详情不 scrub，地点旧字模存活 → locink≈14；
+    汉化 hook 的 scrub_list_arena 全池清洗 → locink=0（地点空白）。
+    修复后应恢复到与列表页一致，作为可证伪预测字段。
+    左栏窗 tilemap=0x0600F800，地点占屏幕 y=5/6 x=1..12。
+    """
+    TM = 0x0600F800
+    tiles: set[int] = set()
+    try:
+        for y in (5, 6):
+            raw = bytes(gdb.read_mem(TM + (y * 32 + 1) * 2, 24))
+            for k in range(0, 24, 2):
+                t = (raw[k] | (raw[k + 1] << 8)) & 0x3FF
+                if t:
+                    tiles.add(t)
+    except Exception:
+        pass
+    inked = 0
+    detail = []
+    for t in sorted(tiles):
+        try:
+            d = bytes(gdb.read_mem(0x06000000 + t * 32, 32))
+            n = sum(1 for b in d if b)
+        except Exception:
+            n = 0
+        if n:
+            inked += 1
+            detail.append(f"{t:x}:{n}")
+    flag = regs.get("r0", 0) & 0xFF
+    # 切换训练家源数据取证：sel=blk[0x8772]，地点名索引=blk+0xCEEA+sel*8，
+    # 重打缓冲 blk+0xD138（PrintLeftStats 0x080EC2E0 拼好的地点串）。
+    blk = regs.get("r2", 0)
+    sel = loc = -1
+    d138 = -1
+    if 0x02000000 <= blk < 0x04000000:
+        try:
+            sel = int.from_bytes(bytes(gdb.read_mem(blk + 0x8772, 2)), "little")
+            if sel & 0x8000:
+                sel -= 0x10000
+            loc = int.from_bytes(bytes(gdb.read_mem(blk + 0xCEEA + sel * 8, 2)), "little")
+            d138 = int.from_bytes(bytes(gdb.read_mem(blk + 0xD138, 4)), "little")
+        except Exception:
+            pass
+    ctx.log(
+        f"\n[TE_LocInk] locink={inked} flag={flag} sel={sel} loc={loc} d138={d138} "
+        f"tiles={','.join(f'{t:x}' for t in sorted(tiles))} "
+        f"inked_detail={' '.join(detail)}"
+    )
+
+
 @handler("InitTextPrinter")
 def _on_init_text(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
     win = regs.get("r0", 0)

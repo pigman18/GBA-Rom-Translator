@@ -1,4 +1,12 @@
 @echo off
+REM === evidence gate (R1 evidence / R2 prediction / R3 stop / R4 doc structure) ===
+REM See scripts/evidence_gate.py --status for the current state.
+python "%~dp0..\..\..\scripts\evidence_gate.py" --check
+if errorlevel 1 (
+    echo.
+    echo [BUILD ABORTED] evidence gate failed - gather data first, do not guess.
+    exit /b 1
+)
 REM build.bat - compile src/ -> out/game.bin (VMA 0x08800000)
 REM Naming: src/{domain}/{Method}_hook.c + entry.s + hooks_origin.s (armips side)
 REM Requires arm-none-eabi-gcc in PATH.
@@ -208,3 +216,6 @@ rem armips errors at use site (loud failure beats jumping to 0x08800000).
 
 echo Build OK: %OUT%\game.bin
 for %%F in (%OUT%\game.bin) do echo Size: %%~zF bytes
+
+REM === mark this build done: next round must re-gather evidence ===
+python "%~dp0..\..\..\scripts\evidence_gate.py" --mark-built

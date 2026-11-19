@@ -604,6 +604,14 @@ gdb:
   default: false
   cfg:
     charmap: configs/POKEMON_RUBY_AXVJ00/charmap.txt
+- name: TE_PrintLocation_flag
+  address: '0x080EB9CC'
+  description: 训练家之眼 PrintLocation 分支点（此处 r0=flag=blk[0x87CE]；cmp#0/cmp#1 后 flag=2 直接返回不打印）
+  default: false
+- name: TE_PrintText_call
+  address: '0x080EBA2A'
+  description: 训练家之眼 PrintLocation 打印调用点（此处 r0=blk+0x878C 待加偏移, r1=1, r2=6, bl Menu_PrintText@0x806F16C）
+  default: false
 - name: TrainerEye_DetailLineY
   address: '0x080EC060'
   description: 训练家之眼详情行 Y（进入时 r3=line，r1=&scroll；原式 y=line*2+2+scroll）

@@ -74,6 +74,13 @@ api.burst("nav_detail_enter_f", 16, 8)
 api.shot("nav_detail")
 api.wait(30)
 api.shot("nav_detail_settle")
+-- BUG-A 回归：详情内切换训练家时地点名是否跟随变动（原场景未覆盖）。
+-- 逐个按键试，origin 侧看哪种触发切换（标题/红条/地点变化），translated 对照。
+for _, k in ipairs({"L", "R", "LEFT", "RIGHT", "UP"}) do
+    api.tap(k, 4, 25)
+    api.burst(string.format("nav_detail_%s_f", k:lower()), 6, 6)
+    api.shot(string.format("nav_detail_%s", k:lower()))
+end
 -- 详情内若可下翻说明（自我介绍多行）
 for i = 1, 3 do
     api.tap("DOWN", 4, 25)

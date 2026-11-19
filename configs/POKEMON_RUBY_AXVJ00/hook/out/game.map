@@ -119,7 +119,7 @@ LOAD out\obj/PokeNav_TrainerEye_SkipListRow_hook.o
 LOAD out\obj/PokeNav_TrainerEye_ListRedraw_entry.o
 LOAD out\obj/PokeNav_TrainerEye_ListRedraw_hook.o
 
-.text           0x08800000     0x23f4
+.text           0x08800000     0x24ec
  *entry.o(.text*)
  .text          0x08800000       0x18 out\obj/text_entry.o
                 0x08800000                EngineEntry
@@ -157,135 +157,135 @@ LOAD out\obj/PokeNav_TrainerEye_ListRedraw_hook.o
  *entry.o(.text.*)
  *fixed_string_entry.o(.text*)
  *(.text*)
- .text          0x08800124     0x1044 out\obj/PrintNextChar_hook.o
-                0x088009f0                GetStringWidth
-                0x08800a3c                PrintNextChar_Hook
- .text          0x08801168       0x24 out\obj/MapNamePopup_hook.o
-                0x08801168                MapNamePopup_CalcLeftPx
- .text          0x0880118c       0x14 out\obj/UpdateNickInHealthbox_hook.o
-                0x0880118c                HealthboxNickCpusetCtrl
-                0x08801194                HealthboxNickCpusetWords
-                0x08801198                HealthboxNickCpusetCtrlStock
- .text          0x088011a0      0x10c out\obj/UnusedPrintMonName_hook.o
-                0x088011f0                UnusedPrintMonName_hook_C
- .text          0x088012ac      0x234 out\obj/UnusedPrintDecimalNum_hook.o
-                0x088012ac                UnusedPrintDecimalNum_hook_C
- .text          0x088014e0      0x560 out\obj/SummaryScreen_PrintTrainerMemo_hook.o
-                0x088017fa                SummaryScreen_PrintTrainerMemo_hook_C
- .text          0x08801a40       0x2c out\obj/SummaryScreen_PrintNicknameGender_hook.o
-                0x08801a40                SummaryScreen_NameLayoutTiles_hook_C
- .text          0x08801a6c       0xc4 out\obj/DrawOptionMenuChoice_hook.o
-                0x08801a6c                DrawOptionMenuChoice_hook_C
- .text          0x08801b30       0x48 out\obj/PokeNav_PrintMenuTip_hook.o
-                0x08801b30                PokeNav_PrintMenuTip_hook_C
- .text          0x08801b78      0x14c out\obj/PokeNav_TrainerEye_FormatListLine_hook.o
-                0x08801bd6                PokeNav_TrainerEye_FormatListLine_hook_C
- .text          0x08801cc4      0x284 out\obj/PokeNav_TrainerEye_DetailEnter_hook.o
-                0x08801d38                PokeNav_TrainerEye_DetailEnter_hook_C
- .text          0x08801f48       0x74 out\obj/PokeNav_TrainerEye_PrintTitle_hook.o
-                0x08801f48                PokeNav_TrainerEye_PrintTitle_hook_C
- .text          0x08801fbc      0x1f4 out\obj/PokeNav_TrainerEye_TitleBlit_hook.o
-                0x08801fbc                PokeNav_TrainerEye_TitleBlit_hook_C
- .text          0x088021b0        0x4 out\obj/PokeNav_TrainerEye_SkipListRow_hook.o
-                0x088021b0                PokeNav_TrainerEye_SkipListRow_hook_C
- .text          0x088021b4      0x160 out\obj/PokeNav_TrainerEye_ListRedraw_hook.o
-                0x088021b4                PokeNav_TrainerEye_ListBlank_C
+ .text          0x08800124     0x113c out\obj/PrintNextChar_hook.o
+                0x08800ac0                GetStringWidth
+                0x08800b0c                PrintNextChar_Hook
+ .text          0x08801260       0x24 out\obj/MapNamePopup_hook.o
+                0x08801260                MapNamePopup_CalcLeftPx
+ .text          0x08801284       0x14 out\obj/UpdateNickInHealthbox_hook.o
+                0x08801284                HealthboxNickCpusetCtrl
+                0x0880128c                HealthboxNickCpusetWords
+                0x08801290                HealthboxNickCpusetCtrlStock
+ .text          0x08801298      0x10c out\obj/UnusedPrintMonName_hook.o
+                0x088012e8                UnusedPrintMonName_hook_C
+ .text          0x088013a4      0x234 out\obj/UnusedPrintDecimalNum_hook.o
+                0x088013a4                UnusedPrintDecimalNum_hook_C
+ .text          0x088015d8      0x560 out\obj/SummaryScreen_PrintTrainerMemo_hook.o
+                0x088018f2                SummaryScreen_PrintTrainerMemo_hook_C
+ .text          0x08801b38       0x2c out\obj/SummaryScreen_PrintNicknameGender_hook.o
+                0x08801b38                SummaryScreen_NameLayoutTiles_hook_C
+ .text          0x08801b64       0xc4 out\obj/DrawOptionMenuChoice_hook.o
+                0x08801b64                DrawOptionMenuChoice_hook_C
+ .text          0x08801c28       0x48 out\obj/PokeNav_PrintMenuTip_hook.o
+                0x08801c28                PokeNav_PrintMenuTip_hook_C
+ .text          0x08801c70      0x14c out\obj/PokeNav_TrainerEye_FormatListLine_hook.o
+                0x08801cce                PokeNav_TrainerEye_FormatListLine_hook_C
+ .text          0x08801dbc      0x284 out\obj/PokeNav_TrainerEye_DetailEnter_hook.o
+                0x08801e30                PokeNav_TrainerEye_DetailEnter_hook_C
+ .text          0x08802040       0x74 out\obj/PokeNav_TrainerEye_PrintTitle_hook.o
+                0x08802040                PokeNav_TrainerEye_PrintTitle_hook_C
+ .text          0x088020b4      0x1f4 out\obj/PokeNav_TrainerEye_TitleBlit_hook.o
+                0x088020b4                PokeNav_TrainerEye_TitleBlit_hook_C
+ .text          0x088022a8        0x4 out\obj/PokeNav_TrainerEye_SkipListRow_hook.o
+                0x088022a8                PokeNav_TrainerEye_SkipListRow_hook_C
+ .text          0x088022ac      0x160 out\obj/PokeNav_TrainerEye_ListRedraw_hook.o
+                0x088022ac                PokeNav_TrainerEye_ListBlank_C
  *(.rodata*)
- .rodata        0x08802314       0x7c out\obj/PrintNextChar_hook.o
- .rodata        0x08802390        0xd out\obj/UnusedPrintMonName_hook.o
- *fill*         0x0880239d        0x3 
- .rodata        0x088023a0       0x45 out\obj/SummaryScreen_PrintTrainerMemo_hook.o
- *fill*         0x088023e5        0x3 
- .rodata        0x088023e8        0xc out\obj/PokeNav_PrintMenuTip_hook.o
+ .rodata        0x0880240c       0x7c out\obj/PrintNextChar_hook.o
+ .rodata        0x08802488        0xd out\obj/UnusedPrintMonName_hook.o
+ *fill*         0x08802495        0x3 
+ .rodata        0x08802498       0x45 out\obj/SummaryScreen_PrintTrainerMemo_hook.o
+ *fill*         0x088024dd        0x3 
+ .rodata        0x088024e0        0xc out\obj/PokeNav_PrintMenuTip_hook.o
  *(.rodata.*)
-                0x088023f4                        . = ALIGN (0x4)
+                0x088024ec                        . = ALIGN (0x4)
 
-.data           0x088023f4        0x0
- .data          0x088023f4        0x0 out\obj/text_entry.o
- .data          0x088023f4        0x0 out\obj/PrintNextChar_hook.o
- .data          0x088023f4        0x0 out\obj/MapNamePopup_entry.o
- .data          0x088023f4        0x0 out\obj/MapNamePopup_hook.o
- .data          0x088023f4        0x0 out\obj/UpdateNickInHealthbox_entry.o
- .data          0x088023f4        0x0 out\obj/UpdateNickInHealthbox_hook.o
- .data          0x088023f4        0x0 out\obj/UnusedPrintMonName_entry.o
- .data          0x088023f4        0x0 out\obj/UnusedPrintMonName_hook.o
- .data          0x088023f4        0x0 out\obj/UnusedPrintDecimalNum_entry.o
- .data          0x088023f4        0x0 out\obj/UnusedPrintDecimalNum_hook.o
- .data          0x088023f4        0x0 out\obj/SummaryScreen_PrintTrainerMemo_entry.o
- .data          0x088023f4        0x0 out\obj/SummaryScreen_PrintTrainerMemo_hook.o
- .data          0x088023f4        0x0 out\obj/SummaryScreen_PrintNicknameGender_entry.o
- .data          0x088023f4        0x0 out\obj/SummaryScreen_PrintNicknameGender_hook.o
- .data          0x088023f4        0x0 out\obj/DrawOptionMenuChoice_entry.o
- .data          0x088023f4        0x0 out\obj/DrawOptionMenuChoice_hook.o
- .data          0x088023f4        0x0 out\obj/PokeNav_PrintMenuTip_entry.o
- .data          0x088023f4        0x0 out\obj/PokeNav_PrintMenuTip_hook.o
- .data          0x088023f4        0x0 out\obj/PokeNav_TrainerEye_FormatListLine_entry.o
- .data          0x088023f4        0x0 out\obj/PokeNav_TrainerEye_FormatListLine_hook.o
- .data          0x088023f4        0x0 out\obj/PokeNav_TrainerEye_DetailEnter_entry.o
- .data          0x088023f4        0x0 out\obj/PokeNav_TrainerEye_DetailEnter_hook.o
- .data          0x088023f4        0x0 out\obj/PokeNav_TrainerEye_PrintTitle_entry.o
- .data          0x088023f4        0x0 out\obj/PokeNav_TrainerEye_PrintTitle_hook.o
- .data          0x088023f4        0x0 out\obj/PokeNav_TrainerEye_TitleBlit_entry.o
- .data          0x088023f4        0x0 out\obj/PokeNav_TrainerEye_TitleBlit_hook.o
- .data          0x088023f4        0x0 out\obj/PokeNav_TrainerEye_PrintTitleSprite_entry.o
- .data          0x088023f4        0x0 out\obj/PokeNav_TrainerEye_SkipListRow_entry.o
- .data          0x088023f4        0x0 out\obj/PokeNav_TrainerEye_SkipListRow_hook.o
- .data          0x088023f4        0x0 out\obj/PokeNav_TrainerEye_ListRedraw_entry.o
- .data          0x088023f4        0x0 out\obj/PokeNav_TrainerEye_ListRedraw_hook.o
+.data           0x088024ec        0x0
+ .data          0x088024ec        0x0 out\obj/text_entry.o
+ .data          0x088024ec        0x0 out\obj/PrintNextChar_hook.o
+ .data          0x088024ec        0x0 out\obj/MapNamePopup_entry.o
+ .data          0x088024ec        0x0 out\obj/MapNamePopup_hook.o
+ .data          0x088024ec        0x0 out\obj/UpdateNickInHealthbox_entry.o
+ .data          0x088024ec        0x0 out\obj/UpdateNickInHealthbox_hook.o
+ .data          0x088024ec        0x0 out\obj/UnusedPrintMonName_entry.o
+ .data          0x088024ec        0x0 out\obj/UnusedPrintMonName_hook.o
+ .data          0x088024ec        0x0 out\obj/UnusedPrintDecimalNum_entry.o
+ .data          0x088024ec        0x0 out\obj/UnusedPrintDecimalNum_hook.o
+ .data          0x088024ec        0x0 out\obj/SummaryScreen_PrintTrainerMemo_entry.o
+ .data          0x088024ec        0x0 out\obj/SummaryScreen_PrintTrainerMemo_hook.o
+ .data          0x088024ec        0x0 out\obj/SummaryScreen_PrintNicknameGender_entry.o
+ .data          0x088024ec        0x0 out\obj/SummaryScreen_PrintNicknameGender_hook.o
+ .data          0x088024ec        0x0 out\obj/DrawOptionMenuChoice_entry.o
+ .data          0x088024ec        0x0 out\obj/DrawOptionMenuChoice_hook.o
+ .data          0x088024ec        0x0 out\obj/PokeNav_PrintMenuTip_entry.o
+ .data          0x088024ec        0x0 out\obj/PokeNav_PrintMenuTip_hook.o
+ .data          0x088024ec        0x0 out\obj/PokeNav_TrainerEye_FormatListLine_entry.o
+ .data          0x088024ec        0x0 out\obj/PokeNav_TrainerEye_FormatListLine_hook.o
+ .data          0x088024ec        0x0 out\obj/PokeNav_TrainerEye_DetailEnter_entry.o
+ .data          0x088024ec        0x0 out\obj/PokeNav_TrainerEye_DetailEnter_hook.o
+ .data          0x088024ec        0x0 out\obj/PokeNav_TrainerEye_PrintTitle_entry.o
+ .data          0x088024ec        0x0 out\obj/PokeNav_TrainerEye_PrintTitle_hook.o
+ .data          0x088024ec        0x0 out\obj/PokeNav_TrainerEye_TitleBlit_entry.o
+ .data          0x088024ec        0x0 out\obj/PokeNav_TrainerEye_TitleBlit_hook.o
+ .data          0x088024ec        0x0 out\obj/PokeNav_TrainerEye_PrintTitleSprite_entry.o
+ .data          0x088024ec        0x0 out\obj/PokeNav_TrainerEye_SkipListRow_entry.o
+ .data          0x088024ec        0x0 out\obj/PokeNav_TrainerEye_SkipListRow_hook.o
+ .data          0x088024ec        0x0 out\obj/PokeNav_TrainerEye_ListRedraw_entry.o
+ .data          0x088024ec        0x0 out\obj/PokeNav_TrainerEye_ListRedraw_hook.o
 
-.igot.plt       0x088023f4        0x0
- .igot.plt      0x088023f4        0x0 out\obj/text_entry.o
+.igot.plt       0x088024ec        0x0
+ .igot.plt      0x088024ec        0x0 out\obj/text_entry.o
 
-.glue_7         0x088023f4        0x0
- .glue_7        0x088023f4        0x0 linker stubs
+.glue_7         0x088024ec        0x0
+ .glue_7        0x088024ec        0x0 linker stubs
 
-.glue_7t        0x088023f4        0x0
- .glue_7t       0x088023f4        0x0 linker stubs
+.glue_7t        0x088024ec        0x0
+ .glue_7t       0x088024ec        0x0 linker stubs
 
-.vfp11_veneer   0x088023f4        0x0
- .vfp11_veneer  0x088023f4        0x0 linker stubs
+.vfp11_veneer   0x088024ec        0x0
+ .vfp11_veneer  0x088024ec        0x0 linker stubs
 
-.v4_bx          0x088023f4        0x0
- .v4_bx         0x088023f4        0x0 linker stubs
+.v4_bx          0x088024ec        0x0
+ .v4_bx         0x088024ec        0x0 linker stubs
 
-.iplt           0x088023f4        0x0
- .iplt          0x088023f4        0x0 out\obj/text_entry.o
+.iplt           0x088024ec        0x0
+ .iplt          0x088024ec        0x0 out\obj/text_entry.o
 
-.rel.dyn        0x088023f4        0x0
- .rel.iplt      0x088023f4        0x0 out\obj/text_entry.o
+.rel.dyn        0x088024ec        0x0
+ .rel.iplt      0x088024ec        0x0 out\obj/text_entry.o
 
-.bss            0x088023f4        0x0
- .bss           0x088023f4        0x0 out\obj/text_entry.o
- .bss           0x088023f4        0x0 out\obj/PrintNextChar_hook.o
- .bss           0x088023f4        0x0 out\obj/MapNamePopup_entry.o
- .bss           0x088023f4        0x0 out\obj/MapNamePopup_hook.o
- .bss           0x088023f4        0x0 out\obj/UpdateNickInHealthbox_entry.o
- .bss           0x088023f4        0x0 out\obj/UpdateNickInHealthbox_hook.o
- .bss           0x088023f4        0x0 out\obj/UnusedPrintMonName_entry.o
- .bss           0x088023f4        0x0 out\obj/UnusedPrintMonName_hook.o
- .bss           0x088023f4        0x0 out\obj/UnusedPrintDecimalNum_entry.o
- .bss           0x088023f4        0x0 out\obj/UnusedPrintDecimalNum_hook.o
- .bss           0x088023f4        0x0 out\obj/SummaryScreen_PrintTrainerMemo_entry.o
- .bss           0x088023f4        0x0 out\obj/SummaryScreen_PrintTrainerMemo_hook.o
- .bss           0x088023f4        0x0 out\obj/SummaryScreen_PrintNicknameGender_entry.o
- .bss           0x088023f4        0x0 out\obj/SummaryScreen_PrintNicknameGender_hook.o
- .bss           0x088023f4        0x0 out\obj/DrawOptionMenuChoice_entry.o
- .bss           0x088023f4        0x0 out\obj/DrawOptionMenuChoice_hook.o
- .bss           0x088023f4        0x0 out\obj/PokeNav_PrintMenuTip_entry.o
- .bss           0x088023f4        0x0 out\obj/PokeNav_PrintMenuTip_hook.o
- .bss           0x088023f4        0x0 out\obj/PokeNav_TrainerEye_FormatListLine_entry.o
- .bss           0x088023f4        0x0 out\obj/PokeNav_TrainerEye_FormatListLine_hook.o
- .bss           0x088023f4        0x0 out\obj/PokeNav_TrainerEye_DetailEnter_entry.o
- .bss           0x088023f4        0x0 out\obj/PokeNav_TrainerEye_DetailEnter_hook.o
- .bss           0x088023f4        0x0 out\obj/PokeNav_TrainerEye_PrintTitle_entry.o
- .bss           0x088023f4        0x0 out\obj/PokeNav_TrainerEye_PrintTitle_hook.o
- .bss           0x088023f4        0x0 out\obj/PokeNav_TrainerEye_TitleBlit_entry.o
- .bss           0x088023f4        0x0 out\obj/PokeNav_TrainerEye_TitleBlit_hook.o
- .bss           0x088023f4        0x0 out\obj/PokeNav_TrainerEye_PrintTitleSprite_entry.o
- .bss           0x088023f4        0x0 out\obj/PokeNav_TrainerEye_SkipListRow_entry.o
- .bss           0x088023f4        0x0 out\obj/PokeNav_TrainerEye_SkipListRow_hook.o
- .bss           0x088023f4        0x0 out\obj/PokeNav_TrainerEye_ListRedraw_entry.o
- .bss           0x088023f4        0x0 out\obj/PokeNav_TrainerEye_ListRedraw_hook.o
+.bss            0x088024ec        0x0
+ .bss           0x088024ec        0x0 out\obj/text_entry.o
+ .bss           0x088024ec        0x0 out\obj/PrintNextChar_hook.o
+ .bss           0x088024ec        0x0 out\obj/MapNamePopup_entry.o
+ .bss           0x088024ec        0x0 out\obj/MapNamePopup_hook.o
+ .bss           0x088024ec        0x0 out\obj/UpdateNickInHealthbox_entry.o
+ .bss           0x088024ec        0x0 out\obj/UpdateNickInHealthbox_hook.o
+ .bss           0x088024ec        0x0 out\obj/UnusedPrintMonName_entry.o
+ .bss           0x088024ec        0x0 out\obj/UnusedPrintMonName_hook.o
+ .bss           0x088024ec        0x0 out\obj/UnusedPrintDecimalNum_entry.o
+ .bss           0x088024ec        0x0 out\obj/UnusedPrintDecimalNum_hook.o
+ .bss           0x088024ec        0x0 out\obj/SummaryScreen_PrintTrainerMemo_entry.o
+ .bss           0x088024ec        0x0 out\obj/SummaryScreen_PrintTrainerMemo_hook.o
+ .bss           0x088024ec        0x0 out\obj/SummaryScreen_PrintNicknameGender_entry.o
+ .bss           0x088024ec        0x0 out\obj/SummaryScreen_PrintNicknameGender_hook.o
+ .bss           0x088024ec        0x0 out\obj/DrawOptionMenuChoice_entry.o
+ .bss           0x088024ec        0x0 out\obj/DrawOptionMenuChoice_hook.o
+ .bss           0x088024ec        0x0 out\obj/PokeNav_PrintMenuTip_entry.o
+ .bss           0x088024ec        0x0 out\obj/PokeNav_PrintMenuTip_hook.o
+ .bss           0x088024ec        0x0 out\obj/PokeNav_TrainerEye_FormatListLine_entry.o
+ .bss           0x088024ec        0x0 out\obj/PokeNav_TrainerEye_FormatListLine_hook.o
+ .bss           0x088024ec        0x0 out\obj/PokeNav_TrainerEye_DetailEnter_entry.o
+ .bss           0x088024ec        0x0 out\obj/PokeNav_TrainerEye_DetailEnter_hook.o
+ .bss           0x088024ec        0x0 out\obj/PokeNav_TrainerEye_PrintTitle_entry.o
+ .bss           0x088024ec        0x0 out\obj/PokeNav_TrainerEye_PrintTitle_hook.o
+ .bss           0x088024ec        0x0 out\obj/PokeNav_TrainerEye_TitleBlit_entry.o
+ .bss           0x088024ec        0x0 out\obj/PokeNav_TrainerEye_TitleBlit_hook.o
+ .bss           0x088024ec        0x0 out\obj/PokeNav_TrainerEye_PrintTitleSprite_entry.o
+ .bss           0x088024ec        0x0 out\obj/PokeNav_TrainerEye_SkipListRow_entry.o
+ .bss           0x088024ec        0x0 out\obj/PokeNav_TrainerEye_SkipListRow_hook.o
+ .bss           0x088024ec        0x0 out\obj/PokeNav_TrainerEye_ListRedraw_entry.o
+ .bss           0x088024ec        0x0 out\obj/PokeNav_TrainerEye_ListRedraw_hook.o
 
 /DISCARD/
  *(.comment)

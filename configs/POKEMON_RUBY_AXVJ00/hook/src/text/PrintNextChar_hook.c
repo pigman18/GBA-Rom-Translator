@@ -144,6 +144,48 @@ static uint16_t grid_tile(TextPrinter *win, unsigned col)
             + 2u * grid_store_col(row, col));
 }
 
+/* =====================================================================
+ * textMode 0 直写（BUG-C，2026-11-19 GDB + 反汇编定案）
+ *
+ * **只有 textMode 1 需要分配 tile**（原版按字形槽号 tile=TB+2*glyph，
+ * 所以预载 UI 图形与文本永不互踩）。其余 textMode 全是**直写**：
+ *
+ *   textMode 0 — 累加器  tile = TILE_BASE + TILE_OFFSET
+ *   textMode 2 — 写 win+0x20 缓冲（grid_setup 的 buffered 分支）
+ *   textMode 3 — 屏幕行列 tile = TB + 2 + (curX+curTX) + 30*(curY+curTY)
+ *                （反汇编 0x080034E0 逐条确认：adds #2 / lsls#4+subs / lsls#1
+ *                  = row*30；注意是 row*30 不是 band*62）
+ *
+ * GDB 实测 origin 侧（battle_menu_audit 20261119T171208，**未打补丁** ROM，
+ * 在 PrintNextChar@0x080032F8 入口逐字采样 win）：
+ *
+ *   菜单窗 TB=0x190 curX=19：
+ *     index  TILE_OFF  curTX  curTY
+ *       0      0x00      0      0    ← 串首
+ *      17      0x12      9      0
+ *      18      0x12      0      2    ← 换行：TILE_OFF 不变，curTX 归零
+ *      27      0x24      9      2
+ *
+ * ⇒ textMode 0 三铁律：
+ *   ① tile = TILE_BASE + TILE_OFFSET
+ *   ② 每印一个字 TILE_OFFSET += 2（行内恒有 TILE_OFFSET = 2*cursorTileX）
+ *   ③ 换行时 TILE_OFFSET **不清零**，只有 curTX 归零、curTY += 2
+ *   且**没有冲突规避、没有 0x1F0 上限**。
+ *
+ * 旧实现把 textMode 0 也套网格 TB+2+band*62+2*col：
+ *   TB=0x1B8 row=17 → band=1 → 0x1F8 > 0x1F0 ⇒ 越界分支 return，
+ *   整个战斗对话框一字不写（BUG-C 症状）；冲突规避还会把相邻两字
+ *   迁到同一空闲 tile（实测 x20/x21 同指 0x1A4 → 「宝可梦」和「逃跑」
+ *   之间冒残字）。
+ * ===================================================================== */
+
+/* textMode 0 的 tile 号 = TB + TILE_OFFSET（铁律 ①）。 */
+static uint16_t grid_tile_linear(TextPrinter *win)
+{
+    return (uint16_t)((unsigned)win_u16(win, WIN_TILE_BASE)
+                    + (unsigned)win_u16(win, WIN_TILE_OFFSET));
+}
+
 /* ---------------------------------------------------------------------
  * tile 冲突规避（2026-11-13 实测定案）
  *
@@ -635,6 +677,38 @@ static void grid_emit(TextPrinter *win, GridTarget *t,
                     && win_u8(win, WIN_CURSOR_X) < 20u);
 
     if (!t->buffered) {
+        /* === textMode 0：直写 TB+TILE_OFFSET，完全绕开网格与冲突规避 ===
+         * 依据见 grid_tile_linear 上方 GDB 实测表与反汇编。
+         * 只有 textMode 1 需要分配 tile；textMode 0 是纯累加器直写。 */
+        if (win_u8(win, WIN_TEXTMODE) == 0u) {
+            uint16_t lt = grid_tile_linear(win);
+
+            /* 只做 10-bit tile 号硬边界保护，不迁址、不找空位。
+             * 越界说明模板 TB 本身配错，不该由渲染层兜。 */
+            if ((unsigned)lt + 2u * ncols > GRID_TILE_BITS) {
+                diag_ctrl(3u, (uint32_t)lt, 0u);
+                win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(t->rel + delta));
+                return;
+            }
+            grid_pair_store(p0, t->base + 32u * lt);
+            if (ncols > 1u)
+                grid_pair_store(p1, t->base + 32u * (lt + 2u));
+            for (c = 0u; c < ncols; ++c) {
+                /* 屏幕列与 tile 严格同步：第 c 列写到 col+c、指向 lt+2c */
+                win_set_u8(win, WIN_CURSOR_TILE_X,
+                           (uint8_t)(t->rel + c));
+                UpdateTilemap_PreserveCursorX(win,
+                    (uint16_t)(lt + 2u * c), (uint16_t)(lt + 2u * c + 1u));
+            }
+            /* 推进：TILE_OFFSET += 2*delta（铁律 ②，换行时游戏不清零，
+             * 所以累加即正确，与 origin 逐字一致）。 */
+            win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(t->rel + delta));
+            win_set_u16(win, WIN_TILE_OFFSET,
+                        (uint16_t)(win_u16(win, WIN_TILE_OFFSET)
+                                   + 2u * delta));
+            return;
+        }
+
         if (bag
             && (grid_cursor_ty(win) >= 18u
                 || (ncols > 1u
@@ -710,19 +784,23 @@ static void grid_load(TextPrinter *win, GridTarget *t,
         /* phase>0：左 4px 属上一字右缘；上一字可能已迁离本征，读 tilemap 实指。 */
         const uint8_t *tpl = win_template(win);
         const uint16_t *map;
-        uint16_t t0 = grid_tile(win, t->col);
+        uint16_t t0 = (win_u8(win, WIN_TEXTMODE) == 0u)
+                    ? grid_tile_linear(win)
+                    : grid_tile(win, t->col);
         unsigned ty = grid_cursor_ty(win);
+        unsigned hi = (win_u8(win, WIN_TEXTMODE) == 0u)
+                    ? GRID_TILE_BITS : GRID_TILE_LIMIT;
 
         if (tpl) {
             map = (const uint16_t *)(const void *)
                 (uintptr_t)win_u32(tpl, TPL_TILEMAP);
             if (map && t->col < GRID_TILEMAP_W && ty < GRID_TILEMAP_W) {
                 unsigned v = grid_tilemap_entry(map, t->col, ty);
-                if (v != 0u && v < GRID_TILE_LIMIT)
+                if (v != 0u && v < hi)
                     t0 = (uint16_t)v;
             }
         }
-        if ((unsigned)t0 + 2u * (ncols - 1u) + 2u > GRID_TILE_LIMIT)
+        if ((unsigned)t0 + 2u * (ncols - 1u) + 2u > hi)
             return;
         addr = t->base + 32u * t0;
     } else {
@@ -777,6 +855,29 @@ static uint8_t grid_bg(TextPrinter *win)
 
     if ((uintptr_t)tpl == TPL_POKENAV_TRAINER_EYE_LEFT)
         return 0u;
+
+    /* textMode 0（战斗对话/主菜单/招式）：用 win[0x0D] = D = 背景色。
+     *
+     * GDB 实测 origin 侧（battle_menu_audit 20261119T171208）三个战斗窗的
+     * 真实配色（只统计「真正打印文字」时的样本）：
+     *
+     *   对话窗 TB=0x1B8  27 次  色 C/D/E=1/15/8   pal=0
+     *   菜单窗 TB=0x190  42 次  色 C/D/E=13/14/15 pal=5
+     *   招式窗 TB=0x2C0  18 次  色 C/D/E=13/14/15 pal=5
+     *
+     * 而「白底」在各自调色板里的索引：
+     *   pal0 → 15 是白（idx1/idx5 也白，但 D 取 15）
+     *   pal5 → 14 是白（15 是 (213,213,205) 灰！）
+     *
+     * ⇒ **D 就是背景色**，两个窗各自都对；照搬 tpl[6] 在菜单/招式窗会拿到
+     *   15 = 灰，屏幕上就是「菜单项背后一块灰」（用户截图 2026-11-19）。
+     *
+     * 为什么不影响其他 textMode：图鉴滚动时 FC 会把 win[0x0D] 临时改成 2(红)
+     * 画高亮，若拿它铺整列 64B 会把 12px 共享列里前一字的右半染红
+     * （VRAM 实证 tile 16B..171 主色 nibble=2）。所以只有 textMode 0 用它，
+     * 其余仍认模板背景。 */
+    if (win_u8(win, WIN_TEXTMODE) == 0u)
+        return win_u8(win, WIN_COLOR_D);
 
     /* 预载字模的背景是**窗口模板的固定色**，不是当前绘制色。
      * GRID_DIAG 六场景实测：对话/选项/导航/开始菜单 tpl[6]=0xF(白)，
@@ -930,6 +1031,13 @@ static void grid_draw_pcs(TextPrinter *win, uint8_t glyph, unsigned phase)
     if (glyph == 0x00u) {
         win_set_u8(win, WIN_CURSOR_TILE_X,
                    (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
+        /* textMode 0 直写：空格也占一格，TILE_OFFSET 必须同步 +2。
+         * origin 实证（菜单窗第 2 行 x23=0x1AA、x25=0x1AE，中间 0x1AC
+         * 无人引用）—— 那正是空格消耗掉的编号。不推进的话后一字会落回
+         * 前字的 tile（实测 x23/x25 同指 0x1A4，两字叠出残字）。 */
+        if (win_u8(win, WIN_TEXTMODE) == 0u)
+            win_set_u16(win, WIN_TILE_OFFSET,
+                        (uint16_t)(win_u16(win, WIN_TILE_OFFSET) + 2u));
         return;
     }
     if (!grid_setup(win, &t)) {

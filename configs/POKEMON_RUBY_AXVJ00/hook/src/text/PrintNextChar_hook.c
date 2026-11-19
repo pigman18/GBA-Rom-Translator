@@ -569,6 +569,40 @@ static int grid_setup(TextPrinter *win, GridTarget *t)
     return t->base != 0u && t->col < GRID_COLS_PER_SEG;
 }
 
+/* 与 grid_setup 的 buffered 判定同口径（textMode 2，或模板无 tilemap）。 */
+static int grid_is_buffered(TextPrinter *win)
+{
+    const uint8_t *tpl = win_template(win);
+
+    return (win_u8(win, WIN_TEXTMODE) == 2u)
+        || (tpl != 0 && win_u32(tpl, TPL_TILEMAP) == 0u);
+}
+
+/* 前向声明：grid_fill_blank_cell 需要它（定义在 §3 末尾） */
+static uint8_t grid_bg(TextPrinter *win);
+
+/* buffered 窗的空白格：把当前光标那一格的缓冲字节刷成背景色并推进一格。
+ *
+ * 只用于 8px 单列字（fontNum 2/4）的 buffered 窗，例如战斗血条的 HP 数字。
+ * 为什么必须刷（BUG-5）：HP 串首字符是空格 0x00，若不刷就保留上一条串
+ * （等级）留在同一位置的字模 → 等级 36 的首位「3」变成 HP 的 377。
+ * 为什么刷满 GRID_PAIR_BYTES 是安全的：buffered 不写 tilemap，8px 字只占
+ * 一个 tile 列，不存在 12px 跨列共享左 4px 的问题（见 grid_load 注释）。 */
+static void grid_fill_blank_cell(TextPrinter *win)
+{
+    uint32_t addr = win_u32(win, WIN_TILE_DATA)
+                  + (uint32_t)win_u8(win, WIN_CURSOR_TILE_X) * GRID_PAIR_BYTES;
+    uint8_t bg = grid_bg(win);
+    uint32_t v = (uint32_t)bg * 0x11111111u;
+    uint32_t *d = (uint32_t *)(uintptr_t)addr;
+    unsigned i;
+
+    for (i = 0u; i < GRID_PAIR_BYTES / 4u; ++i)
+        d[i] = v;
+    win_set_u8(win, WIN_CURSOR_TILE_X,
+               (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
+}
+
 #ifdef GRID_DIAG
 static void diag_write(unsigned slot, const uint8_t *r)
 {
@@ -879,6 +913,18 @@ static uint8_t grid_bg(TextPrinter *win)
     if (win_u8(win, WIN_TEXTMODE) == 0u)
         return win_u8(win, WIN_COLOR_D);
 
+    /* textMode 2（buffered 缓冲直绘）：必须用运行时 win[0x0D]，不能用 tpl[6]。
+     *
+     * 血条模板 0x081BB40C 的 tpl[6]=0（透明），但运行时字符串以
+     * `fc 01 01 fc 02 02` 开头，把 C 设为 1、**D 设为 2**：
+     *   GDB 实测 origin 侧 win=0x020231CC：42 次 色C/D/E=1/2/3，
+     *   另有 17 次 1/0/3（未设色的短串）。
+     * 若这里返回 tpl[6]=0，空格刷成「透明 0」等于没清，BUG-5 修不掉。
+     * buffered 窗不写 tilemap、8px 字不跨列共享，所以用 win[0x0D] 安全
+     * （没有图鉴那种「共享列被染红」的风险）。 */
+    if (win_u8(win, WIN_TEXTMODE) == 2u)
+        return win_u8(win, WIN_COLOR_D);
+
     /* 预载字模的背景是**窗口模板的固定色**，不是当前绘制色。
      * GRID_DIAG 六场景实测：对话/选项/导航/开始菜单 tpl[6]=0xF(白)，
      * 图鉴/背包 tpl[6]=0(透明，露出下层气泡)，且除 FC 临时改色外
@@ -1029,6 +1075,30 @@ static void grid_draw_pcs(TextPrinter *win, uint8_t glyph, unsigned phase)
      * 图鉴分类行的问号擦除改在 UnusedPrintMonName 侧处理，禁止在此对
      * 0x00 整格铺背景（会削 12px 共享列 → 列表 № 与名字之间残笔）。 */
     if (glyph == 0x00u) {
+        /* 空格：推进一格，textMode 0 同步 TILE_OFFSET（见下）。
+         *
+         * ★ textMode 2（buffered 缓冲直绘）必须**真的把这一格刷成背景**，
+         * 不能只推进游标 —— BUG-5「HP 显示 377/115」的根因就在这里。
+         *
+         * GDB 实测 origin 侧（battle_menu_audit 20261119T180131，win=0x020231CC
+         * textMode=2 fontNum=4，字节流逐字采样）：
+         *
+         *   第 1 串：fc 01 01 fc 02 02 a4 a7 ff     ← 等级「36」(a4=3, a7=6)
+         *   第 2 串：fc 01 01 fc 02 02 00 a8 a8 ff  ← HP「 77」(00=空格, a8=7)
+         *
+         * 两串写进**同一块缓冲的同一段位置**。第 2 串首字符是空格 0x00，
+         * 旧实现只把 cursorTileX +1、不重绘那一格 ⇒ 第 1 串等级的首位
+         * 字模留在原地：Lv10 残留「1」→ HP 显示 126；Lv36 残留「3」→ 377。
+         * 用户实机截图 2026-11-19 18:34 两张图正好对应这两种情况。
+         *
+         * 为什么这里可以整格铺背景、而 12px 汉字窗不行：
+         * buffered 窗 fontNum=4 是 8px 单列字（GRID_PAIR_BYTES=64 但只占 1 列），
+         * 不存在 12px 跨列共享左 4px 的问题；且 buffered 不写 tilemap，
+         * 只改缓冲字节，不会削掉邻字。12px 的约束见 grid_load 注释。 */
+        if (grid_is_buffered(win)) {
+            grid_fill_blank_cell(win);
+            return;
+        }
         win_set_u8(win, WIN_CURSOR_TILE_X,
                    (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
         /* textMode 0 直写：空格也占一格，TILE_OFFSET 必须同步 +2。

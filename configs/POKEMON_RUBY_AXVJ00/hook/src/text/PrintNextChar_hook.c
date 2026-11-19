@@ -109,16 +109,39 @@ static unsigned grid_row(TextPrinter *win)
             + (unsigned)win_u8(win, WIN_CURSOR_TILE_Y)) >> 1;
 }
 
+/* 行段存储列（BUG-B 2026-11-19）。
+ *
+ * 公式只有 8 个 band，而图鉴列表要画 11 行（GDB 实测 curY 10..30 ⇒
+ * row 5..15）。row 13 的 row&7 = 5，与 row 5 同 band 同列 ⇒ 同 tile，
+ * 第 9 行字模直接覆盖第 1 行：顶行「No003 妙蛙花」变「No011 ------」。
+ * tilemap 实测 0x15F..0x16E 被 (r10/r11) 与 (r26/r27) 双重引用。
+ *
+ * 修法：回绕行（row >= 8）把**存储列**翻到另半区（col ^ 16）。
+ *   · col ^ 16 != col 恒成立 ⇒ 同 band 内两行的存储列必然不同 ⇒ 不再同 tile
+ *   · 屏幕位置由 tilemap 表项决定，与存储 tile 号无关，所以画面不变
+ *   · 每段 31 列（GRID_COLS_PER_SEG），翻半区后仍落在同一 band 内
+ *   · row < 8 的窗口（绝大多数）col^0 == col，行为完全不变
+ * 图鉴 11 行时最多 2 行共享一个 band，翻半区即可分开；3 行同 band 时
+ * 才需要第三区，而 11 行只有 row 5/13 与 6/14 与 7/15 三对，各 2 行。 */
+static unsigned grid_store_col(unsigned row, unsigned col)
+{
+    if (row < GRID_SEG_COUNT)
+        return col;
+    /* 只翻低 4 位：保证结果仍在 [0, GRID_COLS_PER_SEG) 内 */
+    return col ^ 16u;
+}
+
 static uint16_t grid_tile(TextPrinter *win, unsigned col)
 {
     uint16_t tb = win_u16(win, WIN_TILE_BASE);
+    unsigned row = grid_row(win);
     /* textMode3：GetBlankTileNum = TB+1。若 arena 从 TB 起算，band0/col0
      * 的 lower 正好是 TB+1 → 写汉字/▶ 时踩碎「空白」模板；开始菜单
      * RedrawMenuCursor 再 Blank 把格指回 TB+1，屏上冒灰影残墨
      *（bot：START 开→关→开→上下，残墨色 (74,74,74)=阴影灰）。 */
     return (uint16_t)((unsigned)tb + 2u
-            + (grid_row(win) & (GRID_SEG_COUNT - 1u)) * GRID_SEG_TILES
-            + 2u * col);
+            + (row & (GRID_SEG_COUNT - 1u)) * GRID_SEG_TILES
+            + 2u * grid_store_col(row, col));
 }
 
 /* ---------------------------------------------------------------------
@@ -299,7 +322,9 @@ static int grid_tile_is_other_col_natural(TextPrinter *win, unsigned n,
     if (nat_col >= GRID_COLS_PER_SEG)
         return 0;
     cur_band = grid_row(win) & (GRID_SEG_COUNT - 1u);
-    if (band == cur_band && nat_col == except_col)
+    /* 本格本征的**存储**列（回绕行已翻半区，见 grid_store_col） */
+    if (band == cur_band
+        && nat_col == grid_store_col(grid_row(win), except_col))
         return 0;                    /* 本格本征，允许 */
     return 1;
 }

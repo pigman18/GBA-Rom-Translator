@@ -594,6 +594,59 @@ def _on_te_print_location_flag(
     )
 
 
+@handler("DexRowDup")
+def _on_dex_row_dup(
+    gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]
+) -> None:
+    """图鉴列表跨行 tile 双重引用计数（BUG-B 可证伪判据）。
+
+    根因：tile = TB+2+(row&7)*62+col*2 只有 8 个 band，图鉴列表 11 行时
+    第 9~11 行 row&7 回绕到 5/6/7，与第 1~3 行同 tile，字模互相覆盖
+    （顶行 No003 妙妙花 -> No011 ------）。
+
+    统计方式：扫列表窗 tilemap（0x0600F7000），按 tile 号归并引用它的
+    屏幕行；被 >1 个不同行引用即记一次 dup。排除精灵球图标 0x1FC/0x1FD
+    （设计上就是所有行共用同一图标）。
+    修复前 f043 实测 16 对；修复后应为 0。
+    """
+    TM = 0x06007000
+    CB = 0x06008000
+    ICON = {0x1FC, 0x1FD}
+    # GDB stub 单包上限 0x100，tilemap 2048B 必须分块读
+    try:
+        chunks = [bytes(gdb.read_mem(TM + off, 0x100))
+                  for off in range(0, 32 * 32 * 2, 0x100)]
+        raw = b"".join(chunks)
+    except Exception:
+        ctx.log("\n[DexRowDup] 读 tilemap 失败")
+        return
+    if len(raw) < 32 * 32 * 2:
+        ctx.log(f"\n[DexRowDup] 读 tilemap 不完整 {len(raw)}B")
+        return
+    own: dict[int, set[int]] = {}
+    for row in range(32):
+        for col in range(32):
+            o = (row * 32 + col) * 2
+            t = (raw[o] | (raw[o + 1] << 8)) & 0x3FF
+            if t:
+                own.setdefault(t, set()).add(row)
+    dup = 0
+    dups: list[str] = []
+    for t, rows in sorted(own.items()):
+        if t in ICON or len(rows) < 2:
+            continue
+        # 只统计「有墨」的 tile（空槽被多行引用不算撞字）
+        try:
+            d = bytes(gdb.read_mem(CB + t * 32, 32))
+            if not any(d):
+                continue
+        except Exception:
+            continue
+        dup += 1
+        dups.append(f"{t:x}@r{','.join(str(r) for r in sorted(rows))}")
+    ctx.log(f"\n[DexRowDup] dup={dup} " + (" ".join(dups[:10]) if dups else ""))
+
+
 @handler("InitTextPrinter")
 def _on_init_text(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
     win = regs.get("r0", 0)

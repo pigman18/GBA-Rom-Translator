@@ -56,6 +56,9 @@ if errorlevel 1 exit /b 1
 
 echo === Assembling battle\UpdateNickInHealthbox_entry.s ===
 %CC% %ASFLAGS% %BATTLE%\UpdateNickInHealthbox_entry.s -o %BUILD%\UpdateNickInHealthbox_entry.o
+%CC% %ASFLAGS% %BATTLE%\NickSlot_entry.s -o %BUILD%\NickSlot_entry.o
+
+
 if errorlevel 1 exit /b 1
 
 echo === Compiling battle\UpdateNickInHealthbox_hook.c ===
@@ -172,7 +175,7 @@ echo === Linking game.elf ===
   %BUILD%/MapNamePopup_entry.o ^
   %BUILD%/MapNamePopup_hook.o ^
   %BUILD%/UpdateNickInHealthbox_entry.o ^
-  %BUILD%/UpdateNickInHealthbox_hook.o ^
+  %BUILD%/UpdateNickInHealthbox_hook.o %BUILD%/NickSlot_entry.o ^
   %BUILD%/UnusedPrintMonName_entry.o ^
   %BUILD%/UnusedPrintMonName_hook.o ^
   %BUILD%/UnusedPrintDecimalNum_entry.o ^
@@ -209,7 +212,7 @@ rem Stream emit: no copy-vars, no silent fallback. Missing symbol -> no line ->
 rem armips errors at use site (loud failure beats jumping to 0x08800000).
 > %OUT%\game_syms.asm (
     echo ; Auto-generated from out/game.map - do not edit
-    for %%S in (MapName_DisplayCellLength UnusedPrintMonName_Hook UnusedPrintDecimalNum_Hook SummaryScreen_PrintTrainerMemo_Hook SummaryScreen_NameLayoutTiles_Hook DrawOptionMenuChoice_Hook PokeNav_PrintMenuTip_Hook PokeNav_TrainerEye_FormatListLine_Hook PokeNav_TrainerEye_DetailEnter_Hook PokeNav_TrainerEye_PrintTitle_Hook PokeNav_TrainerEye_PrintTitleSprite_Hook PokeNav_TrainerEye_TitleBlit_Hook PokeNav_TrainerEye_SkipListRow_Hook PokeNav_TrainerEye_ListRedraw_Hook) do (
+    for %%S in (MapName_DisplayCellLength UnusedPrintMonName_Hook UnusedPrintDecimalNum_Hook SummaryScreen_PrintTrainerMemo_Hook SummaryScreen_NameLayoutTiles_Hook DrawOptionMenuChoice_Hook PokeNav_PrintMenuTip_Hook PokeNav_TrainerEye_FormatListLine_Hook PokeNav_TrainerEye_DetailEnter_Hook PokeNav_TrainerEye_PrintTitle_Hook PokeNav_TrainerEye_PrintTitleSprite_Hook PokeNav_TrainerEye_TitleBlit_Hook PokeNav_TrainerEye_SkipListRow_Hook PokeNav_TrainerEye_ListRedraw_Hook NickSlot_Hook) do (
         for /f "tokens=1" %%a in ('findstr /R "%%S$" %OUT%\game.map') do @echo %%S equ %%a
     )
 )

@@ -754,6 +754,169 @@ def _on_pnc_entry(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> 
     )
     ctx.log(f"  {_win_fields_us(wb) if us else _win_fields(wb)}")
     ctx.log(f"  字节流: {data.hex(' ')}")
+    # ★ 缓冲起点全貌：定位「名字被固定长度截断」类问题（BUG-8）。
+    #   text+index 只看到断点之后，看不到整串是从哪开始、被砍在哪。
+    #   读 tptr 起 64B，配合 index 就能算出「展开后的名字占了几字节」。
+    if tptr and cfg.get("bufdump"):
+        whole = _read_mem(gdb, tptr, 64)
+        ctx.log(f"  缓冲起点@0x{tptr:08X}: {whole.hex(' ')}")
+
+
+@handler("StringCopyN")
+def _on_strcpyn(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """StringCopyN(dst=r0, src=r1, n=r2) 入口：定位「固定长度截断」类 BUG。
+
+    BUG-8「野生的雷?/蛇??」的根因就在这类硬编码长度上：
+    原版日文名 ≤5 假名，代码里写死 `movs r2,#7`（6B 名槽 + FF），
+    而中文名是 `F7 00 hi lo` × N，3 字要 12B，直接被截断成
+    「1 个汉字 + 半个汉字」，屏幕上就是残字。
+    LR 告诉我们是谁在拷贝；len 就是那个写死的上限。
+    """
+    dst = regs.get("r0", 0)
+    src = regs.get("r1", 0)
+    n = regs.get("r2", 0)
+    lr = regs.get("r14", 0) & ~1
+    if not ctx._hit((lr, n)):
+        return
+    ctx.log(f"\n[StringCopyN] LR=0x{lr:08X} n={n} dst=0x{dst:08X} src=0x{src:08X}")
+    if src:
+        ctx.log(f"  源串: {_read_mem(gdb, src, min(n + 8, 40)).hex(' ')}")
+    if dst:
+        ctx.log(f"  目标: {_read_mem(gdb, dst, min(n + 8, 40)).hex(' ')}")
+
+
+@handler("NickSlotDump")
+def _on_nickslot_dump(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict) -> None:
+    """NickSlot_Hook 内 GetMonData(mon,11) 返回后：r0=species, r4=mon, r5=dst。"""
+    r0 = regs.get("r0", 0)
+    r4 = regs.get("r4", 0)
+    r5 = regs.get("r5", 0)
+    n = int(cfg.get("n") or 24)
+    ctx.log("")
+    ctx.log("[NickSlot] species(r0)=0x%X (%d)  mon=0x%08X  dst=0x%08X"
+            % (r0, r0, r4, r5))
+    if r4:
+        ctx.log("  mon+0 : " + _read_mem(gdb, r4, n).hex(" "))
+        ctx.log("  mon+8 : " + _read_mem(gdb, r4 + 8, n).hex(" "))
+
+
+@handler("SpDump")
+def _on_sp_dump(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """读当前栈指针附近内容，用于看「展开后的名字到底多长」。
+
+    BUG-8 排查用：在 0x08042436（bl 0x8004290 截断）处下点，
+    sp 里就是 0x08042430 展开出来的物种名。若这里只有 10B，
+    说明截断发生在上游；若这里有 12B 而缓冲只有 10B，说明是本函数砍的。
+    """
+    sp = regs.get("r13", 0)
+    n = int(cfg.get("n") or 40)
+    if not sp:
+        return
+    ctx.log(f"\n[SpDump] sp=0x{sp:08X} r0=0x{regs.get('r0',0):08X} "
+            f"r5=0x{regs.get('r5',0):08X} lr=0x{regs.get('r14',0)&~1:08X}")
+    ctx.log(f"  栈内容: {_read_mem(gdb, sp, n).hex(' ')}")
+    # 源字段：r5 是宝可梦结构指针，名字在 +8。直接读原始源，
+    # 判断「是源本身就短」还是「拷贝时被砍」。
+    r5 = regs.get("r5", 0)
+    if r5:
+        ctx.log(f"  源 r5+8 : {_read_mem(gdb, r5 + 8, n).hex(' ')}")
+        ctx.log(f"  源 r5+0 : {_read_mem(gdb, r5, 24).hex(' ')}")
+    for _rn in ("r4", "r6", "r7", "r8", "r9"):
+        _rv = regs.get(_rn, 0)
+        if _rv:
+            ctx.log(f"  {_rn}=0x{_rv:08X} : {_read_mem(gdb, _rv, 20).hex(' ')}")
+
+
+@handler("Param3Dump")
+def _on_param3(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict) -> None:
+    """param3 处理器 0x0803A1E6：r9=mon。"""
+    r9 = regs.get("r9", 0)
+    n = int(cfg.get("n") or 32)
+    ctx.log("")
+    ctx.log("[Param3] r9=0x%08X r7=0x%08X" % (r9, regs.get("r7", 0)))
+    if r9:
+        ctx.log("  mon+0 : " + _read_mem(gdb, r9, n).hex(" "))
+        ctx.log("  mon+8 : " + _read_mem(gdb, r9 + 8, n).hex(" "))
+        ctx.log("  +18/+19: " + _read_mem(gdb, r9 + 18, 4).hex(" "))
+
+
+@handler("SpNameHookDump")
+def _on_spname_hook(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict) -> None:
+    """SpeciesNameExpand_Hook 入口：r9=mon, r7=dst。"""
+    r9 = regs.get("r9", 0)
+    r7 = regs.get("r7", 0)
+    n = int(cfg.get("n") or 32)
+    ctx.log("")
+    ctx.log("[SpNameHook] r9(mon)=0x%08X r7(dst)=0x%08X" % (r9, r7))
+    if r9:
+        ctx.log("  mon+0  : " + _read_mem(gdb, r9, n).hex(" "))
+        ctx.log("  mon+8  : " + _read_mem(gdb, r9 + 8, n).hex(" "))
+    if r7:
+        ctx.log("  dst    : " + _read_mem(gdb, r7, n).hex(" "))
+
+
+@handler("SlotSrcDump")
+def _on_slot_src(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict) -> None:
+    """占位符2 else 分支入口：r9 = 源结构指针，+8 是名字槽。"""
+    r9 = regs.get("r9", 0)
+    r7 = regs.get("r7", 0)
+    n = int(cfg.get("n") or 40)
+    ctx.log("")
+    ctx.log("[SlotSrcDump] r9=0x%08X r7(dst)=0x%08X" % (r9, r7))
+    if r9:
+        ctx.log("  r9+0  : " + _read_mem(gdb, r9, n).hex(" "))
+        ctx.log("  r9+8  : " + _read_mem(gdb, r9 + 8, n).hex(" "))
+
+
+@handler("NickAfterCopy")
+def _on_nick_after_copy(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict) -> None:
+    """StringCopy 之后：看目标缓冲 r4-3 与 sp。"""
+    sp = regs.get("r13", 0)
+    r4 = regs.get("r4", 0)
+    n = int(cfg.get("n") or 32)
+    ctx.log("")
+    ctx.log("[NickAfterCopy] r4=0x%08X sp=0x%08X r6=0x%08X"
+            % (r4, sp, regs.get("r6", 0)))
+    if sp:
+        ctx.log("  sp : " + _read_mem(gdb, sp, n).hex(" "))
+    if r4:
+        ctx.log("  r4-3: " + _read_mem(gdb, (r4 - 3) & 0xFFFFFFFF, n).hex(" "))
+
+
+@handler("NickHookMid")
+def _on_nick_hook_mid(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """NickFullName_Hook 第3步前（StringCopy 之前）：看 species 与 sp 里的完整名。"""
+    sp = regs.get("r13", 0)
+    n = int(cfg.get("n") or 32)
+    ctx.log("")
+    ctx.log("[NickHookMid] r6(species)=0x%08X r4(dst)=0x%08X sp=0x%08X"
+            % (regs.get("r6", 0), regs.get("r4", 0), sp))
+    if sp:
+        ctx.log("  sp[0..31] : " + _read_mem(gdb, sp, n).hex(" "))
+    r4 = regs.get("r4", 0)
+    if r4:
+        ctx.log("  r4[0..31] : " + _read_mem(gdb, r4, n).hex(" "))
+
+
+@handler("SpeciesDump")
+def _on_species_dump(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """0x080424B8：GetMonData(mon, 11) 已拿到 species、正要定位结构。
+
+    验证「这个函数内部本来就有 species」——若有，就能直接用新表查名字，
+    不必依赖 gBattleTextBuff2 的 10B 槽。
+    """
+    # sl 是 r10，GDB g 包给 r0..r12，r10 即 sl
+    slv = regs.get("r10", 0)
+    sp = regs.get("r13", 0)
+    n = int(cfg.get("n") or 32)
+    ctx.log("\n[SpeciesDump] r10(sl)=0x%08X r5(mon)=0x%08X r4=0x%08X r6=0x%08X"
+            % (slv, regs.get("r5", 0), regs.get("r4", 0), regs.get("r6", 0)))
+    if sp:
+        ctx.log(f"  栈 sp: {_read_mem(gdb, sp, n).hex(' ')}")
+    r5 = regs.get("r5", 0)
+    if r5:
+        ctx.log(f"  mon+0: {_read_mem(gdb, r5, 24).hex(' ')}")
+        ctx.log(f"  mon+8: {_read_mem(gdb, r5 + 8, n).hex(' ')}")
 
 
 @handler("WinDump")
@@ -1205,6 +1368,7 @@ class TilesHarvester:
         origin: Optional[bytes],
         log: Callable[[object], None],
         enabled: bool = True,
+        write_presets: bool = False,
     ):
         self.gdb = gdb
         self.game_yaml = game_yaml
@@ -1212,6 +1376,10 @@ class TilesHarvester:
         self.origin = origin
         self.log = log
         self.enabled = enabled
+        # 2026-11-19：`rt_*` 自动配置只按「Loader 命中」推断图集切分，
+        # 实际尺寸/调色板大量判错（被用户点名删除）。默认不再写 yaml，
+        # 只导出 PNG 供人工核对；需要时显式传 write_presets=True。
+        self.write_presets = write_presets
         self.sheets: dict[int, PendingSheet] = {}    # tileTag → sheet 资产
         self.bindings: dict[int, tuple] = {}         # tileTag → (paletteTag, (w,h,is8)|None)
         self.pal_by_tag: dict[int, int] = {}         # paletteTag → ROM src
@@ -1415,7 +1583,11 @@ class TilesHarvester:
             if not self._export(sh, w, h, is8, count, palette):
                 self.stats["skipped"] += 1
                 return
-            self._upsert_preset(sh, cfg, md5hex)
+            if self.write_presets:
+                self._upsert_preset(sh, cfg, md5hex)
+            else:
+                self.log(f"  [tiles] 导出 PNG @0x{sh.data_addr:08X}（不写 yaml："
+                         f"rt_* 自动配置已停用）")
             self.known_md5[addr_key] = md5hex
             self.exported_addrs.add(sh.data_addr)
             self.stats["paired"] += 1

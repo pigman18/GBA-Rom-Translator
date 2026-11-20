@@ -1,0 +1,6 @@
+{
+  "meta": {
+    "title": "Evidence gate",
+    "description": "Blocks edits to protected renderer and pipeline sources until fresh static, GDB, and bot evidence is recorded, so debugging starts from measured data instead of guesses."
+  }
+}

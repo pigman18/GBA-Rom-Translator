@@ -566,6 +566,35 @@ def render_palette_image(palette: list[tuple], colors_per_row: int = 16,
 # ROM 工具
 # ─────────────────────────────────────────────
 
+def load_compose_palette_banks(rom: bytes, compose: dict | None,
+                               fallback_flat=None, fallback_banks=None):
+    """compose.palette_banks: {bank: '0xADDR'} → 逐 bank 从 ROM 读 32B 调色板。
+
+    背景（BG）图层的 tilemap 每个格子可以带自己的 palbank（entry bit12-15），
+    所以一个画面常常引用多个 16 色调色板，而且它们在 ROM 里**不相邻**
+    （实测背包 BG2：bank0=0x08397BC0，bank1=0x087F2770）。
+    这个函数把每个 bank 单独读出来拼成 flat，供 decode/encode 使用。
+
+    未配置 palette_banks 时原样返回 fallback（保持旧 preset 行为）。
+    """
+    pb_map = (compose or {}).get("palette_banks")
+    if not pb_map:
+        return fallback_flat, fallback_banks, (
+            len(fallback_banks) if fallback_banks else None)
+    maxb = max(int(k) for k in pb_map)
+    banks = []
+    for b in range(maxb + 1):
+        addr = pb_map.get(b) or pb_map.get(str(b))
+        if not addr:
+            banks.append([(0, 0, 0)] * 16)
+            continue
+        off = gba_address_to_offset(_normalize_gba_addr(addr))
+        banks.append(decode_palette_gba555(bytes(rom[off:off + 32]),
+                                          bank_count=1)[0])
+    flat = [c for bank in banks for c in bank]
+    return flat, banks, len(banks)
+
+
 def gba_address_to_offset(addr: int) -> int:
     """GBA 地址 → 文件偏移。如果 addr < 0x08000000，视为文件偏移直接返回。"""
     if addr < 0x08000000:
@@ -1339,6 +1368,8 @@ def _cmd_export_one(args):
     if compression == "auto":
         compression = detect_lz77(rom, offset)
         print(f"自动检测压缩: {compression}")
+    elif compression == "raw":
+        compression = "none"
 
     # ── 解压 ──
     raw_data = None
@@ -1374,7 +1405,10 @@ def _cmd_export_one(args):
         else:
             # raw: 先读大块再自动检测实际大小
             chunk = rom[pal_offset:pal_offset + 512]
-            pal_sz = _auto_palette_size(chunk)
+            # compose.palette_banks 已显式列了每个 bank 的来源 → 不再自动扩张
+            pb_map = (getattr(args, "compose", None) or {}).get("palette_banks")
+            pal_sz = (int(args.palette_size) if pb_map
+                      else _auto_palette_size(chunk))
             if pal_sz != args.palette_size:
                 print(f"调色板大小自动检测: {pal_sz} bytes (原指定 {args.palette_size})")
                 args.palette_size = pal_sz
@@ -1398,6 +1432,10 @@ def _cmd_export_one(args):
     bank_list = None
     if compose_info and palette_flat:
         comp_type = compose_info["type"]
+        palette_flat, palette_banks, _pb_count = load_compose_palette_banks(
+            rom, compose_info, palette_flat, palette_banks)
+        if _pb_count:
+            pal_bank_count = _pb_count
         if comp_type == "banner":
             l = compose_info["left"]; r = compose_info["right"]
             left_img = decode_tiles(raw_data[:l["width"] * l["height"] * 64],
@@ -1431,6 +1469,119 @@ def _cmd_export_one(args):
             composed.save(output_dir / f"{prefix}_compose.png")
             print(f"导出 {prefix}_compose.png ({composed.width}×{composed.height})")
             sprite_w, sprite_h = composed.width, composed.height
+            count = 1
+        elif comp_type == "bgmap":
+            # BG 文本层拼合：tilemap 来自 ROM（LZ 或 raw），每格带自己的 palbank
+            tm_addr = compose_info["tilemap_address"]
+            tm_off = gba_address_to_offset(_normalize_gba_addr(tm_addr)
+                                           if isinstance(tm_addr, str) else tm_addr)
+            tm_comp = compose_info.get("tilemap_compression")
+            if not tm_comp or tm_comp == "auto":
+                tm_comp = detect_lz77(rom, tm_off)
+            if tm_comp in ("lz77", "lz77_swap"):
+                map_data = lz77_decompress(rom[tm_off:], swap=(tm_comp == "lz77_swap"))
+            else:
+                map_data = rom[tm_off:tm_off + int(compose_info.get("tilemap_size", 0x800))]
+
+            tw = compose_info["width"]; th = compose_info["height"]
+            crop = compose_info.get("crop") or [0, 0, tw * 8, th * 8]
+            cx, cy, cw, ch = [int(v) for v in crop]
+            entries = list(struct.unpack(f"<{len(map_data) // 2}H",
+                                         map_data[:len(map_data) // 2 * 2]))
+            # 运行时改写：ROM 的 map 常常是「空白底板」，游戏在进界面时
+            # 才把口袋名等字形格写上去（实测背包 BG2：11 格与 ROM 不同）。
+            # tilemap_overrides = [[col, row, entry], ...]，只用于拼合，不写回 ROM。
+            for ov in compose_info.get("tilemap_overrides") or []:
+                col, row, e = int(ov[0]), int(ov[1]), int(ov[2])
+                if 0 <= row < th and 0 <= col < tw:
+                    entries[row * tw + col] = e
+            composed = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
+            ts = 64 if bpp == 8 else 32
+            n_tiles = len(raw_data) // ts
+            flip_lr = Image.Transpose.FLIP_LEFT_RIGHT
+            flip_tb = Image.Transpose.FLIP_TOP_BOTTOM
+            skipped = 0
+            for row in range(th):
+                for col in range(tw):
+                    e = entries[row * tw + col] if row * tw + col < len(entries) else 0
+                    idx = e & 0x3FF
+                    bank = (e >> 12) & 0xF
+                    if idx >= n_tiles:
+                        skipped += 1
+                        continue
+                    bank_pal = (palette_flat[bank * 16:(bank + 1) * 16]
+                                if palette_flat and bank * 16 < len(palette_flat)
+                                else (palette_flat or [(0, 0, 0)] * 16)[:16])
+                    t = decode_tiles(raw_data[idx * ts:(idx + 1) * ts],
+                                     bpp, 1, 1, palette=bank_pal)[0]
+                    if e & 0x0400:          # hflip
+                        t = t.transpose(flip_lr)
+                    if e & 0x0800:          # vflip
+                        t = t.transpose(flip_tb)
+                    composed.paste(t, (col * 8 - cx, row * 8 - cy))
+            composed.save(output_dir / f"{prefix}_compose.png")
+            print(f"导出 {prefix}_compose.png ({cw}×{ch}, "
+                  f"map {tw}×{th}, 越界 tile {skipped})")
+            sprite_w, sprite_h = cw, ch
+            count = 1
+        elif comp_type == "cells":
+            # 运行时拼出来的 BG 层：ROM 里没有对应 tilemap（map 由程序在
+            # RAM 里搭），所以直接给「格子表」：[[col, row, entry], ...]。
+            # entry 与 GBA BG map 同格式：低 10 位 tile 号、bit10/11 翻转、
+            # bit12-15 palbank。只导出/回写 tile 数据，不碰任何 map。
+            tw = int(compose_info["width"]); th = int(compose_info["height"])
+            crop = compose_info.get("crop") or [0, 0, tw * 8, th * 8]
+            cx, cy, cw, ch = [int(v) for v in crop]
+            # 精灵可以落在非 8 的整数倍位置（实测领航员菜单行 y=34），
+            # 所以 cells 允许带 compose.offset = [dx, dy] 的亚格偏移
+            dx, dy = [int(v) for v in (compose_info.get("offset") or [0, 0])]
+            cellmap = {}
+            for c in compose_info.get("cells") or []:
+                src = int(c[3]) if len(c) > 3 else 0
+                cellmap[(int(c[0]), int(c[1]))] = (int(c[2]), src)
+            # 一条界面可能由多张图块集拼起来（领航员菜单行的最右一格
+            # 就来自另一块），所以允许 compose.sources 给出多个源，
+            # 每个格子带源号；不给 sources 时沿用 preset 自身地址。
+            src_list = compose_info.get("sources")
+            if src_list:
+                src_data = []
+                for s in src_list:
+                    soff = gba_address_to_offset(_normalize_gba_addr(s["address"]))
+                    scomp = s.get("compression")
+                    if scomp in ("lz77", "lz77_swap"):
+                        src_data.append(lz77_decompress(
+                            rom[soff:], swap=(scomp == "lz77_swap")))
+                    else:
+                        src_data.append(rom[soff:soff + int(s.get("raw_size") or 0)])
+            else:
+                src_data = [raw_data]
+            composed = Image.new("RGBA", (cw, ch), (0, 0, 0, 0))
+            ts = 64 if bpp == 8 else 32
+            flip_lr = Image.Transpose.FLIP_LEFT_RIGHT
+            flip_tb = Image.Transpose.FLIP_TOP_BOTTOM
+            skipped = 0
+            for (col, row), (e, src) in sorted(cellmap.items()):
+                idx = e & 0x3FF
+                bank = (e >> 12) & 0xF
+                data = src_data[src] if src < len(src_data) else src_data[0]
+                n_tiles = len(data) // ts
+                if idx >= n_tiles:
+                    skipped += 1
+                    continue
+                bank_pal = (palette_flat[bank * 16:(bank + 1) * 16]
+                            if palette_flat and bank * 16 < len(palette_flat)
+                            else (palette_flat or [(0, 0, 0)] * 16)[:16])
+                t = decode_tiles(data[idx * ts:(idx + 1) * ts],
+                                 bpp, 1, 1, palette=bank_pal)[0]
+                if e & 0x0400:
+                    t = t.transpose(flip_lr)
+                if e & 0x0800:
+                    t = t.transpose(flip_tb)
+                composed.paste(t, (col * 8 + dx - cx, row * 8 + dy - cy))
+            composed.save(output_dir / f"{prefix}_compose.png")
+            print(f"导出 {prefix}_compose.png ({cw}×{ch}, "
+                  f"{len(cellmap)} 格, 越界 tile {skipped})")
+            sprite_w, sprite_h = cw, ch
             count = 1
         else:
             print(f"错误: 未知 compose 类型 '{comp_type}'")
@@ -1779,6 +1930,8 @@ def cmd_import(args):
         # ── 读取所有 sprite ──
         all_raw = bytearray()
         compose_meta = meta.get("compose")
+        palette_flat, palette_banks, _pb_count = load_compose_palette_banks(
+            rom, compose_meta, palette_flat, palette_banks)
         if compose_meta and palette_flat:
             comp_type = compose_meta["type"]
             # 从 meta 中读取实际文件名，兼容旧的硬编码名称
@@ -1828,6 +1981,187 @@ def cmd_import(args):
                         td = encode_tiles_8bpp_from_raw([tile_img], 1, 1, palette_flat)
                         new_tiles[idx * ts:(idx + 1) * ts] = td
                 all_raw = new_tiles
+            elif comp_type == "bgmap":
+                # 与 logo 相反：BG 层可能有多个 palbank / 翻转，逐格按原 entry 写回。
+                # 只改 tile 数据，tilemap 原样保留（“不改 map / 不重映射”）。
+                tm_addr = compose_meta["tilemap_address"]
+                tm_off = gba_address_to_offset(
+                    _normalize_gba_addr(tm_addr) if isinstance(tm_addr, str) else tm_addr)
+                tm_comp = compose_meta.get("tilemap_compression")
+                if not tm_comp or tm_comp == "auto":
+                    tm_comp = detect_lz77(rom, tm_off)
+                if tm_comp in ("lz77", "lz77_swap"):
+                    map_data = lz77_decompress(rom[tm_off:], swap=(tm_comp == "lz77_swap"))
+                else:
+                    map_data = rom[tm_off:tm_off + int(compose_meta.get("tilemap_size", 0x800))]
+                tw = compose_meta["width"]; th = compose_meta["height"]
+                crop = compose_meta.get("crop") or [0, 0, tw * 8, th * 8]
+                cx, cy, cw, ch = [int(v) for v in crop]
+                if img.size != (cw, ch):
+                    print(f"错误: 图片尺寸 {img.size} ≠ 期望 {cw}×{ch}（preset 的 crop 变了？）")
+                    sys.exit(1)
+                entries = list(struct.unpack(f"<{len(map_data) // 2}H",
+                                             map_data[:len(map_data) // 2 * 2]))
+                for ov in compose_meta.get("tilemap_overrides") or []:
+                    col, row, e = int(ov[0]), int(ov[1]), int(ov[2])
+                    if 0 <= row < th and 0 <= col < tw:
+                        entries[row * tw + col] = e
+                if meta["compression"] in ("lz77", "lz77_swap"):
+                    orig_tiles = lz77_decompress(
+                        rom[offset:], swap=(meta["compression"] == "lz77_swap"))
+                else:
+                    orig_tiles = rom[offset:offset + meta.get("raw_size", 0)]
+                new_tiles = bytearray(orig_tiles)
+                ts = 64 if bpp == 8 else 32
+                n = len(orig_tiles) // ts
+                flip_lr = Image.Transpose.FLIP_LEFT_RIGHT
+                flip_tb = Image.Transpose.FLIP_TOP_BOTTOM
+                written = 0
+                for row in range(th):
+                    for col in range(tw):
+                        i = row * tw + col
+                        if i >= len(entries):
+                            continue
+                        e = entries[i]
+                        idx = e & 0x3FF
+                        bank = (e >> 12) & 0xF
+                        if idx >= n:
+                            continue
+                        px = col * 8 - cx
+                        py = row * 8 - cy
+                        if px < 0 or py < 0 or px + 8 > cw or py + 8 > ch:
+                            continue
+                        tile_img = img.crop((px, py, px + 8, py + 8))
+                        if e & 0x0400:        # hflip：图片是屏幕方向，先翻回 tile 方向
+                            tile_img = tile_img.transpose(flip_lr)
+                        if e & 0x0800:
+                            tile_img = tile_img.transpose(flip_tb)
+                        bank_pal = (palette_flat[bank * 16:(bank + 1) * 16]
+                                    if palette_flat and bank * 16 < len(palette_flat)
+                                    else (palette_flat or [(0, 0, 0)] * 16)[:16])
+                        if bpp == 8:
+                            td = encode_tiles_8bpp_from_raw([tile_img], 1, 1, bank_pal)
+                        else:
+                            td = encode_tiles_4bpp_from_raw([tile_img], 1, 1, bank_pal)
+                        new_tiles[idx * ts:(idx + 1) * ts] = td
+                        written += 1
+                all_raw = new_tiles
+                print(f"  bgmap 写回 {written} 格 / {len(orig_tiles)}B")
+            elif comp_type == "cells":
+                # 与 bgmap 同样只改 tile 数据；map 来自 preset 的显式格子表
+                tw = int(compose_meta["width"]); th = int(compose_meta["height"])
+                crop = compose_meta.get("crop") or [0, 0, tw * 8, th * 8]
+                cx, cy, cw, ch = [int(v) for v in crop]
+                if img.size != (cw, ch):
+                    print(f"错误: 图片尺寸 {img.size} ≠ 期望 {cw}×{ch}（preset 的 crop 变了？）")
+                    sys.exit(1)
+                dx, dy = [int(v) for v in (compose_meta.get("offset") or [0, 0])]
+                cellmap = {}
+                for c in compose_meta.get("cells") or []:
+                    src = int(c[3]) if len(c) > 3 else 0
+                    cellmap[(int(c[0]), int(c[1]))] = (int(c[2]), src)
+
+                # ── 多图块集：一条界面由几块拼成时，逐块就地打补丁 ──
+                # 只做原地写回（不搬迁、不改指针）：翻译只是换同尺寸的图，
+                # 压缩后体积通常不超过原槽位。
+                src_list = compose_meta.get("sources")
+                if src_list:
+                    ts = 64 if bpp == 8 else 32
+                    for si, s in enumerate(src_list):
+                        s_off = gba_address_to_offset(
+                            _normalize_gba_addr(s["address"]))
+                        scomp = s.get("compression")
+                        if scomp in ("lz77", "lz77_swap"):
+                            orig = lz77_decompress(
+                                bytes(rom[s_off:]),
+                                swap=(scomp == "lz77_swap"))
+                        else:
+                            orig = bytes(rom[s_off:s_off + int(s.get("raw_size") or 0)])
+                        new_s = bytearray(orig)
+                        n = len(orig) // ts
+                        cnt = 0
+                        for (col, row), (e, src) in sorted(cellmap.items()):
+                            if src != si:
+                                continue
+                            idx = e & 0x3FF
+                            bank = (e >> 12) & 0xF
+                            if idx >= n:
+                                continue
+                            px = col * 8 + dx - cx
+                            py = row * 8 + dy - cy
+                            if px < 0 or py < 0 or px + 8 > cw or py + 8 > ch:
+                                continue
+                            tile_img = img.crop((px, py, px + 8, py + 8))
+                            if e & 0x0400:
+                                tile_img = tile_img.transpose(flip_lr)
+                            if e & 0x0800:
+                                tile_img = tile_img.transpose(flip_tb)
+                            bank_pal = (palette_flat[bank * 16:(bank + 1) * 16]
+                                        if palette_flat and bank * 16 < len(palette_flat)
+                                        else (palette_flat or [(0, 0, 0)] * 16)[:16])
+                            if bpp == 8:
+                                td = encode_tiles_8bpp_from_raw(
+                                    [tile_img], 1, 1, bank_pal)
+                            else:
+                                td = encode_tiles_4bpp_from_raw(
+                                    [tile_img], 1, 1, bank_pal)
+                            new_s[idx * ts:(idx + 1) * ts] = td
+                            cnt += 1
+                        if cnt == 0:
+                            continue
+                        if scomp in ("lz77", "lz77_swap"):
+                            comp = lz77_compress(bytes(new_s),
+                                                 swap=(scomp == "lz77_swap"))
+                            cap = find_lz77_size(bytes(rom), s_off)
+                            if len(comp) > cap:
+                                print(f"错误: source {s['address']} 压缩后 {len(comp)}B "
+                                      f"超过原槽位 {cap}B，无法原地写回")
+                                sys.exit(1)
+                            rom[s_off:s_off + len(comp)] = comp
+                        else:
+                            if len(new_s) != len(orig):
+                                print("错误: raw source 尺寸变化")
+                                sys.exit(1)
+                            rom[s_off:s_off + len(new_s)] = new_s
+                        print(f"  source{si} {s['address']}: 写回 {cnt} 格 / {len(orig)}B")
+                    continue
+
+                if meta["compression"] in ("lz77", "lz77_swap"):
+                    orig_tiles = lz77_decompress(
+                        rom[offset:], swap=(meta["compression"] == "lz77_swap"))
+                else:
+                    orig_tiles = rom[offset:offset + meta.get("raw_size", 0)]
+                new_tiles = bytearray(orig_tiles)
+                ts = 64 if bpp == 8 else 32
+                n = len(orig_tiles) // ts
+                flip_lr = Image.Transpose.FLIP_LEFT_RIGHT
+                flip_tb = Image.Transpose.FLIP_TOP_BOTTOM
+                written = 0
+                for (col, row), (e, _src) in sorted(cellmap.items()):
+                    idx = e & 0x3FF
+                    bank = (e >> 12) & 0xF
+                    if idx >= n:
+                        continue
+                    px = col * 8 + dx - cx
+                    py = row * 8 + dy - cy
+                    if px < 0 or py < 0 or px + 8 > cw or py + 8 > ch:
+                        continue
+                    tile_img = img.crop((px, py, px + 8, py + 8))
+                    if e & 0x0400:
+                        tile_img = tile_img.transpose(flip_lr)
+                    if e & 0x0800:
+                        tile_img = tile_img.transpose(flip_tb)
+                    bank_pal = (palette_flat[bank * 16:(bank + 1) * 16]
+                                if palette_flat and bank * 16 < len(palette_flat)
+                                else (palette_flat or [(0, 0, 0)] * 16)[:16])
+                    if bpp == 8:
+                        td = encode_tiles_8bpp_from_raw([tile_img], 1, 1, bank_pal)
+                    else:
+                        td = encode_tiles_4bpp_from_raw([tile_img], 1, 1, bank_pal)
+                    new_tiles[idx * ts:(idx + 1) * ts] = td
+                    written += 1
+                all_raw = new_tiles
+                print(f"  cells 写回 {written} 格 / {len(orig_tiles)}B")
             else:
                 print(f"错误: 未知 compose 类型 '{comp_type}'")
                 sys.exit(1)

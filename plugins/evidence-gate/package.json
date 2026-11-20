@@ -1,0 +1,21 @@
+{
+  "name": "@local/evidence-gate",
+  "version": "1.0.0",
+  "private": true,
+  "type": "module",
+  "description": "Blocks source edits in the GBA-Rom-Translator workspace until fresh static/GDB/bot evidence is recorded.",
+  "exports": {
+    ".": "./index.js",
+    "./locale/*.json": "./locale/*.json"
+  },
+  "files": [
+    "index.js",
+    "cordis.patch.yml",
+    "locale/*.json"
+  ],
+  "dsh": {
+    "bundle": {
+      "patch": "./cordis.patch.yml"
+    }
+  }
+}

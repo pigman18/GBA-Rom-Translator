@@ -728,6 +728,137 @@ def _on_char(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
     ctx.log(f"  {_win_fields(wb)}")
 
 
+@handler("SaveInfoDraw")
+def _on_save_info(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict) -> None:
+    """HandleDrawSaveWindowInfo 入口。"""
+    n = int(cfg.get("n") or 32)
+    ctx.log("")
+    ctx.log("[SaveInfo] r0=0x%08X r1=0x%08X r2=0x%08X r3=0x%08X lr=0x%08X"
+            % (regs.get("r0",0), regs.get("r1",0), regs.get("r2",0),
+               regs.get("r3",0), regs.get("r14",0)))
+
+
+@handler("GlyphPtr")
+def _on_glyph_ptr(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict) -> None:
+    """GetGlyphTilePointers(fontNum, glyph, **upper, **lower)。"""
+    fn = regs.get("r0", 0) & 0xFF
+    g  = regs.get("r1", 0) & 0xFFFF
+    pu = regs.get("r2", 0)
+    if fn != 3 or not (0xA0 <= g <= 0xAF):
+        return
+    key = (fn, g, pu)
+    if not ctx._hit(key):
+        return
+    ctx.log("")
+    ub = _read_mem(gdb, pu, 4) if pu else b""
+    up = u32(ub, 0) if len(ub) >= 4 else 0
+    first = _read_mem(gdb, up, 16) if up else b""
+    ctx.log("[GlyphPtr] fn=%d glyph=0x%02X  pu=0x%08X  *upper=0x%08X"
+            % (fn, g, pu, up))
+    ctx.log("           字模: " + first.hex(" "))
+
+
+@handler("TilemapWriter")
+def _on_tilemap_writer(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict) -> None:
+    """UpdateTilemap(win, upper, lower) —— 报参数与栈顶调用者。"""
+    win = regs.get("r0", 0)
+    up = regs.get("r1", 0) & 0xFFFF
+    lo = regs.get("r2", 0) & 0xFFFF
+    if not win:
+        return
+    wb = _read_win(gdb, win)
+    if len(wb) < 0x20:
+        return
+    cx = wb[0x1A]; ctx_ = wb[0x1B]
+    cty = wb[0x1C] + wb[0x1D]
+    key = (win, cx, cty, up)
+    if not ctx._hit(key):
+        return
+    lr = regs.get("lr", 0)
+    ctx.log("")
+    ctx.log("[TMW] win=0x%08X upper=0x%03X lower=0x%03X curX=%d curTX=%d ty=%d lr=0x%08X"
+            % (win, up, lo, cx, ctx_, cty, lr))
+
+
+@handler("BandDump")
+def _on_band(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict) -> None:
+    """报每个窗的 curX/curY 与 grid_row/band（每 (win,ty) 只报一次）。"""
+    win = regs.get("r0", 0)
+    if not win:
+        return
+    wb = _read_win(gdb, win)
+    if len(wb) < 0x20:
+        return
+    cx = wb[0x1A]; cty = wb[0x1C] + wb[0x1D]
+    row = cty >> 1
+    band = row & 7
+    tb = u16(wb, 0x16)
+    key = (win, cty, tb)
+    if not ctx._hit(key):
+        return
+    ctx.log("")
+    ctx.log("[BAND] win=0x%08X tm=%d fn=%d TB=0x%04X curX=%d curY+TY=%d"
+            % (win, wb[0x0A], wb[0x0B], tb, cx, cty))
+    ctx.log("       -> row=%d  band=%d  tile_base=TB+2+%d*62+2*col"
+            % (row, band, band))
+
+
+@handler("PcsGlyphDump")
+def _on_pcs_glyph(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict) -> None:
+    """只报 glyph 在 0xA0..0xAF 的字符，附带完整串。"""
+    win = regs.get("r0", 0)
+    if not win:
+        return
+    wb = _read_win(gdb, win)
+    if len(wb) < 0x20:
+        return
+    idx = u16(wb, 0x14)
+    tptr = u32(wb, 0x10)
+    if not tptr:
+        return
+    c = _read_mem(gdb, tptr + idx, 1)
+    if not c:
+        return
+    g = c[0]
+    if not (0xA0 <= g <= 0xAF):
+        return
+    whole = _read_mem(gdb, tptr, 24)
+    key = (win, idx, g)
+    if not ctx._hit(key):
+        return
+    ctx.log("")
+    ctx.log("[PCS] glyph=0x%02X idx=%d fn=%d tm=%d curX=%d curTX=%d curY=%d curTY=%d TB=0x%04X"
+            % (g, idx, wb[0x0B], wb[0x0A], wb[0x1A], wb[0x1B], wb[0x1C], wb[0x1D], u16(wb, 0x16)))
+    ctx.log("      整串: " + whole.hex(" "))
+
+
+@handler("SaveBoxWinDump")
+def _on_savebox_win(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict) -> None:
+    """save 场景：报每个窗的 textMode / TB / curX / curY 与即将处理的字节。"""
+    win = regs.get("r0", 0)
+    if not win:
+        return
+    wb = _read_win(gdb, win)
+    if len(wb) < 0x20:
+        return
+    tm = wb[0x0A]
+    tb = u16(wb, 0x16)
+    cx = wb[0x1A]; ctx_ = wb[0x1B]
+    cy = wb[0x1C]; cty = wb[0x1D]
+    idx = u16(wb, 0x14)
+    tptr = u32(wb, 0x10)
+    key = (win, idx)
+    if not ctx._hit(key):
+        return
+    data = _read_mem(gdb, tptr + idx, 12) if tptr else b""
+    ctx.log("")
+    toff = u16(wb, 0x18)
+    tpl = u32(wb, 0x00)
+    ctx.log("[SB] win=0x%08X tm=%d fn=%d TB=0x%04X TOFF=0x%04X b1E=%d b1F=%d TPL=0x%08X ptr=0x%08X idx=%d curX=%d curTX=%d curY=%d curTY=%d"
+            % (win, tm, wb[0x0B], tb, toff, wb[0x1E], wb[0x1F], tpl, tptr, idx, cx, ctx_, cy, cty))
+    ctx.log("     字节: " + data.hex(" "))
+
+
 @handler("PrintNextChar")
 def _on_pnc_entry(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
     """字符处理器入口：此刻 index 未推进，text[index] 即即将处理的字符。

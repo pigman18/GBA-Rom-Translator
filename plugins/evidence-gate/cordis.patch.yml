@@ -1,0 +1,22 @@
+- insert:
+    - id: evidence-gate
+      name: '@local/evidence-gate'
+      config:
+        workspace: 'C:\code\GBA-Rom-Translator'
+        # 只拦截这些工具；read/grep/glob/pwsh 等采集类工具不受影响
+        guardedTools:
+          - edit
+          - write
+          - apply_patch
+        # 受保护路径前缀（相对 workspace）；命中才要求证据
+        protectedPrefixes:
+          - 'configs/POKEMON_RUBY_AXVJ00/hook/src/'
+          - 'configs/POKEMON_RUBY_AXVJ00/hook/include/'
+          - 'configs/POKEMON_RUBY_AXVJ00/hook/patches/'
+          - 'src/meowth/'
+          - 'src/util/'
+        # 必需证据类别（全部齐全才放行）
+        requiredKinds:
+          - static
+          - gdb
+          - bot

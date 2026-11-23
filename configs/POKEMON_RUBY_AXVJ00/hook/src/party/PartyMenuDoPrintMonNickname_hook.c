@@ -56,6 +56,12 @@ uint32_t PartyName_LookupJp(const uint8_t *p)
     if (p[0] == 0xFFu || p[0] >= 0xF0u)   /* 空串 / 控制码 / 已是中文 */
         return 0u;
 
+    /* ── 蛋（タマゴ）特判 ────────────────────────────────────────────
+     * 蛋显示「タマゴ」(60 6f 8b ff)，但它**不在物种名表里**（硬编码串），
+     * 所以下面的表循环查不到。返回 hooks_origin.s 里写好的中文「蛋」串。 */
+    if (p[0] == 0x60u && p[1] == 0x6Fu && p[2] == 0x8Bu && p[3] == 0xFFu)
+        return 0x081B5100u;
+
     for (sp = 1u; sp < SPECIES_COUNT; ++sp) {
         const uint8_t *cand = jp + sp * JP_NAME_STRIDE;
         unsigned i = 0u;

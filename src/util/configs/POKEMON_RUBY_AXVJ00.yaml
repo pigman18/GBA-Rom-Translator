@@ -4903,3 +4903,21 @@ gdb:
   cfg:
     n: 16
   default: false
+- name: PdPNameBuf
+  address: '0x0806B2AA'
+  description: PartyMenuDoPrint 的 nameBuffer（r2）内容；看蛋是 タマゴ 还是别的
+  cfg:
+    n: 16
+  default: false
+- name: EggBufCheck
+  address: '0x0806B2AA'
+  description: nameBuffer 即将进 r1；r2=指针。蛋的 nameBuffer 到底存了什么
+  cfg:
+    n: 16
+  default: false
+- name: EggBufData
+  address: '0x0806B2B2'
+  description: Text_InitWindow 已返回；win->text 已设。看蛋那次的 win+0x10
+  cfg:
+    n: 16
+  default: false

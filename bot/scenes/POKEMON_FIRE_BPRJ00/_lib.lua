@@ -21,6 +21,13 @@ function M.new()
             S[#S + 1] = { act = "shot", n = 0, name = name }
             return api
         end,
+        -- 连抓 n 帧、每 every 帧一张：用来看画面演进（淡入/重绘/残影）。
+        -- 与 ruby 侧 _lib 的 burst 同构，产出 {prefix}_01.._nn 五件套。
+        burst = function(prefix, n, every)
+            S[#S + 1] = { act = "burst", n = n or 10, every = every or 1,
+                          name = prefix }
+            return api
+        end,
         await = function(opt)
             opt = opt or {}
             assert(opt.dispcnt, "await 需要 dispcnt（DISPCNT 实测值）")

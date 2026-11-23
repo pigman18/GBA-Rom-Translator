@@ -20,7 +20,7 @@
 | BUG-11 | 存档确认句第一行右侧多出残字 | ① 原版 12 字各占 1 列排到 col25，汉化 12px 各占 2 列只排到 col20；col21–25 这 5 格**本该没有表项**，但上一轮 8px 日文布局写下的 `1DA..1DE` 没被清掉。② 那批 tile 已不再为空——「现」字的 12px 拆分占了 `0x1DB/0x1DC`，于是 col22/23 也把它显示出来 | 动态 | 新增 `grid_clear_row_tail()`：`0xFE` 时清「光标右侧连续指向公式区」的表项。三版判据收敛过程见 `30-问题与验证.md` |
 | BUG-10 | 出招画面撕裂 / 底部黑带 | **两侧遭遇的不是同一只宝可梦**（origin enemy=338 / translated enemy=288，等级都是 26），战斗类场景所有同号帧不可比。画面黑带只是这个对照失效的表象 | 动态 | `gBattleMons` 实测 `0x020247E0`（符号表 `0x02024A80` 差 `0x2A0`）；`species`=+0x00、`level`=+0x2A、跨度 0x58。金手指写死 enemy species 后 4/4 帧一致 |
 | BUG-12 | 敌方血条名字栏破碎残字 + 绿块（对话框里名字却正确） | 血条名走的是与对话框**不同的表**；具体的表/打印路径未定 | 动态（写死 species 前后两版采集都是碎的，与 BUG-10 无关） | 未修 |
-| BUG-13 | 队伍列表宝可梦名全是日文（fontNum=4/Small） | 名字经 `InitTextPrinter`（win=`0x03004170`，fontNum=4、textMode=1、文本在 IWRAM 栈缓冲）打印，**取源函数 `0x0803B11C` 命中 0 次**（队伍不走它）。三条修法均失败：字符流换源→输入停摆；入口改 r1→崩溃（`0x464E`=`mov r6,r9` 误读） | 动态（GDB `InitTextPrinter`/`PrintNextChar`/`PartyNickSrc` 断点） | 未修 |
+| BUG-13 | 队伍列表宝可梦名全是日文（fontNum=4/Small） | hook `PartyMenuDoPrintMonNickname`(0x0806B288) 入口换 r2 → 中文表条目。真正根因是 hook 里 `pop {r3}` 丢弃了返回地址，重放 `push {r4,lr}` 时入栈假 lr → 只执行 1 次就偏离 | 动态（GDB 命中次数 1→12）+ 空操作对照 | ✅ 已修 |
 | BUG-14 | 名字写进存档 → 串回日版乱码 | Gen3 名字字段**定长**（`nickname[10]`/`playerName[8]`），中文 1 字 4B、3 字 12B 塞不下 ⇒ 截断或越界（实测队伍内存 nickname 尾部有 `75 53 57` 校验 magic 残渣） | 动态 + 火红 ROM 对照 | 未修（火红式解耦方案已调研） |
 
 ## 二、已消失 / 非 ROM 缺陷

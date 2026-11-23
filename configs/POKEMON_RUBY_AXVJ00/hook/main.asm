@@ -33,6 +33,7 @@
 .include "./src/summary/hooks_origin.s"
 .include "./src/option/hooks_origin.s"
 .include "./src/pokenav/hooks_origin.s"
+.include "./src/party/hooks_origin.s"
 .include "./src/bag/hooks_origin.s"
 
 ; ---- 纯值补丁（INS/DATA/NOP 类） ----

@@ -4885,3 +4885,21 @@ gdb:
   cfg:
     n: 16
   default: false
+- name: PrintWindowEntry
+  address: '0x08002DE8'
+  description: Text_PrintWindow 入口（r0=win）；看 win->text(+0x10) 是哪个串
+  cfg:
+    n: 16
+  default: false
+- name: PartyNameToWin
+  address: '0x0806B2AA'
+  description: PrintPartyMenuMonNickname 里 adds r1,r2,#0（r2=nameBuffer 即将进 r1）
+  cfg:
+    n: 16
+  default: false
+- name: PdPHookEntry
+  address: '0x088000A0'
+  description: PartyMenuDoPrint_Hook 入口（r0=monIndex r1=b r2=nameBuffer）
+  cfg:
+    n: 16
+  default: false

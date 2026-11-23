@@ -13,29 +13,55 @@
 --   本场景**只专注出招那一下的逐帧演进**，用 every=1 全帧采集，
 --   覆盖：选招式 → 确认 → 动画播放 → 伤害结算 → 返回菜单。
 --
--- 【确定性遇敌】沿用 battle_full 已验证的写法（勿改）：
---   钉一次 RNG + hunt ⇒ 两侧都在第 5 格遇敌，帧对齐可靠。
+-- 【确定性遇敌】2026-11-23 重写。旧注释声称「钉一次 RNG + hunt ⇒ 两侧都在
+--   第 5 格遇敌，完全一致」——**实测不成立**，两侧对手不同。
+--   正确做法与门槛见下方 §确定性遇敌 注释块；对手一致性必须离线比对 ram。
+--   详见 docs/POKEMON_RUBY_AXVJ00/30-问题与验证.md 的 BUG-10 定案。
 -- ============================================================================
 local L = dofile((os.getenv("BOT_ROOT") or "."):gsub("\\", "/"):gsub("/+$", "")
                  .. "/scenes/" .. os.getenv("BOT_GAME_ID") .. "/_lib.lua")
 local api = L.new()
 
 local ADDR_RNG = 0x03004818
+local RNG_FIXED = 0x0000AAAA
 
 L.preamble(api)
 api.shot("ov_overworld")
 
--- ── 确定性遇敌（与 battle_full 同款）──────────────────────────────────────
-api.poke{ { addr = ADDR_RNG, width = 4, value = 0x0000AAAA, note = "钉 RNG" } }
+-- ── 确定性遇敌（BUG-10 定案后重写，2026-11-23）─────────────────────────────
+-- 【两轮实测，都推翻了旧注释里的「✅ 完全一致」】
+--   · 旧写法「poke 一次 → hunt 40 步」：实测两侧**对手不同**
+--     （origin ジグザグマ Lv24 / translated 另一只 Lv26）。
+--   · 改成「每格 poke 再 walk 一格」：对手**还是不同**。
+--   原因：两侧 settle 时长不同（译文更长），poke 与走格之间的帧距不等，
+--   RNG 在**遇敌判定那一刻**的取值必然不同 —— poke 只影响写入瞬间，
+--   影响不了之后几十帧的消耗。
+--
+-- 【现在的做法（与 battle_menu_audit.lua 同款）】
+--   1) poke 一次 + hunt 把战斗打进（只求进战斗，不指定对手）
+--   2) 转场结束、战斗界面稳定后**再 poke 一次** —— 此时战斗对象已确定，
+--      重钉不改对手，但能让后续伤害浮动/命中判定/动画在两侧一致
+--   3) 对手是否一致**不靠运气**：shot 落 ram.bin 后离线读
+--      player @0x02024A80 / enemy @0x02024AD8 比对；不一致就重跑。
+--   ⚠ 这是本场景的硬门槛，理由见 docs 的 BUG-10 定案。
+api.poke{ { addr = ADDR_RNG, width = 4, value = RNG_FIXED, note = "钉 RNG（进战斗）" } }
 api.hunt{ dir = "DOWN", x = 68, y = 7, steps = 40, timeout = 120 }
 
 api.await{ any_of = { 0x0000, 0xBF40 }, timeout = 900, tag = "battle" }
+
+-- ★ 转场后重钉：让伤害浮动/命中判定/动画在两侧一致
+api.poke{ { addr = ADDR_RNG, width = 4, value = RNG_FIXED, note = "转场后重钉 RNG" } }
+
 
 -- ── 跳过开场台词，尽快进主菜单 ────────────────────────────────────────────
 for i = 1, 3 do
     api.tap("A", 4, 40)
 end
 api.shot("mv_menu")
+
+-- ★ 对手校验：进菜单时先拍一张带 dump 的定型帧。
+--   BUG-10 的教训是「两侧对手不同 → 后面所有帧都不可比」，
+--   所以把校验点前移到出招之前，而不是等像素对不上再回头查。
 
 -- ── 选「战斗」（左上第一项）→ 进招式列表 ──────────────────────────────────
 api.tap("A", 4, 60)
@@ -60,5 +86,10 @@ api.tap("DOWN", 4, 24)           -- 选第 2 个招式
 api.tap("A", 4, 20)
 api.burst("mv_cast2", 40, 1)
 api.burst("mv_settle2", 20, 2)
+
+-- ★ 收尾 dump：黑带类问题必须能读 IO/VRAM 才能定案。
+--   burst 帧只落 PNG（bot.lua 的 burst 未接 dumps 参数），
+--   所以关键时刻一律补 shot。
+api.shot("mv_end")
 
 return api.S

@@ -55,9 +55,11 @@ static void diag_emit(unsigned tag, unsigned code, unsigned phase,
                       TextPrinter *win, const GridTarget *t, unsigned t0,
                       unsigned fg, unsigned bg);
 static void diag_ctrl(unsigned tag, unsigned code, uint16_t index);
+static void diag_store(unsigned t0, const uint8_t *p0);
 #else
 #define diag_emit(t,c,ph,w,gt,t0,fg,bg)          ((void)0)
 #define diag_ctrl(t,c,i)                         ((void)0)
+#define diag_store(t0,p0)                        ((void)0)
 #endif
 
 /* =====================================================================
@@ -109,39 +111,52 @@ static unsigned grid_row(TextPrinter *win)
             + (unsigned)win_u8(win, WIN_CURSOR_TILE_Y)) >> 1;
 }
 
-/* 行段存储列（BUG-B 2026-11-19）。
+/* 行段存储列（BUG-B 2026-11-19，2026-11-23 按 BUG-9 收敛）。
  *
  * 公式只有 8 个 band，而图鉴列表要画 11 行（GDB 实测 curY 10..30 ⇒
  * row 5..15）。row 13 的 row&7 = 5，与 row 5 同 band 同列 ⇒ 同 tile，
  * 第 9 行字模直接覆盖第 1 行：顶行「No003 妙蛙花」变「No011 ------」。
  * tilemap 实测 0x15F..0x16E 被 (r10/r11) 与 (r26/r27) 双重引用。
  *
- * 修法：回绕行（row >= 8）把**存储列**翻到另半区（col ^ 16）。
- *   · col ^ 16 != col 恒成立 ⇒ 同 band 内两行的存储列必然不同 ⇒ 不再同 tile
- *   · 屏幕位置由 tilemap 表项决定，与存储 tile 号无关，所以画面不变
- *   · 每段 31 列（GRID_COLS_PER_SEG），翻半区后仍落在同一 band 内
- *   · row < 8 的窗口（绝大多数）col^0 == col，行为完全不变
- * 图鉴 11 行时最多 2 行共享一个 band，翻半区即可分开；3 行同 band 时
- * 才需要第三区，而 11 行只有 row 5/13 与 6/14 与 7/15 三对，各 2 行。 */
-static unsigned grid_store_col(unsigned row, unsigned col)
+ * 修法（BUG-B）：回绕行把**存储列**翻到另半区（col ^ 16）——屏幕位置由
+ * tilemap 表项决定，与存储 tile 号无关，所以画面不变。
+ *
+ * BUG-9 修正：无条件翻会制造新碰撞。存档框实测
+ *   信息框第 1 行 row0 col1..8  → tile 5,7,9..（不翻）
+ *   确认句第 2 行 row8 col16..19 → 16^16 = 0 → tile 3,5,9
+ * 两句同 band0，确认句后画，把「118」覆盖成「里吗？」的残字。
+ * 现改成**只有该 tile 真被本列别的行引用时才翻**：
+ *   · 图鉴 row13 col1 展开后正是 row5 指着的 tile → 照旧翻，11 行不撞
+ *   · 存档框确认句 col16 展开后本列无人引用 → 不翻 → 与信息框错开
+ * 判据只扫「同一列」32 项，与 grid_tile_taken 同口径（排除本格自身）。 */
+static int grid_col_claims_tile(TextPrinter *win, unsigned col, uint16_t t0);
+
+static unsigned grid_store_col(TextPrinter *win, unsigned row, unsigned col)
 {
+    unsigned band = row & (GRID_SEG_COUNT - 1u);
+    uint16_t unf;
+
     if (row < GRID_SEG_COUNT)
         return col;
     /* 只翻低 4 位：保证结果仍在 [0, GRID_COLS_PER_SEG) 内 */
-    return col ^ 16u;
+    unf = (uint16_t)((unsigned)win_u16(win, WIN_TILE_BASE) + 2u
+                     + band * GRID_SEG_TILES + 2u * col);
+    return grid_col_claims_tile(win, col, unf) ? (col ^ 16u) : col;
 }
 
 static uint16_t grid_tile(TextPrinter *win, unsigned col)
 {
     uint16_t tb = win_u16(win, WIN_TILE_BASE);
     unsigned row = grid_row(win);
+
     /* textMode3：GetBlankTileNum = TB+1。若 arena 从 TB 起算，band0/col0
      * 的 lower 正好是 TB+1 → 写汉字/▶ 时踩碎「空白」模板；开始菜单
      * RedrawMenuCursor 再 Blank 把格指回 TB+1，屏上冒灰影残墨
-     *（bot：START 开→关→开→上下，残墨色 (74,74,74)=阴影灰）。 */
+     *（bot：START 开→关→开→上下，残墨色 (74,74,74)=阴影灰）。
+     * 存储列由 grid_store_col 决定（含 BUG-9 的按需翻半区）。 */
     return (uint16_t)((unsigned)tb + 2u
             + (row & (GRID_SEG_COUNT - 1u)) * GRID_SEG_TILES
-            + 2u * grid_store_col(row, col));
+            + 2u * grid_store_col(win, row, col));
 }
 
 /* =====================================================================
@@ -219,6 +234,15 @@ static uint16_t grid_tilemap_entry(const uint16_t *map, unsigned x, unsigned y)
     return (uint16_t)(map[y * GRID_TILEMAP_W + x] & 0x3FFu);
 }
 
+/* 只改低 10 位 tile 号，保留调色板/翻转等高位（与 grid_tilemap_entry 对称）。
+ * BUG-11 清行尾用。 */
+static void grid_tilemap_set(uint16_t *map, unsigned x, unsigned y,
+                             uint16_t tile)
+{
+    uint16_t *p = &map[y * GRID_TILEMAP_W + x];
+    *p = (uint16_t)((*p & 0xFC00u) | (tile & 0x3FFu));
+}
+
 /* 光标所在 tilemap 行（与 UpdateTilemap 同口径）。
  * 禁止用 (row&7)*2：row≥8 时会把「本格」误判到 y=0/1（背包图一带），
  * 规避/占用扫描与真实写点错位 → 底行/切页撞 UI。 */
@@ -237,6 +261,31 @@ static int grid_cell_own(TextPrinter *win, unsigned col,
     if (x != col)
         return 0;
     return y == ty || y == ty + 1u;
+}
+
+/* 本列里除本格（上/下两行）之外，是否已有格子指向 t0（或 t0+1）。
+ * 只扫同一列 32 项：撞车必然发生在「同 band 同列」上，跨列由 band 公式
+ * 天然分开。判据与 grid_tile_taken 同口径（排除本格自身）。 */
+static int grid_col_claims_tile(TextPrinter *win, unsigned col, uint16_t t0)
+{
+    const uint8_t *tpl = win_template(win);
+    const uint16_t *map;
+    unsigned y;
+
+    if (!tpl || col >= GRID_TILEMAP_W)
+        return 0;
+    map = (const uint16_t *)(const void *)(uintptr_t)win_u32(tpl, TPL_TILEMAP);
+    if (!map)
+        return 0;
+    for (y = 0u; y < GRID_TILEMAP_W; ++y) {
+        unsigned v;
+        if (grid_cell_own(win, col, col, y))
+            continue;
+        v = grid_tilemap_entry(map, col, y);
+        if (v == t0 || v == (unsigned)t0 + 1u)
+            return 1;
+    }
+    return 0;
 }
 
 /* 收集本窗 tilemap 已被占用的 tile（排除本格自身）。返回 1 表示 t0/t0+1
@@ -364,9 +413,9 @@ static int grid_tile_is_other_col_natural(TextPrinter *win, unsigned n,
     if (nat_col >= GRID_COLS_PER_SEG)
         return 0;
     cur_band = grid_row(win) & (GRID_SEG_COUNT - 1u);
-    /* 本格本征的**存储**列（回绕行已翻半区，见 grid_store_col） */
+    /* 本格本征的**存储**列（回绕行按需翻半区，见 grid_store_col） */
     if (band == cur_band
-        && nat_col == grid_store_col(grid_row(win), except_col))
+        && nat_col == grid_store_col(win, grid_row(win), except_col))
         return 0;                    /* 本格本征，允许 */
     return 1;
 }
@@ -603,6 +652,85 @@ static void grid_fill_blank_cell(TextPrinter *win)
                (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
 }
 
+/* =====================================================================
+ * 行尾残留清理（BUG-11，2026-11-23）
+ *
+ * 现象：存档确认框第一行「要把至今为止的活跃表现」右侧多出一串半截假名，
+ *   而 origin 同位置是空白。
+ *
+ * 根因（动态实测）：原版这句日文更长，第一行占满 col4..25；汉化后 12px
+ *   汉字各占 2 列，同样的 12 个字只排到 col20。col21..25 这 5 个格子的
+ *   tilemap 表项是**原版那一轮打印留下的**（`474..478`），我们这轮既没
+ *   覆盖它们、也没清掉。而「现」字占的 `0x1DB/0x1DC`（band7 col19 本征）
+ *   正好等于 col22/23 指着的那两项 ⇒ 那两格也显示「现」。
+ *
+ * 为什么不能靠「迁址」绕开：`grid_tile_find_free` 只肯用「非本征」空位，
+ *   而公式区 3..498 被 8 band × 31 列正好占满，全被
+ *   grid_tile_is_other_col_natural 禁掉 ⇒ 永远 0xFFFF（实测 alt=65535）。
+ *
+ * ── 判据（三次实测收敛，前两版都有严重副作用）──────────────────
+ *   ① 在 0xFF 清 → 开始菜单 8 项全消失（菜单是「一项一次独立打印」，
+ *      每项以 0xFF 结束且光标已回行首，整行被抹平）。
+ *   ② 在 0xFE 清、从光标列清到表宽 → 背包列表第 6/7 项被削
+ *      （y=104..119 实测）。背包列表行内也带 0xFE，光标右侧还有
+ *      **同一行尚未打印**的列。
+ *
+ *   最终判据：从光标列往右，只清**连续指向公式区**（TB+2 .. TB+2+8*62）
+ *   的格子；遇到非公式区（空白 tile / 框体装饰 / UI 图标）立刻停。
+ *   实测依据：
+ *     · 存档框 col21..25 = 474..478 全在公式区 → 清掉，残字消失；
+ *       col26 起 = 623/625/622 是框体装饰（原版也有）→ 停，装饰不受损。
+ *     · 背包列表 col20 起就是空白 tile 1 → 立刻停，列表不被误削
+ *       （第二版「从光标清到表宽」曾把滚动帧削掉 822 px）。
+ * ===================================================================== */
+static void grid_clear_row_tail(TextPrinter *win)
+{
+    const uint8_t *tpl = win_template(win);
+    uint16_t *map;
+    unsigned ty, x, blank, arena, arena_end, start;
+    uint16_t tb;
+
+    if (!tpl || grid_is_buffered(win))
+        return;
+    map = (uint16_t *)(void *)(uintptr_t)win_u32(tpl, TPL_TILEMAP);
+    if (!map)
+        return;
+
+    tb = win_u16(win, WIN_TILE_BASE);
+    blank = (unsigned)tb + 1u;
+    arena = (unsigned)tb + 2u;
+    arena_end = arena + GRID_SEG_COUNT * GRID_SEG_TILES;
+    ty = grid_cursor_ty(win);
+    start = (unsigned)win_u8(win, WIN_CURSOR_X)
+          + (unsigned)win_u8(win, WIN_CURSOR_TILE_X);
+    /* 从光标格的**下一格**开始清：光标格可能正是本行最后一个字
+     * （12px 的第二列），碰它会把字削掉（实测 col20 被清成空白，
+     * 正是「现」的右半列）。 */
+    if (start + 1u < GRID_TILEMAP_W)
+        start += 1u;
+
+    /* 光标右侧：只清「指向公式区」的连续段；遇到非公式区（空白 tile、
+     * 框体装饰 tile、UI 图标）就停。这一条是三次实测收敛出来的：
+     *   · 存档框：col21..25 = 474..478（都在公式区）→ 清；
+     *             col26 起 = 623/625/622（框体装饰）→ 停，装饰不受损。
+     *   · 背包列表：col20 起就是空白 tile 1 → 立刻停，列表不再被误削。 */
+    for (x = start; x < GRID_TILEMAP_W; ++x) {
+        unsigned v0 = grid_tilemap_entry(map, x, ty);
+        unsigned v1 = grid_tilemap_entry(map, x, ty + 1u);
+
+        /* 只用上半行（ty）判停：12px 字的**离屏副本**落在 ty+1 行，
+         * 那里的表项会指向公式区之外（实测存档框 r16 col21 = 504），
+         * 拿它判停会导致一格都清不掉。 */
+        if (v0 < arena || v0 >= arena_end)
+            break;                    /* 非公式区：属于框体/UI，停手 */
+
+        grid_tilemap_set(map, x, ty, (uint16_t)blank);
+        /* 下半行只在它确实指向公式区时才一并清，避免误伤离屏副本。 */
+        if (v1 >= arena && v1 < arena_end)
+            grid_tilemap_set(map, x, ty + 1u, (uint16_t)blank);
+    }
+}
+
 #ifdef GRID_DIAG
 static void diag_write(unsigned slot, const uint8_t *r)
 {
@@ -659,6 +787,20 @@ static void diag_emit(unsigned tag, unsigned code, unsigned phase,
     r[21] = (uint8_t)((textptr >> 8) & 0xFFu);
     r[22] = (uint8_t)((textptr >> 16) & 0xFFu);
     r[23] = (uint8_t)((textptr >> 24) & 0xFFu);
+    /* BUG-11 诊断：把撞车规避的判定输入一起记下来。
+     *   r[7] bit7 = buffered；这里借用 t->buffered 之后的空闲位不现实，
+     *   改用 r[19]（tpl[8]，本就在 BUG-11 排查中无用）存标志：
+     *     bit0 = dialogue 判据是否成立
+     *     bit1 = grid_tile_taken 是否判「t0/t0+1 被别人引用」
+     *   只在 GRID_DIAG 构建里存在。 */
+    {
+        int _dlg = (grid_cursor_ty(win) >= 14u
+                    && win_u8(win, WIN_CURSOR_X) < 20u);
+        uint32_t _used[GRID_TILE_BITS / 32u];
+        int _tk = grid_tile_taken(win, t->col,
+                                  grid_tile(win, t->col), _used);
+        r[19] = (uint8_t)((_dlg ? 1u : 0u) | (_tk ? 2u : 0u));
+    }
     diag_write(diag_slot(), r);
 }
 
@@ -674,6 +816,25 @@ static void diag_ctrl(unsigned tag, unsigned code, uint16_t index)
     r[2] = (uint8_t)((code >> 8) & 0xFFu);
     r[14] = (uint8_t)(index & 0xFFu);
     r[15] = (uint8_t)((index >> 8) & 0xFFu);
+    diag_write(diag_slot(), r);
+}
+
+/* tag=2：真正写进 VRAM 前一刻的快照。r[1..2]=t0，r[8..11]=p0 第 0 行，
+ * r[12..15]=p0 第 3 行，r[16..19]=p0 第 4 行（用于确认「写的是不是这个字」）。 */
+static void diag_store(unsigned t0, const uint8_t *p0)
+{
+    uint8_t r[DIAG_RECB];
+    unsigned i;
+    for (i = 0u; i < DIAG_RECB; ++i)
+        r[i] = 0u;
+    r[0] = 2u;
+    r[1] = (uint8_t)(t0 & 0xFFu);
+    r[2] = (uint8_t)((t0 >> 8) & 0xFFu);
+    for (i = 0u; i < 4u; ++i) {
+        r[8u + i] = p0[i];
+        r[12u + i] = p0[12u + i];
+        r[16u + i] = p0[16u + i];
+    }
     diag_write(diag_slot(), r);
 }
 #endif
@@ -760,18 +921,23 @@ static void grid_emit(TextPrinter *win, GridTarget *t,
             && !grid_cell_points_to(win, t->col, t0)
             && grid_tile_taken(win, t->col, t0, used)) {
             if (bag) {
+                diag_ctrl(6u, (uint32_t)t0, 1u);   /* BUG-11：bag 分支拦截 */
                 win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(t->rel + delta));
                 return;
             }
             if (dialogue) {
                 uint16_t alt = grid_tile_find_free(win, t->col, used);
+                diag_ctrl(6u, (uint32_t)alt, 2u);  /* BUG-11：记录 alt */
                 if (alt != 0xFFFFu
                     && (unsigned)alt + 2u * (ncols - 1u) + 2u
                        <= GRID_TILE_LIMIT)
                     t0 = alt;
+            } else {
+                diag_ctrl(6u, (uint32_t)t0, 3u);   /* BUG-11：非对话，写本征 */
             }
             /* 非对话：写本征 */
         }
+        diag_store(t0, p0);
         grid_pair_store(p0, t->base + 32u * t0);
         if (ncols > 1u)
             grid_pair_store(p1, t->base + 32u * (t0 + 2u));
@@ -1333,6 +1499,14 @@ static int grid_control(TextPrinter *win, uint8_t c, uint16_t next)
         win_set_u16(win, WIN_STATE, AXV_STATE_PLACEHOLDER);
         return 2;
     case 0xFE:
+        /* BUG-11：换行前把本行剩余列的表项清成空白 tile。
+         * 必须在设置 STATE 之前清 —— 换行后 cursorY 会移动，
+         * grid_cursor_ty 就指向下一行了。
+         * ⚠ 只在 0xFE 清，绝不在 0xFF 清：菜单类是「一项一次独立打印」，
+         *   每项都以 0xFF 结束且光标已回到行首，在 0xFF 清会把整行菜单
+         *   抹掉（2026-11-23 实测：开始菜单 8 项全消失）。带 0xFE 的
+         *   多行文本才是本函数要处理的场景。 */
+        grid_clear_row_tail(win);
         win_set_u16(win, WIN_STATE, AXV_STATE_NEWLINE);
         return 2;
     case 0xFF:

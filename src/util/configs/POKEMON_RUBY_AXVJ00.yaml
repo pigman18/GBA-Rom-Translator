@@ -4813,3 +4813,15 @@ gdb:
   address: '0x08002AEA'
   description: 分区器出口 pop{r4-r6} 处（r0=返回值=下一空闲 offset，r4=入口 r0）——与入口成对还原分区链
   default: false
+- name: PartyNickSrc
+  address: '0x0803B11C'
+  description: 队伍名字取源函数入口（r0=dst, r1=species）；命不中就说明队伍不走它
+  cfg:
+    n: 24
+  default: false
+- name: PartyNickCall
+  address: '0x08037D06'
+  description: 唯一 bl 0x0803B11C 的调用点（r7=mon, r5=dst）——验证队伍路径是否经过这里
+  cfg:
+    n: 24
+  default: false

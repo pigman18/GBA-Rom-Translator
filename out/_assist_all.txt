@@ -3466,7 +3466,7 @@ GDB 日志很长。这个会话已经很长了，抓证据会产生大量输出�
 因为真正伤到你的是“我拿出一个 ROM 说修好了，其实没验证”。改代码本身不伤人。所以：
 
 ```
-scripts/evidence_gate.py
+scripts/build/evidence_gate.py
   - 记录「本轮是否采集过运行时证据」：
       · bot/run.py --gdb 执行过（匹配命令行）
       · 读过 gdb_probe.log
@@ -3610,10 +3610,10 @@ ESM 导入正常。现在重新激活插件。
 
 ## 已完成的
 
-### 1. build 门禁（仓库内，`scripts/evidence_gate.py` + `build.bat`）
+### 1. build 门禁（仓库内，`scripts/build/evidence_gate.py` + `build.bat`）
 
 ```
-python scripts\evidence_gate.py --check
+python scripts/build/evidence_gate.py --check
 ```
 
 - 三类证据（static / gdb / bot）必须齐全
@@ -4070,7 +4070,7 @@ C 引擎对战斗窗的写入次数从 **0 次 → 126 次**。
 
 - 代码改动**在工作区未提交**（`PrintNextChar_hook.c` 的 `grid_tile` fallback）
 - ROM `0DA0DC2A…521A2`
-- 门禁脚本 `scripts/evidence_gate.py` + `build.bat` 已就位并生效
+- 门禁脚本 `scripts/build/evidence_gate.py` + `build.bat` 已就位并生效
 - 插件 `@local/evidence-gate` 已安装，拦截 edit/write
 
 ## 下一步（等你决定）
@@ -4206,7 +4206,7 @@ OFF:  4    (恒定)
 - `PrintNextChar_hook.c` 有未提交改动（fallback 尝试，效果不完整）
 - `src/util/gdb_patcher.py` 加了 `GridTile` handler
 - `src/util/configs/POKEMON_RUBY_AXVJ00.yaml` 加了 `GridTile` 探针
-- `scripts/evidence_gate.py` + `build.bat` 门禁
+- `scripts/build/evidence_gate.py` + `build.bat` 门禁
 - 插件 `@local/evidence-gate` 已装
 
 ## 需要你定
@@ -4319,7 +4319,7 @@ TILE_OFF 仍未推进（第 6 字起仍是 `0x09`）。
 **代码改动在工作区**（未提交）：
 - `grid_tile` 增加了高 TB 窗的线性分支
 - `grid_emit` 增加了 `TILE_OFF += 2` 推进
-- `scripts/evidence_gate.py` 门禁逻辑修正
+- `scripts/build/evidence_gate.py` 门禁逻辑修正
 - `plugins/evidence-gate/index.js` 同步修正
 - `build.bat` 门禁调用
 
@@ -4613,7 +4613,7 @@ master 有 `chs_px` 这个**跨字相位累加器**（`struct ChineseTileState`�
 - `PrintNextChar_hook.c`：`grid_use_linear` + `grid_last_off` + `TILE_OFFSET` 推进
 - `src/util/configs/*.yaml`：GridTile 探针
 - `src/util/gdb_patcher.py`：GridTile handler
-- `build.bat`、`scripts/evidence_gate.py`、`plugins/evidence-gate`
+- `build.bat`、`scripts/build/evidence_gate.py`、`plugins/evidence-gate`
 
 ROM：`BB232BCC…`
 
@@ -4846,7 +4846,7 @@ git worktree remove ..\GBA-master
 
 | 路径 | 内容 |
 |---|---|
-| `scripts/evidence_gate.py` | 证据门禁脚本（未跟踪） |
+| `scripts/build/evidence_gate.py` | 证据门禁脚本（未跟踪） |
 | `configs/POKEMON_RUBY_AXVJ00/hook/build.bat` | **有未提交改动**（插入了门禁调用） |
 | `plugins/evidence-gate/` | 已安装到 desktop profile 的插件 |
 | `docs/research/` 若干 md | 本轮写的分析文档 |
@@ -5023,7 +5023,7 @@ BUG-1 未修复。相比本轮开始时，代码没有任何变化。
 | 路径 | 说明 |
 |---|---|
 | `C:\code\GBA-master` | git worktree（master 分支检出），删除用 `git worktree remove ..\GBA-master` |
-| `scripts/evidence_gate.py` | 证据门禁脚本（未跟踪） |
+| `scripts/build/evidence_gate.py` | 证据门禁脚本（未跟踪） |
 | `configs/POKEMON_RUBY_AXVJ00/hook/build.bat` | 已回滚，无门禁调用 |
 | `plugins/evidence-gate/` | 已安装进 desktop profile 的插件，用 `plugin_manager remove_bundle` 卸载 |
 | `docs/research/` 若干 md | 本轮写的分析文档（BUG_LEDGER_20261118.md、BUG1_REAL_DATA_20261118.md、METHOD_WHY_SLOW_20261118.md 等） |

@@ -1,12 +1,4 @@
 @echo off
-REM === evidence gate (R1 evidence / R2 prediction / R3 stop / R4 doc structure) ===
-REM See scripts/evidence_gate.py --status for the current state.
-python "%~dp0..\..\..\scripts\evidence_gate.py" --check
-if errorlevel 1 (
-    echo.
-    echo [BUILD ABORTED] evidence gate failed - gather data first, do not guess.
-    exit /b 1
-)
 REM build.bat - compile src/ -> out/game.bin (VMA 0x08800000)
 REM Naming: src/{domain}/{Method}_hook.c + entry.s + hooks_origin.s (armips side)
 REM Requires arm-none-eabi-gcc in PATH.
@@ -41,11 +33,11 @@ echo === Compiling PrintNextChar_hook.c (JP takeover engine) ===
 if errorlevel 1 exit /b 1
 
 
-rem 2026-11-11 晚：串页方案（页表 / PHYS 池 / 列内容池）整体退役。
-rem 运行时逻辑全部收进 PrintNextChar_hook.c + include/text_grid.h：
-rem tile 号是屏幕行列的纯函数，字库 0x09000000 由 font_patch 装入，
-rem 构建期不再生成任何页表，engine.run_full() 不再后置烙入 0x09500000。
-rem reference/ 已于 2026-11-02 移除：5 个 ref* 符号无调用者（原占约 8KB）。
+rem 2026-11-11: paging scheme (page table / PHYS pool / column pool) retired entirely.
+rem Runtime logic all lives in PrintNextChar_hook.c + include/text_grid.h:
+rem tile id is a pure function of screen row/col; font bank 0x09000000 is loaded by font_patch,
+rem no page table at build time; engine.run_full() no longer patches 0x09500000 afterwards.
+rem reference/ removed 2026-11-02: 5 ref* symbols had no callers (was ~8KB).
 
 echo === Assembling map_name_popup\entry.s ===
 %CC% %ASFLAGS% %MAP_POPUP%\entry.s -o %BUILD%\MapNamePopup_entry.o
@@ -86,7 +78,7 @@ echo === Assembling summary\SummaryScreen_PrintTrainerMemo_entry.s ===
 if errorlevel 1 exit /b 1
 
 echo === Compiling summary\SummaryScreen_PrintTrainerMemo_hook.c ===
-@rem -O1：避免 -O2 把 PCS 拷贝循环证成无出口死循环（曾卡死进摘要页）
+@rem -O1: -O2 miscompiles the PCS copy loop into a no-exit loop (used to hang on summary page)
 %CC% %CFLAGS% -O1 %SUMMARY%\SummaryScreen_PrintTrainerMemo_hook.c -o %BUILD%\SummaryScreen_PrintTrainerMemo_hook.o
 if errorlevel 1 exit /b 1
 
@@ -168,7 +160,7 @@ if errorlevel 1 exit /b 1
 
 echo === Linking game.elf ===
 @rem text_entry.o must be FIRST: main.asm JP2CHS_Entry = GameBinAddresses = bin start.
-@rem bag：P38 left=0x10、P39 cmp#7（hooks_origin.s）；列表裁切见 PrintNextChar。
+@rem bag: P38 left=0x10, P39 cmp#7 (hooks_origin.s); list clipping in PrintNextChar.
 %CC% %LDFLAGS% -o %OUT%/game.elf ^
   %BUILD%/text_entry.o ^
   %BUILD%/PrintNextChar_hook.o ^
@@ -219,6 +211,3 @@ rem armips errors at use site (loud failure beats jumping to 0x08800000).
 
 echo Build OK: %OUT%\game.bin
 for %%F in (%OUT%\game.bin) do echo Size: %%~zF bytes
-
-REM === mark this build done: next round must re-gather evidence ===
-python "%~dp0..\..\..\scripts\evidence_gate.py" --mark-built

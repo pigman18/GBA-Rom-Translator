@@ -25,7 +25,7 @@
 - **定位纪律（只适用于"改游戏内常量/函数地址"）**：找函数/常量地址，**先查权威符号表再动手**，禁止凭空猜测地址或靠截图纯像素去反向前后函数。权威符号表在 `configs/POKEMON_RUBY_AXVJ00/symbols/pokeruby_jp.sym`（**日版**红宝石符号，4.2MB，含函数地址与大小）；标 `UNVERIFIED` 的项必须先反汇编验证行为再订址。若需美版对照，用 `hook/reference/` 下的官方移植件源码，**不要**再去 `tools/` 找美版 pokeruby（本仓无此目录）。跨文件/跨分段的偏移**不是常数**，必须用同文件内的共同函数做锚点。日美两版只在低地址基础库（约 0x0803xxxx 及以下）对齐，高地址代码区因文本长度差异会重排。切忌：不查符号表就凭反汇编「猜」函数；用错偏移却继续在原错误上加码；一次失败不返工根因。
   - ⚠️ **此纪律不得套用到"数据被写坏/图形异常"类任务**。这类问题符号表帮不上忙（它告诉你函数在哪，不告诉你哪块数据被写坏），**第一动作永远是 origin-vs-output 逐字节比对 + 特征字节搜索**，见 `docs/START_HERE.md`。
 - **启动必读**：每次会话开始，先读 `docs/START_HERE.md`（判断树 + 自检），再进入任务。
-- **bot 改动自检**：改 `bot/bot.lua`（及其 `_lib`）后先跑 `scripts/lint_lua.py`。它专门检查顶层语句是否被误删——曾因插入新动作吞掉 `else`+`end`，语法合法但 mGBA 静默卡死，白跑好几轮。
+- **bot 改动自检**：改 `bot/bot.lua`（及其 `_lib`）后先跑 `scripts/build/lint_lua.py`。它专门检查顶层语句是否被误删——曾因插入新动作吞掉 `else`+`end`，语法合法但 mGBA 静默卡死，白跑好几轮。
 - **反过度分析护栏（强制）**：目标是产出可验证结果，不是把正确性推演当产出。三选一，违反即停：
   - **三连卡死即停**：同一个问题若连续 3 次工具调用（或一段长推理）仍原地打转、无产出，必须立刻改为「执行一个最小可验证步骤」或「向用户提问」，禁止第 4 次自我辩论。
   - **能推进就先推进，歧义记账**：遇到不阻塞执行的歧义，先记入 `docs/` 待办文档并用默认值继续；只有真正阻塞决策的点才停下问。禁止让 1 个歧义卡死整批工作。
@@ -38,7 +38,7 @@
 - 输出: `roms\outputs`
 
 ## 标准打包（用户验收用）
-见 [`PACK_ROM.md`](docs/PACK_ROM.md)。  
+见 [`00-总览.md`](docs/POKEMON_RUBY_AXVJ00/00-总览.md)（打包命令与验收见 `docs/通用/00-工程手册.md`）。  
 用户说打 rom / 打包 / 给出该命令时，代理必须代跑；默认 `--seed-only`，且**包含物种名**；勿擅自加回姓名输入等高风险跳过模块。
 
 ## Armips 汇编验证（不依赖翻译文本）
@@ -49,7 +49,7 @@ cd "configs\POKEMON_RUBY_AXVJ00\hook"
 ```
 
 > ⚠️ **不要在此目录直接 `armips main.asm`**：`main.asm` 的 `./charmap.txt`、
-> `./graphic/fonts.s`、`./gen/translated_slot.asm` 只在流水线 staging 目录
+> `./graphic/fonts.s` 只在流水线 staging 目录
 > （`work/{游戏ID}/build/`）里齐全，由 `font_patch.apply_font_patch()` 组装。
 > 原地跑会报 `Table file "./charmap.txt" does not exist` / `graphic\fonts.s does not exist`，
 > 这是正常现象，不是构建缺陷。单独验证汇编层请走下方完整流水线。
@@ -62,9 +62,11 @@ C:\Python314\python.exe -m meowth full "roms\origin\POKEMON_RUBY_AXVJ00.gba" --s
 ```
 - `--seed-only`：不调用 LLM API，只用离线种子翻译
 - ⚠️ `--modules` 已废弃（CLI 标注 Ignored）：AXVJ 固定抽取/翻译全量 texts，
-  模块筛选不再生效，**不要**照 `docs/PACK_ROM.md` 里的 `--modules` 长列表照抄
+  模块筛选不再生效，**不要**照 `docs/POKEMON_RUBY_AXVJ00/01-打包.md` 里的 `--modules` 长列表照抄
 - 默认流：extract → seed-translate → build（内含 armips 汇编 + 字体生成）
-- 实测（2026-11-02，原版 AXVJ）：7297 replaced / 2221 relocated，产物 32MB
+- 实测（2026-11-02）：7297 replaced / 2221 relocated，产物 32MB
+- 实测（2026-11-23）：0 replaced / 6938 relocated / 8,141 条注入，产物 32,505,856 B
+- 本机依赖（click/httpx/rapidfuzz/capstone/PyYAML/Pillow）装在 `work\_pylibs`，需加进 PYTHONPATH
 
 > 🔴 **改了 `hook/src/**` 必须先跑 `build.bat` 再打包**：流水线只嵌入
 > `hook/out/game.bin` 的**现有文件**，不会自动编译 C。它的内嵌校验只比对

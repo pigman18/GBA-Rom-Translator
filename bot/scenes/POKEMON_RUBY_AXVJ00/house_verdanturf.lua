@@ -1,7 +1,7 @@
 -- ============================================================================
 -- house_verdanturf.lua — Verdanturf 民家（map=6:7）
 --
--- 【地图 ID 依据】scripts/map_ids_full.py
+-- 【地图 ID 依据】scripts/maps/map_ids_full.py
 --   日版实测校准了 group 0/2/10 与美版完全一致，其余组按美版顺序换算。
 --
 -- 【到达方式】warp（精确跳图，2026-11-03 跑通）

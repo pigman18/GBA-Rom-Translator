@@ -12,7 +12,7 @@
 若四方向 talk 都打空，再**回到落点附近侧移后重试**。
 这样两类场景都能覆盖。
 
-用法：python scripts/_patch_counter_v2.py
+用法：python scripts/oneoff/_patch_counter_v2.py
 """
 from pathlib import Path
 

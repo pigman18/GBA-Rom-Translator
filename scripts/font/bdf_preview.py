@@ -10,15 +10,15 @@
 用法
 ----
   # 全部字形（自动分页，每页 cols×rows 个）
-  python scripts/bdf_preview.py configs/POKEMON_RUBY_AXVJ00/fonts/normal.bdf \
+  python scripts/font/bdf_preview.py configs/POKEMON_RUBY_AXVJ00/fonts/normal.bdf \
       -o work/font_preview/normal.png
 
   # 只看指定字，放大看清楚笔画
-  python scripts/bdf_preview.py <bdf> --text "烧伤药活力碎片先制之爪" \
+  python scripts/font/bdf_preview.py <bdf> --text "烧伤药活力碎片先制之爪" \
       -o work/font_preview/check.png --scale 10
 
   # 只看第 2 页
-  python scripts/bdf_preview.py <bdf> -o out.png --page 1
+  python scripts/font/bdf_preview.py <bdf> -o out.png --page 1
 
 输出
 ----

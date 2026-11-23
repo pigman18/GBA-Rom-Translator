@@ -357,7 +357,7 @@ for i, st in ipairs(STEPS) do
         --   → 菜单里用传送 → 落地 map=0:33 grid=(68,7) 一字不差
         --
         -- ⚠ 前置：存档里必须有会「传送术(moveId=100)」的宝可梦，
-        --   由 scripts/warp_tool.py --apply 植入。
+        --   由 scripts/warp/warp_tool.py --apply 植入。
         -- 参数：
         --   map = "group:num"   目标地图
         --   x, y                目标格坐标（s16）

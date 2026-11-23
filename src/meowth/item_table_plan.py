@@ -1,7 +1,7 @@
 """道具名结构体表：40→48 + 字段重排（已验证布局）。
 
 见 docs/STRUCT_TABLE_TRANSLATION_FINDINGS.md 与
-scripts/research/ruby/gen_item_stride.py。
+scripts/tables/gen_item_stride.py。
 
 - 名字区 9→17B
 - +0x1C 的 u16 **留在 0x1C**（ldrb 立即数上限 31）

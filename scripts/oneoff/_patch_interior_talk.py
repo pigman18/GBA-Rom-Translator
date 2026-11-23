@@ -10,7 +10,7 @@
 原 interior 模板是「四方向 tap + A + B」，改成「四方向 tap + talk(soft)」，
 talk 会用「文本真的推进」当判据，比单发 A 可靠得多。
 
-用法：python scripts/_patch_interior_talk.py
+用法：python scripts/oneoff/_patch_interior_talk.py
 """
 from pathlib import Path
 

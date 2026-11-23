@@ -15,8 +15,8 @@
    事后再按 VRAM 差异挑（见 COVERAGE 2.2 的坑 1）。
 
 用法：
-  python scripts/gen_scenes.py --emit          # 生成全部
-  python scripts/gen_scenes.py --emit --only gym_dewford
+  python scripts/scene/gen_scenes.py --emit          # 生成全部
+  python scripts/scene/gen_scenes.py --emit --only gym_dewford
 """
 from __future__ import annotations
 
@@ -28,7 +28,7 @@ SCENES = ROOT / "bot" / "scenes" / "POKEMON_RUBY_AXVJ00"
 
 # ── 场景定义：名字 -> (mapId, x, y, 说明, 模式) ─────────────────────────
 #   ★ 落点怎么定（2026-11-03 起有工具了，别再用猜的）：
-#       python scripts/list_interactables.py --sav <存档>
+#       python scripts/maps/list_interactables.py --sav <存档>
 #     它会解出 ObjectEventTemplate（日版布局 SaveBlock1+0x0C0C，每项 0x18，
 #     +0x00 s16 x / +0x02 s16 y / +0x0C u32 script），
 #     直接给出「warp 到哪个相邻格、朝哪个方向」。
@@ -150,7 +150,7 @@ SCENE_DEFS = {
 HEADER = '''-- ============================================================================
 -- {name}.lua — {desc}（map={mapId}）
 --
--- 【地图 ID 依据】scripts/map_ids_full.py
+-- 【地图 ID 依据】scripts/maps/map_ids_full.py
 --   日版实测校准了 group 0/2/10 与美版完全一致，其余组按美版顺序换算。
 --
 -- 【到达方式】warp（精确跳图，2026-11-03 跑通）

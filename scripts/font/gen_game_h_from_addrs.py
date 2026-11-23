@@ -7,8 +7,8 @@ with a trailing ``; C: ADDR_X`` marker expose the value to the C layer; this
 script rewrites the ``// <<<GEN_ADDR>>>`` block in game.h from those markers.
 
 Usage:
-    python scripts/gen_game_h_from_addrs.py [--game POKEMON_RUBY_AXVJ00]
-    python scripts/gen_game_h_from_addrs.py --check   # fail if game.h is stale
+    python scripts/font/gen_game_h_from_addrs.py [--game POKEMON_RUBY_AXVJ00]
+    python scripts/font/gen_game_h_from_addrs.py --check   # fail if game.h is stale
 
 Run before build.bat any time game_addrs.asm changes.
 """
@@ -54,7 +54,7 @@ def collect(game_root: Path) -> dict[str, str]:
 def render_block(macros: dict[str, str]) -> str:
     lines = [
         BEGIN,
-        "/* Auto-generated from game_addrs.asm by scripts/gen_game_h_from_addrs.py.",
+        "/* Auto-generated from game_addrs.asm by scripts/font/gen_game_h_from_addrs.py.",
         " * Do not edit by hand. Change the address in game_addrs.asm; `; C:` marker",
         " * on the equ line sets the ADDR_* macro name. */",
     ]

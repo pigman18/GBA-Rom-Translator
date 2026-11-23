@@ -1,7 +1,7 @@
 -- ============================================================================
 -- gym_mauville.lua — Mauville City 道馆（10:0）
 --
--- 【地图 ID 的推导依据】（scripts/map_ids.py 有完整推导）
+-- 【地图 ID 的推导依据】（scripts/maps/map_ids.py 有完整推导）
 --   日版实测点校准了三个地图组与美版**完全一致**：
 --     group 0  : Route118=33, Route119=34, MauvilleCity=2
 --     group 2  : OldaleTown_PokemonCenter_1F=2

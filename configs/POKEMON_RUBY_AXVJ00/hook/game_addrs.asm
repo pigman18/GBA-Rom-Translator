@@ -2,7 +2,7 @@
 ; ROM SHA1: 5C5E546720300B99AE45D2AA35C646C8B8FF5C56
 ; Single source of truth for hook addresses. Referenced by:
 ;   - main.asm / src/*.s  (equ, via .include "./game_addrs.asm")
-;   - game.h ADDR_*       (via scripts/gen_game_h_from_addrs.py, `; C:` markers)
+;   - game.h ADDR_*       (via scripts/font/gen_game_h_from_addrs.py, `; C:` markers)
 ; 2026-08 purged: only equ actually referenced by hook (asm .org/call or
 ; C game.h ADDR_*). Removed addresses → symbols/pokeruby_jp.sym UNVERIFIED.
 

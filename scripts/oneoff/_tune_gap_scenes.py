@@ -13,7 +13,7 @@ gamecorner_mauville (10:3)：
   ⇒ 落点 (8,10) 其实不错，只要**先把 UP 走通**（之前 UP 被挡是因为
     落点紧贴老虎机）。改成往**右侧**绕一点再上去。
 
-用法：python scripts/_tune_gap_scenes.py
+用法：python scripts/oneoff/_tune_gap_scenes.py
 """
 from pathlib import Path
 

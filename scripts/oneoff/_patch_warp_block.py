@@ -5,7 +5,7 @@
 导致「语法合法但语义被吞」的静默卡死。改成按行号定位、显式校验边界，
 替换完立刻调 lint 验证。
 
-用法：python scripts/_patch_warp_block.py
+用法：python scripts/oneoff/_patch_warp_block.py
 """
 from __future__ import annotations
 

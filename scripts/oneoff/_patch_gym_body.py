@@ -7,7 +7,7 @@
   · gym_dewford 两种都只有 1 个（NPC 在并列走道，隔墙打不到）。
 ⇒ 模板改成两段：先竖扫，再蛇形。
 
-用法：python scripts/_patch_gym_body.py
+用法：python scripts/oneoff/_patch_gym_body.py
 """
 from pathlib import Path
 

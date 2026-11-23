@@ -35,7 +35,7 @@
   之前一直把 Noto 的 12px 二值化当点阵用（BDF 里 COMMENT 写着 `NotoSansSC@bmp11`，却没看）。
   现为 `simsun.ttc#0@bmp12`，与宋体原始 bitmap 逐像素一致。
 
-- [x] **BDF 预览工具** `scripts/bdf_preview.py`（2026-11-10）
+- [x] **BDF 预览工具** `scripts/font/bdf_preview.py`（2026-11-10）
   `--compact --single --cols 100 --scale 1` 出整版图（7420 字，16px 原尺寸）；
   `--text "..." --scale 10` 出抽样放大图。验字不必再打包 + 起模拟器。
 
@@ -354,7 +354,7 @@ blob 落到 new_base → insns 按 .org/.byte 打补丁 → literals 改字面�
 ### 2.21 剩余日文盘点：338 → 195 条（2026-11-11 03:35）
 
 判据：`translated` 非空、且**不等于原文**（自复制是噪声，不算真译文）。
-工具：`scripts/diag/classify_residual.py`（只读，输出形态分布）。
+工具：`scripts/textdata/classify_residual.py`（只读，输出形态分布）。
 
 **本轮三件事，`unresolved 261 → 4`：**
 
@@ -399,7 +399,7 @@ blob 落到 new_base → insns 按 .org/.byte 打补丁 → literals 改字面�
 | 图鉴列表：编号数字字形 | ❌ 既有渲染问题（`∩∩4` 形态 + 红块），旧版同样 | `bot/dex/*/016` |
 | 战斗名字（5 字节槽） | ❌ P0-1 未解 | — |
 | 剧情/UI 已注入 | ✅ `relocated=6821 redirects=774` | 本轮构建（2026-11-11 03:00） |
-| **未解析（无锚点/装不下）** | ❌ 374 条（剧情 320 / 树果名 41 / UI 14） | `scripts/diag_unresolved.py` |
+| **未解析（无锚点/装不下）** | ❌ 374 条（剧情 320 / 树果名 41 / UI 14） | `scripts/textdata/diag_unresolved.py` |
 | **无译文（多半是扫描噪声）** | ⚠️ 1488 条，其中 1137 属「补漏剧情」随机字节 | plan `skip` |
 
 **本轮（19:30–20:05）修掉的东西**
@@ -417,7 +417,7 @@ blob 落到 new_base → insns 按 .org/.byte 打补丁 → literals 改字面�
 
 **本轮收益**：`relocated` 6618 → **6769**（+151），`ptr_writes` 8229 → **8383**。
 
-### 剩余 398 条的闸门分布（用 `scripts/diag_unresolved.py` 量）
+### 剩余 398 条的闸门分布（用 `scripts/textdata/diag_unresolved.py` 量）
 
 | 闸门 | 条数 | 含义 / 能否救 |
 |---|---|---|
@@ -585,7 +585,7 @@ blob 落到 new_base → insns 按 .org/.byte 打补丁 → literals 改字面�
 名字确实不在这里画。也就是说 `0x3A1050` 的名字字段要么由另一个模块按
 「参数传 base」的方式读（静态搜不到 literal），要么在正式版里根本不显示。
 
-**方法沉淀**：`scripts/find_callers.py` —— 按半字精确解码 BL/BLX 找调用点。
+**方法沉淀**：`scripts/gdb/find_callers.py` —— 按半字精确解码 BL/BLX 找调用点。
 必须用它而不是 capstone 线性扫描：代码段里到处是内联数据（跳转表/literal pool/
 脚本字节流），线性扫描落到数据上就整段错位，实测找 `0x4F7AC` 时 capstone 返回
 0 命中，而精确解码准确找到 `0x4FD24`。
@@ -619,7 +619,7 @@ blob 落到 new_base → insns 按 .org/.byte 打补丁 → literals 改字面�
 
 ### 2.9 对战塔训练家表：从 62 条 unresolved 到整表写入（2026-11-11 00:30）
 
-**找到了确定的结构**（`scripts/find_callers.py` 追到 literal 引用者）：
+**找到了确定的结构**（`scripts/gdb/find_callers.py` 追到 literal 引用者）：
 
 ```
 0x080A9DE6  lsls r2, r5, #6        ; idx × 64
@@ -635,7 +635,7 @@ blob 落到 new_base → insns 按 .org/.byte 打补丁 → literals 改字面�
 （之前把 `0x39DF52` 当 base、把 `0xA9D6C` 当「误判」都是错的：
 `0xA9D6C` 是 **ldr 指令地址**，我拿它当 literal 读了 4 字节，才得出 `0x7F114A30` 的假结论。）
 
-**补全 texts.json**（`scripts/_add_tower_table.py`）：
+**补全 texts.json**（`scripts/oneoff/_add_tower_table.py`）：
 
 | 动作 | 条数 |
 |---|---|
@@ -777,7 +777,7 @@ literal 站点 → 所在函数 → 精确解码 BL 找 StringCopyN 调用点
    一个都命中不了。长度只**读出来**用于替换。
 2. **不能用 capstone 线性扫描找调用者**。它从代码段一路解码，撞上跳转表 /
    literal pool / 脚本流就整段错位。实测找 `0x4F7AC` 的调用者时 0 命中，
-   精确解码 BL 才找到 `0x4FD24`（工具：`scripts/diag/find_callers.py`）。
+   精确解码 BL 才找到 `0x4FD24`（工具：`scripts/gdb/find_callers.py`）。
 3. **函数归属约束**：调用点必须落在「引用本表基址字面量的函数」里。
    ROM 里 16 处 `StringCopyN` 调用，同一函数常同时拷贝别的字段
    （训练家名 @0xC 长度 10，走寄存器相加 `adds r1,r1,r2`，立即数不等，天然分开）。

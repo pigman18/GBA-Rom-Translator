@@ -9,7 +9,7 @@
 
 输出一份可直接粘进 gen_scenes.py 的 SCENE_DEFS 片段。
 
-用法：python scripts/calibrate_scenes.py [--write]
+用法：python scripts/scene/calibrate_scenes.py [--write]
   --write  直接把校准后的落点写回 gen_scenes.py
 """
 from __future__ import annotations

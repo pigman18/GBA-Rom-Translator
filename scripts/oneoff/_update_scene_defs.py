@@ -1,11 +1,11 @@
 #!/usr/bin/env python3
 """更新 SCENE_DEFS：把两个缺口场景的落点改成「可交互对象相邻格」。
 
-依据 scripts/list_interactables.py 解出的 ObjectEventTemplate：
+依据 scripts/maps/list_interactables.py 解出的 ObjectEventTemplate：
   gym_dewford (3:3)：最近对象 (2,17) → 落点 (2,18) 朝 UP
   contest_lilycove (13:5)：最近对象 (11,7) → 落点 (11,8) 朝 UP
 
-用法：python scripts/_update_scene_defs.py
+用法：python scripts/oneoff/_update_scene_defs.py
 """
 import re
 from pathlib import Path

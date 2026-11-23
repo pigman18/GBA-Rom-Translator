@@ -10,7 +10,7 @@ bikeshop_mauville 在两种模板下的表现：
 而商店/PC 正好相反（先 UP 才对，固定侧移会离开柜台）。
 ⇒ 生成器加第四种模式 counter_left，专门给 bikeshop 这类「店主在侧面」的场景。
 
-用法：python scripts/_add_counter_left.py
+用法：python scripts/oneoff/_add_counter_left.py
 """
 from pathlib import Path
 

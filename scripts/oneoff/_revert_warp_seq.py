@@ -6,7 +6,7 @@
 之后我为了「重复调用」加了 B 清场和额外 UP，结果**两次都 TIMEOUT**，
 比原版更差。所以回退到已验证版本，把「重复调用」记为已知限制。
 
-用法：python scripts/_revert_warp_seq.py
+用法：python scripts/oneoff/_revert_warp_seq.py
 """
 from pathlib import Path
 

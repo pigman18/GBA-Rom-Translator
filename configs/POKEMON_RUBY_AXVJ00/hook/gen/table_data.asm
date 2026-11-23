@@ -1,6 +1,6 @@
 ; ===============================================================================
 ; 9 张定长表的新数据（自动生成，勿手改）
-; 生成器: scripts/research/ruby/emit_table_data.py
+; 生成器: scripts/tables/emit_table_data.py
 ;
 ; 每项布局按新 stride 重排：[name_offset 头部][名字][eos 填充][元数据]
 ; 基址由 patches/table_relink.asm 改字面量指过来。

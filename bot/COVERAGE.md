@@ -103,12 +103,12 @@ api.warp{ map = "10:0", x = 5, y = 8, mon = 1 }
 实测 `(23,17) map=0:2` → `(68,7) map=0:33`，**坐标一字不差**。
 
 **前置**：存档里要有会传送术的宝可梦，用
-`python scripts/warp_tool.py --apply --out work/teleport.sav` 植入一次。
+`python scripts/warp/warp_tool.py --apply --out work/teleport.sav` 植入一次。
 
 ### 已验证可直达的地图 ID
 
 日版 group 顺序与美版**在 0 / 2 / 10 / 5 组上完全一致**（用实测点校准过，
-见 `scripts/map_ids.py`）：
+见 `scripts/maps/map_ids.py`）：
 
 | 地图 | ID | 用途 | 实测 |
 |---|---|---|---|
@@ -140,12 +140,12 @@ api.warp{ map = "10:0", x = 5, y = 8, mon = 1 }
 ## 2.3 ★ 用生成器铺场景（2026-11-03）
 
 窗口覆盖要采十几张室内地图，手写会大量重复且容易漏掉「连帧」「闸门」。
-`scripts/gen_scenes.py` 把套路固化，改一处全部更新。
+`scripts/scene/gen_scenes.py` 把套路固化，改一处全部更新。
 
 ```powershell
-python scripts/gen_scenes.py                  # 列出全部场景定义
-python scripts/gen_scenes.py --emit           # 全部生成
-python scripts/gen_scenes.py --emit --only gym_dewford
+python scripts/scene/gen_scenes.py                  # 列出全部场景定义
+python scripts/scene/gen_scenes.py --emit           # 全部生成
+python scripts/scene/gen_scenes.py --emit --only gym_dewford
 ```
 
 三种套路：
@@ -229,10 +229,10 @@ SaveBlock1 + 0x0C0C 起，每项 0x18 字节：
 
 ```powershell
 # 已知地图的可交互对象（读存档）
-python scripts/list_interactables.py --sav work/_probe/teleport.sav
+python scripts/maps/list_interactables.py --sav work/_probe/teleport.sav
 
 # 读 bot 采到的 ram 帧（更准，运行时 template 已载入）
-python scripts/list_interactables.py --ram <run_dir> --frame <帧名>
+python scripts/maps/list_interactables.py --ram <run_dir> --frame <帧名>
 ```
 
 输出会直接给「warp 到哪个相邻格、朝哪个方向」的建议。
@@ -287,7 +287,7 @@ python scripts/list_interactables.py --ram <run_dir> --frame <帧名>
 
 ### 全城市场景铺开（2026-11-04 第五轮）
 
-把**所有城市**的室内场景都铺了。用 `scripts/list_all_city_maps.py` 算出
+把**所有城市**的室内场景都铺了。用 `scripts/maps/list_all_city_maps.py` 算出
 46 个候选，新增 31 个场景。
 
 **总规模：59 个场景，8754 帧，其中 6827 帧含真实窗口。**
@@ -328,13 +328,13 @@ group 0/2/3/5/10/13 已用实测验证与美版顺序一致，其余组按同规
 | `contest_slateport_l` | 1 | **83** | (9,6) → 落 (9,7) |
 | `museum_slateport` | 1 | **69** | (7,7) → 落 (7,8) |
 
-修法：`scripts/calibrate_scenes.py` 读每个场景最后一帧的 ram.bin，
+修法：`scripts/scene/calibrate_scenes.py` 读每个场景最后一帧的 ram.bin，
 用 `ObjectEventTemplate` 解出最近的带 script 对象，落点自动定到它下方一格。
 
 ```powershell
-python scripts/calibrate_scenes.py          # 只打印建议
-python scripts/calibrate_scenes.py --write  # 写回 gen_scenes.py
-python scripts/gen_scenes.py --emit         # 重新生成场景文件
+python scripts/scene/calibrate_scenes.py          # 只打印建议
+python scripts/scene/calibrate_scenes.py --write  # 写回 gen_scenes.py
+python scripts/scene/gen_scenes.py --emit         # 重新生成场景文件
 ```
 
 #### ⚠ 生成器会覆盖手工场景（踩过一次）
@@ -452,9 +452,9 @@ prove → poke 钉 gRngValue(0x03004818)=0x0000AAAA → hunt → await{any_of={0
 **所以验收看什么**：
 
 ```powershell
-python scripts/run_verify_batch.py --all --skip-done   # 采集
-python scripts/build_baseline.py                       # 生成基线
-python scripts/show_baseline.py C                      # 看 C 级有没有变多
+python scripts/textdata/run_verify_batch.py --all --skip-done   # 采集
+python scripts/textdata/build_baseline.py                       # 生成基线
+python scripts/textdata/show_baseline.py C                      # 看 C 级有没有变多
 ```
 
 判断标准不是「有没有 fail」，而是**分级分布有没有变差**、

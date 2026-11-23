@@ -1,7 +1,7 @@
 -- ============================================================================
 -- _probe_obj_pos.lua — 验证「用 object 表坐标直接 warp 到 NPC 旁」是否可行
 --
--- 【依据】scripts/list_objects.py 实测解出 object 结构：
+-- 【依据】scripts/maps/list_objects.py 实测解出 object 结构：
 --   0x03004800 + i*0x24，+0x04/+0x06 = 当前格坐标（s16）
 --   道馆 map=3:3 帧里读到：
 --     obj[0] (9,24)   obj[1] (8,17)   obj[2] (19,31)   obj[3] (12,31)

@@ -8,7 +8,7 @@ house_mauville2 校准后落点 (4,6) 正好在 NPC (4,5) 正下方，
 
 ⇒ 落点是**用 NPC 坐标算出来的**，那么一到位就该先试，不能先走开。
 
-用法：python scripts/_patch_interior_first.py
+用法：python scripts/oneoff/_patch_interior_first.py
 """
 from pathlib import Path
 

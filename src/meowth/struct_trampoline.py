@@ -744,7 +744,7 @@ def _bl_sites(rom: bytes, target: int, lo: int = 0, hi: int | None = None) -> li
     为什么不用 capstone 线性扫描：它会从代码段一路解码下去，撞上跳转表 /
     literal pool / 脚本流就整段错位，落到数据上以后整片指令都解析错。
     实测找 ``0x4F7AC`` 的调用者时 capstone 返回 0 命中，这里准确找到
-    ``0x4FD24``（见 scripts/diag/find_callers.py）。
+    ``0x4FD24``（见 scripts/gdb/find_callers.py）。
 
     按半字独立解码，只认 BL 的 32 位编码（h1=11110xxxxxxxxxx、
     h2=11J1J2xxxxxxxxxx），与上下文无关，因此不受错位影响。

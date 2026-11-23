@@ -2,7 +2,7 @@
 -- ui_sweep.lua — UI 全扫：图鉴各子界面 + ポケナビ 各子界面
 --
 -- 【目的】把「预渲染成图片的日文」尽可能摆到屏幕上，供 scene harvest 抓
---   图块集（scripts/misc/harvest_obj_assets.py）。这个场景不追 BUG，只负责
+--   图块集（scripts/scene_assets/harvest_obj_assets.py）。这个场景不追 BUG，只负责
 --   **把能进的界面都进一遍**：
 --     图鉴：列表（滚动）→ 条目页 → 顶部四键
 --           ぶんぶ(分布) / なきごえ / おおきさ / もどる

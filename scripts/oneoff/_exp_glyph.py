@@ -5,7 +5,7 @@
 FreeType 的几档 hinting / 二值化策略并排渲染，肉眼看差距。
 
 用法:
-    python scripts/_exp_glyph.py --px 10 --out work/font_preview/exp10.png
+    python scripts/oneoff/_exp_glyph.py --px 10 --out work/font_preview/exp10.png
 """
 
 from __future__ import annotations

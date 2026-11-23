@@ -9,7 +9,7 @@
 #define LANGUAGE_JAPANESE          1u
 #define CHS_GLYPH_ADVANCE_JP_PX    8u
 // <<<GEN_ADDR>>>
-/* Auto-generated from game_addrs.asm by scripts/gen_game_h_from_addrs.py.
+/* Auto-generated from game_addrs.asm by scripts/font/gen_game_h_from_addrs.py.
  * Do not edit by hand. Change the address in game_addrs.asm; `; C:` marker
  * on the equ line sets the ADDR_* macro name. */
 #define ADDR_BATTLE_IF_GFX                 0x02020004u

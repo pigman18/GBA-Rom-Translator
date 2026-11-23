@@ -36,7 +36,7 @@
 #define GRID_TILE_LIMIT     0x1F0u                  /* 不写 >= 0x1F0 的 tile */
 
 /* 字库：0x09000000 起 7168 槽 × 128B，顺序 TL(0) BL(32) TR(64) BR(96)，
- * 4bpp **低半字节 = 左像素**（scripts/build_chinese_font.py --nibble-order lo-first，
+ * 4bpp **低半字节 = 左像素**（scripts/font/build_chinese_font.py --nibble-order lo-first，
  * engine.py:1919），墨迹值 0/15，墨迹盒 12×12 放在 16×16 槽的 x=0..11 / y=3..14。 */
 #define GRID_FONT_NORMAL    ADDR_FONT_CHS_NORMAL
 #define GRID_GLYPH_BYTES    128u
@@ -53,7 +53,7 @@
 #define GRID_TILE_BITS      1024u
 
 /* F7 00 hi lo 的 hi 是 charmap 原始 lead（1..5/7..26/28..30），
- * 字库槽号 = lead_adjust(hi)*256 + lo（scripts/build_chinese_font.py::glyph_index）。
+ * 字库槽号 = lead_adjust(hi)*256 + lo（scripts/font/build_chinese_font.py::glyph_index）。
  * 实证：最终 ROM 里 160,998 个 F7 token 的 hi 分布含 28/29/30，
  * 而槽号 hi 上界只有 27 ⇒ 绝不能把 (hi,lo) 直接当槽号。 */
 #define GRID_LEAD_ADJUST(h) \

@@ -193,7 +193,7 @@ function M.new()
         --       → 落地 map=0:33 grid=(68,7)，一字不差。
         --
         -- 前置：存档里必须有会「传送术(moveId=100)」的宝可梦：
-        --   python scripts/warp_tool.py --apply --out <新存档>
+        --   python scripts/warp/warp_tool.py --apply --out <新存档>
         --   然后用这份存档跑场景。
         -- 用法：api.warp{ map = "0:33", x = 68, y = 7, mon = 1 }
         warp = function(opt)

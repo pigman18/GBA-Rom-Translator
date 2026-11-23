@@ -3,9 +3,9 @@
 
 ── 为什么可以批量加 ────────────────────────────────────────────────────
 1. **地图 ID 有依据**：group 0/2/3/5/10/13 已用实测 warp 验证与美版一致，
-   其余组按同规则换算（scripts/list_all_city_maps.py）。
+   其余组按同规则换算（scripts/maps/list_all_city_maps.py）。
 2. **落点不用猜**：每个城市室内图的 NPC 位置都可以先 warp 进去采一帧，
-   再用 scripts/list_interactables.py 解出。但为了先铺量，这里用
+   再用 scripts/maps/list_interactables.py 解出。但为了先铺量，这里用
    「中心落点 + 四方向 talk 试探」的通用模板，采不到再单独校准。
 3. **模式已有三种**：counter / counter_left / gym / interior。
 
@@ -14,7 +14,7 @@
    · 道馆布局各异 → gym 模式（两段扫）
    · 大赛会场很大 → interior 蛇形扫
 
-用法：python scripts/add_all_city_scenes.py --emit
+用法：python scripts/scene/add_all_city_scenes.py --emit
 """
 from __future__ import annotations
 

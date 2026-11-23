@@ -1,7 +1,7 @@
 -- ============================================================================
 -- contest_hall.lua — 华丽大赛会场（FallarborTown_ContestHall）
 --
--- 【地图 ID 推导】（scripts/map_ids.py 有完整证据）
+-- 【地图 ID 推导】（scripts/maps/map_ids.py 有完整证据）
 --   日版实测校准了三个组与美版完全一致：
 --     group 0  : Route118=33, Route119=34, MauvilleCity=2
 --     group 2  : OldaleTown_PokemonCenter_1F=2

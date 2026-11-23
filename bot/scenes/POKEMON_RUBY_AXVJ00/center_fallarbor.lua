@@ -1,7 +1,7 @@
 -- ============================================================================
 -- center_fallarbor.lua — Fallarbor 宝可梦中心 1F（map=5:3）
 --
--- 【地图 ID 依据】scripts/map_ids_full.py
+-- 【地图 ID 依据】scripts/maps/map_ids_full.py
 --   日版实测校准了 group 0/2/10 与美版完全一致，其余组按美版顺序换算。
 --
 -- 【到达方式】warp（精确跳图，2026-11-03 跑通）

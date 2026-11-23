@@ -13,7 +13,7 @@ bikeshop_mauville 两种配置的位置与结果：
 结论：counter 模板只保留「先 UP 4 格 + 四方向 talk」，
 去掉我先前加的「侧移后重试」fallback；bikeshop 也回到 counter。
 
-用法：python scripts/_patch_counter_v3.py
+用法：python scripts/oneoff/_patch_counter_v3.py
 """
 from pathlib import Path
 

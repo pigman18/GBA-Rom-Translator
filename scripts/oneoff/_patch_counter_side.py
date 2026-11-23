@@ -7,7 +7,7 @@ gamecorner_mauville 原来只有 1 帧有窗口。实测发现：
   改成 **先 RIGHT 绕 2 格，再 UP**，窗口从 1 帧涨到 **218 帧**。
 所以 counter 模板加上「先侧移」这一步，对所有紧贴柜台的场景都更稳。
 
-用法：python scripts/_patch_counter_side.py
+用法：python scripts/oneoff/_patch_counter_side.py
 """
 from pathlib import Path
 

@@ -5,8 +5,8 @@ Loads **all** fonts you pass (files or directories), tries each in order until a
 glyph has enough ink, then appends/replaces the BDF entry.
 
 Typical flow after FireRed export:
-  1. scripts/firered_export_bdf.py → normal_firered.bdf (+ .map.csv)
-  2. python scripts/bdf_fill_missing.py \\
+  1. scripts/font/firered_export_bdf.py → normal_firered.bdf (+ .map.csv)
+  2. python scripts/font/bdf_fill_missing.py \\
        --bdf configs/POKEMON_RUBY_AXVJ00/fonts/normal_firered.bdf \\
        --charmap configs/POKEMON_RUBY_AXVJ00/charmap.txt \\
        --fonts C:/Windows/Fonts/simsun.ttc C:/Windows/Fonts/msyh.ttc \\

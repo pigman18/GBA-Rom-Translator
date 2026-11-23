@@ -13,8 +13,8 @@ Steps:
      with COMMENT fr_code=...
 
 Usage:
-  python scripts/firered_export_bdf.py
-  python scripts/firered_export_bdf.py --out configs/POKEMON_RUBY_AXVJ00/fonts/normal_firered.bdf
+  python scripts/font/firered_export_bdf.py
+  python scripts/font/firered_export_bdf.py --out configs/POKEMON_RUBY_AXVJ00/fonts/normal_firered.bdf
 """
 from __future__ import annotations
 

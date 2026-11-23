@@ -22,36 +22,53 @@ local L = dofile((os.getenv("BOT_ROOT") or "."):gsub("\\", "/"):gsub("/+$", "")
                  .. "/scenes/" .. os.getenv("BOT_GAME_ID") .. "/_lib.lua")
 local api = L.new()
 
-local ADDR_RNG = 0x03004818
-local RNG_FIXED = 0x0000AAAA
+-- ── 确定性遇敌：写死对手物种（2026-11-23 定案，取代此前三种失败写法）──
+--
+-- 【为什么之前三种写法全失败】
+--   ① poke 一次 + hunt 40 步（旧法，battle_full 注释曾标「勿改 ✅完全一致」）
+--   ② 每走一格 poke 再 walk 一格（_probe_detbattle4 写法）
+--   ③ poke -> hunt -> await -> 转场后重钉（battle_menu_audit 写法）
+--   三种都做不到「两侧同对手」。原因：两侧 settle 时长不同（译文更长），
+--   poke 只决定**写入那一瞬**的 RNG；从写入到「遇敌判定」之间还要跑几十帧，
+--   RNG 早被消耗掉。_lib.lua 里也早写过「第 N 格必遇敌做不到」。
+--
+-- 【实测证据（本次用它量出了 BUG-10 的真根因）】
+--   同一帧 bd_battle_in，读 gBattleMons：
+--     origin     player=282 Blaziken Lv36 / enemy=338 Lv26
+--     translated player=282 Blaziken Lv36 / enemy=288 Lv26
+--   我方完全一致，**敌方物种不同**（338 vs 288），等级都是 26。
+--   ⇒ 战斗类场景所有同号帧都不可比，BUG-10 的「黑带」就是这么来的。
+--
+-- 【现在的做法】直接写死敌方 species。
+--   gBattleMons 真实地址 = 0x020247E0（不是符号表的 0x02024A80，差 0x2A0）。
+--   结构 0x58 字节/battler：species 在 +0x00（u16），level 在 +0x2A（u8）。
+--   推导方法：用「我方 Lv36 / 敌方 Lv26」+ 物种 282/288 反查，两级跨度
+--   正好 0x58，且六项能力值紧跟在 species 之后 —— 见 docs 的 BUG-10 定案。
+--
+--   ⚠ 写入时机：`await battle` 之后、进菜单之前。实测 bd_battle_in 帧时
+--     species 已填充（=288），此时改不会影响敌方**模型/图鉴**的加载
+--     （模型由 species 决定，改了会换外观，但这正是我们要的：两侧同一只）。
+local ADDR_RNG      = 0x03004818
+local RNG_FIXED     = 0x0000AAAA
+local ADDR_BATTLE   = 0x020247E0   -- gBattleMons（实测，非符号表值）
+local BATTLER_SZ    = 0x58
+local SPECIES_FIXED = 288          -- Zigzagoon：Route118 常见，两侧都写它
 
 L.preamble(api)
 api.shot("ov_overworld")
 
--- ── 确定性遇敌（BUG-10 定案后重写，2026-11-23）─────────────────────────────
--- 【两轮实测，都推翻了旧注释里的「✅ 完全一致」】
---   · 旧写法「poke 一次 → hunt 40 步」：实测两侧**对手不同**
---     （origin ジグザグマ Lv24 / translated 另一只 Lv26）。
---   · 改成「每格 poke 再 walk 一格」：对手**还是不同**。
---   原因：两侧 settle 时长不同（译文更长），poke 与走格之间的帧距不等，
---   RNG 在**遇敌判定那一刻**的取值必然不同 —— poke 只影响写入瞬间，
---   影响不了之后几十帧的消耗。
---
--- 【现在的做法（与 battle_menu_audit.lua 同款）】
---   1) poke 一次 + hunt 把战斗打进（只求进战斗，不指定对手）
---   2) 转场结束、战斗界面稳定后**再 poke 一次** —— 此时战斗对象已确定，
---      重钉不改对手，但能让后续伤害浮动/命中判定/动画在两侧一致
---   3) 对手是否一致**不靠运气**：shot 落 ram.bin 后离线读
---      player @0x02024A80 / enemy @0x02024AD8 比对；不一致就重跑。
---   ⚠ 这是本场景的硬门槛，理由见 docs 的 BUG-10 定案。
-api.poke{ { addr = ADDR_RNG, width = 4, value = RNG_FIXED, note = "钉 RNG（进战斗）" } }
 api.hunt{ dir = "DOWN", x = 68, y = 7, steps = 40, timeout = 120 }
-
 api.await{ any_of = { 0x0000, 0xBF40 }, timeout = 900, tag = "battle" }
 
--- ★ 转场后重钉：让伤害浮动/命中判定/动画在两侧一致
-api.poke{ { addr = ADDR_RNG, width = 4, value = RNG_FIXED, note = "转场后重钉 RNG" } }
-
+-- ★ 写死敌方物种（battler1 = 对手）+ 转场后重钉 RNG
+--   ⚠ 要写**两次**：转场中写一次（尽量赶在模型加载前），进菜单后再写一次。
+--     实测只写转场那次无效 —— 那时 gBattleMons 还在被游戏初始化覆盖，
+--     写完又被自己的初始化流程刷回去了。
+api.poke{
+    { addr = ADDR_BATTLE + BATTLER_SZ, width = 2, value = SPECIES_FIXED,
+      note = "写死敌方 species（转场中）" },
+    { addr = ADDR_RNG, width = 4, value = RNG_FIXED, note = "转场后重钉 RNG" },
+}
 
 -- ── 跳过开场台词，尽快进主菜单 ────────────────────────────────────────────
 for i = 1, 3 do
@@ -59,9 +76,16 @@ for i = 1, 3 do
 end
 api.shot("mv_menu")
 
--- ★ 对手校验：进菜单时先拍一张带 dump 的定型帧。
---   BUG-10 的教训是「两侧对手不同 → 后面所有帧都不可比」，
---   所以把校验点前移到出招之前，而不是等像素对不上再回头查。
+-- ★ 二次写入：此时 gBattleMons 已定型（实测帧 2 读得出 species/level），
+--   这一次一定生效。
+api.poke{
+    { addr = ADDR_BATTLE + BATTLER_SZ, width = 2, value = SPECIES_FIXED,
+      note = "写死敌方 species（进菜单后，确保生效）" },
+}
+
+-- ★ 对手校验：进菜单时先拍一张带 dump 的定型帧，离线读 gBattleMons 比对。
+--   判据（2026-11-23 定）：player/enemy species 两侧必须相等；
+--   enemy 应为 288。不一致即本次采集不可比，重跑。
 
 -- ── 选「战斗」（左上第一项）→ 进招式列表 ──────────────────────────────────
 api.tap("A", 4, 60)

@@ -31,7 +31,7 @@ from __future__ import annotations
 import sys
 from pathlib import Path
 
-ROOT = Path(__file__).resolve().parent.parent
+ROOT = Path(__file__).resolve().parents[2]   # scripts/battle/ -> 仓库根
 ROM = ROOT / "roms" / "origin" / "POKEMON_RUBY_AXVJ00.gba"
 BASE = 0x08000000
 

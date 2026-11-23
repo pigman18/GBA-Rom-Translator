@@ -4825,3 +4825,63 @@ gdb:
   cfg:
     n: 24
   default: false
+- name: PartyNameHit
+  address: '0x088000BC'
+  description: PartyName_Hook 里 cmp r0,#0 处（r0=查表结果，非0即命中改写）
+  cfg:
+    n: 24
+  default: false
+- name: PartyNameEntry
+  address: '0x088000A0'
+  description: PartyName_Hook 入口（r0=win, r1=text）
+  cfg:
+    n: 16
+  default: false
+- name: PartyNameCFn
+  address: '0x088014D0'
+  description: PartyName_Lookup 入口（r0=win, r1=text）
+  cfg:
+    n: 16
+  default: false
+- name: PartyNameAfter
+  address: '0x08002C70'
+  description: InitTextPrinter 第5条 ldr 处（hook 返回后）；r1 应已是中文指针
+  cfg:
+    n: 16
+  default: false
+- name: GetMonNicknameTest
+  address: '0x0806B7E4'
+  description: 疑似 GetMonNickname（pokeruby src/party_menu.c:2600）；r0=pokemon r1=buf
+  cfg:
+    n: 16
+  default: false
+- name: NickAfterGetMonData
+  address: '0x0806B7FA'
+  description: 0x0806B7E4 内 GetMonData 之后（r0=返回的串指针，r5=buf?，r4=idx）
+  cfg:
+    n: 16
+  default: false
+- name: GetMonDataEntry
+  address: '0x08039F24'
+  description: GetMonData 入口（r0=mon, r1=field, r2=data）；抓 field=2 的调用者 LR
+  cfg:
+    n: 24
+  default: false
+- name: R2HookEntry
+  address: '0x088000A0'
+  description: PartyNick_R2Hook 入口（r0=monIndex r1=pokemon r2=buf r5=pokemon）
+  cfg:
+    n: 16
+  default: false
+- name: R2HookEntry2
+  address: '0x0806B2E4'
+  description: PrintPartyMenuMonNickname 的 mov r2,sp 处（补丁点）；确认是否被执行
+  cfg:
+    n: 16
+  default: false
+- name: DoPrintNick
+  address: '0x0806B288'
+  description: PartyMenuDoPrintMonNickname 入口（r0=monIndex r1=b r2=nameBuffer）
+  cfg:
+    n: 16
+  default: false

@@ -131,6 +131,7 @@ def bdf_to_ink(
     pad_top: int = 0,
     center_x: bool = False,
     valign: str = "baseline",
+    downsample: bool = False,
 ) -> bytearray:
     """Rasterize BDF into ``ink_w`` x ``ink_h`` ink (1=ink).
 
@@ -243,6 +244,42 @@ def bdf_to_ink(
     # 采用：**左上角直接裁切**（保留左 ink_w 列、上 ink_h 行）。
     # 丢的是最右 1 列和最下 1 行，字仍能辨认（实测「宝」宀+王、
     # 「菇」草头轮廓都在）；这是 8x8 槽下最保结构的做法。
+    #
+    # ── downsample=True（2026-11-23 新增）──────────────────────────────
+    # 上面那条「左上角裁切」只适用于**源墨迹本来就接近目标框**的情况
+    # （如 small.bdf 的 9x9 → 8x9，只丢 1 列）。
+    # 但 Unifont 这类**原生 16x16 点阵**，左上角裁切等于只取左上四分之一，
+    # 「蛋」的下半「虫」、「蘑」的下半「磨」全被砍掉 —— 实测糊成残字。
+    # 此时必须**整框降采样**（按面积多数投票），把 15x16 完整映射到 8x9。
+    if downsample and (bw > ink_w or bh > ink_h):
+        out = bytearray(ink_w * ink_h)
+        for oy in range(ink_h):
+            sy0 = (oy * bh) // ink_h
+            sy1 = max(sy0 + 1, ((oy + 1) * bh) // ink_h)
+            for ox in range(ink_w):
+                sx0 = (ox * bw) // ink_w
+                sx1 = max(sx0 + 1, ((ox + 1) * bw) // ink_w)
+                cnt = 0
+                tot = 0
+                for sy in range(sy0, min(sy1, bh)):
+                    row = min_y + sy
+                    if not (0 <= row < len(raw)):
+                        continue
+                    for sx in range(sx0, min(sx1, bw)):
+                        col = min_x + sx
+                        if col < 0 or col >= src_w:
+                            continue
+                        if raw[row * src_w + col]:
+                            cnt += 1
+                        tot += 1
+                # OR（块内任一像素有墨迹即算墨迹）。
+                # 为什么不用面积投票：Unifont 笔画只有 1px 宽，15x15 压到
+                # 8x9 时落在 2x2 块里只占 25%，任何阈值（50%/60%）都会
+                # 把横竖笔画整条抹掉 —— 实测「土」只剩左竖、字形散架。
+                # OR 保证笔画连续，代价是笔画略粗（8px 下可接受）。
+                if cnt:
+                    out[oy * ink_w + ox] = 1
+        return out
     if bw > ink_w or bh > ink_h:
         for ny in range(min(ink_h, bh)):
             for nx in range(min(ink_w, bw)):
@@ -342,6 +379,7 @@ def build_font_bin(
     ink_h: int = INK_H,
     pad_top: int | None = None,
     lo_first: bool = False,
+    downsample: bool = False,
 ) -> bytearray:
     if bytes_per_glyph != BYTES_PER_GLYPH:
         raise ValueError(
@@ -358,6 +396,7 @@ def build_font_bin(
             ink = bdf_to_ink(
                 bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y, font_ascent,
                 ink_w=ink_w, ink_h=ink_h, pad_top=pad_top,
+                downsample=downsample,
             )
         else:
             ink = bytearray(ink_w * ink_h)
@@ -460,7 +499,27 @@ def main() -> None:
     ap.add_argument("--slot-sizes", nargs="+", type=int, default=None)
     ap.add_argument("--prefix", type=str, default="PokeRSFontChs")
     ap.add_argument("--dilate", action="store_true")
-    ap.add_argument("--shadow", action=argparse.BooleanOptionalAction, default=True)
+    ap.add_argument(
+        "--downsample",
+        action="store_true",
+        help="源墨迹远大于目标框时按面积降采样（而不是左上角裁切）。"
+             "Unifont 这类原生 16x16 点阵必须开，否则下半字被砍掉。",
+    )
+    ap.add_argument(
+        "--shadow",
+        action=argparse.BooleanOptionalAction,
+        default=False,
+        help="默认不生成阴影层（2026-11-24 改）。逐槽覆盖用 --shadow-map。",
+    )
+    ap.add_argument(
+        "--shadow-map",
+        nargs="*",
+        default=None,
+        metavar="LABEL=0|1",
+        help="逐 slot 指定是否生成阴影层，如 Normal=1 Middle=0 Small=0。"
+             "优先级高于 --shadow。8px 小字加阴影会占掉本已不足的列宽，"
+             "实测队伍名字糊成一片，故 Small 默认关。",
+    )
     ap.add_argument(
         "--nibble-order",
         choices=("lo-first", "hi-first"),
@@ -492,6 +551,7 @@ def main() -> None:
     bdf_map = _kv_map(args.bdf_map)
     ink_map = _kv_map(args.ink_map)
     pad_map = _kv_map(args.pad_map)
+    shadow_map = _kv_map(args.shadow_map)
     slot_chars: dict[str, list[str]] = {}
     for item in args.slot_chars or []:
         if "=" not in item:
@@ -513,7 +573,7 @@ def main() -> None:
 
     # 逐 slot 解析 BDF 与 ink 尺寸，同一 BDF 只解析一次
     bdf_cache: dict[Path, tuple[dict, int]] = {args.bdf.resolve(): (default_glyphs, default_ascent)}
-    plan: list[tuple[str, Path, dict, int, int, int]] = []
+    plan: list[tuple[str, Path, dict, int, int, int, int, bool]] = []
     for label in args.slot_labels:
         bp = Path(bdf_map[label]) if label in bdf_map else args.bdf
         key = bp.resolve()
@@ -541,10 +601,15 @@ def main() -> None:
                 raise SystemExit(f"error: pad_top 需整数，收到 {pad_map[label]!r}")
         else:
             pad = max(0, (SLOT_H - ih) // 2)
-        plan.append((label, bp, glyphs, ascent, iw, ih, pad))
-        print(f"  [{label}] bdf={bp.name} ink={iw}x{ih} pad_top={pad}")
+        # 逐槽 shadow：--shadow-map 优先，其次 --shadow 全局默认（false）
+        if label in shadow_map:
+            sh = str(shadow_map[label]).strip().lower() not in ("0", "false", "no", "off")
+        else:
+            sh = args.shadow
+        plan.append((label, bp, glyphs, ascent, iw, ih, pad, sh))
+        print(f"  [{label}] bdf={bp.name} ink={iw}x{ih} pad_top={pad} shadow={sh}")
 
-    for i, (label, bp, glyphs, ascent, iw, ih, pad) in enumerate(plan):
+    for i, (label, bp, glyphs, ascent, iw, ih, pad, sh) in enumerate(plan):
         print(f"Building {label} font...")
         if label in slot_chars:
             buf = build_sym_bank(glyphs, ascent, slot_chars[label])
@@ -567,11 +632,12 @@ def main() -> None:
             ascent,
             glyph_count=args.glyph_count,
             bytes_per_glyph=args.bytes_per_glyph,
-            shadow=args.shadow,
+            shadow=sh,
             ink_w=iw,
             ink_h=ih,
             pad_top=pad,
             lo_first=(args.nibble_order == "lo-first"),
+            downsample=args.downsample,
         )
         if args.slot_sizes and i < len(args.slot_sizes):
             buf = buf[: args.slot_sizes[i]]

@@ -22,7 +22,7 @@
       30
     ]
   ],
-  "shadow": false,
+  "_shadow_note": "2026-11-24：全局 shadow 已移除，改为 font_slots[].shadow 逐槽配置，默认 false。★ 三套字库都必须 false：渲染层 grid_draw_chs 会程序化补右下 1px 阴影（先铺 E 色，再把 C 色压在主墨上），字库再自带一层就会双重阴影 → 字糊成一团（实测开始菜单「继续游戏」整片糊掉）。这个开关留给将来需要「字库直出三色预渲染」的场景。",
   "embed_primary": true,
   "_embed_primary_note": "2026-11-02 起为 true：三套字库均由 BDF 直出，直接嵌入主 bin。原先 embed_primary=false 会嵌入 *_unshadow，而那份是拿旧 12px 参照对形变来的，会把墨迹多撑 1px。",
   "_fonts_dir": "configs/POKEMON_RUBY_AXVJ00/fonts",
@@ -37,6 +37,8 @@
       "bdf": "normal.bdf",
       "ink": "12x12",
       "pad_top": 3,
+      "shadow": false,
+      "_shadow_note": "必须 false！渲染层 grid_draw_chs 会**程序化补**右下 1px 阴影（E 色垫底 + C 色压主墨）。字库若再自带一层，两层叠加 → 字糊成一团（2026-11-24 实测：开始菜单「继续游戏」整片糊掉）。三套字库统一 false。",
       "_ink_note": "2026-11-10 12px 宋体内嵌点阵（EBDT），非缩放",
       "advance": 12
     },
@@ -47,7 +49,8 @@
       "bytes_per_glyph": 128,
       "bdf": "middle.bdf",
       "ink": "9x11",
-      "pad_top": 2
+      "pad_top": 2,
+      "shadow": false
     },
     {
       "label": "Small",
@@ -55,10 +58,11 @@
       "glyph_count": 7168,
       "bytes_per_glyph": 128,
       "bdf": "small.bdf",
-      "ink": "8x8",
+      "ink": "8x9",
       "pad_top": 6,
       "advance": 8,
-      "_ink_note": "2026-11-10 小字改 8x8：墨迹必须 <= 步进 8px，否则相邻字互压（商店金额标签糊成一团实证）"
+      "shadow": false,
+      "_ink_note": "2026-11-23 改 8x9：BDF 源换成 Unifont 原生 16x16 点阵经 OR 降采样（scripts/font/unifont_to_small_bdf.py）。原来的 SimSun 12px 缩到 8x8 后复杂字糊成一团（「蛋」「蘑」实测认不出）。宽度仍限 8px（必须 <= 步进 8），高度用满 9px（槽内 y=6..14，与旧字库一致）。"
     },
     {
       "label": "Sym",
@@ -70,7 +74,17 @@
       "ink": "8x12",
       "pad_top": 2,
       "_slot_chars_note": "0x36..0x3E 句读标点，按 64B/字 8x16 单独生成；不再复用整张 charmap 的前 9 个汉字（那会让所有标点变成汉字残片）",
-      "slot_chars": [";", "。", "－", "~", "、", "，", "！", "？", "："]
+      "slot_chars": [
+        ";",
+        "。",
+        "－",
+        "~",
+        "、",
+        "，",
+        "！",
+        "？",
+        "："
+      ]
     }
   ]
 }

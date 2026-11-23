@@ -1830,6 +1830,7 @@ class TranslationEngine:
             bdf_map_args: list[str] = []
             ink_map_args: list[str] = []
             pad_map_args: list[str] = []
+            shadow_map_args: list[str] = []
             slot_chars_args: list[str] = []
             for s in slots:
                 lbl = s.get("label", "Unknown")
@@ -1840,6 +1841,11 @@ class TranslationEngine:
                     ink_map_args.append(f"{lbl}={s['ink']}")
                 if s.get("pad_top") is not None:
                     pad_map_args.append(f"{lbl}={int(s['pad_top'])}")
+                # 逐槽阴影开关（2026-11-24）：slot 里写 "shadow": true/false。
+                # 8px 小字加阴影会占掉本已不足的列宽（Small 墨迹 8px +
+                # 阴影 1px = 9px > 步进 8px），实测队伍名字糊成一片。
+                if "shadow" in s:
+                    shadow_map_args.append(f"{lbl}={1 if s['shadow'] else 0}")
                 # 显式字符槽（Sym 句读标点）：按 64B/字 8x16 单独生成，
                 # 不能沿用「整张 charmap 从第 0 字起」的 16x16 缓冲。
                 if s.get("slot_chars"):
@@ -1874,9 +1880,10 @@ class TranslationEngine:
                 args += ["--ink-map", *ink_map_args]
             if pad_map_args:
                 args += ["--pad-map", *pad_map_args]
-            if fp_cfg.get("shadow") is False:
-                args.append("--no-shadow")
-            else:
+            if shadow_map_args:
+                args += ["--shadow-map", *shadow_map_args]
+            # 全局兜底（默认 false）：仅在 slot 未显式写 shadow 时生效。
+            if fp_cfg.get("shadow") is True:
                 args.append("--shadow")
             r = subprocess.run(args, capture_output=True, text=True, timeout=120)
             if r.returncode != 0:
@@ -1891,7 +1898,20 @@ class TranslationEngine:
             try:
                 _charmap_path = get_charmap_path(self.config.game)
                 if _charmap_path.exists():
-                    _no_shadow = fp_cfg.get("shadow") is False
+                    # 逐槽阴影开关（2026-11-24）：slot 里 "shadow": true/false。
+                    # 未写则跟全局 fp_cfg["shadow"]（默认 False）。
+                    _slot_shadow = {
+                        str(s.get("label", "")).lower(): bool(s["shadow"])
+                        for s in slots if "shadow" in s
+                    }
+                    _global_shadow = fp_cfg.get("shadow") is True
+
+                    def _shadow_for_bin(name: str) -> bool:
+                        low = name.lower()
+                        for lbl, val in _slot_shadow.items():
+                            if lbl and lbl.lower() in low:
+                                return val
+                        return _global_shadow
                     # 标点回退源：优先 configs/{game}/fonts/normal.bdf。
                     # 2026-11-02 起不再引用仓根 fonts/firefly-bdf-bitmap（已废弃删除）。
                     _bdf_punct = None
@@ -1901,9 +1921,12 @@ class TranslationEngine:
                         if _p.is_file():
                             _bdf_punct = _p
                             break
+                    _any_no_shadow = False
                     for _bin in sorted(fonts_dir.glob("*.bin")):
                         if "_unshadow" in _bin.name or "Sym" in _bin.name:
                             continue
+                        _bin_no_shadow = not _shadow_for_bin(_bin.name)
+                        _any_no_shadow = _any_no_shadow or _bin_no_shadow
                         _args_patch = [
                             sys.executable,
                             str(_scripts_dir / "patch_font_punct.py"),
@@ -1913,11 +1936,11 @@ class TranslationEngine:
                         ]
                         if _bdf_punct:
                             _args_patch += ["--bdf-punct", str(_bdf_punct)]
-                        if _no_shadow:
+                        if _bin_no_shadow:
                             _args_patch.append("--no-shadow")
                         subprocess.run(_args_patch, capture_output=True, text=True, timeout=60)
                     self._log("info", "Punctuation glyphs patched (baseline + no right spill)")
-                    if _no_shadow:
+                    if _any_no_shadow:
                         from ..font_patch import (
                             patch_primary_missing_glyphs_from_reference,
                             restore_tuned_font_bins_from_reference,

@@ -1847,7 +1847,8 @@ class TranslationEngine:
                         f"{lbl}=" + ",".join(str(c) for c in s["slot_chars"])
                     )
 
-            _scripts_dir = Path(__file__).resolve().parents[3] / "scripts"
+            # 2026-11-23: scripts 重组后字库脚本在 scripts/font/ 下（旧路径已不存在）
+            _scripts_dir = Path(__file__).resolve().parents[3] / "scripts" / "font"
             args = [
                 sys.executable,
                 str(_scripts_dir / "build_chinese_font.py"),
@@ -2022,7 +2023,7 @@ class TranslationEngine:
             s.get("slot_size", s.get("glyph_count", 7168) * s.get("bytes_per_glyph", 128))
             for s in slots
         ]
-        _scripts_dir = root / "scripts"
+        _scripts_dir = root / "scripts" / "font"
         args = [
             sys.executable,
             str(_scripts_dir / "build_chinese_font.py"),

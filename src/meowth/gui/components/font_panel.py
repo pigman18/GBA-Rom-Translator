@@ -196,7 +196,7 @@ def _get_font_selection_file() -> Path:
 
 
 def _get_build_chinese_font_script() -> Path:
-    return _root() / "scripts" / "build_chinese_font.py"
+    return _root() / "scripts" / "font" / "build_chinese_font.py"
 
 
 def _get_charmap() -> Path:

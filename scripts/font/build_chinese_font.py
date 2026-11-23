@@ -402,7 +402,12 @@ def build_sym_bank(
     _scripts = Path(__file__).resolve().parent
     if str(_scripts) not in sys.path:
         sys.path.insert(0, str(_scripts))
-    from font.glyph_valign import resolve_valign
+    try:
+        from font.glyph_valign import resolve_valign
+    except ModuleNotFoundError:
+        # 2026-11-23: 本脚本已从 scripts/ 移入 scripts/font/，包根随之上移一级；
+        # 此时 ``font`` 包不可见，直接按同目录模块导入。
+        from glyph_valign import resolve_valign
 
     buf = bytearray(SYM_BYTES_PER_GLYPH * len(chars))
     for i, ch in enumerate(chars):

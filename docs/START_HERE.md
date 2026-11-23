@@ -1,6 +1,6 @@
 # START HERE
 
-> 文档按「通用 / 游戏 / 归档」三层。**必读 9 篇，归档 3 篇不必读。**
+> 文档按「通用 / 游戏 / 归档」三层。**必读 10 篇，归档 3 篇不必读。**
 
 ---
 
@@ -14,7 +14,8 @@
 | AXVJ | `POKEMON_RUBY_AXVJ00/00-总览.md` | 现状、产物基线 SHA、未修项、路径 |
 | AXVJ | `POKEMON_RUBY_AXVJ00/10-文本与数据.md` | 协议、注入模型、27 模块表、表算法、物种名、背包 |
 | AXVJ | `POKEMON_RUBY_AXVJ00/20-渲染与钩子.md` | textMode 分派、字段、常量、补丁站点、已证伪 |
-| AXVJ | `POKEMON_RUBY_AXVJ00/30-问题与验证.md` | BUG 台账、BUG-9 三候选、bot 流程、判据 |
+| AXVJ | `POKEMON_RUBY_AXVJ00/30-问题与验证.md` | BUG 状态、BUG-9/BUG-10 定案、bot 流程、判据 |
+| AXVJ | `POKEMON_RUBY_AXVJ00/40-BUG根因台账.md` | **各 BUG 的根因 + 证据等级 + 已证伪的假根因** |
 | AXVJ | `POKEMON_RUBY_AXVJ00/90-历史与已证伪.md` | 历史阶段、不再维护的概念、踩坑 |
 | 火红 | `FIRERED_BPRE00/00-12px与昵称参照.md` | 12px 实测、昵称槽解耦、不要照抄的部分 |
 | 归档 | `归档/*.md`（3 篇） | 窗口系统静态分析、11-11 渲染探索史、火红昵称槽解剖 —— 原始证据，非必读 |

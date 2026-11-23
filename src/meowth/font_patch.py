@@ -194,7 +194,7 @@ def _glyph_index_from_charmap(charmap_path: Path, char: str) -> int | None:
 
     scripts = Path(__file__).resolve().parents[2] / "scripts"
     spec = importlib.util.spec_from_file_location(
-        "build_chinese_font", scripts / "build_chinese_font.py"
+        "build_chinese_font", scripts / "font" / "build_chinese_font.py"
     )
     if spec is None or spec.loader is None:
         return None
@@ -246,10 +246,10 @@ def _load_font_slot_codec():
 
     scripts = Path(__file__).resolve().parents[2] / "scripts"
     spec_blit = importlib.util.spec_from_file_location(
-        "sim_gba_font_blit", scripts / "sim_gba_font_blit.py"
+        "sim_gba_font_blit", scripts / "font" / "sim_gba_font_blit.py"
     )
     spec_bcf = importlib.util.spec_from_file_location(
-        "build_chinese_font", scripts / "build_chinese_font.py"
+        "build_chinese_font", scripts / "font" / "build_chinese_font.py"
     )
     if (
         spec_blit is None
@@ -526,7 +526,7 @@ def _charmap_glyph_indices(game_id: str) -> set[int]:
 
     scripts = Path(__file__).resolve().parents[2] / "scripts"
     spec = importlib.util.spec_from_file_location(
-        "build_chinese_font", scripts / "build_chinese_font.py"
+        "build_chinese_font", scripts / "font" / "build_chinese_font.py"
     )
     if spec is None or spec.loader is None:
         return set()

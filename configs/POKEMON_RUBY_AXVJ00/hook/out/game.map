@@ -172,8 +172,8 @@ LOAD out\obj/PokeNav_TrainerEye_ListRedraw_hook.o
  *fixed_string_entry.o(.text*)
  *(.text*)
  .text          0x088001b4     0x12f0 out\obj/PrintNextChar_hook.o
-                0x08800c0c                GetStringWidth
-                0x08800c58                PrintNextChar_Hook
+                0x08800c08                GetStringWidth
+                0x08800c54                PrintNextChar_Hook
  .text          0x088014a4       0x24 out\obj/MapNamePopup_hook.o
                 0x088014a4                MapNamePopup_CalcLeftPx
  .text          0x088014c8       0x14 out\obj/UpdateNickInHealthbox_hook.o

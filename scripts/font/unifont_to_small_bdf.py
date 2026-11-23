@@ -52,7 +52,7 @@ from pathlib import Path
 
 ROOT = Path(__file__).resolve().parents[2]
 
-INK_W = 8
+INK_W = 9
 INK_H = 9
 PAD_TOP = 6          # 必须与旧 small 字库一致（实测 y=6..14），否则多行互相压盖
 SLOT = 16

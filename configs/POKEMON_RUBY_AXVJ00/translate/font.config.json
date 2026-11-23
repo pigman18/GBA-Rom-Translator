@@ -58,11 +58,11 @@
       "glyph_count": 7168,
       "bytes_per_glyph": 128,
       "bdf": "small.bdf",
-      "ink": "8x9",
+      "ink": "9x9",
       "pad_top": 6,
-      "advance": 8,
+      "advance": 10,
       "shadow": false,
-      "_ink_note": "2026-11-23 改 8x9：BDF 源换成 Unifont 原生 16x16 点阵经 OR 降采样（scripts/font/unifont_to_small_bdf.py）。原来的 SimSun 12px 缩到 8x8 后复杂字糊成一团（「蛋」「蘑」实测认不出）。宽度仍限 8px（必须 <= 步进 8），高度用满 9px（槽内 y=6..14，与旧字库一致）。"
+      "_ink_note": "2026-11-24 改 9x9 / advance 10：照抄 12px 的跨列方案（12px 是墨迹 11px + 步进 12，跨 2 列工作正常）。BDF 源是 Unifont 原生 16x16 经 OR 降采样到 9x9。之前用 8x9 失败是因为墨迹只有 8px，第 9 列本身没内容。"
     },
     {
       "label": "Sym",

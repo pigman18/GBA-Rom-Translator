@@ -157,19 +157,25 @@ struct ChsPhase {
  *   的 tile_get_px/put_px 正是按高半字节读，是重影/粘连的直接根因。
  *
  * 三档字形（与 translate/font.config.json 的 ink/pad_top 必须逐项一致）：
- *   Normal 12×13 @pad2   advance 12   ← 常规对话/菜单/说明
+ *   Normal 12×12 @pad3   advance 12   ← 常规对话/菜单/说明（墨迹 11px，跨 2 列）
  *   Middle  9×11 @pad2   advance 12   ← fc 06 05 中号
- *   Small   9×9  @pad6   advance 8    ← 队伍/战斗顶栏等小字（绘制裁到 8 列 = 8×9）
+ *   Small   9×9  @pad6   advance 10   ← 队伍/战斗顶栏等小字（跨 2 列）
  *   Native  8×16 @pad0   advance 8    ← 原版假名/数字/符号（1bpp→4bpp）
  *
- * 步进与墨迹解耦：Small 取 8 而不是 9，是为了落在 8px 硬件栅格上（原生
- * font4 同窗混排时零相位漂移、且不撑破队伍窗定宽字段）；代价是第 9 列不绘，
- * 视觉上是「8×9」，与 docs/GBA_12px字体渲染方案.md 的允许范围一致。
- * Normal 12 % 8 = 4，存在 0/4 二相周期 —— 由 text_render.c 的像素游标
- * （行内 px）显式承担，不再靠 tile 列反推。
+ * ── Small 步进 8 → 10（2026-11-24）──────────────────────────────────
+ * 照抄 12px 的跨列方案：12px 墨迹 11px + 步进 12，跨 2 列工作正常
+ * （诊断日志 t0 间隔 2，如 97→99，靠 grid_load 的 phase 挑回保留上一字右缘）。
+ *
+ * 之前 8px 步进失败的真正原因不是 tile 机制，而是**字库墨迹只有 8px**：
+ * sx=8 那一列本身是空的，p1 无内容可写，看起来像「第 9 列丢了」。
+ * 现在墨迹改 9px（Unifont 16x16 经 OR 降采样），sx=0..8 都有笔画。
+ *
+ * Normal 12 % 8 = 4，存在 0/4 二相周期；Small 10 % 8 = 2，四相 0/2/4/6。
+ * 相位由 grid_phase_adv 从串首重扫累计宽度算出（&7），
+ * 不靠 tile 列反推，所以非 8 倍数的步进天然支持。
  * ===================================================================== */
 #define CHS_GLYPH_ADVANCE_PX 12
-#define CHS_GLYPH_ADVANCE_SMALL 8
+#define CHS_GLYPH_ADVANCE_SMALL 10
 #define CHS_CHAR_HEIGHT_PX   12
 #define CHS_LINE_FEED_PX     16
 #define CHS_CELL_BYTES       128

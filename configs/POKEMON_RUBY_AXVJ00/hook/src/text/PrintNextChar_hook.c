@@ -1007,8 +1007,14 @@ static void grid_load(TextPrinter *win, GridTarget *t,
         addr = t->base + (uint32_t)t->rel * GRID_PAIR_BYTES;
     }
     grid_pair_load(q, addr);
+    /* 挑回本列左 phase 个像素：它们属于**上一个字**的右缘。
+     *
+     * ★ 2026-11-24：旧代码写死 `x < 4`，因为当时只有 12px（phase 最大 4）。
+     *   Small 步进改 10 后 phase 可达 6（10 % 8 = 2，四相 0/2/4/6），
+     *   写死 4 会把上一字的第 5~6 像素清掉 —— 那正是「本字左邻的右缘」，
+     *   表现为字与字之间缺笔画。改为按 phase 动态挑回，两档字号都正确。 */
     for (y = 0u; y < 16u; ++y) {
-        for (x = 0u; x < 4u; ++x) {
+        for (x = 0u; x < phase && x < 8u; ++x) {
             uint8_t v = grid_pair_px(q, x, y);
             if (v != 0u && v != bg)
                 grid_pair_set(p0, x, y, v);

@@ -4921,3 +4921,241 @@ gdb:
   cfg:
     n: 16
   default: false
+
+# ── BUG-12 血条名字调查（2026-11-24）─────────────────────────────────────
+- name: HgLoopCount
+  address: '0x0804252C'
+  description: Alt2 循环次数定型点（r0=StringLength(gDisplayedStringBattle)，下一步 r8=r0）
+  cfg:
+    n: 12
+  default: false
+- name: HgCopyStart
+  address: '0x080425CC'
+  description: Alt2 图形搬运循环入口（r8=次数；看 r8 是否随中文变长而变大）
+  cfg:
+    n: 12
+  default: false
+- name: HgCpuSet
+  address: '0x080425F0'
+  description: Alt2 每格 CpuSet（r0=dst r1=src r2=ctrl）；看写入目标与长度
+  cfg:
+    n: 16
+  default: false
+- name: HgNameBuf
+  address: '0x0804252E'
+  description: 名字缓冲已就绪（r4=? r6=tile ptr）；看 buf 内容与 tile 基址
+  cfg:
+    n: 16
+  default: false
+- name: HgBufDump
+  address: '0x0804252C'
+  description: BUG-12 名字缓冲实测（dump 0x0202362C 的 32B + r0 长度）
+  cfg:
+    n: 8
+    buf: 0x0202362C
+    bufn: 32
+  default: false
+- name: HgTilePtr
+  address: '0x0804253E'
+  description: BUG-12 tile 目标指针（r6=ptr）+ r8 循环次数
+  cfg:
+    n: 8
+  default: false
+- name: HgPnc
+  address: '0x080032F8'
+  description: 血条名字的 PrintNextChar 入口（win 字段 + buffered 判定）
+  cfg:
+    n: 6
+    only_buffered: true
+  default: false
+- name: HgTileData
+  address: '0x0804252E'
+  description: BUG-12 血条 tileData 参数（r6 = 0x02000520 + pos*0x180）
+  cfg:
+    n: 8
+  default: false
+- name: HgSkipEntry
+  address: '0x088000D8'
+  description: NickSkipTiler_Hook 入口（确认 hook B 是否被执行）
+  cfg:
+    n: 8
+  default: false
+- name: HgSeg2
+  address: '0x080425A8'
+  description: 第二段入口（hook B 应跳到这里）
+  cfg:
+    n: 8
+  default: false
+- name: HgAlt1Cover
+  address: '0x0804166A'
+  description: Alt1 的 CpuSet（0x080415A0 函数内的 0x2B 覆盖）
+  cfg:
+    n: 6
+  default: false
+- name: HgMainCover
+  address: '0x08042BAA'
+  description: Main 的 CpuSet（0x08042B14 函数内的 0x2B 覆盖）
+  cfg:
+    n: 6
+  default: false
+- name: HgBeforeSkip
+  address: '0x08042536'
+  description: hook B 执行前，dump EWRAM 名字缓冲 0x02000520（看是否已有 22）
+  cfg:
+    n: 6
+    buf: 0x02000520
+    bufn: 192
+  default: false
+- name: HgAfterSeg2
+  address: '0x0804261C'
+  description: 第二段结束后（0x0804261C e03f），dump EWRAM 与 VRAM 目标
+  cfg:
+    n: 6
+    buf: 0x02000520
+    bufn: 192
+  default: false
+- name: HgHookA
+  address: '0x08800094'
+  description: NickFullName_Hook 入口（确认 hook A 是否执行 + r5=mon）
+  cfg:
+    n: 6
+  default: false
+- name: HgAfterHookA
+  address: '0x08042444'
+  description: hook A 返回后（r0=EOS），看 gDSB+3 被写成什么
+  cfg:
+    n: 6
+  default: false
+- name: HgFieldDump
+  address: '0x080032F8'
+  description: BUG-12 现场：名字窗的 tm/tileData/cursorTileX/cursorX 全字段
+  cfg:
+    n: 40
+    dump_all: true
+  default: false
+- name: HgWinId
+  address: '0x080032F8'
+  description: BUG-12 区分敌我：名字串内容 + 落址基址
+  cfg:
+    n: 20
+  default: false
+- name: HgCpuSetDst
+  address: '0x080425F0'
+  description: BUG-12 第二段 CpuSet 实测 src/dst/tile
+  cfg:
+    n: 30
+  default: false
+- name: HgCsAlt1
+  address: '0x0804166A'
+  description: Alt1 的 CpuSet（0x080415A0 函数）
+  cfg:
+    n: 20
+  default: false
+- name: HgCsMain
+  address: '0x08042BAA'
+  description: Main 的 CpuSet（0x08042B14 函数）
+  cfg:
+    n: 20
+  default: false
+- name: HgCsAlt2b
+  address: '0x08042610'
+  description: Alt2 第二个 CpuSet（下半片）
+  cfg:
+    n: 20
+  default: false
+- name: HgGuard
+  address: '0x080425B8'
+  description: BUG-12 第二段守卫：看哪个 battler 被跳过（r4结构+0x3A状态位）
+  cfg:
+    n: 20
+  default: false
+- name: HgCsBak
+  address: '0x0804266E'
+  description: BUG-12 备用路径 CpuSet（0x0804262C 分支，tile=r5+1）
+  cfg:
+    n: 20
+  default: false
+- name: HgCsBak2
+  address: '0x08042690'
+  description: BUG-12 备用路径第二个 CpuSet（下半片）
+  cfg:
+    n: 20
+  default: false
+- name: HgR6Skip
+  address: '0x08042536'
+  description: hookB 入口时的 r6
+  cfg:
+    n: 20
+  default: false
+- name: HgR6Seg2
+  address: '0x080425CC'
+  description: 第二段入口时的 r6（主路径）
+  cfg:
+    n: 20
+  default: false
+- name: HgR6Bak
+  address: '0x0804262C'
+  description: 备用路径入口时的 r6
+  cfg:
+    n: 20
+  default: false
+- name: HgEwSeg2
+  address: '0x080425F0'
+  description: 主路径 CpuSet 前的 EWRAM 源内容
+  cfg:
+    n: 20
+  default: false
+- name: HgEwBak
+  address: '0x08042690'
+  description: 备用路径 CpuSet 前的 EWRAM 源内容
+  cfg:
+    n: 20
+  default: false
+- name: HgAfterDraw
+  address: '0x08042536'
+  description: RenderTextHandleBold 返回瞬间：dump 两个名字区的真实内容
+  cfg:
+    n: 20
+  default: false
+- name: HgCsTrace
+  address: '0x080425F0'
+  description: 主路径 CpuSet：dump 源和目标 tile 号
+  cfg:
+    n: 20
+  default: false
+- name: HgCsTrace2
+  address: '0x08042690'
+  description: 备用路径 CpuSet：dump 源和目标 tile 号
+  cfg:
+    n: 20
+  default: false
+- name: HgAlt1
+  address: '0x080415A0'
+  description: Alt1 入口（0x080415A0）看谁走这条
+  cfg:
+    n: 20
+  default: false
+- name: HgAlt2
+  address: '0x08042408'
+  description: Alt2 入口（0x08042408）
+  cfg:
+    n: 20
+  default: false
+- name: HgMain
+  address: '0x08042B14'
+  description: Main 入口（0x08042B14）
+  cfg:
+    n: 20
+  default: false
+- name: HgDispatch
+  address: '0x08042E70'
+  description: UpdateHealthboxAttribute 分派器：抓 r7 属性值
+  cfg:
+    n: 30
+  default: false
+- name: HgSeg2Entry
+  address: '0x080425A8'
+  description: hookB 跳转目标（第二段入口）：确认 hookB 生效
+  cfg:
+    n: 30
+  default: false

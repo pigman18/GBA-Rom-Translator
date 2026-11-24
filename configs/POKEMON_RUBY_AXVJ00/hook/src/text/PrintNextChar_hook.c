@@ -627,20 +627,48 @@ static int grid_is_buffered(TextPrinter *win)
         || (tpl != 0 && win_u32(tpl, TPL_TILEMAP) == 0u);
 }
 
+/* ★ 2026-11-24 BUG-12：buffered 窗每字缓冲字节数。
+ *
+ * 结论：**保持原版 64B/字，不做 128B**。
+ *
+ * 一度想改成 128B（16px 宽）来容纳 9px 墨迹，但实测火红汉化版：
+ *   队伍「喷火龙」9px 墨迹 + 1px 空 = 10px 步进
+ *   战斗「哈克龙」27px 三字连排 = 9px 步进、零空隙
+ * 火红是**紧凑排列**，不是每字 16px。128B 会变成「火　焰　鸡」稀疏效果。
+ *
+ * 正确做法：64B 单元（8px 宽 × 16px 高）+ adv=9。
+ *   adv=9 时 phase 八相 0..7，字 N 的墨迹从第 N 个 8px 格的第 phase 列开始，
+ *   第 9 个像素落到下一格第 0 列 —— 正好被下一字的 phase 挑回逻辑保留
+ *   （grid_load 里 `x < phase` 挑回上一字右缘）。相邻字自然咬合，
+ *   屏幕效果 9px/字，与火红一致，且 6 字容量不变。
+ *
+ * 为什么不能用 adv=10 + 64B：phase=6 时 delta=(6+10)>>3=2 → rel 跳格，
+ * 第 4 个字直接丢失（实测 w=30 时 rel 从 2 跳到 4）。 */
+#define BUF_NAME_AREA_START  0x02000520u
+
+static unsigned grid_buf_cell(TextPrinter *win)
+{
+    /* 名字区与 HP 区都是 64B/字（原版口径）。保留此函数是为了让
+     * grid_emit / grid_load / grid_fill_blank_cell 共用同一口径，
+     * 将来若要再分档只需改这里。 */
+    (void)win;
+    return GRID_PAIR_BYTES;
+}
+
 /* 前向声明：grid_fill_blank_cell 需要它（定义在 §3 末尾） */
 static uint8_t grid_bg(TextPrinter *win);
 
-/* buffered 窗的空白格：把当前光标那一格的缓冲字节刷成背景色并推进一格。
+/* buffered 窗的空白格：把当前字的单元刷成背景色并推进指针。
  *
- * 只用于 8px 单列字（fontNum 2/4）的 buffered 窗，例如战斗血条的 HP 数字。
  * 为什么必须刷（BUG-5）：HP 串首字符是空格 0x00，若不刷就保留上一条串
  * （等级）留在同一位置的字模 → 等级 36 的首位「3」变成 HP 的 377。
- * 为什么刷满 GRID_PAIR_BYTES 是安全的：buffered 不写 tilemap，8px 字只占
- * 一个 tile 列，不存在 12px 跨列共享左 4px 的问题（见 grid_load 注释）。 */
+ *
+ * ★ 2026-11-24 BUG-12：落址照原版「指针累加」（win[0x20]），
+ * 不是 base + cursorTileX*64。刷 64B（一个单元）后指针 +64，
+ * 与原版 0x080033A6 完全一致。 */
 static void grid_fill_blank_cell(TextPrinter *win)
 {
-    uint32_t addr = win_u32(win, WIN_TILE_DATA)
-                  + (uint32_t)win_u8(win, WIN_CURSOR_TILE_X) * GRID_PAIR_BYTES;
+    uint32_t addr = win_u32(win, WIN_TILE_DATA);
     uint8_t bg = grid_bg(win);
     uint32_t v = (uint32_t)bg * 0x11111111u;
     uint32_t *d = (uint32_t *)(uintptr_t)addr;
@@ -648,8 +676,7 @@ static void grid_fill_blank_cell(TextPrinter *win)
 
     for (i = 0u; i < GRID_PAIR_BYTES / 4u; ++i)
         d[i] = v;
-    win_set_u8(win, WIN_CURSOR_TILE_X,
-               (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + 1u));
+    win_set_u32(win, WIN_TILE_DATA, addr + GRID_PAIR_BYTES);
 }
 
 /* =====================================================================
@@ -862,7 +889,7 @@ static int grid_is_bag_list(TextPrinter *win)
  *（切招式页再切回撞 UI）。只推进、不写。 */
 static void grid_emit(TextPrinter *win, GridTarget *t,
                       const uint8_t *p0, const uint8_t *p1,
-                      unsigned ncols, unsigned delta)
+                      unsigned ncols, unsigned delta, unsigned phase)
 {
     unsigned c;
     uint16_t t0;
@@ -949,10 +976,72 @@ static void grid_emit(TextPrinter *win, GridTarget *t,
                 (uint16_t)(t0 + 2u * c), (uint16_t)(t0 + 2u * c + 1u));
         }
     } else {
-        uint32_t addr = t->base + (uint32_t)t->rel * GRID_PAIR_BYTES;
-        grid_pair_store(p0, addr);
-        if (ncols > 1u)
-            grid_pair_store(p1, addr + GRID_PAIR_BYTES);
+        /* ★★ 2026-11-24 BUG-12 定案：buffered 落址必须照原版「指针累加」★★
+         *
+         * 原版 textMode 2（反汇编 0x0800338C，权威）：
+         *   8003394  ldr  r1,[r5,#32]   ; r1 = win[0x20] = tileData 指针
+         *   80033a2  bl   0x08003630    ; 画字（dst = r1）
+         *   80033a6  ldr  r0,[r5,#32]
+         *   80033a8  adds r0,#64        ; +64
+         *   80033aa  str  r0,[r5,#32]   ; win[0x20] += 64   ★ 指针自己往前走
+         *
+         * ⇒ 原版落址 = **win[0x20] 指针本身**，`cursorTileX(0x1B)` 完全不参与。
+         *   它只用于文本层列号（tilemap 用）。
+         *
+         * 我们之前用 `base + rel*64`（base 固定、rel 取 win[0x1B]），语义错了：
+         *   GDB 实测 rel 序列 = 0 0 1 2 3 3 4  →  写址 0x520 0x520 0x560
+         *   0x5A0 0x5E0 0x5E0 0x620  ⇒ 出现重复写址，后写覆盖前写，字丢失。
+         *   VRAM 佐证：sprite8 行1/行2 被铺满 8 个 tile（64px），原版只用 2 个。
+         *
+         * 正确做法（与原版逐条对齐）：
+         *   addr = win[0x20]            ← 指针，不是 base+rel
+         *   写 addr
+         *   win[0x20] = addr + 64       ← 推进指针
+         *
+         * 每字固定推进 64B（一个单元 = 8px 宽 × 16px 高 = 上片32B + 下片32B），
+         * 与字库的 9px 墨迹如何咬合由 grid_draw_chs 的 phase 处理，
+         * 落址本身永远只走 64B —— 这就是原版的设计。
+         *
+         * 注意：不能用 grid_buf_cell(win) 的返回值来推进（那会随窗变化），
+         * 原版恒为 64。 */
+        uint32_t addr = win_u32(win, WIN_TILE_DATA);
+        unsigned i;
+
+        /* p0 写本单元 col phase..7，但**不能覆盖 col0..phase-1**
+         * （那是上一个字的尾巴）。逐字节按列边界合并。 */
+        for (i = 0u; i < GRID_PAIR_BYTES; ++i) {
+            uint8_t *q = (uint8_t *)(uintptr_t)(addr + i);
+            uint8_t src = p0[i];
+            uint8_t dst = *q;
+            unsigned col = ((i & 3u) << 1);      /* 该字节的左像素列（0,2,4,6） */
+
+            if (col >= phase)
+                dst = (uint8_t)((dst & 0xF0u) | (uint8_t)(src & 0x0Fu));
+            if (col + 1u >= phase)
+                dst = (uint8_t)((dst & 0x0Fu) | (uint8_t)(src & 0xF0u));
+            *q = dst;
+        }
+
+        if (ncols > 1u) {
+            uint8_t *q = (uint8_t *)(uintptr_t)(addr + GRID_PAIR_BYTES);
+
+            /* p1 里 dx>=8 的像素 → 下一单元 col0.. 合并（与下一字的 p0 共享） */
+            for (i = 0u; i < GRID_PAIR_BYTES; ++i) {
+                uint8_t src = p1[i];
+                uint8_t dst = q[i];
+                uint8_t lo = (uint8_t)(src & 0x0Fu);
+                uint8_t hi = (uint8_t)(src >> 4);
+
+                if (lo != 0u)
+                    dst = (uint8_t)((dst & 0xF0u) | lo);
+                if (hi != 0u)
+                    dst = (uint8_t)((dst & 0x0Fu) | (uint8_t)(hi << 4));
+                q[i] = dst;
+            }
+        }
+
+        /* ★ 照原版 0x080033A8：指针 +64（不是 +rel、不是 +cell） */
+        win_set_u32(win, WIN_TILE_DATA, addr + GRID_PAIR_BYTES);
     }
     win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(t->rel + delta));
 }
@@ -1004,7 +1093,11 @@ static void grid_load(TextPrinter *win, GridTarget *t,
             return;
         addr = t->base + 32u * t0;
     } else {
-        addr = t->base + (uint32_t)t->rel * GRID_PAIR_BYTES;
+        /* ★ 2026-11-24 BUG-12：读回也照原版「指针」模型。
+         * grid_load 在 grid_emit 之前调用，此时 win[0x20] 仍指向本字单元
+         * （emit 末尾才 +64），所以直接读 win[0x20] 就是本字地址。
+         * 不能用 base+rel*64 —— 原版落址根本不用 cursorTileX。 */
+        addr = win_u32(win, WIN_TILE_DATA);
     }
     grid_pair_load(q, addr);
     /* 挑回本列左 phase 个像素：它们属于**上一个字**的右缘。
@@ -1154,10 +1247,23 @@ static void grid_draw_chs(TextPrinter *win, uint16_t gidx, unsigned phase)
     unsigned sx, sy, ncols, delta;
     uint8_t fg, bg, sh;
     const uint8_t *g;
-    unsigned adv;
+    unsigned adv, ink_w;
     const uint8_t *font = grid_font_for(win_u8(win, WIN_FONTNUM_REAL), &adv);
 
-    ncols = (phase + adv + 7u) >> 3;                     /* 1 或 2 列承载 */
+    /* ★ 2026-11-24 BUG-12 定案：ncols 按**墨迹宽度**算，不按 advance。
+     *
+     * 一列 = 8 像素。墨迹从 phase 起占 ink_w 像素，
+     * 需要 ceil((phase + ink_w) / 8) 列。
+     *   12px（Normal）: ink_w=12，phase 0/4  → 2 列
+     *    8px（Small） : ink_w=9，phase 0..7  → 2 列（第 2 列只含 1~2 像素）
+     *
+     * buffered 同样允许 2 列 —— 第 2 列的那 1~2 个像素要写进**下一个 64B 单元**
+     * 的开头（与下一字的 p0 共享），由 grid_emit 的 buffered 分支做合并写。
+     * 早期实现把 buffered 强制 ncols=1，导致 9px 墨迹的第 9 列被丢弃，
+     * 字被削窄一列。 */
+    ink_w = (win_u8(win, WIN_FONTNUM_REAL) == 2u
+             || win_u8(win, WIN_FONTNUM_REAL) == 4u) ? CHS_INK_SMALL_W : GRID_INK_W;
+    ncols = (phase + ink_w + 7u) >> 3;                    /* 1 或 2 列承载 */
     delta = (phase + adv) >> 3;                          /* Small: 恒 1 */
     if (!grid_setup(win, &t) || gidx >= GRID_GLYPH_SLOTS) {
         win_set_u8(win, WIN_CURSOR_TILE_X,
@@ -1171,34 +1277,49 @@ static void grid_draw_chs(TextPrinter *win, uint16_t gidx, unsigned phase)
     diag_emit(0u, gidx, phase, win, &t, grid_tile(win, t.col), fg, bg);
 
     grid_load(win, &t, p0, p1, ncols, phase, bg);
-    /* 阴影层：origin 的 tm1 预载字模是「C 主墨 + E 右下 1px 阴影 + D 背景」
-     * 三色预渲染（pal9/pal15 实测 1/8/15）。12px 汉字字库只有 0/15 单色，
-     * 若只写 C，整屏汉字比 origin 少一整层墨迹 → 菜单发灰、发细、颜色对不上。
-     * 按同一语义程序化补影：墨迹右下 1px 先铺 E，再写 C 压在上面。
-     * 不是 DONT.md §9 禁止的 `colors[0]=bg+OR`（那会把背景混进墨色糊成重影），
-     * 这里是显式三色独立像素。 */
-    for (sy = 0u; sy + 1u < 16u; ++sy) {
-        for (sx = 0u; sx < GRID_INK_W; ++sx) {
-            unsigned dx = phase + sx + 1u;
-            uint8_t *p;
-            if (!grid_glyph_px(g, sx, sy) || dx >= ncols * 8u)
-                continue;
-            p = (dx >> 3) ? p1 : p0;
-            grid_pair_set(p, dx & 7u, sy + 1u, sh);
+    /* ★ 2026-11-24 修 BUG-12：字模必须按 pad_top 读，且目标用同一 y。
+     *
+     * 字库槽 128B = 2 个 tile 列 × 16 行（grid_glyph_px：x>>3 选列、
+     * y>>3 选上下半），墨迹不占满整槽 —— 三档 pad_top 不同（game.h）：
+     *   Normal 12×12 @pad3   ← 墨迹在行 3..14
+     *   Middle  9×11 @pad2   ← 墨迹在行 2..12
+     *   Small   9×9  @pad6   ← 墨迹在行 6..14  ★
+     *
+     * 旧实现从 y=0 读、从 y=0 写，Small 的墨迹（行 6..14）被当成行 0..8
+     * 画出去 —— 整个字上移 6px 跑到可见区外，名字区一片空白。
+     * 修法：源索引和目标行都用 `y + pad`，16 行槽足够容纳（6+9=15 < 16）。 */
+    {
+        unsigned pad = (win_u8(win, WIN_FONTNUM_REAL) == 2u
+                        || win_u8(win, WIN_FONTNUM_REAL) == 4u)
+                       ? CHS_INK_SMALL_TOP : CHS_INK_NORMAL_TOP;
+        unsigned ink_h = (win_u8(win, WIN_FONTNUM_REAL) == 2u
+                          || win_u8(win, WIN_FONTNUM_REAL) == 4u)
+                         ? CHS_INK_SMALL_H : CHS_INK_NORMAL_H;
+
+        for (sy = 0u; sy < ink_h; ++sy) {
+            unsigned ty = sy + pad;
+
+            if (ty >= 16u)
+                break;
+            /* 阴影层：墨迹右下 1px 先铺 E（与旧实现同语义） */
+            for (sx = 0u; sx < ink_w; ++sx) {
+                unsigned dx = phase + sx + 1u;
+                uint8_t *p;
+                if (!grid_glyph_px(g, sx, ty) || dx >= ncols * 8u)
+                    continue;
+                p = (dx >> 3) ? p1 : p0;
+                if (ty + 1u < 16u)
+                    grid_pair_set(p, dx & 7u, ty + 1u, sh);
+            }
+            for (sx = 0u; sx < ink_w; ++sx) {
+                unsigned dx = phase + sx;
+                uint8_t *p = (dx >> 3) ? p1 : p0;
+                if (grid_glyph_px(g, sx, ty))
+                    grid_pair_set(p, dx & 7u, ty, fg);
+            }
         }
     }
-    for (sy = 0u; sy < 16u; ++sy) {
-        for (sx = 0u; sx < GRID_INK_W; ++sx) {
-            unsigned dx = phase + sx;
-            uint8_t *p = (dx >> 3) ? p1 : p0;
-            uint8_t v = grid_glyph_px(g, sx, sy);
-            /* 背景已由 grid_pair_fill 铺满；此处不能再写 bg，否则会把上一步
-             * 刚补的阴影层整片洗掉。只在主墨像素上写 C。 */
-            if (v)
-                grid_pair_set(p, dx & 7u, sy, fg);
-        }
-    }
-    grid_emit(win, &t, p0, p1, ncols, delta);
+    grid_emit(win, &t, p0, p1, ncols, delta, phase);
 }
 
 /* PCS 单字节：句读 0x36..0x3E 读 CHS Sym（与 Wokann 增益版同构）；
@@ -1362,7 +1483,7 @@ static void grid_draw_pcs(TextPrinter *win, uint8_t glyph, unsigned phase)
             grid_pair_set(p, dx & 7u, sy, nv);
         }
     }
-    grid_emit(win, &t, p0, p1, ncols, delta);
+    grid_emit(win, &t, p0, p1, ncols, delta, phase);
 }
 
 /* =====================================================================

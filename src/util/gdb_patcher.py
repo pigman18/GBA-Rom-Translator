@@ -319,10 +319,10 @@ def handler(name: str):
 
 def _read_win(gdb: GdbClient, win: int) -> bytes:
     try:
-        b = bytes(gdb.read_mem(win, 0x20))
+        b = bytes(gdb.read_mem(win, 0x24))
     except GdbError:
         return b""
-    return b[:0x20]
+    return b[:0x24]
 
 
 def _win_fields(wb: bytes) -> str:
@@ -335,6 +335,8 @@ def _win_fields(wb: bytes) -> str:
         f" TILE_BASE=0x{u16(wb, 0x16):04X} TILE_OFF=0x{u16(wb, 0x18):04X}"
         f" curX={wb[0x1A]} curTX={wb[0x1B]} curY={wb[0x1C]} curTY={wb[0x1D]}"
         f" index={u16(wb, 0x14)}"
+        # +0x20 = RenderTextHandleBold 写进去的 dest buffer ptr（tm2/buffered 的基址）
+        + (f" TILE_DATA=0x{u32(wb, 0x20):08X}" if len(wb) >= 0x24 else "")
     )
 
 
@@ -1449,6 +1451,108 @@ def _on_lz_vram(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> No
 
 
 # ---------------------------------------------------------------------------
+# BUG-12 血条名字调查（2026-11-24）
+# 目标：实测 Alt2(sub_80451A0) 的循环次数 r8 与名字缓冲真实内容，
+#       判定「日文字模二次覆盖」到底写了几格、写了什么。
+#   0x0804252C = r8 定型点（r0 = StringLength(gDisplayedStringBattle)，r8 = r0）
+#   0x0804253E = 图形搬运循环体入口
+# ---------------------------------------------------------------------------
+
+@handler("HgLoopCount")
+def _on_hg_loop_count(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """r8 定型点：r0=StringLength(gDisplayedStringBattle)，下一步 r8=r0。"""
+    r0 = regs.get("r0", 0) & 0xFFFFFFFF
+    r2 = regs.get("r2", 0) & 0xFFFFFFFF
+    r3 = regs.get("r3", 0) & 0xFFFFFFFF
+    side = "我方" if r3 == 0x03004290 else ("敌方" if r3 == 0x030044F0 else f"r3=0x{r3:08X}")
+    ctx.log(f"\n[HgLoopCount] {side}  StringLength(gDisplayedStringBattle)=r0={r0}  ⇒ r8={r0}")
+    if cfg.get("buf"):
+        buf = int(cfg["buf"], 0) if isinstance(cfg["buf"], str) else cfg["buf"]
+        n = int(cfg.get("bufn", 32))
+        data = _read_mem(gdb, buf, n)
+        if data:
+            ctx.log(f"  buf@0x{buf:08X}: {data.hex(' ')}")
+            end = data.find(b"\xff")
+            ctx.log(f"  到首个FF: {ctx.text_of(data[:end + 1] if end >= 0 else data)!r}")
+
+
+@handler("HgBufDump")
+def _on_hg_buf_dump(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """名字缓冲完整 dump（含中文名是否已在 ff 之后）。"""
+    r0 = regs.get("r0", 0) & 0xFFFFFFFF
+    r3 = regs.get("r3", 0) & 0xFFFFFFFF
+    side = "我方" if r3 == 0x03004290 else ("敌方" if r3 == 0x030044F0 else f"r3=0x{r3:08X}")
+    buf = 0x0202362C
+    data = _read_mem(gdb, buf, 40)
+    ctx.log(f"\n[HgBufDump] {side} StringLength(gDisplayedStringBattle)=r0={r0} (r8={r0})")
+    if data:
+        ctx.log(f"  buf[40]: {data.hex(' ')}")
+        end = data.find(b"\xff")
+        ctx.log(f"  到首个FF(={end}): {ctx.text_of(data[:end + 1] if end >= 0 else data)!r}")
+        tail = data[end + 1:] if end >= 0 else b""
+        if tail:
+            e2 = tail.find(b"\xff")
+            ctx.log(f"  FF之后的内容: {ctx.text_of(tail[:e2 + 1] if e2 >= 0 else tail)!r}")
+
+
+@handler("HgCopyStart")
+def _on_hg_copy_start(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """图形搬运循环入口：r8 在别的寄存器/高寄存器里，dump 关键值。"""
+    r2 = regs.get("r2", 0) & 0xFFFFFFFF
+    ctx.log(f"\n[HgCopyStart] r2={hex(r2)} (0x04000008=原版32B / 0x04000006=被砍24B)")
+
+
+@handler("HgTilePtr")
+def _on_hg_tile_ptr(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """循环体内：r6=目标 tile 指针，r8=次数，r5=当前格。"""
+    r6 = regs.get("r6", 0) & 0xFFFFFFFF
+    ctx.log(f"\n[HgTilePtr] r6(dst ptr)=0x{r6:08X} region={region_of(r6)}")
+
+
+@handler("HgPnc")
+def _on_hg_pnc(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """血条名字的 PrintNextChar：只看 buffered 窗（tm=2 且 tmap=NULL）。
+
+    ★ 2026-11-24 权威结论（pokeruby battle_interface.c:1545 + 反汇编 0x080424D8）：
+      血条名字走 RenderTextHandleBold，它**强制 win[0x0A]=2**（buffered），
+      并把 tileData 参数写进 win[0x20]。tileData =
+        &eBattleInterfaceGfxBuffer[0x520 + battlerPos * 0x180]
+        = 0x02000520 + pos*0x180   （EWRAM，不是 VRAM！）
+      ⇒ 与队伍界面同一条 buffered 直写路径，**不是 12px 网格**。
+      每字按 rel*64B 线性排布（1 字 = 1 个 64B 单元 = 上下两片 8x8）。
+    """
+    win = regs.get("r0", 0)
+    wb = _read_win(gdb, win)
+    if len(wb) < 0x24:
+        return
+    tm = wb[0x0A]
+    if tm != 2:
+        return                      # 只关心 buffered（血条/HP 数字）
+    tpl = u32(wb, 0x00)
+    tmap = 0
+    if tpl:
+        tb = _read_mem(gdb, tpl, 0x18)
+        if len(tb) >= 0x14:
+            tmap = u32(tb, 0x10)
+    td = u32(wb, 0x20)
+    idx = u16(wb, 0x14)
+    tptr = u32(wb, 0x10)
+    cur = (tptr + idx) & 0xFFFFFFFF if tptr else 0
+    rel = wb[0x1B]
+    if not ctx._hit(("HGPNC", win, cur, td, rel)):
+        return
+    ctx.log(
+        f"\n[HgPnc] win=0x{win:08X} tm={tm} fn={wb[0x0B]} tpl=0x{tpl:08X} tmap=0x{tmap:08X}"
+    )
+    ctx.log(f"  TILE_DATA(+0x20)=0x{td:08X} region={region_of(td)} rel(curTX)={rel}")
+    ctx.log(f"  ★ buffered 写址 = 0x{td + rel * 64:08X}  (td + rel*64B, 每字 64B)")
+    ctx.log(f"  curX={wb[0x1A]} curY={wb[0x1C]} TOFF=0x{u16(wb, 0x18):04X}")
+    if cur:
+        data = _read_mem(gdb, cur, 20)
+        ctx.log(f"  即将处理@0x{cur:08X}: {data.hex(' ')}")
+
+
+# ---------------------------------------------------------------------------
 # tiles 实时采集 v2（登记 + 绑定，反汇编定案见 docs）：
 #   LoadSpriteSheet / LoadCompressedObjectPic → tag 登记像素资产
 #   LoadSpritePalette / LoadCompressedObjectPalette → tag 登记调色板源
@@ -2074,3 +2178,324 @@ def main(argv: Optional[Sequence[str]] = None) -> int:
 
 if __name__ == "__main__":
     raise SystemExit(main())
+
+
+@handler("HgBeforeSkip")
+def _on_hg_before_skip(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """hook B 执行前：EWRAM 名字缓冲是否已含 elem 0x2B 的 0x22 底色。"""
+    buf = 0x02000520
+    data = _read_mem(gdb, buf, 192)
+    if not data:
+        return
+    if not ctx._hit(("HGBS", bytes(data[:32]))):
+        return
+    from collections import Counter
+    ctx.log(f"\n[HgBeforeSkip] EWRAM 0x02000520 (hook B 之前)")
+    for i in range(3):
+        u = data[i * 64:(i + 1) * 64]
+        c = Counter(u)
+        top = c.most_common(3)
+        ctx.log(f"  unit{i}: {u[:16].hex(' ')}  top={top}")
+
+
+@handler("HgAfterSeg2")
+def _on_hg_after_seg2(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """第二段结束后：EWRAM 与 VRAM 都要看。"""
+    buf = 0x02000520
+    data = _read_mem(gdb, buf, 192)
+    if not data:
+        return
+    if not ctx._hit(("HGAS", bytes(data[:32]))):
+        return
+    from collections import Counter
+    ctx.log(f"\n[HgAfterSeg2] EWRAM 0x02000520 (第二段之后)")
+    for i in range(3):
+        u = data[i * 64:(i + 1) * 64]
+        c = Counter(u)
+        ctx.log(f"  unit{i}: {u[:16].hex(' ')}  top={c.most_common(3)}")
+
+
+@handler("HgFieldDump")
+def _on_hg_field_dump(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """BUG-12 现场：血条名字窗（tileData >= 0x02000520）的全部关键字段。
+
+    重点验证：原版 textMode2 是「win[0x20] 指针自己 +64」，
+    我们用「base + rel*64」。若 rel(win[0x1B]) 初值非 0，落址就整体偏移。
+    """
+    win = regs.get("r0", 0)
+    wb = _read_win(gdb, win)
+    if len(wb) < 0x24:
+        return
+    if wb[0x0A] != 2:
+        return
+    td = u32(wb, 0x20)
+    if td < 0x02000520 or td >= 0x02001000:
+        return                       # 只看血条名字区
+    idx = u16(wb, 0x14)
+    tptr = u32(wb, 0x10)
+    cur = (tptr + idx) & 0xFFFFFFFF if tptr else 0
+    if not ctx._hit(("HGFD", win, cur, td, wb[0x1B])):
+        return
+    ctx.log(f"\n[HgFieldDump] win=0x{win:08X}")
+    ctx.log(f"  tm(0x0A)={wb[0x0A]} fn(0x0B)={wb[0x0B]}")
+    ctx.log(f"  TILE_DATA(0x20)=0x{td:08X}   ★ 落址基址")
+    ctx.log(f"  cursorX(0x1A)={wb[0x1A]}  cursorTileX(0x1B)={wb[0x1B]}  ★ rel")
+    ctx.log(f"  cursorY(0x1C)={wb[0x1C]}  cursorTileY(0x1D)={wb[0x1D]}")
+    ctx.log(f"  TILE_BASE(0x16)=0x{u16(wb, 0x16):04X} TILE_OFFSET(0x18)=0x{u16(wb, 0x18):04X}")
+    ctx.log(f"  我们算出的写址 = 0x{td + wb[0x1B] * 64:08X}   (base + rel*64)")
+    ctx.log(f"  原版等价写址 = 0x{td:08X}  （指针累加，与 rel 无关）")
+
+
+@handler("HgWinId")
+def _on_hg_win_id(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """区分敌我：dump 名字串内容 + 落址基址，确认哪个窗画的是谁。"""
+    win = regs.get("r0", 0)
+    wb = _read_win(gdb, win)
+    if len(wb) < 0x24 or wb[0x0A] != 2:
+        return
+    td = u32(wb, 0x20)
+    if td < 0x02000520 or td >= 0x02001000:
+        return
+    tptr = u32(wb, 0x10)
+    idx = u16(wb, 0x14)
+    if not tptr:
+        return
+    whole = _read_mem(gdb, tptr, 32)
+    if not whole:
+        return
+    if not ctx._hit(("HGWIN", td, bytes(whole[:16]))):
+        return
+    end = whole.find(b"\xff")
+    txt = ctx.text_of(whole[:end + 1] if end >= 0 else whole)
+    ctx.log(f"\n[HgWinId] tileData=0x{td:08X} 色C/D/E={wb[0x0C]}/{wb[0x0D]}/{wb[0x0E]}")
+    ctx.log(f"  串: {txt!r}")
+    ctx.log(f"  bytes: {whole[:20].hex(' ')}")
+
+
+@handler("HgCpuSetDst")
+def _on_hg_cpuset_dst(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """第二段 CpuSet 实测：src/dst/ctrl，看敌方名字被写到哪个 tile。"""
+    src = regs.get("r0", 0) & 0xFFFFFFFF
+    dst = regs.get("r1", 0) & 0xFFFFFFFF
+    ctrl = regs.get("r2", 0) & 0xFFFFFFFF
+    if dst < 0x06000000 or dst >= 0x06018000:
+        return
+    if not ctx._hit(("HGCS", src, dst)):
+        return
+    tile = (dst - 0x06010000) // 32
+    ctx.log(f"  [CpuSet] src=0x{src:08X} dst=0x{dst:08X} (tile 0x{tile:03X}) ctrl=0x{ctrl:08X}")
+
+
+@handler("HgCsAlt1")
+@handler("HgCsMain")
+@handler("HgCsAlt2b")
+def _on_hg_cs_any(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """三个平行实现的 CpuSet 统一探测：看敌方(pos1)走哪条。"""
+    src = regs.get("r0", 0) & 0xFFFFFFFF
+    dst = regs.get("r1", 0) & 0xFFFFFFFF
+    ctrl = regs.get("r2", 0) & 0xFFFFFFFF
+    pc = regs.get("r15", 0) & 0xFFFFFFFF
+    if not ctx._hit(("HGCSA", pc, src, dst)):
+        return
+    region = "?"
+    if 0x02000520 <= src < 0x020006A0:
+        region = "我方(0x520)"
+    elif 0x020006A0 <= src < 0x02000820:
+        region = "敌方(0x6A0)"
+    elif 0x02000820 <= src < 0x020009A0:
+        region = "pos2"
+    tile = (dst - 0x06010000) // 32 if dst >= 0x06010000 else -1
+    ctx.log(f"  [Cs@{pc:08X}] src=0x{src:08X}({region}) dst=0x{dst:08X} tile=0x{tile:03X} ctrl=0x{ctrl:08X}")
+
+
+@handler("HgGuard")
+def _on_hg_guard(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """第二段守卫：记录每个 battler 的状态位，判断谁被跳过。
+
+    0x080425B2  ldrh r0,[r4,#0x3A]  -> 状态索引
+    0x080425B8  bl 0x0807584C       -> (flag[r0+off] & 1)
+    0x080425C0  bne skip            -> 非0 就跳过整个第二段
+    """
+    r4 = regs.get("r4", 0) & 0xFFFFFFFF
+    if not (0x02000000 <= r4 < 0x02040000):
+        return
+    st = _read_mem(gdb, r4 + 0x3A, 2)
+    stv = (st[0] | (st[1] << 8)) & 0xFF if len(st) >= 2 else -1
+    if not ctx._hit(("HGG", r4, stv)):
+        return
+    # 两个守卫的实际返回值
+    f1 = _read_mem(gdb, 0x02023758, 1)
+    g1 = (f1[0] & 1) if f1 else -1
+    ctx.log(f"\n[HgGuard] r4=0x{r4:08X} 状态索引[r4+0x3A]=0x{stv:02X}")
+    ctx.log(f"  守卫2 @0x02023758 = 0x{(f1[0] if f1 else 0):02X}  bit0={g1}")
+    ctx.log(f"  → bit0=1 时整个第二段被跳过（名字不进 VRAM）")
+
+
+@handler("HgCsBak")
+@handler("HgCsBak2")
+def _on_hg_cs_bak(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """备用路径 CpuSet：pos1(敌方) 走这里。"""
+    src = regs.get("r0", 0) & 0xFFFFFFFF
+    dst = regs.get("r1", 0) & 0xFFFFFFFF
+    ctrl = regs.get("r2", 0) & 0xFFFFFFFF
+    pc = regs.get("r15", 0) & 0xFFFFFFFF
+    if not ctx._hit(("HGCB", pc, src, dst)):
+        return
+    tag = "我方" if 0x02000520 <= src < 0x020006A0 else ("敌方" if 0x020006A0 <= src < 0x02000820 else "?")
+    tile = (dst - 0x06010000) // 32 if dst >= 0x06010000 else -1
+    ctx.log(f"  [Bak@{pc:08X}] src=0x{src:08X}({tag}) dst=0x{dst:08X} tile=0x{tile:03X} ctrl=0x{ctrl:08X}")
+
+
+@handler("HgR6Trace")
+def _on_hg_r6(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """追踪 r6（EWRAM 名字缓冲指针）在各关键点的值。"""
+    pc = regs.get("r15", 0) & 0xFFFFFFFF
+    r6 = regs.get("r6", 0) & 0xFFFFFFFF
+    r8 = regs.get("r8", 0) & 0xFFFFFFFF
+    if not ctx._hit(("HGR6", pc, r6, r8)):
+        return
+    tag = "我方(0x520)" if 0x520 <= r6 < 0x6A0 else ("敌方(0x6A0)" if 0x6A0 <= r6 < 0x820 else "?")
+    ctx.log(f"  [r6@{pc:08X}] r6=0x{r6:08X}({tag}) r8={r8}")
+
+
+@handler("HgR6Skip")
+@handler("HgR6Seg2")
+@handler("HgR6Bak")
+def _on_hg_r6_points(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    pc = regs.get("r15", 0) & 0xFFFFFFFF
+    r6 = regs.get("r6", 0) & 0xFFFFFFFF
+    r8 = regs.get("r8", 0) & 0xFFFFFFFF
+    if not ctx._hit(("HGR6P", pc, r6, r8)):
+        return
+    ctx.log(f"  [r6@{pc:08X}] r6=0x{r6:08X} r8={r8}")
+
+
+@handler("HgEwDump")
+def _on_hg_ew_dump(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """在 CpuSet 那一刻 dump EWRAM 源区：判断搬过去的是字形还是背景。
+
+    关键：必须在真正 bl CpuSet 之前读，且读 r6 指向的区域（不是 r0）。
+    """
+    pc = regs.get("r15", 0) & 0xFFFFFFFF
+    r6 = regs.get("r6", 0) & 0xFFFFFFFF
+    r8 = regs.get("r8", 0) & 0xFFFFFFFF
+    if not ctx._hit(("HGEW", pc, r6)):
+        return
+    data = _read_mem(gdb, r6, 64)
+    if not data:
+        return
+    nz = sum(1 for b in data if b not in (0x00, 0x22))
+    tag = "我方" if r6 < 0x020006A0 else "敌方"
+    ctx.log(f"  [EW@{pc:08X}] {tag} r6=0x{r6:08X} r8={r8} 非背景字节={nz}")
+    ctx.log(f"      {data[:32].hex(' ')}")
+
+
+@handler("HgEwSeg2")
+@handler("HgEwBak")
+def _on_hg_ew_pts(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    pc = regs.get("r15", 0) & 0xFFFFFFFF
+    r6 = regs.get("r6", 0) & 0xFFFFFFFF
+    if not (0x02000000 <= r6 < 0x02040000):
+        return
+    if not ctx._hit(("HGEWP", pc, r6)):
+        return
+    data = _read_mem(gdb, r6, 32)
+    if not data:
+        return
+    nz = sum(1 for b in data if b not in (0x00, 0x22))
+    tag = "我方" if r6 < 0x020006A0 else "敌方"
+    ctx.log(f"  [EWP@{pc:08X}] {tag} src=0x{r6:08X} 非背景={nz}  {data[:16].hex(' ')}")
+
+
+@handler("HgAfterDraw")
+def _on_hg_after_draw(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """RenderTextHandleBold 返回瞬间（0x08042536）：
+    名字刚画完，EWRAM 里就是最终内容。直接 dump 两个区，不推测。
+    """
+    r6 = regs.get("r6", 0) & 0xFFFFFFFF
+    r8 = regs.get("r8", 0) & 0xFFFFFFFF
+    if not (0x02000000 <= r6 < 0x02040000):
+        return
+    data = _read_mem(gdb, r6, 0x180)
+    if not data:
+        return
+    key = (r6, bytes(data[:48]))
+    if not ctx._hit(("HGAD",) + key):
+        return
+    tag = "我方(0x520)" if r6 < 0x020006A0 else "敌方(0x6A0)"
+    ctx.log(f"\n[HgAfterDraw] {tag} r6=0x{r6:08X} r8(串长)={r8}")
+    # 逐 64B 单元统计
+    for i in range(4):
+        unit = data[i * 64:(i + 1) * 64]
+        if not unit:
+            break
+        nz = sum(1 for b in unit if b not in (0x00, 0x22))
+        ctx.log(f"  单元{i} (0x{r6 + i * 64:08X}): 非背景={nz:2d}  {unit[:24].hex(' ')}")
+
+
+@handler("HgCsTrace")
+@handler("HgCsTrace2")
+def _on_hg_cs_trace(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """精确记录每次 CpuSet 的 源指针 + 目标 tile + 源内容指纹。"""
+    pc = regs.get("r15", 0) & 0xFFFFFFFF
+    src = regs.get("r0", 0) & 0xFFFFFFFF
+    dst = regs.get("r1", 0) & 0xFFFFFFFF
+    if dst < 0x06010000 or dst >= 0x06018000:
+        return
+    tile = (dst - 0x06010000) // 32
+    # 读源前 8 字节做指纹
+    head = _read_mem(gdb, src, 8) if 0x02000000 <= src < 0x02040000 else None
+    sig = head.hex() if head else "????"
+    if not ctx._hit(("HGCT", pc, src, dst)):
+        return
+    tag = "我方" if 0x02000520 <= src < 0x020006A0 else ("敌方" if 0x020006A0 <= src < 0x02000820 else "?")
+    ctx.log(f"  [{pc:08X}] {tag} src=0x{src:08X} -> tile 0x{tile:03X}  src前8B={sig}")
+
+
+@handler("HgAlt1")
+@handler("HgAlt2")
+@handler("HgMain")
+def _on_hg_alt_which(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """三套平行实现入口：记录每次调用时的关键参数，判断谁在处理敌方。
+
+    三个函数签名相同：sub_80451A0(u8 a, struct Pokemon *pkmn)
+      r0 = a (healthbox sprite id)
+      r1 = pkmn 指针
+    我们关心的是 GetBattlerPosition 的结果，但入口处还没有，
+    所以先记录调用次数 + pkmn 指针，用 pkmn 区分敌我。
+    """
+    pc = regs.get("r15", 0) & 0xFFFFFFFF
+    a = regs.get("r0", 0) & 0xFFFFFFFF
+    pkmn = regs.get("r1", 0) & 0xFFFFFFFF
+    if not ctx._hit(("HGALT", pc, a, pkmn)):
+        return
+    name = {0x080415A0: "Alt1", 0x08042408: "Alt2", 0x08042B14: "Main"}.get(pc, "?")
+    ctx.log(f"  [{name}@{pc:08X}] a(r0)=0x{a:08X} pkmn(r1)=0x{pkmn:08X}")
+
+
+@handler("HgDispatch")
+def _on_hg_dispatch(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """UpdateHealthboxAttribute 分派器 @0x08042E70：r7 = 属性类型。
+
+    pokeruby: HEALTHBOX_ALL=0, HEALTHBOX_NICK=4, HEALTHBOX_SMALL_STRING=9, ...
+    最后调用的那次决定最终显示。
+    """
+    r6 = regs.get("r6", 0) & 0xFFFFFFFF
+    r7 = regs.get("r7", 0) & 0xFFFFFFFF
+    r8 = regs.get("r8", 0) & 0xFFFFFFFF
+    if not ctx._hit(("HGDISP", r6, r7)):
+        return
+    names = {0: "ALL", 1: "LEVEL", 2: "HP", 3: "MAX_HP", 4: "NICK",
+             5: "STATUS", 6: "STATUS2", 7: "STATUS3", 9: "SMALL_STRING", 10: "?"}
+    ctx.log(f"  [Disp] healthbox=0x{r6:08X} attr(r7)={r7}({names.get(r7,'?')})")
+
+
+@handler("HgSeg2Entry")
+def _on_hg_seg2(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """hookB 跳转目标 @0x080425A8：证明 hookB 生效，并记录 r6/r8。"""
+    r6 = regs.get("r6", 0) & 0xFFFFFFFF
+    r8 = regs.get("r8", 0) & 0xFFFFFFFF
+    if not ctx._hit(("HGSEG2", r6, r8)):
+        return
+    tag = "我方" if 0x02000520 <= r6 < 0x020006A0 else "敌方"
+    ctx.log(f"  [Seg2] {tag} r6=0x{r6:08X} r8={r8}  (hookB 生效)")

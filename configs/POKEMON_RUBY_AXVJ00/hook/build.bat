@@ -47,9 +47,10 @@ echo === Compiling map_name_popup\MapNamePopup_hook.c ===
 %CC% %CFLAGS% %MAP_POPUP%\MapNamePopup_hook.c -o %BUILD%\MapNamePopup_hook.o
 if errorlevel 1 exit /b 1
 
-echo === Assembling battle\UpdateNickInHealthbox_entry.s ===
-%CC% %ASFLAGS% %BATTLE%\UpdateNickInHealthbox_entry.s -o %BUILD%\UpdateNickInHealthbox_entry.o
+echo === Assembling battle\NickSlot_entry.s (P12 遭遇文本) ===
 %CC% %ASFLAGS% %BATTLE%\NickSlot_entry.s -o %BUILD%\NickSlot_entry.o
+echo === Assembling battle\NickFullName_entry.s (BUG-12 血条名字) ===
+%CC% %ASFLAGS% %BATTLE%\NickFullName_entry.s -o %BUILD%\NickFullName_entry.o
 
 echo === Compiling party\PartyMenuDoPrintMonNickname (BUG-13) ===
 %CC% %CFLAGS% %PARTY%\PartyMenuDoPrintMonNickname_hook.c -o %BUILD%\PartyMenuDoPrintMonNickname_hook.o
@@ -60,9 +61,8 @@ if errorlevel 1 exit /b 1
 
 if errorlevel 1 exit /b 1
 
-echo === Compiling battle\UpdateNickInHealthbox_hook.c ===
-%CC% %CFLAGS% %BATTLE%\UpdateNickInHealthbox_hook.c -o %BUILD%\UpdateNickInHealthbox_hook.o
-if errorlevel 1 exit /b 1
+; [P03] 2026-11-24 撤销：UpdateNickInHealthbox_hook.c / _entry.s 不再编译
+; （CpuSet 池补丁已全部恢复原版 0x04000008，配套 C 只导出常量，无调用者）
 
 echo === Assembling pokedex\UnusedPrintMonName_entry.s ===
 %CC% %ASFLAGS% %POKEDEX%\UnusedPrintMonName_entry.s -o %BUILD%\UnusedPrintMonName_entry.o
@@ -173,8 +173,7 @@ echo === Linking game.elf ===
   %BUILD%/PrintNextChar_hook.o ^
   %BUILD%/MapNamePopup_entry.o ^
   %BUILD%/MapNamePopup_hook.o ^
-  %BUILD%/UpdateNickInHealthbox_entry.o ^
-  %BUILD%/UpdateNickInHealthbox_hook.o %BUILD%/NickSlot_entry.o ^
+  %BUILD%/NickSlot_entry.o %BUILD%/NickFullName_entry.o ^
   %BUILD%/PartyMenuDoPrintMonNickname_hook.o %BUILD%/PartyMenuDoPrintMonNickname_entry.o ^
   %BUILD%/UnusedPrintMonName_entry.o ^
   %BUILD%/UnusedPrintMonName_hook.o ^
@@ -212,7 +211,7 @@ rem Stream emit: no copy-vars, no silent fallback. Missing symbol -> no line ->
 rem armips errors at use site (loud failure beats jumping to 0x08800000).
 > %OUT%\game_syms.asm (
     echo ; Auto-generated from out/game.map - do not edit
-    for %%S in (MapName_DisplayCellLength UnusedPrintMonName_Hook UnusedPrintDecimalNum_Hook SummaryScreen_PrintTrainerMemo_Hook SummaryScreen_NameLayoutTiles_Hook DrawOptionMenuChoice_Hook PokeNav_PrintMenuTip_Hook PokeNav_TrainerEye_FormatListLine_Hook PokeNav_TrainerEye_DetailEnter_Hook PokeNav_TrainerEye_PrintTitle_Hook PokeNav_TrainerEye_PrintTitleSprite_Hook PokeNav_TrainerEye_TitleBlit_Hook PokeNav_TrainerEye_SkipListRow_Hook PokeNav_TrainerEye_ListRedraw_Hook NickSlot_Hook PartyMenuDoPrint_Hook PartyName_LookupJp) do (
+    for %%S in (MapName_DisplayCellLength UnusedPrintMonName_Hook UnusedPrintDecimalNum_Hook SummaryScreen_PrintTrainerMemo_Hook SummaryScreen_NameLayoutTiles_Hook DrawOptionMenuChoice_Hook PokeNav_PrintMenuTip_Hook PokeNav_TrainerEye_FormatListLine_Hook PokeNav_TrainerEye_DetailEnter_Hook PokeNav_TrainerEye_PrintTitle_Hook PokeNav_TrainerEye_PrintTitleSprite_Hook PokeNav_TrainerEye_TitleBlit_Hook PokeNav_TrainerEye_SkipListRow_Hook PokeNav_TrainerEye_ListRedraw_Hook NickSlot_Hook NickFullName_Hook NickSkipTiler_Hook NickCopyCells_Hook NickCopyCellsAlt_Hook PartyMenuDoPrint_Hook PartyName_LookupJp) do (
         for /f "tokens=1" %%a in ('findstr /R "%%S$" %OUT%\game.map') do @echo %%S equ %%a
     )
 )

@@ -175,7 +175,18 @@ struct ChsPhase {
  * 不靠 tile 列反推，所以非 8 倍数的步进天然支持。
  * ===================================================================== */
 #define CHS_GLYPH_ADVANCE_PX 12
-#define CHS_GLYPH_ADVANCE_SMALL 10
+/* ── Small 步进 10 → 9（2026-11-24，BUG-12 定案）──────────────────────
+ * 火红汉化版实测（本工程 bot 采集，非估算）：
+ *   队伍「喷火龙」：墨迹 9px 宽 / 10px 步进（9 墨 + 1 空）
+ *   战斗「哈克龙」：墨迹连成 27px 三段 = 每字 9px / **9px 步进（零空隙）**
+ * 血条名字区（eBattleInterfaceGfxBuffer 0x520 起）是按 8px 单元排布的：
+ *   0x180 字节 = 6 个 64B 单元，每单元 8px 宽 × 16px 高。
+ * adv=10 时 phase 四相 0/2/4/6，phase=6 会算出 delta=2 → rel 跳格、
+ * 第 4 个字丢失（实测数据见下方注释表）。adv=9 时 phase 八相 0..7，
+ * delta 在 phase 0..6 恒为 1，只有第 9 个字（phase=7）才 =2，
+ * 而血条名字最多 3 字，永远碰不到。
+ * ⇒ adv=9 与 8px 单元自洽，且与火红战斗的紧凑排列一致。 */
+#define CHS_GLYPH_ADVANCE_SMALL 9
 #define CHS_CHAR_HEIGHT_PX   12
 #define CHS_LINE_FEED_PX     16
 #define CHS_CELL_BYTES       128
@@ -187,8 +198,8 @@ struct ChsPhase {
 #define CHS_INK_MIDDLE_W     9
 #define CHS_INK_MIDDLE_H     11
 #define CHS_INK_MIDDLE_TOP   2
-#define CHS_INK_SMALL_W      8
-#define CHS_INK_SMALL_H      8
+#define CHS_INK_SMALL_W      9
+#define CHS_INK_SMALL_H      9
 #define CHS_INK_SMALL_TOP    6
 #define CHS_INK_NATIVE_W     8
 #define CHS_INK_NATIVE_H     16

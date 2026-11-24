@@ -190,17 +190,18 @@ NickSkipTiler_Hook:
     .thumb_func
     .type NickCopyCells_Hook, %function
 NickCopyCells_Hook:
-    push {r4, r5, r6, lr}
+    push {r4, r5, r6, r7, lr}
 
     ldr  r4, =0x0202362F            @ gDisplayedStringBattle + 3
     movs r5, #0                     @ 汉字计数
     movs r6, #0                     @ 字节偏移
+    movs r7, #0                     @ ★ 累计像素宽（BUG-16）
 
 _Nc_scan:
     ldrb r0, [r4, r6]
     cmp  r0, #255                   @ FF = EOS
     beq  _Nc_calc
-    cmp  r5, #5                     @ 名字区最多 5 字
+    cmp  r5, #5                     @ 名字区最多 5 字（含符号）
     bge  _Nc_calc
 
     cmp  r0, #0xF7                  @ F7 00 hi lo = 一个汉字（4B）
@@ -210,7 +211,8 @@ _Nc_scan:
     cmp  r0, #0
     bne  _Nc_plain
     adds r6, #4
-    adds r5, #1
+    adds r5, #1                     @ 汉字计 1 个「9px 单位」
+    adds r7, #9                     @ ★ 累计像素宽（BUG-16）
     b    _Nc_scan
 
 _Nc_ctrl:
@@ -220,22 +222,29 @@ _Nc_ctrl:
     b    _Nc_scan
 
 _Nc_plain:
-    adds r6, #1                     @ 其它单字节不计数（性别图标等）
+    @ ★ BUG-16：性别符号 0xB5/0xB6 也是**可见字形**（8px），必须计入宽度，
+    @ 否则 r8 少算一格，符号右缘被裁（用户实测：蛇纹熊♀ 的 ♀ 右边缺一块）。
+    @ 原版这段是逐字节 CpuCopy32（每字节一格），符号自然占格；
+    @ 我们按 9px 汉字排版，符号按原版 8px 计。
+    cmp  r0, #0x20                  @ 小于 0x20 是控制/空格，跳过
+    blt  _Nc_skip
+    adds r7, #8                     @ 单字节字形计 8px
+_Nc_skip:
+    adds r6, #1
     b    _Nc_scan
 
 _Nc_calc:
-    @ r8 = ceil(r5 * 9 / 8) = (r5*9 + 7) >> 3
-    movs r0, #9
-    muls r0, r5, r0
-    adds r0, #7
+    @ r8 = ceil((汉字数*9 + 符号数*8) / 8)
+    @   用累计像素宽 r7，除以 8 上取整。r7=0 时 r8=0（空名）。
+    adds r0, r7, #7
     lsrs r0, r0, #3
-    cmp  r0, #6                     @ 硬上限 6 个单元
+    cmp  r0, #6                     @ 硬上限 6 个单元（名字区 0x180 = 6 单元）
     ble  _Nc_set
     movs r0, #6
 _Nc_set:
     mov  r8, r0
 
-    pop  {r4, r5, r6}
+    pop  {r4, r5, r6, r7}
     pop  {r0}
 
     @ 重放被 bl 覆盖的两条原指令，再跳到 bge
@@ -283,17 +292,18 @@ _Nc_set:
     .thumb_func
     .type NickCopyCellsAlt_Hook, %function
 NickCopyCellsAlt_Hook:
-    push {r4, r5, r6, lr}
+    push {r4, r5, r6, r7, lr}
 
     ldr  r4, =0x0202362F            @ gDisplayedStringBattle + 3
     movs r5, #0                     @ 汉字计数
     movs r6, #0                     @ 字节偏移
+    movs r7, #0                     @ ★ 累计像素宽（BUG-16）
 
 _Na_scan:
     ldrb r0, [r4, r6]
     cmp  r0, #255                   @ FF = EOS
     beq  _Na_calc
-    cmp  r5, #5                     @ 名字区最多 5 字
+    cmp  r5, #5                     @ 名字区最多 5 字（含符号）
     bge  _Na_calc
 
     cmp  r0, #0xF7                  @ F7 00 hi lo = 一个汉字（4B）
@@ -304,6 +314,7 @@ _Na_scan:
     bne  _Na_plain
     adds r6, #4
     adds r5, #1
+    adds r7, #9                     @ ★ 汉字 9px
     b    _Na_scan
 
 _Na_ctrl:
@@ -313,17 +324,17 @@ _Na_ctrl:
     b    _Na_scan
 
 _Na_plain:
-    adds r6, #1                     @ 其它单字节不计数（性别图标等）
+    @ ★ BUG-16：性别符号 0xB5/0xB6 是可见字形（8px），必须计宽。
+    cmp  r0, #0x20
+    blt  _Na_skip
+    adds r7, #8
+_Na_skip:
+    adds r6, #1
     b    _Na_scan
 
 _Na_calc:
-    @ 备用路径的 up/dn 只差 8 格（比主路径的 8 格少 1 个错位），
-    @ 因此重叠区间是 [dn_start, up_end] = [i+9, i+1+n-1] ⇒ 只要 n>=9 就重叠。
-    @ 用「n 个单元」= ceil(字数*9/8) 并硬限 6，两条路径区间都安全：
-    @   n=6 ⇒ up=+1..+6, dn=+9..+14 ⇒ 无重叠，正好 6 个汉字的上/下片。
-    movs r0, #9
-    muls r0, r5, r0
-    adds r0, #7
+    @ r8 = ceil(r7 / 8)，再硬限 6
+    adds r0, r7, #7
     lsrs r0, r0, #3
     cmp  r0, #6                     @ 硬上限 6 个单元（名字区 0x180 = 6 单元）
     ble  _Na_set
@@ -331,7 +342,7 @@ _Na_calc:
 _Na_set:
     mov  r8, r0
 
-    pop  {r4, r5, r6}
+    pop  {r4, r5, r6, r7}
     pop  {r0}
 
     @ 重放被覆盖的两条原指令（movs r5,#0 / cmp r5,r8），再跳 bge

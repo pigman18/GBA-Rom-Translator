@@ -657,6 +657,8 @@ static unsigned grid_buf_cell(TextPrinter *win)
 
 /* 前向声明：grid_fill_blank_cell 需要它（定义在 §3 末尾） */
 static uint8_t grid_bg(TextPrinter *win);
+/* 前向声明：血条名字区 up 片装饰（定义在 §3 末尾） */
+static void grid_healthbox_decoration(uint8_t *p);
 
 /* buffered 窗的空白格：把当前字的单元刷成背景色并推进指针。
  *
@@ -674,7 +676,11 @@ static void grid_fill_blank_cell(TextPrinter *win)
     uint32_t *d = (uint32_t *)(uintptr_t)addr;
     unsigned i;
 
-    for (i = 0u; i < GRID_PAIR_BYTES / 4u; ++i)
+    /* ★ BUG-15/16：up 片写原版 0x2B 装饰（row0-1 透明 + row2-7 渐变），
+     * 不能刷成单一 bg —— 那会盖住血条框上边框和底色渐变（白底方块）。
+     * 下片（dn, row8..15）才是字形区，按 bg 刷空。 */
+    grid_healthbox_decoration((uint8_t *)(uintptr_t)addr);
+    for (i = GRID_PAIR_BYTES / 8u; i < GRID_PAIR_BYTES / 4u; ++i)
         d[i] = v;
     win_set_u32(win, WIN_TILE_DATA, addr + GRID_PAIR_BYTES);
 }
@@ -1007,13 +1013,36 @@ static void grid_emit(TextPrinter *win, GridTarget *t,
         uint32_t addr = win_u32(win, WIN_TILE_DATA);
         unsigned i;
 
-        /* p0 写本单元 col phase..7，但**不能覆盖 col0..phase-1**
-         * （那是上一个字的尾巴）。逐字节按列边界合并。 */
-        for (i = 0u; i < GRID_PAIR_BYTES; ++i) {
+        /* ★★ 2026-11-24 BUG-15/16 定案：up 片写「原版 0x2B 装饰」，不是跳过 ★★
+         *
+         * 实测 origin（battle_move_anim 20261124T164228 的 058 帧 +
+         * EWRAM 0x02000520/0x020006A0 各 6 个 64B 单元）：
+         *
+         *   up 片 row0-1 = 00 00 00 00   ← 透明，露出血条框上边框
+         *   up 片 row2   = 66 66 66 66 ┐
+         *   up 片 row3   = 77 77 77 77 │ 血条框底色渐变（屏幕上立体边）
+         *   up 片 row4   = 33 33 33 33 │
+         *   up 片 row5-7 = 22 22 22 22 ┘
+         *   dn 片 row8-15 = 汉字字形
+         *
+         * 这 32B 就是 GetHealthboxElementGfxPtr(0x2B) 的原样内容
+         * （日版 ROM 0x0868F140 实测：00/00/66/77/33/22/22/22），
+         * 原版 CpuCopy32 直接搬进缓冲。
+         *
+         * 两版错误都踩过了，记下来别重走：
+         *   ① 从 row0 全刷 bg(0x22) ⇒ row0-4 装饰被覆盖 ⇒ 白底方块（用户 BUG-15）
+         *   ② 跳过 row0-5 不写 ⇒ 该 32B 是未初始化的新缓冲，全是 00 ⇒
+         *      屏幕上整条装饰变成透明/漏 BG ⇒ 058 帧 y16-17 露出背景（实测）
+         *
+         * ⇒ 正确做法：**显式写入原版 0x2B 这 32B**，再把字形叠在 row6 起。
+         *   这样 row0-1 自然透明、row2-7 自然是渐变，与 origin 逐字节一致。 */
+        grid_healthbox_decoration((uint8_t *)(uintptr_t)addr);
+
+        for (i = GRID_PAIR_BYTES * 3u / 8u; i < GRID_PAIR_BYTES; ++i) {
             uint8_t *q = (uint8_t *)(uintptr_t)(addr + i);
             uint8_t src = p0[i];
             uint8_t dst = *q;
-            unsigned col = ((i & 3u) << 1);      /* 该字节的左像素列（0,2,4,6） */
+            unsigned col = ((i & 3u) << 1);
 
             if (col >= phase)
                 dst = (uint8_t)((dst & 0xF0u) | (uint8_t)(src & 0x0Fu));
@@ -1025,8 +1054,10 @@ static void grid_emit(TextPrinter *win, GridTarget *t,
         if (ncols > 1u) {
             uint8_t *q = (uint8_t *)(uintptr_t)(addr + GRID_PAIR_BYTES);
 
-            /* p1 里 dx>=8 的像素 → 下一单元 col0.. 合并（与下一字的 p0 共享） */
-            for (i = 0u; i < GRID_PAIR_BYTES; ++i) {
+            /* p1 里 dx>=8 的像素 → 下一单元，同样先铺装饰再叠加字形 */
+            grid_healthbox_decoration(q);
+
+            for (i = GRID_PAIR_BYTES * 3u / 8u; i < GRID_PAIR_BYTES; ++i) {
                 uint8_t src = p1[i];
                 uint8_t dst = q[i];
                 uint8_t lo = (uint8_t)(src & 0x0Fu);
@@ -1048,6 +1079,33 @@ static void grid_emit(TextPrinter *win, GridTarget *t,
 
 /* §3 末尾定义（grid_bg 之后），此处前置声明供 grid_load 使用。 */
 static void grid_pair_fill(uint8_t *p, uint8_t bg);
+static void grid_healthbox_decoration(uint8_t *p);
+
+/* ★ BUG-15：血条名字区 up 片的框体装饰，原版 GetHealthboxElementGfxPtr(0x2B)
+ * 的原样 32B（日版 ROM 0x0868F140 实测）：
+ *   row0 00000000  ← 透明，露出血条框上边框
+ *   row1 00000000
+ *   row2 66666666 ┐
+ *   row3 77777777 │ 底色渐变（屏幕上立体边）
+ *   row4 33333333 │
+ *   row5 22222222 │
+ *   row6 22222222 │
+ *   row7 22222222 ┘
+ * 原版把它 CpuCopy32 进名字缓冲的 up 片；我们必须写同样的字节，
+ * 不能让该缓冲保持未初始化（全 00 会漏出 BG），也不能刷成单一 bg
+ * （会盖掉 6/7/3 渐变，屏幕上是白底方块）。 */
+static void grid_healthbox_decoration(uint8_t *p)
+{
+    static const uint32_t d[8] = {
+        0x00000000u, 0x00000000u,
+        0x66666666u, 0x77777777u, 0x33333333u,
+        0x22222222u, 0x22222222u, 0x22222222u
+    };
+    uint32_t *q = (uint32_t *)(void *)p;
+    unsigned i;
+    for (i = 0u; i < 8u; ++i)
+        q[i] = d[i];
+}
 
 /* 两列一律先铺成「窗口背景色」，不继承 VRAM 里的旧内容。
  *

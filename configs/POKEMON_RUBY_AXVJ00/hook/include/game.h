@@ -183,9 +183,16 @@ struct ChsPhase {
  *   0x180 字节 = 6 个 64B 单元，每单元 8px 宽 × 16px 高。
  * adv=10 时 phase 四相 0/2/4/6，phase=6 会算出 delta=2 → rel 跳格、
  * 第 4 个字丢失（实测数据见下方注释表）。adv=9 时 phase 八相 0..7，
- * delta 在 phase 0..6 恒为 1，只有第 9 个字（phase=7）才 =2，
- * 而血条名字最多 3 字，永远碰不到。
- * ⇒ adv=9 与 8px 单元自洽，且与火红战斗的紧凑排列一致。 */
+ * delta 在 phase 0..7 中只有最后一个才 =2：
+ *   相位累进（&7）：字 N 的起点 = (N * 9) & 7
+ *     N=0→0  N=1→1  N=2→2  N=3→3  N=4→4  N=5→5  N=6→6  N=7→7  N=8→0
+ *   delta = (phase + 9) >> 3：phase 0..6 → 1，phase 7 → 2
+ *   ⇒ 只有**第 8 个字**（N=7）才会算出 delta=2。
+ *
+ * ★ BUG-17 之后名字上限从 3 字放宽到 5 字（hook A 的截断字节数 12→20），
+ *   5 字仍远小于第 8 字，所以 adv=9 的「不跳格」前提依然成立。
+ *   容量核算：5 字 × 9px = 45px → ceil(45/8) = 6 单元，正好用满 0x180。
+ *   ⇒ adv=9 与 8px 单元自洽，且与火红战斗的紧凑排列一致。 */
 #define CHS_GLYPH_ADVANCE_SMALL 9
 #define CHS_CHAR_HEIGHT_PX   12
 #define CHS_LINE_FEED_PX     16

@@ -1,4 +1,4 @@
-﻿#!/usr/bin/env python3
+#!/usr/bin/env python3
 # -*- coding: utf-8 -*-
 """
 gdb_patcher.py — 基于 mGBA GDB stub 的运行时追踪工具（yaml 配置驱动）。
@@ -541,6 +541,138 @@ def _on_te_detail_line_y(
     )
 
 
+@handler("SetSubspriteTablesAll")
+def _on_set_subsprite_tables_all(
+    gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]
+) -> None:
+    """SetSubspriteTables 本体断点：抓所有 subsprite 表的装配（含血条外框）。
+
+    为什么要在这里断（2026-11-24）：
+      血条框的 OAM 是 64x32(主框) + 32x32(右端盖) + 3 段 32x8(下边)，
+      共 5 条 subsprite —— 与「名字区/HP 行」用的 2~3 条表不同。
+      上次只断了 0x08040DAA 那一处调用点，抓到的 2 条表是内部条，
+      改错了对象（把 HP 行拉长了，外框没动）。
+      这里直接断函数本体，能看到所有 sprite 用的是哪张表。
+    """
+    sprite = regs.get("r0", 0)
+    table = regs.get("r1", 0)
+    lr = regs.get("r14", 0) & ~1
+    if not ctx._hit((sprite, table)):
+        return
+
+    ctx.log(
+        f"\n[SetSubspriteTablesAll] sprite=0x{sprite:08X}({region_of(sprite)}) "
+        f"table=0x{table:08X}({region_of(table)}) LR=0x{lr:08X}"
+    )
+
+    tb = _read_mem(gdb, table, 8)
+    if len(tb) < 8:
+        ctx.log(f"  表读取失败 len={len(tb)}")
+        return
+    count = tb[0]
+    subs = u32(tb, 4)
+    ctx.log(f"  count={count} subs=0x{subs:08X}({region_of(subs)})")
+
+    SHAPE = ("SQUARE", "H_RECT", "V_RECT", "?")
+    DIM = {("SQUARE", 0): "8x8", ("SQUARE", 1): "16x16",
+           ("SQUARE", 2): "32x32", ("SQUARE", 3): "64x64",
+           ("H_RECT", 0): "16x8", ("H_RECT", 1): "32x8",
+           ("H_RECT", 2): "32x16", ("H_RECT", 3): "64x32",
+           ("V_RECT", 0): "8x16", ("V_RECT", 1): "8x32",
+           ("V_RECT", 2): "16x32", ("V_RECT", 3): "32x64"}
+    # 从 sprite 读 OAM，便于把表和屏幕上的块对上
+    ob = _read_mem(gdb, sprite, 8)
+    if len(ob) >= 6:
+        o0, o1, o2 = u16(ob, 0), u16(ob, 2), u16(ob, 4)
+        ctx.log(
+            f"  OAM y={o0 & 0xFF} x={o1 & 0x1FF} tile={o2 & 0x3FF} "
+            f"shape={(o0 >> 14) & 3} size={(o1 >> 14) & 3}"
+        )
+    for i in range(min(count, 8)):
+        b = _read_mem(gdb, subs + i * 4, 4)
+        if len(b) < 4:
+            ctx.log(f"  [{i}] 读取失败")
+            continue
+        x = struct.unpack("b", b[0:1])[0]
+        y = struct.unpack("b", b[1:2])[0]
+        w = u16(b, 2)
+        sh = w & 3
+        sz = (w >> 2) & 3
+        off = (w >> 4) & 0x3FF
+        pr = (w >> 14) & 3
+        ctx.log(
+            f"  [{i}] x={x:4d} y={y:3d} {SHAPE[sh]:<6} "
+            f"{DIM.get((SHAPE[sh], sz), '?'):<6} tileOff={off:3d} prio={pr}"
+        )
+
+
+@handler("HealthboxSubspriteCall")
+def _on_healthbox_subsprite_call(
+    gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]
+) -> None:
+    """血条框 SetSubspriteTables 调用点：读出 subsprite 表的真实内容。
+
+    为什么需要这个探针（2026-11-24）：
+      源码 pokeruby battle_interface.c:603 是
+          SetSubspriteTables(sprite, &gSubspriteTables_820A684[GetBattlerSide(a)]);
+      但符号表给的 0x0820A684 是 **US 版地址**（标 KEEP-US），日版不同；
+      靠字节模式搜 ROM 又因为 Subsprite 是位域、区域有重复数据而不可靠。
+      所以直接在这里（调用点）读 r1 = 实际传入的表指针，
+      再顺着 {count, ptr} 读 subsprite 数组，拿到确定数据。
+
+    Subsprite 结构（实测反推，非文档推断）：
+      s8 x, s8 y, u16 bits
+      bits: shape:2 | size:2 | tileOffset:10 | priority:2
+      ⚠ x/y 是 **s8**（x=-16 编码为 0xF0），不是 s16 —— 这是本次实测确认的，
+        按 s16 解会得到 y=16389 这种荒谬值。
+    """
+    sprite = regs.get("r0", 0)
+    table = regs.get("r1", 0)
+    lr = regs.get("r14", 0) & ~1
+    if not ctx._hit((sprite, table)):
+        return
+
+    ctx.log(
+        f"\n[HealthboxSubspriteCall] sprite=0x{sprite:08X}({region_of(sprite)}) "
+        f"table=0x{table:08X}({region_of(table)}) LR=0x{lr:08X}"
+    )
+
+    # SubspriteTable = { u8 count; u8 pad[3]; const struct Subsprite *subs; }  (8B)
+    tb = _read_mem(gdb, table, 8)
+    if len(tb) < 8:
+        ctx.log(f"  表读取失败 len={len(tb)}")
+        return
+    count = tb[0]
+    subs = u32(tb, 4)
+    ctx.log(f"  count={count} subs=0x{subs:08X}({region_of(subs)})")
+
+    # 逐条读 Subsprite（8B/条，前 4B 有效）
+    SHAPE = ("SQUARE", "H_RECT", "V_RECT", "?")
+    DIM = {("SQUARE", 0): "8x8", ("SQUARE", 1): "16x16",
+           ("SQUARE", 2): "32x32", ("SQUARE", 3): "64x64",
+           ("H_RECT", 0): "16x8", ("H_RECT", 1): "32x8",
+           ("H_RECT", 2): "32x16", ("H_RECT", 3): "64x32",
+           ("V_RECT", 0): "8x16", ("V_RECT", 1): "8x32",
+           ("V_RECT", 2): "16x32", ("V_RECT", 3): "32x64"}
+    for i in range(min(count, 8)):
+        b = _read_mem(gdb, subs + i * 8, 8)
+        if len(b) < 4:
+            ctx.log(f"  [{i}] 读取失败")
+            continue
+        x = struct.unpack("b", b[0:1])[0]
+        y = struct.unpack("b", b[1:2])[0]
+        w = u16(b, 2)
+        sh = w & 3
+        sz = (w >> 2) & 3
+        off = (w >> 4) & 0x3FF
+        pr = (w >> 14) & 3
+        dim = DIM.get((SHAPE[sh], sz), "?")
+        ctx.log(
+            f"  [{i}] x={x:4d} y={y:3d} {SHAPE[sh]:<6} {dim:<6} "
+            f"tileOff={off:3d} prio={pr}  raw={b.hex(' ')}"
+        )
+
+
 @handler("TE_PrintLocation_flag")
 def _on_te_print_location_flag(
     gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]
@@ -746,8 +878,10 @@ def _on_glyph_ptr(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict) -> None:
     fn = regs.get("r0", 0) & 0xFF
     g  = regs.get("r1", 0) & 0xFFFF
     pu = regs.get("r2", 0)
-    if fn != 3 or not (0xA0 <= g <= 0xAF):
-        return
+    # 2026-11-25: 抓数字(0xA1-0xAA)与冒号(0xF0)的真实字模指针，
+    # 用于确认美版 : / 数字用哪个字库槽。
+    # 2026-11-25: 全部记录，用于确认血条 Lv 数字的真实 gidx
+    pass
     key = (fn, g, pu)
     if not ctx._hit(key):
         return
@@ -822,7 +956,8 @@ def _on_pcs_glyph(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict) -> None:
     if not c:
         return
     g = c[0]
-    if not (0xA0 <= g <= 0xAF):
+    # 2026-11-25: 放宽以覆盖血条 Lv 串（含 0xBA/0xF0 与汉字高位）
+    if wb[0x0A] != 2:
         return
     whole = _read_mem(gdb, tptr, 24)
     key = (win, idx, g)
@@ -1292,6 +1427,43 @@ def _on_iwtd_ret(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> N
     ctx.log(f"\n[IWTD-Ret] r0(下一空闲)=0x{ret:08X} r4=0x{r4:08X}")
 
 
+@handler("JPGlyph")
+def _on_jp_glyph(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """日版 字形取址 @0x08003730（反汇编实测签名，4 参数）。
+
+        r0 = fontNum   r1 = glyph   r2 = &upper   r3 = &lower
+
+    函数体尾部才写 out 参数，入口读到的是调用方预置值；一并 dump 字模首字节。
+    fontNum 分支（反汇编 0x08003750 跳转表，7 项 + 默认）：
+        0 -> 0x081B3AAC + glyph*16   （8x8 上下两块 1bpp/4bpp）
+        1 -> FontType1Map[glyph] -> 0x081B49AC + idx*8
+        2 -> 0x081B504C + glyph*8
+        3 -> 0x081B6C2C + glyph*32   （多色，nibble 0/14/15）
+        4/5 -> FontType1Map -> 0x081B51AC + idx*32
+        6 -> FontType1Map -> 0x081B6D2C + idx*8
+    """
+    fn_ = regs.get("r0", 0) & 0xFF
+    gl = regs.get("r1", 0) & 0xFFFF
+    pu = regs.get("r2", 0)
+    pl = regs.get("r3", 0)
+    if not ctx._hit((fn_, gl)):
+        return
+    ub = _read_mem(gdb, pu, 4) if pu else b""
+    up = u32(ub, 0) if len(ub) == 4 else 0
+    lb = _read_mem(gdb, pl, 4) if pl else b""
+    lo = u32(lb, 0) if len(lb) == 4 else 0
+    ctx.log(
+        f"\n[JPGlyph] fn={fn_} glyph=0x{gl:02X}"
+        f" pu=0x{pu:08X}->0x{up:08X} pl=0x{pl:08X}->0x{lo:08X}"
+    )
+    for tag, p in (("up", up), ("lo", lo)):
+        if not p:
+            continue
+        b = _read_mem(gdb, p, 16)
+        if b:
+            ctx.log(f"           {tag}@0x{p:08X}: {b.hex(' ')}")
+
+
 @handler("GetGlyphTilePointers")
 def _on_ggtp(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
     """美版 GetGlyphTilePointers(fontNum, language, glyph, &upper, &lower)。"""
@@ -1301,6 +1473,86 @@ def _on_ggtp(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
     if not ctx._hit((fn_, lang, gl)):
         return
     ctx.log(f"\n[GGTP] fontNum={fn_} language={lang} glyph=0x{gl:02X}")
+
+
+@handler("GlyphUSExit")
+def _on_ggtp_exit(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """美版字形取址**出口** @0x08003AC4：此时 [r5]=&upper 已写、[r6]=&lower 已写。
+
+    type 分支的收尾都是：
+        str r0,[r5]     ; *upper = ...
+        str r0,[r6]     ; *lower = ...
+        pop {r4,r5,r6}
+        pop {r0}
+        bx  r0
+    断在 0x08003AC4 时 r5/r6 仍有效，直接读它们指向的字模地址。
+    """
+    pu = regs.get("r5", 0)
+    pl = regs.get("r6", 0)
+    if not pu or not pl:
+        return
+    ub = _read_mem(gdb, pu, 4)
+    lb = _read_mem(gdb, pl, 4)
+    up = u32(ub, 0) if len(ub) == 4 else 0
+    lo = u32(lb, 0) if len(lb) == 4 else 0
+    if not up and not lo:
+        return
+    if not ctx._hit((up, lo)):
+        return
+    gl = getattr(ctx, "last_glyph", -1)
+    ctx.log("\n[GlyphExit] glyph=0x%02X upper=0x%08X lower=0x%08X" % (gl, up, lo))
+    for tag, p in (("up", up), ("lo", lo)):
+        if not p:
+            continue
+        b = _read_mem(gdb, p, 32)
+        if not b:
+            continue
+        D = "0123456789abcdef"
+        ctx.log("           %s@0x%08X: %s" % (tag, p, b.hex(" ")))
+        for y in range(8):
+            row = ""
+            for by in b[y * 4:y * 4 + 4]:
+                row += D[by & 0xF] + D[by >> 4]
+            ctx.log("             " + row)
+
+
+@handler("GlyphPtrUS")
+def _on_ggtp_us(gdb: GdbClient, regs: dict, ctx: Ctx, cfg: dict[str, Any]) -> None:
+    """美版/美版汉化 字形取址 @0x08003A1C（反汇编实测签名）。
+
+        r0 = fontNum   r1 = language   r2 = glyph
+        r3 = &upper    [sp+16] = &lower
+
+    函数尾部 `str r0,[r5]` / `str r0,[r6]` 才写入这两个 out 参数，所以入口读到
+    的是调用方预置的旧值。这里一并把旧值 dump 出来，配合字模首字节判别真伪。
+    """
+    fn_ = regs.get("r0", 0) & 0xFF
+    lang = regs.get("r1", 0) & 0xFF
+    gl = regs.get("r2", 0) & 0xFFFF
+    pu = regs.get("r3", 0)
+    sp = regs.get("sp", 0)
+    low_ptr = 0
+    sb = _read_mem(gdb, sp + 16, 4) if sp else b""
+    if len(sb) == 4:
+        low_ptr = u32(sb, 0)
+    if not ctx._hit((fn_, lang, gl)):
+        return
+    # 同一次调用里入口在前、出口在后；先把 glyph 暂存给出口 handler
+    ctx.last_glyph = gl          # type: ignore[attr-defined]
+    ub = _read_mem(gdb, pu, 4) if pu else b""
+    up = u32(ub, 0) if len(ub) == 4 else 0
+    lb = _read_mem(gdb, low_ptr, 4) if low_ptr else b""
+    lo = u32(lb, 0) if len(lb) == 4 else 0
+    ctx.log(
+        f"\n[GlyphUS] fn={fn_} lang={lang} glyph=0x{gl:02X}"
+        f" pu=0x{pu:08X}->0x{up:08X} pl=0x{low_ptr:08X}->0x{lo:08X}"
+    )
+    for tag, p in (("up", up), ("lo", lo)):
+        if not p:
+            continue
+        b = _read_mem(gdb, p, 16)
+        if b:
+            ctx.log(f"           {tag}@0x{p:08X}: {b.hex(' ')}")
 
 
 @handler("Text_UpdateWindow")

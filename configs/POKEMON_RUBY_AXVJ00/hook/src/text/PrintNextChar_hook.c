@@ -1267,8 +1267,22 @@ static void grid_emit(TextPrinter *win, GridTarget *t,
             unsigned _w1 = (width_px + adv_px) >> 3;
             uint32_t _step = (uint32_t)(_w1 - _w0);
 
-            if (_step == 0u)
-                _step = 1u;              /* adv=0（PCS 路径）时保持原版 +64 */
+            /* ★ 2026-11-26 回归修复：PCS 单字节字符（ASCII 字母/数字/假名）
+             * 必须保持原版固定 +64，绝不走变步长。
+             *
+             * 事故经过：A 路线首版给 grid_draw_pcs 也传了真实 width/adv，
+             * 结果 `Lv` 两个字母整个不画、`:12` 左移 7px（用户截图反馈）。
+             * 上一版是 `e5ca0b8`，那时 PCS 传的是 0/0 → 兜底成 +64 →
+             * `Lv` 正常显示。
+             *
+             * 原因：PCS 的 advance 恒为 8px（CHS_GLYPH_ADVANCE_JP_PX），
+             * 与 8px 单元严格对齐，phase 永为 0 → 天然不需要变步长。
+             * 而传进来的 adv_px 对 PCS 是 10（Small 汉字步进），
+             * 与 PCS 自身 8px 不符，算出的 _step 把落址推歪。
+             *
+             * ⇒ 用 pcs_mode 标志（adv_px==0 表示 PCS 路径）强制 +64。 */
+            if (adv_px == 0u || _step == 0u)
+                _step = 1u;
             win_set_u32(win, WIN_TILE_DATA, addr + GRID_PAIR_BYTES * _step);
         }
     }
@@ -1640,7 +1654,8 @@ static int grid_pcs_is_sym(uint8_t glyph)
         && (unsigned)(glyph - SYM_GLYPH_BASE) < SYM_GLYPH_COUNT;
 }
 
-static void grid_draw_pcs(TextPrinter *win, uint8_t glyph, unsigned phase)
+static void grid_draw_pcs(TextPrinter *win, uint8_t glyph, unsigned phase,
+                          unsigned width_px)
 {
     GridTarget t;
     uint32_t tmp[GRID_PAIR_BYTES / 4u];
@@ -1792,6 +1807,8 @@ static void grid_draw_pcs(TextPrinter *win, uint8_t glyph, unsigned phase)
             grid_pair_set(p, dx & 7u, sy, nv);
         }
     }
+    /* ★ adv_px 传 0：PCS 走原版固定 +64（见 grid_emit 内的回归说明）。
+     * none 也不要传真实 adv —— 那会让 Lv 等 ASCII 字符落址错位。 */
     grid_emit(win, &t, p0, p1, ncols, delta, phase, 0u, 0u, 0u);
 }
 
@@ -1998,6 +2015,13 @@ int PrintNextChar_Hook(TextPrinter *win)
         return 1;
     }
 
-    grid_draw_pcs(win, c, grid_phase_for(win, text, index));
+    {
+        unsigned _padv = (win_u8(win, WIN_FONTNUM_REAL) == 2u
+                          || win_u8(win, WIN_FONTNUM_REAL) == 4u)
+                         ? CHS_GLYPH_ADVANCE_SMALL : CHS_GLYPH_ADVANCE_PX;
+        unsigned _pw = grid_width_adv(text, index, _padv, 0);
+
+        grid_draw_pcs(win, c, _pw & 7u, _pw);
+    }
     return 1;
 }

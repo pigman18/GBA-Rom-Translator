@@ -51,6 +51,8 @@ JP2CHS_Entry:               ; = text/entry.s EngineEntry = 引擎入口跳板
 
 .include "./graphic/fonts.s"
 
+
+
 ; 数据侧 type=slot 恒为 0 条，hook 侧从不消费，仅剩空壳表。
 ; 不再 include ./gen/translated_slot.asm。
 ; 串页方案已整体退役：不建页表、不后置烙入、不 include 任何 text_page 产物。

@@ -510,31 +510,40 @@ static unsigned fc_arg_count(uint8_t type)
     }
 }
 
-static unsigned grid_phase_adv(const uint8_t *text, uint16_t index, unsigned adv)
+static unsigned grid_width_adv(const uint8_t *text, uint16_t index, unsigned adv,
+                               unsigned *tokens_out)
 {
     unsigned w = 0u;
+    unsigned tokens = 0u;   /* 已画过的 glyph 数（汉字 + PCS），对应原版 +64 的次数 */
     uint16_t i = 0u;
 
-    if (!text)
+    if (!text) {
+        if (tokens_out)
+            *tokens_out = 0u;
         return 0u;
+    }
     while (i < index) {
         uint8_t c = text[i];
         if (c == 0xFFu)
             break;
         if (c == 0xFEu || c == 0xFBu) {       /* 换行 / 等待清屏：相位归零 */
             w = 0u;
+            tokens = 0u;                     /* 换行后新行从单元 0 重新数 */
             ++i;
             continue;
         }
         if (c == 0xFCu) {
             uint8_t type = (i + 1u < index) ? text[i + 1u] : 0u;
-            if (type == FC_CLEARWINDOW)
+            if (type == FC_CLEARWINDOW) {
                 w = 0u;
+                tokens = 0u;
+            }
             i = (uint16_t)(i + 2u + fc_arg_count(type));
             continue;
         }
         if (c == 0xF7u && i + 1u < index && text[i + 1u] == 0u) {
             w += adv;
+            ++tokens;
             i = (uint16_t)(i + 4u);
             continue;
         }
@@ -543,9 +552,17 @@ static unsigned grid_phase_adv(const uint8_t *text, uint16_t index, unsigned adv
             continue;
         }
         w += CHS_GLYPH_ADVANCE_JP_PX;
+        ++tokens;
         ++i;
     }
-    return w & 7u;
+    if (tokens_out)
+        *tokens_out = tokens;
+    return w;
+}
+
+static unsigned grid_phase_adv(const uint8_t *text, uint16_t index, unsigned adv)
+{
+    return grid_width_adv(text, index, adv, 0) & 7u;
 }
 
 /* 按窗口字体号选宽度算相位（Small 窗必须用 8，否则整行错位）。
@@ -955,7 +972,8 @@ static int grid_is_bag_list(TextPrinter *win)
  *（切招式页再切回撞 UI）。只推进、不写。 */
 static void grid_emit(TextPrinter *win, GridTarget *t,
                       const uint8_t *p0, const uint8_t *p1,
-                      unsigned ncols, unsigned delta, unsigned phase)
+                      unsigned ncols, unsigned delta, unsigned phase,
+                      unsigned width_px, unsigned width_tokens, unsigned adv_px)
 {
     unsigned c;
     uint16_t t0;
@@ -1072,6 +1090,31 @@ static void grid_emit(TextPrinter *win, GridTarget *t,
          * 原版恒为 64。 */
         uint32_t addr = win_u32(win, WIN_TILE_DATA);
         unsigned i;
+
+        /* ★★ 2026-11-26 A 路线：写入落址 + 指针推进用同一套「像素连续」公式 ★★
+         *
+         * 问题：原版每字固定 +64B（=8px 单元），但 Small 的
+         * CHS_GLYPH_ADVANCE_SMALL 是 10px。10px 墨迹跨不满两个 8px 单元：
+         *   第4字 phase=6 溢出 3px 到下一字的 p0 单元，
+         *   而下一字 phase=0 时 grid_load 直接 return 不做挑回
+         *   ⇒ 溢出的 3px 被抹掉（实测负电拍拍第4字只有 33/90）。
+         *
+         * ⚠ 只能修正**一处**，不能两处都修（2026-11-26 踩过：addr 修正 +
+         *   推进量修正叠加 = 双重补偿，第5字跳到单元6、单元4 全空）。
+         *
+         * 选「修推进量」而不是「修 addr」：
+         *   推进量改对了，addr 自然就是「上字的 addr + 上字实际占的单元数」，
+         *   与原版「addr = base + N*64」的线性假设一致，无需额外补偿。
+         *
+         * 推进量公式：
+         *   step = ((width_px + adv_px) >> 3) - (width_px >> 3)
+         * adv=10 时：width 0→10 推 1 单元；20→30 推 1；30→40 推 2
+         * （30>>3=3、40>>3=5，跳过单元 4 这个「半个字」的边界）。
+         *
+         * 于是 phase=6 的字（width=30）独占单元3+单元4，下一字（width=40）
+         * 从单元5 起，不再抢单元4 ⇒ 4 字以上名字右缘不再缺块。
+         *
+         * 非 buffered（textMode 0/1）仍走原版固定 +64，不受影响。 */
 
         /* ★★ 2026-11-24 BUG-15/16 定案：up 片写「原版 0x2B 装饰」，不是跳过 ★★
          *
@@ -1201,8 +1244,33 @@ static void grid_emit(TextPrinter *win, GridTarget *t,
                 q[i] = p1[i];
         }
 
-        /* ★ 照原版 0x080033A8：指针 +64（不是 +rel、不是 +cell） */
-        win_set_u32(win, WIN_TILE_DATA, addr + GRID_PAIR_BYTES);
+        /* ★★ 2026-11-26 A 路线（关键）：指针推进量跟随实际像素宽 ★★
+         *
+         * 原版死写 +64（=8px），本引擎的 addr 修正只在**本字写入时**把落址
+         * 拉到正确单元，但下一字读的还是原版推进的 win[0x20]，于是两边
+         * 各算一套、错位累积（实测第5字跳到单元6 而期望单元5）。
+         *
+         * 正确做法：写入落址与指针推进用**同一套公式**。
+         *   addr          = 本窗起点 + (本字 width_px >> 3) * 64
+         *   win[0x20]     = 本窗起点 + (下一字 width_px >> 3) * 64
+         * 下一字的 width_px = 本字 width_px + 本字 advance，所以推进量
+         *   = (本字 width_px + adv) >> 3  -  (本字 width_px >> 3)   个单元
+         * 对 adv=10：width 0→10 推进 1 单元；20→30 推进 1；30→40 推进 2
+         * （30>>3=3、40>>3=5，因为 40/8=5，跨过 4 这个单元）。
+         *
+         * 这样 phase=6 的字（width=30）独占单元3+单元4，下一字（width=40）
+         * 从单元5 开始，不再抢占单元4 ⇒ 4 字以上名字右缘不再缺块。
+         *
+         * 非 buffered（textMode 0/1）仍走原版固定 +64，不受影响。 */
+        {
+            unsigned _w0 = width_px >> 3;
+            unsigned _w1 = (width_px + adv_px) >> 3;
+            uint32_t _step = (uint32_t)(_w1 - _w0);
+
+            if (_step == 0u)
+                _step = 1u;              /* adv=0（PCS 路径）时保持原版 +64 */
+            win_set_u32(win, WIN_TILE_DATA, addr + GRID_PAIR_BYTES * _step);
+        }
     }
     win_set_u8(win, WIN_CURSOR_TILE_X, (uint8_t)(t->rel + delta));
 }
@@ -1454,7 +1522,8 @@ static void grid_font_select(uint8_t font_num, GridFontSel *s)
 
 /* 汉字：墨迹按 phase 铺到 1~2 个 tile 列。
  * 盒内像素先清 0 再写墨迹 —— 既去掉重印残留，又天然保留共享列邻字的余量。 */
-static void grid_draw_chs(TextPrinter *win, uint16_t gidx, unsigned phase)
+static void grid_draw_chs(TextPrinter *win, uint16_t gidx, unsigned phase,
+                          unsigned width_px, unsigned width_tokens)
 {
     GridTarget t;
     uint32_t buf[(2u * GRID_PAIR_BYTES) / 4u];
@@ -1559,7 +1628,7 @@ static void grid_draw_chs(TextPrinter *win, uint16_t gidx, unsigned phase)
             }
         }
     }
-    grid_emit(win, &t, p0, p1, ncols, delta, phase);
+    grid_emit(win, &t, p0, p1, ncols, delta, phase, width_px, width_tokens, adv);
 }
 
 /* PCS 单字节：句读 0x36..0x3E 读 CHS Sym（与 Wokann 增益版同构）；
@@ -1723,7 +1792,7 @@ static void grid_draw_pcs(TextPrinter *win, uint8_t glyph, unsigned phase)
             grid_pair_set(p, dx & 7u, sy, nv);
         }
     }
-    grid_emit(win, &t, p0, p1, ncols, delta, phase);
+    grid_emit(win, &t, p0, p1, ncols, delta, phase, 0u, 0u, 0u);
 }
 
 /* =====================================================================
@@ -1917,8 +1986,14 @@ int PrintNextChar_Hook(TextPrinter *win)
     /* 中文编码：全局唯一 `F7 00 hi lo`。
      * 产物里出现 F9 就是流水线的 bug，应在生成端修，不在这里加分支。 */
     if (c == 0xF7u && p[1] == 0u) {
+        unsigned _adv = (win_u8(win, WIN_FONTNUM_REAL) == 2u
+                         || win_u8(win, WIN_FONTNUM_REAL) == 4u)
+                        ? CHS_GLYPH_ADVANCE_SMALL : CHS_GLYPH_ADVANCE_PX;
+        unsigned _tok = 0u;
+        unsigned _wpx = grid_width_adv(text, index, _adv, &_tok);
+
         gidx = (uint16_t)(GRID_LEAD_ADJUST(p[2]) * 256u + (unsigned)p[3]);
-        grid_draw_chs(win, gidx, grid_phase_for(win, text, index));
+        grid_draw_chs(win, gidx, _wpx & 7u, _wpx, _tok);
         win_set_u16(win, WIN_TEXT_INDEX, (uint16_t)(index + 4u));
         return 1;
     }

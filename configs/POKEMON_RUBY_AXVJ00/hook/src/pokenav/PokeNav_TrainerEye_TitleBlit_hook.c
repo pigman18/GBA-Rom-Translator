@@ -59,7 +59,13 @@ static void put_px(uint8_t *dest, unsigned sx, unsigned sy, uint8_t fg)
         *p = (uint8_t)((*p & 0x0Fu) | (uint8_t)((fg & 0x0Fu) << 4));
 }
 
-/* 字库半字节：lo=左。只把非 0 墨画到 dest，红底保留在无墨处。 */
+/* 字库半字节：lo=左。只把**主墨(15)**画到 dest，阴影(14)与无墨处都保留红底。
+ *
+ * ★ 2026-11-25：判定从 `if (v)` 改成 `if (v == 15u)`。
+ *   本函数读的是 ADDR_FONT_CHS_NORMAL，而 Normal 已整库直嵌美版汉化版官方 bin，
+ *   每像素存 15=主墨 / 14=阴影 两级。旧写法把 14 也当主墨涂成白色，
+ *   整字会「主墨+阴影全白」加粗一档，观感与官方差一截。
+ */
 static uint8_t glyph_px(const uint8_t *g, unsigned gx, unsigned gy)
 {
     const uint8_t *tile;
@@ -91,7 +97,7 @@ static void blit_glyph_12(uint8_t *dest, unsigned px, const uint8_t *g,
     for (gy = 0u; gy < GLYPH_H; gy++) {
         for (gx = 0u; gx < GLYPH_W; gx++) {
             v = glyph_px(g, gx, gy);
-            if (v)
+            if (v == 15u)
                 put_px(dest, px + gx, gy, fg);
         }
     }

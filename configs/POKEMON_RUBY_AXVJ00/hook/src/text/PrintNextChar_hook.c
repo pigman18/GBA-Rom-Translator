@@ -527,7 +527,12 @@ static unsigned grid_phase_adv(const uint8_t *text, uint16_t index, unsigned adv
     return w & 7u;
 }
 
-/* 按窗口字体号选宽度算相位（Small 窗必须用 8，否则整行错位）。 */
+/* 按窗口字体号选宽度算相位（Small 窗必须用 8，否则整行错位）。
+ *
+ * ⚠ 这里的分支必须与下方 grid_font_select() 的 advance 选择保持一致。
+ *   本函数定义在 grid_font_select 之前，无法调用它，所以两处是并列实现。
+ *   Small=8 / Normal=12，改任一处都要同步另一处，否则相位与步进错配。
+ */
 static unsigned grid_phase_for(TextPrinter *win, const uint8_t *text, uint16_t index)
 {
     uint8_t fn = win_u8(win, WIN_FONTNUM_REAL);
@@ -1038,12 +1043,29 @@ static void grid_emit(TextPrinter *win, GridTarget *t,
          *   这样 row0-1 自然透明、row2-7 自然是渐变，与 origin 逐字节一致。 */
         grid_healthbox_decoration((uint8_t *)(uintptr_t)addr);
 
+        /* ★ 2026-11-25 修：dn 片（addr+32..63，槽 row8-15）必须整片覆盖。
+         *
+         * 现象：血条名字糊成一团，每个字叠着旧字形残影（放大 10 倍可见）。
+         *
+         * 根因：上面 grid_healthbox_decoration 只写 up 片（32B）；dn 片
+         * 保持 VRAM 里的旧内容。而下面的合并写只在 `col >= phase` 时替换，
+         * 没墨的位置（src 的高/低半字节为 0）不覆盖 ⇒ 旧字形墨迹整片留下
+         * ⇒ 新旧叠加成重影。
+         *
+         * 修法：dn 片直接取 p0 的同字节。p0 由 grid_load 按窗口背景色铺底、
+         * 再叠本字字形，dn 部分天然是「背景 + 本字墨」的正确内容。
+         * up 片不能整片覆盖 —— row0-5 是血条框渐变装饰（66/77/33/22），
+         * 只有 row6-7 属字形区，故 up 片保留原有的合并写。 */
         for (i = GRID_PAIR_BYTES * 3u / 8u; i < GRID_PAIR_BYTES; ++i) {
             uint8_t *q = (uint8_t *)(uintptr_t)(addr + i);
             uint8_t src = p0[i];
             uint8_t dst = *q;
             unsigned col = ((i & 3u) << 1);
 
+            if (i >= 32u) {
+                *q = src;               /* dn 片：整片覆盖，消除旧字形残留 */
+                continue;
+            }
             if (col >= phase)
                 dst = (uint8_t)((dst & 0xF0u) | (uint8_t)(src & 0x0Fu));
             if (col + 1u >= phase)
@@ -1054,7 +1076,18 @@ static void grid_emit(TextPrinter *win, GridTarget *t,
         if (ncols > 1u) {
             uint8_t *q = (uint8_t *)(uintptr_t)(addr + GRID_PAIR_BYTES);
 
-            /* p1 里 dx>=8 的像素 → 下一单元，同样先铺装饰再叠加字形 */
+            /* p1 里 dx>=8 的像素 → 下一单元，同样先铺装饰再叠加字形。
+             *
+             * ⚠ 起点 24（= GRID_PAIR_BYTES*3/8，即 row6）是**刻意**的，
+             *   不要改成 0。2026-11-25 试过从 0 起全量合并，结果第 1 字
+             *   保真度从 9/10 掉到 1/10 —— 因为 p1 的 row0..row5 与
+             *   up 片的血条框装饰（66/77/33/22）冲突，强行叠加会把整块
+             *   装饰冲成字形残片，屏幕上一片乱码。
+             *
+             * 代价：Small 的 x8 列若在 row0..row5 有主墨会丢（实测
+             *   「落」x8 的 row7 主墨落在 offset 7 → 被跳过）。但 row7
+             *   实际属于 dn 语义区，需要连同下面的 dn 片覆盖一起考虑，
+             *   不能只挪这里的起点。 */
             grid_healthbox_decoration(q);
 
             for (i = GRID_PAIR_BYTES * 3u / 8u; i < GRID_PAIR_BYTES; ++i) {
@@ -1272,7 +1305,7 @@ static void grid_pair_fill(uint8_t *p, uint8_t bg)
 /* =====================================================================
  * §4 两个绘制入口
  * ===================================================================== */
-/* 按 fontNum 选中文 BDF 字库。
+/* 按 fontNum 选中文 BDF 字库，并一次性给出该字库的全部绘制参数。
  *
  * 为什么必须分（2026-11-12 实测）：队伍列表 / 战斗名走 fontNum=4（Small），
  * 窗口排版按 8px/格算好，而 Normal 是 12px 墨迹。旧代码无条件用 Normal +
@@ -1282,16 +1315,44 @@ static void grid_pair_fill(uint8_t *p, uint8_t bg)
  * fontNum 语义（game.h FontIsShadowed + FontSubTable）：
  *   0/1/2/6 → 1bpp 普通；3/4/5 → shadowed 4bpp。
  *   其中 2/4 是「小字」档（Small 字库，8px 步进），其余用 Normal。
+ *   ★ 只有 fontNum=4 会用于队伍/战斗敌我名字；其余界面（对话/菜单/背包）
+ *     都是 Normal。这是本项目的既定事实，不要混用两套字库做验收。
  * MIDDLE（大字号）当前没有 fontNum 映射到它，保留常量备用。
+ *
+ * ★ 2026-11-25：把「字库指针 / 步进 / 墨迹盒 / 双色开关」收敛到一处。
+ *
+ * dual（双色）现在按**字库指针**判定，不再按 fontNum：
+ *   Normal 与 Small 都已整库直嵌美版汉化版官方 bin（见 font.config.json 的
+ *   bin_override），两套库每像素都存 15=主墨 / 14=阴影 两级。
+ *   旧代码只对 fontNum 2/4 开双色，Normal 直嵌后会把 14 阴影当主墨涂成实心
+ *   ⇒ 整个字糊成白块（实测过）。
  */
-static const uint8_t *grid_font_for(uint8_t font_num, unsigned *advance)
+typedef struct {
+    const uint8_t *data;
+    unsigned advance;
+    unsigned ink_w;
+    unsigned ink_h;
+    unsigned pad;
+    int dual;
+} GridFontSel;
+
+static void grid_font_select(uint8_t font_num, GridFontSel *s)
 {
     if (font_num == 2u || font_num == 4u) {
-        *advance = CHS_GLYPH_ADVANCE_SMALL;          /* 8px */
-        return (const uint8_t *)(uintptr_t)ADDR_FONT_CHS_SMALL;
+        s->data = (const uint8_t *)(uintptr_t)ADDR_FONT_CHS_SMALL;
+        s->advance = CHS_GLYPH_ADVANCE_SMALL; /* 8 */
+        s->ink_w = CHS_INK_SMALL_W;           /* 8 */
+        s->ink_h = CHS_INK_SMALL_H;           /* 10 */
+        s->pad = CHS_INK_SMALL_TOP;           /* 6 */
+    } else {
+        s->data = (const uint8_t *)(uintptr_t)GRID_FONT_NORMAL;
+        s->advance = CHS_GLYPH_ADVANCE_PX; /* 12 */
+        s->ink_w = GRID_INK_W;             /* 12 */
+        s->ink_h = CHS_INK_NORMAL_H;       /* 12 */
+        s->pad = CHS_INK_NORMAL_TOP;       /* 2 */
     }
-    *advance = CHS_GLYPH_ADVANCE_PX;                 /* 12px */
-    return (const uint8_t *)(uintptr_t)GRID_FONT_NORMAL;
+    s->dual = (s->data == (const uint8_t *)(uintptr_t)ADDR_FONT_CHS_SMALL)
+           || (s->data == (const uint8_t *)(uintptr_t)ADDR_FONT_CHS_NORMAL);
 }
 
 /* 汉字：墨迹按 phase 铺到 1~2 个 tile 列。
@@ -1305,24 +1366,32 @@ static void grid_draw_chs(TextPrinter *win, uint16_t gidx, unsigned phase)
     unsigned sx, sy, ncols, delta;
     uint8_t fg, bg, sh;
     const uint8_t *g;
-    unsigned adv, ink_w;
-    const uint8_t *font = grid_font_for(win_u8(win, WIN_FONTNUM_REAL), &adv);
+    unsigned adv, ink_w, ink_h, pad;
+    GridFontSel sel;
+    const uint8_t *font;
 
-    /* ★ 2026-11-24 BUG-12 定案：ncols 按**墨迹宽度**算，不按 advance。
+    grid_font_select(win_u8(win, WIN_FONTNUM_REAL), &sel);
+    font = sel.data;
+    adv = sel.advance;
+    ink_w = sel.ink_w;
+    ink_h = sel.ink_h;
+    pad = sel.pad;
+
+    /* ncols 按**墨迹宽度**算，不按 advance。
      *
      * 一列 = 8 像素。墨迹从 phase 起占 ink_w 像素，
      * 需要 ceil((phase + ink_w) / 8) 列。
      *   12px（Normal）: ink_w=12，phase 0/4  → 2 列
-     *    8px（Small） : ink_w=9，phase 0..7  → 2 列（第 2 列只含 1~2 像素）
+     *    8px（Small） : ink_w=8，adv=8 ⇒ phase 恒 0 → 1 列  ★
      *
-     * buffered 同样允许 2 列 —— 第 2 列的那 1~2 个像素要写进**下一个 64B 单元**
-     * 的开头（与下一字的 p0 共享），由 grid_emit 的 buffered 分支做合并写。
-     * 早期实现把 buffered 强制 ncols=1，导致 9px 墨迹的第 9 列被丢弃，
-     * 字被削窄一列。 */
-    ink_w = (win_u8(win, WIN_FONTNUM_REAL) == 2u
-             || win_u8(win, WIN_FONTNUM_REAL) == 4u) ? CHS_INK_SMALL_W : GRID_INK_W;
-    ncols = (phase + ink_w + 7u) >> 3;                    /* 1 或 2 列承载 */
-    delta = (phase + adv) >> 3;                          /* Small: 恒 1 */
+     * ★ Small 现在是 ink_w=8 + adv=8：phase 恒 0、ncols 恒 1，
+     *   墨迹 x0..x7 全部落在 p0 内，不会触发第二列的 tile 保护。
+     *   旧配置 ink_w=9 + adv=9 时 phase 在 0..7 漂移 ⇒ ncols 恒 2 ⇒
+     *   每个字都要占第二列，行尾命中 GRID_TILE_LIMIT 保护后**整字不画**
+     *   （= "一行最后一个字右上角缺一块"的真因）。
+     */
+    ncols = (phase + ink_w + 7u) >> 3; /* 1 或 2 列承载 */
+    delta = (phase + adv) >> 3;        /* Small: 恒 1 */
     if (!grid_setup(win, &t) || gidx >= GRID_GLYPH_SLOTS) {
         win_set_u8(win, WIN_CURSOR_TILE_X,
                    (uint8_t)(win_u8(win, WIN_CURSOR_TILE_X) + delta));
@@ -1338,42 +1407,58 @@ static void grid_draw_chs(TextPrinter *win, uint16_t gidx, unsigned phase)
     /* ★ 2026-11-24 修 BUG-12：字模必须按 pad_top 读，且目标用同一 y。
      *
      * 字库槽 128B = 2 个 tile 列 × 16 行（grid_glyph_px：x>>3 选列、
-     * y>>3 选上下半），墨迹不占满整槽 —— 三档 pad_top 不同（game.h）：
-     *   Normal 12×12 @pad3   ← 墨迹在行 3..14
-     *   Middle  9×11 @pad2   ← 墨迹在行 2..12
-     *   Small   9×9  @pad6   ← 墨迹在行 6..14  ★
+     * y>>3 选上下半），墨迹不占满整槽 —— 三档 pad_top 不同（game.h）。
+     *
+     * ★ 2026-11-25 按官方字库逐槽扫描校正（不再是估算值）：
+     *   Normal 12×12 @pad2   ← 主墨行 2..12，含阴影到 13（实测 6744/7006 槽）
+     *   Middle  9×11 @pad2   ← 无 fontNum 映射，保留备用
+     *   Small   8×10 @pad6   ← 主墨行 6..14，含阴影到 15（实测 6647/7168 槽）
      *
      * 旧实现从 y=0 读、从 y=0 写，Small 的墨迹（行 6..14）被当成行 0..8
      * 画出去 —— 整个字上移 6px 跑到可见区外，名字区一片空白。
-     * 修法：源索引和目标行都用 `y + pad`，16 行槽足够容纳（6+9=15 < 16）。 */
+     * 修法：源索引和目标行都用 `y + pad`，16 行槽足够容纳（6+10=16 ≤ 16）。 */
     {
-        unsigned pad = (win_u8(win, WIN_FONTNUM_REAL) == 2u
-                        || win_u8(win, WIN_FONTNUM_REAL) == 4u)
-                       ? CHS_INK_SMALL_TOP : CHS_INK_NORMAL_TOP;
-        unsigned ink_h = (win_u8(win, WIN_FONTNUM_REAL) == 2u
-                          || win_u8(win, WIN_FONTNUM_REAL) == 4u)
-                         ? CHS_INK_SMALL_H : CHS_INK_NORMAL_H;
-
+        /* pad / ink_h / dual 已在上方由 grid_font_select 统一给出，此处不再重复判定。
+         *
+         * ★ 2026-11-25：双色（15 主墨 / 14 阴影）现在按**字库指针**判（sel.dual），
+         * 不再按 fontNum。因为 Normal 与 Small 都已整库直嵌美版汉化版官方 bin，
+         * 两套库每像素都是 15/14 两级。
+         *
+         * 旧代码 `if (grid_glyph_px(...)) 画 fg` 把**任何非 0 值**都画成主墨，
+         * 于是官方 bin 的 14 阴影被当主墨涂成实心，整字糊成白块
+         * （实测：官方 bin 直嵌后「巨沼怪」变成三个白方块）。
+         *
+         * 现在：15 → fg（主墨），14 → sh（阴影），0 → 不画。
+         * 双色字库**不再程序化补右下阴影**（官方已自带，再补会双重阴影）。
+         * 单色字库（Middle 等仍走 BDF 二值化的）保持原行为。
+         */
         for (sy = 0u; sy < ink_h; ++sy) {
             unsigned ty = sy + pad;
 
             if (ty >= 16u)
                 break;
-            /* 阴影层：墨迹右下 1px 先铺 E（与旧实现同语义） */
-            for (sx = 0u; sx < ink_w; ++sx) {
-                unsigned dx = phase + sx + 1u;
-                uint8_t *p;
-                if (!grid_glyph_px(g, sx, ty) || dx >= ncols * 8u)
-                    continue;
-                p = (dx >> 3) ? p1 : p0;
-                if (ty + 1u < 16u)
-                    grid_pair_set(p, dx & 7u, ty + 1u, sh);
+            if (!sel.dual) {
+                /* 单色字库：程序化补右下阴影（原行为，不变） */
+                for (sx = 0u; sx < ink_w; ++sx) {
+                    unsigned dx = phase + sx + 1u;
+                    uint8_t *p;
+                    if (!grid_glyph_px(g, sx, ty) || dx >= ncols * 8u)
+                        continue;
+                    p = (dx >> 3) ? p1 : p0;
+                    if (ty + 1u < 16u)
+                        grid_pair_set(p, dx & 7u, ty + 1u, sh);
+                }
             }
             for (sx = 0u; sx < ink_w; ++sx) {
                 unsigned dx = phase + sx;
-                uint8_t *p = (dx >> 3) ? p1 : p0;
-                if (grid_glyph_px(g, sx, ty))
-                    grid_pair_set(p, dx & 7u, ty, fg);
+                uint8_t px = grid_glyph_px(g, sx, ty);
+                uint8_t *p;
+                if (!px)
+                    continue;
+                p = (dx >> 3) ? p1 : p0;
+                /* 双色：15 主墨 / 14 阴影；单色：一律主墨 */
+                grid_pair_set(p, dx & 7u, ty,
+                              (sel.dual && px == 14u) ? sh : fg);
             }
         }
     }

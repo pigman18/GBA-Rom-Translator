@@ -609,6 +609,9 @@ def load_game_config(game_id: str) -> dict[str, Any]:
         fp["shadow"] = font_cfg["shadow"]
     if "embed_primary" in font_cfg:
         fp["embed_primary"] = font_cfg["embed_primary"]
+    # bin_override：整库覆盖某些槽位（不经 BDF 二值化）。见 engine.py 的注释。
+    if "bin_override" in font_cfg:
+        fp["bin_override"] = font_cfg["bin_override"]
     if fp:
         profile["font_patch"] = fp
 

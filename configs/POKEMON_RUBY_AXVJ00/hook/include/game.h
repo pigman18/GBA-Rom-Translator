@@ -193,20 +193,60 @@ struct ChsPhase {
  *   5 字仍远小于第 8 字，所以 adv=9 的「不跳格」前提依然成立。
  *   容量核算：5 字 × 9px = 45px → ceil(45/8) = 6 单元，正好用满 0x180。
  *   ⇒ adv=9 与 8px 单元自洽，且与火红战斗的紧凑排列一致。 */
-#define CHS_GLYPH_ADVANCE_SMALL 9
+/* Small 步进 = 10px，墨迹宽 = 9px（2026-11-25 逐像素实测官方汉化版确认）。
+ *
+ * ★ 这是**实测值**，不是从反汇编推的。反汇编里只看得到 `cursorX += 8`，
+ *   但那只是增量的一部分；照它改成 8 会让字挤成一团（已实测翻车）。
+ *
+ * 实测方法与数据（两个独立来源互相印证）：
+ *   1) 官方汉化 ROM 战斗界面敌方名字（bot battle_scent 的 origin/041 帧）
+ *      → 字形区段 (20,28) (30,38) (40,48)：每字宽 9px、pitch 10px
+ *   2) 用户提供的官方汉化队伍截图（落雷兽）
+ *      → 字形区段 (20,28) (30,38) (40,48)：每字宽 9px、pitch 10px
+ *
+ * 字库侧也自洽：官方 Small bin 主墨 x_min=0（6514/7006 槽）、
+ * x_max=8（6667/7006 槽）→ 主墨横跨 x0..x8 = **9px**；
+ * 阴影再占 x9 → 合计 10 列。故 ink_w=9 读全主墨、adv=10 留 1px 阴影位。
+ *
+ * 历史教训（勿重犯）：
+ *   · adv=9 时 density 略紧，5 字名会因 ncols=2 触发行尾保护而丢末字
+ *   · adv=8 时字会被压在一起、完全不可读（实测已确认）
+ *   · font.config.json 里 Small 的 "advance": 10 本来就是对的，别再去改它 */
+#define CHS_GLYPH_ADVANCE_SMALL 10
 #define CHS_CHAR_HEIGHT_PX   12
 #define CHS_LINE_FEED_PX     16
 #define CHS_CELL_BYTES       128
 
-/* 墨迹盒（相对于 16 高槽）：宽高 + 起始行 */
+/* 墨迹盒（相对于 16 高槽）：宽高 + 起始行
+ *
+ * ★ Normal / Small 的实际值是**逐槽扫描官方字库**得出的，不是估算：
+ *     Normal @0x090001A0（7006 槽）：主墨宽 11px / 6486 槽，
+ *             含阴影 12px / 6486 槽；主墨行 y2..y12
+ *     Small  @0x090DB0A0（7168 槽）：主墨宽 9px / 6484 槽，
+ *             含阴影 10px / 6484 槽；主墨行 y6..y14
+ */
 #define CHS_INK_NORMAL_W     12
 #define CHS_INK_NORMAL_H     12
-#define CHS_INK_NORMAL_TOP   3
+/* Normal 起始行 = 2（官方实测主墨 y_min=2）。
+ * 原值是 3，会让整字比官方低 1px —— 读区变成 y3..y14，顶行被裁、底下多读空白。 */
+#define CHS_INK_NORMAL_TOP   2
 #define CHS_INK_MIDDLE_W     9
 #define CHS_INK_MIDDLE_H     11
 #define CHS_INK_MIDDLE_TOP   2
+/* Small：官方反汇编 width=8（90000bc: movs r0,#8 / strb r0,[r1,#2]），
+ * 所以 **ink_w = 8**，只画 x0..x7。
+ *
+ * 注意字形数据本身更宽：官方 bin 主墨到 x8、阴影到 x9。
+ * 但官方自己按 width=8 绘制，x8/x9 本来就不画 —— 我们照做才是等价。
+ *
+ * ink_w 为什么不能取 9/10（实测+离线模拟双重确认）：
+ *   ink_w=9 ⇒ ncols=(0+9+7)>>3=2 ⇒ 多占一列 tile；而 x8 落在 p1[0]，
+ *     下一字 phase=0 起点同为该列、其 p0 全量覆写 ⇒ x8 必被抹掉，
+ *     却仍触发 ncols=2 的行尾保护 ⇒ 末字整字丢失。
+ *   ink_h=10 保留：主墨 9 行(y6..14) + 阴影 1 行(y15)。
+ *   pad=6 保留：官方主墨 y_min=6。 */
 #define CHS_INK_SMALL_W      9
-#define CHS_INK_SMALL_H      9
+#define CHS_INK_SMALL_H      10
 #define CHS_INK_SMALL_TOP    6
 #define CHS_INK_NATIVE_W     8
 #define CHS_INK_NATIVE_H     16

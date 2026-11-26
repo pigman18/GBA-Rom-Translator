@@ -1976,6 +1976,83 @@ class TranslationEngine:
                             )
             except Exception as _e:
                 self._log("warning", f"Punctuation patch failed: {_e}")
+
+            # ★ 2026-11-25：整库覆盖（bin_override）。
+            #
+            # 用途：某些槽位要用「原版字库 bin 原样嵌入」，而不是从 BDF 二值化。
+            # 当前用于 Small —— 美版汉化版官方 bin 每像素存 15=主墨 / 14=阴影
+            # 两级灰度，而 BDF 是 1bpp，物理上存不下两级，走 BDF 必然丢阴影层，
+            # 观感与官方差一截（实测官方「巨」= `.#++++++`，BDF 版只剩 `.#......`）。
+            #
+            # 必须放在 patch_font_punct 之后：标点补丁会改写个别槽位，若先覆盖
+            # 再打补丁，官方 bin 会被改脏。放最后 = 官方 bin 保持逐字节原样。
+            #
+            # hook 侧配套：PrintNextChar_hook.c 的 small_dual 分支按 15/14 双色绘制，
+            # 且 Small 不再程序化补阴影（官方已自带，再补会双重阴影）。
+            _bin_override = fp_cfg.get("bin_override") or {}
+            if isinstance(_bin_override, dict):
+                for _lbl, _spec in _bin_override.items():
+                    if not isinstance(_spec, dict):
+                        continue
+                    _src = _spec.get("path")
+                    if not _src:
+                        continue
+                    _src_p = Path(_src)
+                    if not _src_p.is_absolute():
+                        _src_p = Path(__file__).resolve().parents[3] / _src_p
+                    if not _src_p.is_file():
+                        self._log(
+                            "warning",
+                            f"[font] bin_override[{_lbl}] 源文件不存在: {_src_p}",
+                        )
+                        continue
+                    _size = next(
+                        (
+                            s.get("slot_size", s.get("glyph_count", 7168) * s.get("bytes_per_glyph", 128))
+                            for s in slots
+                            if s.get("label") == _lbl
+                        ),
+                        None,
+                    )
+                    _dst = fonts_dir / f"{prefix}{_lbl}(0x{_size:X}).bin"
+                    _data = _src_p.read_bytes()
+
+                    # ★ 2026-11-25：overlay 语义（不再"只截断"）。
+                    #
+                    # 官方 Normal 只有 7006 槽（896768B），而 slot_size 是
+                    # 0xE0000（917504B）。官方两库在 ROM 里是**紧邻拼接**的
+                    # （0x090001A0 + 7006*128 == 0x090DB0A0），Small 的
+                    # 7006..7167 是 0xFF 填充、不是字库。
+                    #
+                    # 而项目实际在用的标点槽是 7012..7082（。，！？「」～ 等），
+                    # 官方库根本没有这些字形 —— 它们由 patch_font_punct.py
+                    # 写进 dst 的尾部。所以这里必须**保留 dst 已有尾部**，
+                    # 否则 162 个标点槽全丢，Small/Normal 窗口里标点变空白。
+                    #
+                    # 依赖时序：bin_override 在 patch_font_punct 之后执行
+                    # （见本段开头的注释），所以 dst 里的尾部就是本次 BDF +
+                    # 标点补丁的正确结果。
+                    if _size and len(_data) > _size:
+                        _data = _data[:_size]
+                    elif _size and len(_data) < _size:
+                        if not _dst.is_file():
+                            raise RuntimeError(
+                                f"bin_override[{_lbl}] 需要 overlay 但 dst 不存在: "
+                                f"{_dst}（说明 bin_override 跑在了 patch_font_punct 之前）"
+                            )
+                        _tail = _dst.read_bytes().ljust(_size, b"\x00")
+                        _keep = _size - len(_data)
+                        _data = _data + _tail[len(_data) : _size]
+                        self._log(
+                            "info",
+                            f"[font] bin_override[{_lbl}] ← {_src_p.name} "
+                            f"({len(_data) - _keep}B) overlay 保留 dst 尾部 {_keep}B",
+                        )
+                    _dst.write_bytes(_data)
+                    self._log(
+                        "info",
+                        f"[font] bin_override[{_lbl}] 写入 {_dst.name} ({len(_data)}B)",
+                    )
         except (FileNotFoundError, OSError) as e:
             self._fonts_from_bdf = False
             self._log("warning", f"Font generation skipped: {e}")

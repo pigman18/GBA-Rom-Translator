@@ -36,11 +36,12 @@
       "bytes_per_glyph": 128,
       "bdf": "normal.bdf",
       "ink": "12x12",
-      "pad_top": 3,
+      "pad_top": 2,
       "shadow": false,
       "_shadow_note": "必须 false！渲染层 grid_draw_chs 会**程序化补**右下 1px 阴影（E 色垫底 + C 色压主墨）。字库若再自带一层，两层叠加 → 字糊成一团（2026-11-24 实测：开始菜单「继续游戏」整片糊掉）。三套字库统一 false。",
       "_ink_note": "2026-11-10 12px 宋体内嵌点阵（EBDT），非缩放",
-      "advance": 12
+      "advance": 12,
+      "_pad_note": "2026-11-25 实测官方 Normal 字库(0x090001A0) 主墨 y=2..12、含阴影 y=2..13，故 pad_top=2（原 3 会让整字下移 1px）。"
     },
     {
       "label": "Middle",
@@ -58,11 +59,11 @@
       "glyph_count": 7168,
       "bytes_per_glyph": 128,
       "bdf": "small.bdf",
-      "ink": "9x9",
+      "ink": "9x10",
       "pad_top": 6,
       "advance": 10,
       "shadow": false,
-      "_ink_note": "2026-11-24 改 9x9 / advance 10：照抄 12px 的跨列方案（12px 是墨迹 11px + 步进 12，跨 2 列工作正常）。BDF 源是 Unifont 原生 16x16 经 OR 降采样到 9x9。之前用 8x9 失败是因为墨迹只有 8px，第 9 列本身没内容。"
+      "_ink_note": "9x10 / advance 10：实测官方汉化版中文 Small 每字宽 9px、pitch 10px（战斗敌方名字 + 用户队伍截图两个来源一致）。字库侧主墨 x0..x8=9px、阴影到 x9，故 ink_w=9 读全主墨。此值与 hook 的 CHS_INK_SMALL_W=9 / CHS_GLYPH_ADVANCE_SMALL=10 三处必须一致。"
     },
     {
       "label": "Sym",
@@ -86,5 +87,15 @@
         "："
       ]
     }
-  ]
+  ],
+  "bin_override": {
+    "Normal": {
+      "path": "work/_us_cn_ref/FontChsNormal.bin",
+      "_note": "官方 Normal 字库，从 work/_us_cn.gba 0x090001A0 起 dump 896768B(7006槽)。两库紧邻拼接(0x090001A0+7006*128==0x090DB0A0)，故只能导 7006 槽。尾部 162 槽(label 7012..7082 的标点)由 overlay 保留我们自建的字形。"
+    },
+    "Small": {
+      "path": "work/_us_cn_ref/FontChsSmall.bin",
+      "_note": "官方 Small 字库，从 0x090DB0A0 起 dump 896768B(7006槽)。原本 917504B 的尾部 162 槽实测是 0xFF 填充(非字库)，改导 7006 槽以触发 overlay，保留 patch_font_punct 生成的标点。"
+    }
+  }
 }

@@ -112,7 +112,8 @@ NickFullName_Hook:
     @ ④ 逐字节拷到 dst，遇 FF 停（含 FF）
     @
     @ ★ 5 字上限（2026-11-24 BUG-17）：名字区 0x180 = 384 字节
-    @   = 6 个 64B 单元，Small 9px 步进下 5 字 = ceil(45/8) = 6 单元，正好用满。
+    @   = 6 个 64B 单元，Small 8px 步进下 5 字 = ceil(40/8) = 5 单元，够用。
+    @   2026-11-25：步进由 9 改 8 后更宽松（原 ceil(45/8)=6）。
     @
     @   旧实现写死 12B（3 个汉字），实测 species 410「代欧奇希斯」5 字
     @   被截成 3 字，屏幕上只剩「代欧奇」且字形糊在一起（battle_scent 044 帧）。
@@ -181,10 +182,10 @@ NickSkipTiler_Hook:
 @   14 x 64B = 896B 写进只有 384B（0x180）的名字区
 @   ⇒ 越界覆盖 HP 条与框体装饰，实机表现为血条上方整块白斑。
 @
-@ 正确值：Small 每字 9px（adv=9），一个单元 8px 宽，所以
-@   1字→2  2字→3  3字→4  4字→5  5字→6  6字→7 单元
-@   即 r8 = ceil(chars * 9 / 8)，硬上限 6（名字区 0x180 = 6 个 64B 单元）。
-@   名字区最多容纳 5 个汉字（5*9=45px → ceil(45/8)=6）。
+@ 正确值：Small 每字 8px（adv=8，2026-11-25 由官方反汇编 cursorX+=8 确认），
+@   一个单元 8px 宽，所以 1 字 = 1 单元，r8 = ceil(chars * 8 / 8) = chars。
+@   硬上限 6（名字区 0x180 = 6 个 64B 单元），名字区最多容纳 6 个汉字。
+@   （步进 9px 的旧算例：1字→2 2字→3 3字→4 4字→5 5字→6 6字→7 单元，已作废。）
 @
 @ 每轮仍是原版 64B 步进（r5 = 0..r8-1），渲染侧 p0/p1 咬合逻辑
 @ 负责让相邻字共享边界单元（PrintNextChar_hook.c 的 grid_emit buffered 分支）。
@@ -206,7 +207,7 @@ _Nc_scan:
     ldrb r0, [r4, r6]
     cmp  r0, #255                   @ FF = EOS
     beq  _Nc_calc
-    cmp  r5, #5                     @ 名字区最多 5 字（含符号）
+    cmp  r5, #6                     @ 最多 6 个「字形格」：5 汉字 + 1 性别符号
     bge  _Nc_calc
 
     cmp  r0, #0xF7                  @ F7 00 hi lo = 一个汉字（4B）
@@ -216,8 +217,12 @@ _Nc_scan:
     cmp  r0, #0
     bne  _Nc_plain
     adds r6, #4
-    adds r5, #1                     @ 汉字计 1 个「9px 单位」
-    adds r7, #9                     @ ★ 累计像素宽（BUG-16）
+    adds r5, #1                     @ 汉字计 1 个「8px 单位」
+    adds r7, #10                    @ ★ 累计像素宽（BUG-16）
+                                    @   2026-11-25：实测官方汉化版中文 Small
+                                    @   = 字宽9px/pitch10px（两个独立来源验证），
+                                    @   故每字累计 10px，与 game.h 的
+                                    @   CHS_GLYPH_ADVANCE_SMALL(=10) 保持一致。
     b    _Nc_scan
 
 _Nc_ctrl:
@@ -230,7 +235,7 @@ _Nc_plain:
     @ ★ BUG-16：性别符号 0xB5/0xB6 也是**可见字形**（8px），必须计入宽度，
     @ 否则 r8 少算一格，符号右缘被裁（用户实测：蛇纹熊♀ 的 ♀ 右边缺一块）。
     @ 原版这段是逐字节 CpuCopy32（每字节一格），符号自然占格；
-    @ 我们按 9px 汉字排版，符号按原版 8px 计。
+    @ 我们按 8px 汉字排版（2026-11-25 起与官方一致），符号按原版 8px 计。
     cmp  r0, #0x20                  @ 小于 0x20 是控制/空格，跳过
     blt  _Nc_skip
     adds r7, #8                     @ 单字节字形计 8px
@@ -243,9 +248,9 @@ _Nc_calc:
     @   用累计像素宽 r7，除以 8 上取整。r7=0 时 r8=0（空名）。
     adds r0, r7, #7
     lsrs r0, r0, #3
-    cmp  r0, #6                     @ 硬上限 6 个单元（名字区 0x180 = 6 单元）
+    cmp  r0, #7                     @ 硬上限 7 个单元（名字区已扩到 0x1C0 = 7 单元）
     ble  _Nc_set
-    movs r0, #6
+    movs r0, #7
 _Nc_set:
     mov  r8, r0
 
@@ -308,7 +313,7 @@ _Na_scan:
     ldrb r0, [r4, r6]
     cmp  r0, #255                   @ FF = EOS
     beq  _Na_calc
-    cmp  r5, #5                     @ 名字区最多 5 字（含符号）
+    cmp  r5, #6                     @ 最多 6 个「字形格」：5 汉字 + 1 性别符号
     bge  _Na_calc
 
     cmp  r0, #0xF7                  @ F7 00 hi lo = 一个汉字（4B）
@@ -319,7 +324,7 @@ _Na_scan:
     bne  _Na_plain
     adds r6, #4
     adds r5, #1
-    adds r7, #9                     @ ★ 汉字 9px
+    adds r7, #10                    @ ★ 汉字 10px（2026-11-25 实测官方 pitch=10）
     b    _Na_scan
 
 _Na_ctrl:
@@ -338,12 +343,12 @@ _Na_skip:
     b    _Na_scan
 
 _Na_calc:
-    @ r8 = ceil(r7 / 8)，再硬限 6
+    @ r8 = ceil(r7 / 8)，再硬限 7
     adds r0, r7, #7
     lsrs r0, r0, #3
-    cmp  r0, #6                     @ 硬上限 6 个单元（名字区 0x180 = 6 单元）
+    cmp  r0, #7                     @ 硬上限 7 个单元（名字区已扩到 0x1C0 = 7 单元）
     ble  _Na_set
-    movs r0, #6
+    movs r0, #7
 _Na_set:
     mov  r8, r0
 

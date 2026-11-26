@@ -4627,9 +4627,43 @@ gdb:
   default: false
 - name: GlyphPtr
   address: '0x08003730'
-  description: GetGlyphTilePointers 入口，只报 fontNum=3 且 glyph 0xA0-0xAF
+  description: 日版 GetGlyphTilePointers 入口（fontNum=3 且 glyph 0xA0-0xAF）
   cfg:
     n: 8
+  default: false
+- name: GlyphUSExit
+  address: '0x08003AC4'
+  description: '美版字形取址出口 @0x08003AC4：此处 [r5]=upper、[r6]=lower 已写入，读真实字模地址'
+  cfg:
+    n: 8
+    layout: us
+  default: false
+- name: JPGlyph
+  address: '0x08003730'
+  description: '日版字形取址 (fontNum, glyph, &upper, &lower) @0x08003730，全量记录 fn/glyph/out 指针'
+  cfg:
+    n: 8
+  default: false
+- name: GlyphPtrCN
+  address: '0x0900004C'
+  description: '汉化版 DrawGlyphTilesChinese 入口（美版 0x08006874 被换成跳板 bx 0x0900004D）。反汇编确认：r0=win, r1=glyph, r2=glyphWidth；内部 lsls r1,#8 → +trail → lsls r1,#7 得 slot*128。fontNum==4 走 small(0x090DB0A0)，否则 normal(0x090001A0)'
+  cfg:
+    n: 8
+    layout: cn
+  default: false
+- name: CursorAdvCN
+  address: '0x09000124'
+  description: '汉化版 cursorX 推进点前一条指令（0x09000124: ldrb r0,[r6,#16]）。断在此处可读 win->cursorX 的旧值，连续命中两次即可算出真实每字增量。r6=win，故 [r6,#16] 即 cursorX。'
+  cfg:
+    n: 8
+    layout: cn
+  default: false
+- name: GlyphPtrUS
+  address: '0x08003A1C'
+  description: '美版字形取址入口：GetGlyphTilePointers(fontNum, language, glyph, &upper, &lower) @0x08003A1C（美版与美版汉化共用此地址，日版是 0x08003730）'
+  cfg:
+    n: 8
+    layout: us
   default: false
 - name: TilemapWriter
   address: '0x080036DC'
@@ -5158,4 +5192,60 @@ gdb:
   description: hookB 跳转目标（第二段入口）：确认 hookB 生效
   cfg:
     n: 30
+  default: false
+- name: HealthboxSubspriteCall
+  address: '0x08040DAA'
+  description: '血条框 SetSubspriteTables 调用点：r0=sprite, r1=subspriteTable。用于定位框体形状表真实地址'
+  cfg:
+    n: 20
+- name: SetSubspriteTablesAll
+  address: '0x08002540'
+  description: 'SetSubspriteTables 本体：r0=sprite, r1=subspriteTable。抓全部 subsprite 装配点'
+  cfg:
+    n: 40
+  default: false
+- name: LvPrintCopy
+  address: '0x08041756'
+  description: 'Lv 字模拷贝点：r1=目标VRAM地址, r0=源buffer, r2=长度。用于确认Lv写到哪个tile'
+  cfg:
+    n: 12
+  default: false
+- name: NameWriteLoop
+  address: '0x08042672'
+  description: '敌方名字→VRAM 拷贝点：r7=sprite, r5=i, r1=目标VRAM, r2=len, sp12=附加偏移'
+  cfg:
+    n: 24
+  default: false
+- name: LvRealPath
+  address: '0x08041994'
+  description: 'Lv 真实绘制路径：ldr r6,=0x06010000 处，确认单打是否走这条'
+  cfg:
+    n: 16
+  default: false
+- name: LvDblPath
+  address: '0x08041966'
+  description: 'Lv 双打路径：bl sub_8043FC0，验证是否被调用'
+  cfg:
+    n: 8
+  default: false
+- name: NameCellCount
+  address: '0x08042672'
+  description: '名字拷贝循环：r5=i, r8=格数, r1=目标VRAM。确认 r8 是否变 6'
+  cfg:
+    n: 10
+  default: false
+- name: LvStrProbe
+  address: '0x08041732'
+  description: 'Lv 串渲染入口（bl RenderTextHandleBold 前）：dump gDisplayedStringBattle 看 L/v 真实码位'
+  cfg:
+    n: 6
+    buf: '0x0202362C'
+    bufn: 24
+  default: false
+- name: HealthboxTpl
+  address: '0x080034D4'
+  description: 'RenderTextHandleBold 内部（NewWindow 之后）：看 r4 是否 = 血条窗 win 指针'
+  cfg:
+    n: 10
+    winreg: 'r4'
   default: false

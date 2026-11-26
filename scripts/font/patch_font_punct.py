@@ -222,7 +222,13 @@ def patch_font(font_path: Path, charmap_path: Path, bdf_path: Path, *,
             ink = bytearray(INK_W * INK_H)
 
         slot = ink12_to_slot16(ink, shadow=shadow)
-        packed = pack_slot16_4bpp(slot)
+        # ★ 2026-11-25：必须 lo_first=True。
+        # pack_slot16_4bpp 的默认值是 lo_first=False（左像素占**高**半字节），
+        # 而全链路统一 lo-first（build_chinese_font.py 由 engine 显式传
+        # --nibble-order lo-first；官方 DrawGlyphTilesChinese.s 与 hook 的
+        # grid_glyph_px 也都是 lo-first）。这里漏传会让这 51 个标点槽的
+        # 每个字节左右像素对调 —— 8px 宽的标点整体镜像错半像素。
+        packed = pack_slot16_4bpp(slot, lo_first=True)
         buf[off:off+BYTES_PER_GLYPH] = packed
         nz = sum(1 for b in packed if b != 0)
         label = char.encode("ascii", errors="replace").decode("ascii")

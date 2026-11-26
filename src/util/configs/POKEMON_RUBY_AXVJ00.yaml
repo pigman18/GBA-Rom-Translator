@@ -4677,6 +4677,30 @@ gdb:
   cfg:
     band: true
   default: false
+- name: P1Loop
+  address: '0x0880099A'
+  description: 'grid_emit 的 p1 合并循环前一条（880099a: adds r3,#88）。断此处可读 r3(索引基)、r5(终点128)、r1(q-p1 负偏移)、r2(ncols 相关)'
+  cfg:
+    n: 8
+  default: false
+- name: ChsGlyphIdx
+  address: '0x08800CF0'
+  description: 'grid_draw_chs 入口附近，用于读 gidx（待用 objdump 精确定位）'
+  cfg:
+    n: 4
+  default: false
+- name: P1Write
+  address: '0x088009BA'
+  description: 'p1 合并循环的写回点（88009ba: strb r0,[r3,#0]）。r3=q[i] 地址、r0=写回值、r4=p1[i]。i=28 那次即 row7'
+  cfg:
+    n: 8
+  default: false
+- name: P1Loop2
+  address: '0x088009A0'
+  description: 'p1 合并循环第一条（88009a0: ldrb r4,[r1,r3]）。r1=负偏移, r3=索引'
+  cfg:
+    n: 8
+  default: false
 - name: PcsGlyphDump
   address: '0x080032F8'
   description: 只抓字节为 0xA2/0xA6 的字符，报 glyph 与 index

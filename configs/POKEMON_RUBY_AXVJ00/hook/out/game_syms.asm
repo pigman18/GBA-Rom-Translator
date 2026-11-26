@@ -19,4 +19,4 @@ NickSkipTiler_Hook equ 0x088000e4
 NickCopyCells_Hook equ 0x088000e8
 NickCopyCellsAlt_Hook equ 0x0880013c
 PartyMenuDoPrint_Hook equ 0x088001a8
-PartyName_LookupJp equ 0x088016c8
+PartyName_LookupJp equ 0x088015c8

@@ -51,15 +51,36 @@ typedef struct GridTarget GridTarget;   /* 定义见 §3，§0 的前置声明�
 #define DIAG_RECS   128u
 #define DIAG_RECB   24u
 #define DIAG_SEQP   0x1000u
+/* ★ 2026-11-26：p0/p1 原样快照区（排查 x8 列丢失用）。
+ *   放在 0x0203F100 —— 不能放 0x0203E200！
+ *   实测（battle_scent 044 帧 ram.bin）：0x3E200 起被游戏的图形数据占用
+ *   （首字节 cd 06 00 02 ff ff...），写进去会被覆盖、seq 恒为 0。
+ *   旧 diag 区 0x3E000..0x3EC00 + seq@0x1000 之后，0x1100 起实测全零，
+ *   故用 0x3F100。
+ *
+ *   布局：16 条环形，每条 136B = [0..1]gidx [2]phase [3]ncols
+ *                              [4..67] p0 64B  [68..131] p1 64B
+ *   写指针在 +0x1F00。 */
+#define DIAG_P1BASE 0x0203F100u
+#define DIAG_P1RECS 16u
+#define DIAG_P1RECB 136u
+/* ⚠ 2026-11-26 修正：原来写 0x1F00 是错的 ——
+ *   0x0203F100 + 0x1F00 = 0x02041000，已经越过 0x0203F980 的记录区末尾，
+ *   落在别处被覆盖（实测读回来 seq 恒为 0x0A2D2B45 这种垃圾值）。
+ *   记录区实际占 16*136 = 2176 = 0x880，故 seq 放 +0xA00 = 0x0203FB00。 */
+#define DIAG_P1SEQP 0xA00u
 static void diag_emit(unsigned tag, unsigned code, unsigned phase,
                       TextPrinter *win, const GridTarget *t, unsigned t0,
                       unsigned fg, unsigned bg);
 static void diag_ctrl(unsigned tag, unsigned code, uint16_t index);
 static void diag_store(unsigned t0, const uint8_t *p0);
+static void diag_pair(unsigned gidx, unsigned phase, unsigned ncols,
+                      const uint8_t *p0, const uint8_t *p1);
 #else
 #define diag_emit(t,c,ph,w,gt,t0,fg,bg)          ((void)0)
 #define diag_ctrl(t,c,i)                         ((void)0)
 #define diag_store(t0,p0)                        ((void)0)
+#define diag_pair(gi,ph,nc,a,b)                  ((void)0)
 #endif
 
 /* =====================================================================
@@ -875,6 +896,40 @@ static void diag_store(unsigned t0, const uint8_t *p0)
     }
     diag_write(diag_slot(), r);
 }
+
+/* ★ 2026-11-26 新增：把 p0/p1 各 64 字节原样落到 EWRAM，用于排查
+ * 「phase=4 时 sx=5,6 的墨没出现在屏幕上」。
+ *
+ * 为什么需要它：GDB 断在合并写回点只能看到「写进 VRAM 的值」，
+ * 无法区分「p1 本身是 0」和「p1 有值但被合并条件跳过」。这个快照
+ * 直接给出 p1 的原始内容，一次跑就能定案。
+ *
+ * 布局：0x0203E200 起，16 条环形，每条 136B：
+ *   [0..1] gidx  [2] phase  [3] ncols
+ *   [4..67]   p0 64B
+ *   [68..131] p1 64B
+ *   [132..135] 保留
+ * 写指针在 +0x1F00（uint32）。 */
+static void diag_pair(unsigned gidx, unsigned phase, unsigned ncols,
+                      const uint8_t *p0, const uint8_t *p1)
+{
+    volatile uint32_t *seqp =
+        (volatile uint32_t *)(uintptr_t)(DIAG_P1BASE + DIAG_P1SEQP);
+    uint32_t seq = *seqp;
+    uint8_t *base = (uint8_t *)(uintptr_t)(DIAG_P1BASE
+                                           + (seq & (DIAG_P1RECS - 1u)) * DIAG_P1RECB);
+    unsigned i;
+
+    *seqp = seq + 1u;
+    base[0] = (uint8_t)(gidx & 0xFFu);
+    base[1] = (uint8_t)((gidx >> 8) & 0xFFu);
+    base[2] = (uint8_t)phase;
+    base[3] = (uint8_t)ncols;
+    for (i = 0u; i < GRID_PAIR_BYTES; ++i) {
+        base[4u + i] = p0[i];
+        base[68u + i] = p1[i];
+    }
+}
 #endif
 
 /* 背包列表 tpl（GDB）；列表内底在 tile Y=16/17，Y≥18 是框底/箭头带。 */
@@ -1059,18 +1114,37 @@ static void grid_emit(TextPrinter *win, GridTarget *t,
         for (i = GRID_PAIR_BYTES * 3u / 8u; i < GRID_PAIR_BYTES; ++i) {
             uint8_t *q = (uint8_t *)(uintptr_t)(addr + i);
             uint8_t src = p0[i];
-            uint8_t dst = *q;
-            unsigned col = ((i & 3u) << 1);
 
-            if (i >= 32u) {
-                *q = src;               /* dn 片：整片覆盖，消除旧字形残留 */
-                continue;
-            }
-            if (col >= phase)
-                dst = (uint8_t)((dst & 0xF0u) | (uint8_t)(src & 0x0Fu));
-            if (col + 1u >= phase)
-                dst = (uint8_t)((dst & 0x0Fu) | (uint8_t)(src & 0xF0u));
-            *q = dst;
+            /* ★★ 2026-11-26 修「Small 末字右缘缺块」（x8 列 row7 丢失）★★
+             *
+             * 根因（GDB + EWRAM 快照双重实证）：
+             *   名字区每字固定推进 64B，所以「上一字的 p1」和「下一字的 p0」
+             *   是**同一个 64B 单元**。下一字渲染时 grid_healthbox_decoration
+             *   把整个 up 片（row0..row7）刷成装饰，把上一字 p1 留在
+             *   row6/row7 的墨一起冲掉；随后靠 grid_load 的「挑回」补回来。
+             *
+             *   但挑回的值写进 p0 的 x0..x{phase-1}，而本循环的合并条件
+             *   `col >= phase` 恰好把这一段**跳过**，于是挑回白做，
+             *   屏幕上表现为「末字右缘缺一块 / 上一字右缘缺笔画」。
+             *
+             * 实测数据（battle_scent 031 帧，小火龙 species=4 双侧固定）：
+             *   单元3（=「龙」的 p1 / 性别的 p0）row6 = 22222222（纯装饰），
+             *   而「龙」FINAL 阶段 p1 row6 = 21322222（有墨）⇒ 被装饰冲掉。
+             *   逐像素比对：「小」phase=0 90/90、「火」phase=2 90/90、
+             *   「龙」phase=4 只有 85/90，丢的正是 sx=5,6（dx=9,10 → p1）。
+             *
+             * 修法依据：decoration 的 8 个 u32 依次是
+             *   row0=0x00 row1=0x00 row2=0x66 row3=0x77
+             *   row4=0x33 row5=0x22 row6=0x22 row7=0x22
+             * 而本窗口实测 bg=0x22 —— **row5/6/7 的装饰值恰好等于 bg**。
+             * 所以对 row6/row7（offset 24..31，即本循环的全部 up 片）
+             * 直接整片覆盖是无害的：没墨的地方 p0 就是 bg，与装饰同值。
+             *
+             * 注意：本循环起点就是 3*64/8 = 24（row6），row0..row5 不在此
+             * 循环内，那几行的 66/77/33 真装饰完全不受影响。
+             * （2026-11-25 曾误把「p1 的起点」从 24 改成 0 而翻车 —— 那是
+             *   另一个循环，动到了 row0..row5 的装饰，与此处无关。） */
+            *q = src;
         }
 
         if (ncols > 1u) {
@@ -1090,18 +1164,41 @@ static void grid_emit(TextPrinter *win, GridTarget *t,
              *   不能只挪这里的起点。 */
             grid_healthbox_decoration(q);
 
-            for (i = GRID_PAIR_BYTES * 3u / 8u; i < GRID_PAIR_BYTES; ++i) {
-                uint8_t src = p1[i];
-                uint8_t dst = q[i];
-                uint8_t lo = (uint8_t)(src & 0x0Fu);
-                uint8_t hi = (uint8_t)(src >> 4);
-
-                if (lo != 0u)
-                    dst = (uint8_t)((dst & 0xF0u) | lo);
-                if (hi != 0u)
-                    dst = (uint8_t)((dst & 0x0Fu) | (uint8_t)(hi << 4));
-                q[i] = dst;
-            }
+            /* ★★ 2026-11-26 修「Small 末字右缘缺块」（根因已实证）★★
+             *
+             * 与上面 p0 循环同一根因，这里给出完整证据链：
+             *
+             * 【现象】固定遇敌造同物种（小火龙 species=4，两侧 ROM 各打一次
+             *   补丁 —— 产物 ROM 因文本重定位布局不同，必须分开打）后，
+             *   敌名三字逐像素比对：
+             *     phase=0「小」90/90 100%
+             *     phase=2「火」90/90 100%
+             *     phase=4「龙」85/90  94%  ← 只丢 sx=5,6（dx=9,10 → p1）
+             *
+             * 【根因】名字区每字固定推进 64B，故「上一字 p1」与「下一字 p0」
+             *   是同一个单元。下一字的 grid_healthbox_decoration 把 up 片
+             *   row0..row7 刷成装饰，冲掉上一字留在 row6/row7 的墨；靠
+             *   grid_load 的「挑回」从 VRAM 读回来补。但挑回结果写进 p0 的
+             *   x0..x{phase-1} 后，p0 合并的 `col >= phase` 条件把这段跳过，
+             *   挑回白做。
+             *
+             * 【实测佐证】battle_scent 031 帧 EWRAM 快照：
+             *   单元3（「龙」p1 / 性别 p0）row6 = 22222222（纯装饰）
+             *   而「龙」FINAL 阶段 p1 row6 = 21322222（有墨）⇒ 被装饰冲掉
+             *
+             * 【修法依据】decoration 8 个 u32 依次为
+             *   row0=0x00 row1=0x00 row2=0x66 row3=0x77
+             *   row4=0x33 row5=0x22 row6=0x22 row7=0x22
+             *   本窗口实测 bg=0x22 —— row5/6/7 装饰值恰等于 bg，
+             *   所以对 row6/row7 整片覆盖无害（没墨处 p0 就是 bg）。
+             *   本循环起点 3*64/8=24 正是 row6，row0..row5 的 66/77/33
+             *   真装饰不在此循环内，完全不受影响。
+             *
+             * ⚠ 2026-11-25 曾把「本段起点」从 24 改成 0 而翻车（保真度
+             *   9/10→1/10），原因是 0 起点会覆盖 row0..row5 的真装饰。
+             *   起点 24 保持不动，只改合并语义。 */
+            for (i = GRID_PAIR_BYTES * 3u / 8u; i < GRID_PAIR_BYTES; ++i)
+                q[i] = p1[i];
         }
 
         /* ★ 照原版 0x080033A8：指针 +64（不是 +rel、不是 +cell） */

@@ -79,6 +79,57 @@ bot 场景对比 origin vs translated 时，战斗画面的对照前提是**两�
     # 一次给 origin + translated 两份都打
     python scripts/encounter/fix_encounter.py apply --map 0:25 --species 354 \
         --rom work/_fixtest/origin_n354.gba work/_fixtest/trans_n354.gba
+
+# =============================================================================
+# 踩坑记录（2026-11-26，全图鉴采集时踩到，别再重犯）
+# =============================================================================
+#
+# 【坑 1】槽结构把 level/species 写反 → species 变成 3084
+#   错误写法：struct.pack_into("<HH", d, off, species, level)
+#            或 d[off:off+2] = struct.pack("<H", species)
+#   正确写法：d[off+2:off+4] = struct.pack("<H", species)
+#   为什么：槽是 `u8 minLevel; u8 maxLevel; u16 species;`
+#           +0 min、+1 max、+2..3 species。level 占前 **2 个 u8**，不是 u16！
+#   现象：产物遇敌表读回 species=3084（= 0x0C0C，即 level 被当成 species），
+#         采集到的 40 张图全是存档里原有的几种野生（走路草/蛇纹熊…），
+#         被误判成「字体错乱」。
+#   本工具 apply 自带「写后读回 + 逐槽比对」，所以直接调用它不会犯这个错。
+#
+# 【坑 2】自己 pack 而不复用本工具
+#   批量采集脚本曾自己实现遇敌表写入，绕过了本工具的校验。
+#   正确做法：`subprocess` 调
+#       python scripts/encounter/fix_encounter.py apply --species N --rom a.gba b.gba
+#   它已经处理了「表定位 / 写后校验 / 两侧必须同打」三件事。
+#
+# 【坑 3】两侧只打一侧
+#   origin 与 translated 必须打**同一份**补丁。只打 translated 时，
+#   两侧遇到的仍是不同物种，对照失效（与 BUG-10 同类陷阱）。
+#   本工具 --rom 接受多份，务必都传。
+#
+# 【坑 4】以为「改遇敌表」和「钉 RNG / 写 gBattleMons」等价
+#   三者都试过，结论（见 bot/COVERAGE.md §2.1）：
+#     · 只钉 RNG：两侧遇敌格差 1（还有帧号相关判定参与）
+#     · 只 hunt：纯随机，一侧 30 格没遇到
+#     · 钉 RNG + hunt：可用，但仍是时序敏感
+#     · **改 12 槽（本工具）：最稳定，随机性被消灭而非追逐**
+#   battle_scent.lua 就是为这条路设计的（主动放香甜气息强制遇敌）。
+#
+# 【坑 5】species 编号别用 lexicon 顺序推
+#   `lexicon/图鉴.json` 的字典顺序是**全国图鉴**，与日版 ROM 名字表**不一致**：
+#     日版表 species 277 = キモリ(木守宫)，全国图鉴 277 = オオスバメ(大王燕)
+#     日版表 species 302 = テッカニン(铁面忍者)，全国图鉴 302 = ヤミラミ(勾魂眼)
+#   species→名字 的正确来源是 ROM 名字表 0x1CA354（stride 6, 411 条），
+#   见 scripts/verify/build_species_index.py。
+#   只采 1..386，且日版 252..276 这 25 条原文就是「？」（日版空位，
+#   origin 实测 species=252 显示 `?`），不是汉化缺陷。
+#
+# 【坑 6】0x1CA354 是**文件偏移**，不是绝对地址
+#   翻译产物的地址多为绝对地址（0x08xxxxxx），但 texts.json 里
+#   宝可梦名模块的 start=0x1CA354 是**文件偏移**。
+#   减 0x08000000 会得到负数、读出全空，从而误判「日版表是空的」。
+#   判别：值 < 0x08000000 就是文件偏移。
+# =============================================================================
+
 """
 from __future__ import annotations
 

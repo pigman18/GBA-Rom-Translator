@@ -132,6 +132,7 @@ def bdf_to_ink(
     center_x: bool = False,
     valign: str = "baseline",
     downsample: bool = False,
+    absolute: bool = False,
 ) -> bytearray:
     """Rasterize BDF into ``ink_w`` x ``ink_h`` ink (1=ink).
 
@@ -165,6 +166,24 @@ def bdf_to_ink(
             bi, bit = divmod(x, 8)
             if bi < len(row) and (row[bi] & (0x80 >> bit)):
                 raw[y * src_w + x] = 1
+
+    # ★ absolute=True（2026-11-27）：BDF 位图已经是**槽内绝对坐标**
+    #   （来自官方字库 bin 的 base BDF），原样搬运到 16x16 ink 区，
+    #   不做裁剪/重定位/pad_top 平移。
+    #   为什么必须这样：base BDF 的 16 行就是官方 16 行（巨在 row7..14），
+    #   若再走下面的 shift 逻辑，会因 pad_top 被二次应用而整体下移 1 行
+    #   （实测 Small 产物 y7..15 vs 官方 y6..15）。
+    if absolute:
+        # 返回 **16x16**（槽内绝对坐标），不是 ink_w x ink_h。
+        # ink_to_slot16 的 absolute 分支会按 16x16 + pad_top=0 直接搬运。
+        out_abs = bytearray(SLOT_W * SLOT_H)
+        lim_h = min(src_h, SLOT_H)
+        lim_w = min(src_w, SLOT_W)
+        for y in range(lim_h):
+            for x in range(lim_w):
+                if raw[y * src_w + x]:
+                    out_abs[y * SLOT_W + x] = 1
+        return out_abs
 
     min_x, min_y, max_x, max_y = src_w, src_h, -1, -1
     for y in range(src_h):
@@ -311,8 +330,35 @@ def ink_to_slot16(
     ink_w: int = INK_W,
     ink_h: int = INK_H,
     pad_top: int = PAD_TOP,
+    shadow_ink: bytearray | None = None,
+    absolute: bool = False,
 ) -> bytearray:
-    """Place ``ink_w`` x ``ink_h`` ink into the 16x16 slot. Values 0/14/15."""
+    """Place ``ink_w`` x ``ink_h`` ink into the 16x16 slot. Values 0/14/15.
+
+    ``shadow_ink``（2026-11-27 新增）：**官方阴影层**的墨迹 mask（与 ink 同尺寸）。
+    给了它就用它当 nibble 14，不再程序化「主墨右下 1px」。
+
+    为什么需要：官方字库的阴影是手工设计的，与「右下 1px」实测
+    0/6763 槽一致（Normal/Small 全库）。靠程序化补必然与官方不一致，
+    屏幕上观感与官方不同 —— 用户目标是「字体与美日版一致」。
+
+    ``absolute``（2026-11-27）：ink 已是**槽内绝对坐标**（base BDF 直出），
+    此时 pad_top 必须按 0 处理，否则整体下移（实测 Small 偏 1 行）。
+    """
+    if absolute:
+        pad_top = 0
+        slot = bytearray(SLOT_W * SLOT_H)
+        # ink 是 16x16 的槽内绝对坐标
+        for y in range(SLOT_H):
+            for x in range(SLOT_W):
+                if ink[y * SLOT_W + x]:
+                    slot[y * SLOT_W + x] = 15
+        if shadow_ink is not None:
+            for y in range(SLOT_H):
+                for x in range(SLOT_W):
+                    if shadow_ink[y * SLOT_W + x] and slot[y * SLOT_W + x] == 0:
+                        slot[y * SLOT_W + x] = 14
+        return slot
     slot = bytearray(SLOT_W * SLOT_H)
     for y in range(ink_h):
         for x in range(ink_w):
@@ -322,7 +368,24 @@ def ink_to_slot16(
             if not (0 <= sx < SLOT_W and 0 <= sy < SLOT_H):
                 continue
             slot[sy * SLOT_W + sx] = 15
-            if shadow:
+    if shadow_ink is not None:
+        # 官方阴影：逐像素照搬（不与主墨重叠，已实测零重叠）
+        for y in range(ink_h):
+            for x in range(ink_w):
+                if not shadow_ink[y * ink_w + x]:
+                    continue
+                sx, sy = x, y + pad_top
+                if not (0 <= sx < SLOT_W and 0 <= sy < SLOT_H):
+                    continue
+                if slot[sy * SLOT_W + sx] == 0:
+                    slot[sy * SLOT_W + sx] = 14
+        return slot
+    if shadow:
+        for y in range(ink_h):
+            for x in range(ink_w):
+                if not ink[y * ink_w + x]:
+                    continue
+                sx, sy = x, y + pad_top
                 for dx, dy in ((1, 0), (0, 1), (1, 1)):
                     tx, ty = sx + dx, sy + dy
                     if 0 <= tx < SLOT_W and 0 <= ty < SLOT_H:
@@ -380,6 +443,8 @@ def build_font_bin(
     pad_top: int | None = None,
     lo_first: bool = False,
     downsample: bool = False,
+    shadow_glyphs: dict | None = None,
+    absolute_glyphs: dict | None = None,
 ) -> bytearray:
     if bytes_per_glyph != BYTES_PER_GLYPH:
         raise ValueError(
@@ -391,17 +456,29 @@ def build_font_bin(
     buf = bytearray(bytes_per_glyph * glyph_count)
     for idx, char in charmap.items():
         encoding = ord(char)
+        shadow_ink: bytearray | None = None
         if encoding in bdf_glyphs:
             bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y = bdf_glyphs[encoding]
+            # base BDF 的位图是「槽内绝对坐标」，必须走 absolute 路径
+            is_abs = absolute_glyphs is not None and encoding in absolute_glyphs
             ink = bdf_to_ink(
                 bitmap_rows, bbx_w, bbx_h, bbx_x, bbx_y, font_ascent,
                 ink_w=ink_w, ink_h=ink_h, pad_top=pad_top,
-                downsample=downsample,
+                downsample=downsample, absolute=is_abs,
             )
+            # 官方阴影层（若提供）：同一条 BDF 转换路径，保证与主墨对齐
+            if shadow_glyphs and encoding in shadow_glyphs:
+                srows, sw, sh_, sx, sy_ = shadow_glyphs[encoding]
+                shadow_ink = bdf_to_ink(
+                    srows, sw, sh_, sx, sy_, font_ascent,
+                    ink_w=ink_w, ink_h=ink_h, pad_top=pad_top,
+                    downsample=downsample, absolute=is_abs,
+                )
         else:
             ink = bytearray(ink_w * ink_h)
         slot = ink_to_slot16(
             ink, shadow=shadow, ink_w=ink_w, ink_h=ink_h, pad_top=pad_top,
+            shadow_ink=shadow_ink, absolute=is_abs if encoding in bdf_glyphs else False,
         )
         packed = pack_slot16_4bpp(slot, lo_first=lo_first)
         off = idx * bytes_per_glyph
@@ -491,6 +568,14 @@ def main() -> None:
     ap.add_argument("--pad-map", nargs="*", default=None, metavar="LABEL=N",
                     help="逐 slot 指定墨迹在 16 高槽里的起始行，如 Small=6 "
                          "（必须与旧字库对齐，否则多行互相压盖）")
+    ap.add_argument("--shadow-bdf-map", nargs="*", default=None, metavar="LABEL=PATH",
+                    help="逐 slot 指定**官方阴影层 BDF**（nibble 14）。给了它就按逐像素"
+                         "照搬官方阴影，不再程序化「主墨右下 1px」。"
+                         "实测官方阴影与右下1px 0/6763 槽一致，必须用这个才与官方一致。")
+    ap.add_argument("--absolute-bdf-map", nargs="*", default=None, metavar="LABEL=PATH",
+                    help="逐 slot 指定**槽内绝对坐标**的 BDF（base BDF）。"
+                         "这些字形不再做基线重定位/pad_top 平移，原样搬运 —— "
+                         "否则会二次应用 pad_top 导致整体下移（实测 Small 偏 1 行）。")
     ap.add_argument("--charmap", required=True, type=Path)
     ap.add_argument("--output-dir", required=True, type=Path)
     ap.add_argument("--glyph-count", type=int, default=DEFAULT_GLYPH_COUNT)
@@ -552,6 +637,8 @@ def main() -> None:
     ink_map = _kv_map(args.ink_map)
     pad_map = _kv_map(args.pad_map)
     shadow_map = _kv_map(args.shadow_map)
+    shadow_bdf_map = _kv_map(args.shadow_bdf_map)
+    absolute_bdf_map = _kv_map(args.absolute_bdf_map)
     slot_chars: dict[str, list[str]] = {}
     for item in args.slot_chars or []:
         if "=" not in item:
@@ -609,6 +696,16 @@ def main() -> None:
         plan.append((label, bp, glyphs, ascent, iw, ih, pad, sh))
         print(f"  [{label}] bdf={bp.name} ink={iw}x{ih} pad_top={pad} shadow={sh}")
 
+    # 官方阴影层（可选）：逐槽读 BDF，作为 nibble 14 的权威来源
+    shadow_glyphs_map: dict[str, dict] = {}
+    for _lbl, _sp in shadow_bdf_map.items():
+        _p = Path(_sp)
+        if not _p.is_file():
+            raise SystemExit(f"error: --shadow-bdf-map {_lbl} 的 BDF 不存在: {_p}")
+        _g, _asc, _d, _ps = parse_bdf(_p)
+        shadow_glyphs_map[_lbl] = _g
+        print(f"  [{_lbl}] shadow-bdf={_p.name}  {len(_g)} 字形（官方阴影层）")
+
     for i, (label, bp, glyphs, ascent, iw, ih, pad, sh) in enumerate(plan):
         print(f"Building {label} font...")
         if label in slot_chars:
@@ -638,6 +735,9 @@ def main() -> None:
             pad_top=pad,
             lo_first=(args.nibble_order == "lo-first"),
             downsample=args.downsample,
+            shadow_glyphs=shadow_glyphs_map.get(label),
+            absolute_glyphs=(shadow_glyphs_map.get(label)
+                             if label in absolute_bdf_map else None),
         )
         if args.slot_sizes and i < len(args.slot_sizes):
             buf = buf[: args.slot_sizes[i]]

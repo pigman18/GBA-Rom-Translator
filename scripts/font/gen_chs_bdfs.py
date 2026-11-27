@@ -512,6 +512,43 @@ def write_bdf(
     out.write_text("\n".join(lines), encoding="utf-8")
 
 
+def load_base_bdf_rows(path: Path) -> dict[int, list[str]]:
+    """读 base BDF → {unicode: 16 行十六进制}（原样，不做任何变换）。
+
+    ★ 与 ``_load_existing_bdf_rows`` 的区别：这里**只取位图原始行**，
+      不参与栅格化、不重新居中。base 命中时必须原样保留官方像素，
+      否则 ink 会因 place_ink 的 ``(ink_w-tw)//2`` 居中而被平移
+      → 「不回退到官方字库」这个目标就失去了。
+    """
+    if not path.is_file():
+        raise SystemExit(f"error: base BDF 不存在: {path}")
+    out: dict[int, list[str]] = {}
+    lines = path.read_text("utf-8", errors="replace").splitlines()
+    i, n = 0, len(lines)
+    while i < n:
+        if lines[i].startswith("STARTCHAR"):
+            enc = -1
+            bitmap: list[str] = []
+            i += 1
+            while i < n and not lines[i].startswith("BITMAP"):
+                if lines[i].startswith("ENCODING"):
+                    try:
+                        enc = int(lines[i].split()[1])
+                    except (IndexError, ValueError):
+                        enc = -1
+                i += 1
+            i += 1
+            while i < n and not lines[i].startswith("ENDCHAR"):
+                s = lines[i].strip()
+                if s:
+                    bitmap.append(s)
+                i += 1
+            if enc > 0 and bitmap:
+                out[enc] = bitmap
+        i += 1
+    return out
+
+
 def _load_existing_bdf_rows(path: Path) -> dict[int, tuple[list[str], str]]:
     """Parse an existing BDF into {encoding: (hex_rows, tag)} for merge."""
     if not path.is_file():
@@ -545,6 +582,14 @@ def _load_existing_bdf_rows(path: Path) -> dict[int, tuple[list[str], str]]:
     return out
 
 
+def _rel(p: Path) -> str:
+    """尽力输出相对仓库根的路径；不在仓库内则输出绝对路径。"""
+    try:
+        return str(p.relative_to(ROOT))
+    except ValueError:
+        return str(p)
+
+
 def gen_one(
     name: str,
     spec: dict,
@@ -554,6 +599,8 @@ def gen_one(
     *,
     valign_overrides: dict | None = None,
     merge_existing: bool = False,
+    base_rows: dict[int, list[str]] | None = None,
+    base_shadow_rows: dict[int, list[str]] | None = None,
 ) -> tuple[Path, int, int]:
     from glyph_valign import resolve_valign
 
@@ -561,10 +608,13 @@ def gen_one(
     ink_h = int(spec["ink_h"])
     pad_top = int(spec["pad_top"])
     dwidth = int(spec["dwidth"])
-    out = out_dir / spec["file"]
+    out = (out_dir if out_dir.is_absolute() else ROOT / out_dir) / spec["file"]
     bak = backup_bdf(out)
     if bak:
-        print(f"  bak → {bak.relative_to(ROOT)}")
+        try:
+            print(f"  bak → {bak.relative_to(ROOT)}")
+        except ValueError:
+            print(f"  bak → {bak}")
 
     faces = open_faces(font_files)
     if not faces:
@@ -582,7 +632,46 @@ def gen_one(
     min_ink_default = 4 if max(ink_w, ink_h) <= 9 else 8
     failed: list[str] = []
     valign_counts: dict[str, int] = {}
+
+    # ★ base 合并（2026-11-27）：base 命中的字**原样取官方像素**，不栅格化。
+    #
+    # 为什么不能走 rasterize_glyph：那条路会用 FreeType 重画 + place_ink 居中
+    # （ox = (ink_w-tw)//2），官方像素必然被平移/重排 → 就不是官方字库了。
+    # 用户目标「不回退到原本 scripts 生成的 bdf」要求 base 命中部分逐像素一致。
+    #
+    # 阴影：双色渲染下 nibble 14 是阴影色。官方字库的阴影是手工设计的
+    # （实测与「主墨右下 1px」0/6763 槽一致），不能程序化补。
+    # 所以 base.shadow.bdf 的位图会被**合并进主墨位图**——
+    # 具体做法：把阴影行 OR 到主墨行的「14 号位」。
+    # 但标准 BDF 只有 1bpp，装不下两级 ⇒ 走 _base_pending，
+    # 由 write_bdf_with_base() 在写文件时按 15/14 两级输出。
+    base_hit = 0
+    base_miss: list[str] = []
+    if base_rows:
+        for ch in chars:
+            enc = ord(ch)
+            if enc in base_rows:
+                base_hit += 1
+            else:
+                base_miss.append(ch)
+        print(
+            f"  base 命中 {base_hit}/{len(chars)}"
+            + (f"，缺失 {len(base_miss)}（走栅格化）" if base_miss else "，全部命中")
+        )
+        if base_miss[:30]:
+            print(f"  base 缺失样本: {''.join(base_miss[:40])}")
+        # base 命中的字直接进 filled，tag 标 base（不参与下面的栅格化循环）
+        for ch in chars:
+            enc = ord(ch)
+            rows = base_rows.get(enc)
+            if rows is not None:
+                filled[enc] = (rows, "base")
+
     for i, ch in enumerate(chars):
+        enc = ord(ch)
+        if base_rows and enc in base_rows:
+            # 已在上面原样填入，跳过栅格化
+            continue
         # 标点/符号墨迹少，阈值放宽
         o = ord(ch)
         min_ink = 2 if o < 0x80 or not (0x4E00 <= o <= 0x9FFF) else min_ink_default
@@ -615,12 +704,34 @@ def gen_one(
         pad_top=pad_top,
     )
     print(
-        f"  wrote {out.relative_to(ROOT)}  glyphs={len(filled)}  "
+        f"  wrote {_rel(out)}  glyphs={len(filled)}  "
         f"failed={len(failed)}  ink={ink_w}x{ink_h} pad_top={pad_top}  "
         f"valign={valign_counts}"
     )
     if failed[:30]:
         print(f"  failed sample: {''.join(failed[:40])}")
+
+    # ★ 阴影 BDF：只写 base 命中的字（官方阴影是手工设计的，不能程序化补）。
+    # 缺失字没有官方阴影参照，交给 build_chinese_font 的 --shadow 程序化兜底。
+    if base_shadow_rows and base_rows:
+        sh_filled: dict[int, tuple[list[str], str]] = {}
+        for ch in chars:
+            enc = ord(ch)
+            if enc in base_rows and enc in base_shadow_rows:
+                sh_filled[enc] = (base_shadow_rows[enc], "base-shadow")
+        sh_out = out.with_suffix(".shadow.bdf")
+        write_bdf(
+            sh_out,
+            order,
+            sh_filled,
+            name=f"{name.capitalize()}Shadow",
+            ink_w=ink_w,
+            ink_h=ink_h,
+            dwidth=dwidth,
+            pad_top=pad_top,
+        )
+        print(f"  wrote {_rel(sh_out)}  glyphs={len(sh_filled)}（官方阴影）")
+
     return out, len(filled), len(failed)
 
 
@@ -647,6 +758,22 @@ def main() -> int:
         "--chars",
         default="",
         help="只重生成这些字符并 merge 进已有 BDF（如 '，。、！？：；'）",
+    )
+    ap.add_argument(
+        "--base",
+        nargs="*",
+        default=None,
+        metavar="LABEL=PATH",
+        help="逐槽 base 主墨 BDF：base 命中的字**原样取官方像素、不栅格化**。"
+             "如 Normal=fonts/normal.base.bdf Small=fonts/small.base.bdf",
+    )
+    ap.add_argument(
+        "--base-shadow",
+        nargs="*",
+        default=None,
+        metavar="LABEL=PATH",
+        help="逐槽 base 阴影 BDF（官方 nibble 14 层）。与 --base 成对使用，"
+             "生成的 <name>.shadow.bdf 供 build_chinese_font 合成双色字库。",
     )
     a = ap.parse_args()
 
@@ -687,8 +814,38 @@ def main() -> int:
         print(f"  {f}")
 
     names = list(a.only) if a.only else ["normal", "middle", "small"]
+
+    # 解析 --base / --base-shadow（LABEL=PATH，LABEL 大小写不敏感）
+    def _kv(items) -> dict[str, Path]:
+        out: dict[str, Path] = {}
+        for it in items or []:
+            if "=" not in it:
+                raise SystemExit(f"error: 需要 LABEL=PATH 形式，收到 {it!r}")
+            k, _, v = it.partition("=")
+            p = Path(v.strip())
+            if not p.is_absolute():
+                p = ROOT / p
+            out[k.strip().lower()] = p
+        return out
+
+    base_map = _kv(a.base)
+    base_shadow_map = _kv(a.base_shadow)
+    if base_map and not base_shadow_map:
+        print("warning: 只给了 --base 没给 --base-shadow → 阴影将退回程序化生成，"
+              "与官方不一致（官方阴影非「右下 1px」）")
+    if base_shadow_map and not base_map:
+        raise SystemExit("error: --base-shadow 必须与 --base 成对使用")
+
     for name in names:
         print(f"=== {name} ===")
+        br = sr = None
+        if name in base_map:
+            br = load_base_bdf_rows(base_map[name])
+            print(f"  base: {base_map[name].relative_to(ROOT)} → {len(br)} 字形")
+            if name in base_shadow_map:
+                sr = load_base_bdf_rows(base_shadow_map[name])
+                print(f"  base-shadow: {base_shadow_map[name].relative_to(ROOT)}"
+                      f" → {len(sr)} 字形")
         gen_one(
             name,
             slots[name],
@@ -697,6 +854,8 @@ def main() -> int:
             a.out_dir,
             valign_overrides=valign_overrides or None,
             merge_existing=merge,
+            base_rows=br,
+            base_shadow_rows=sr,
         )
     print("done (valign: punct=bottom, CJK=center; metrics-only sizes)")
     return 0

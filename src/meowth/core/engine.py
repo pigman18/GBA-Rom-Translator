@@ -1831,12 +1831,35 @@ class TranslationEngine:
             ink_map_args: list[str] = []
             pad_map_args: list[str] = []
             shadow_map_args: list[str] = []
+            shadow_bdf_map_args: list[str] = []
+            absolute_bdf_map_args: list[str] = []
             slot_chars_args: list[str] = []
             for s in slots:
                 lbl = s.get("label", "Unknown")
                 pb = self._resolve_slot_bdf(s, bdf_path)
                 if pb is not None:
                     bdf_map_args.append(f"{lbl}={pb}")
+                # 官方阴影层 BDF（2026-11-27）：slot 里写 "shadow_bdf": "xxx.shadow.bdf"。
+                # 给了它 → build_chinese_font 按逐像素照搬官方 nibble 14，
+                # 不再程序化「主墨右下 1px」（实测与官方 0/6763 槽一致，必须照搬）。
+                if s.get("shadow_bdf"):
+                    sb = Path(str(s["shadow_bdf"]))
+                    if not sb.is_absolute():
+                        try:
+                            sb = Path(get_fonts_dir(self.config.game)) / sb
+                        except Exception:
+                            sb = bdf_path.parent / sb
+                    if sb.is_file():
+                        shadow_bdf_map_args.append(f"{lbl}={sb}")
+                        # base BDF 是「槽内绝对坐标」，要一并告诉 build_chinese_font
+                        # 不要再做基线重定位（否则 pad_top 二次应用 → 整体下移）
+                        if s.get("absolute"):
+                            absolute_bdf_map_args.append(f"{lbl}={sb}")
+                    else:
+                        self._log(
+                            "warning",
+                            f"[font] {lbl} 的 shadow_bdf 不存在，跳过: {sb}",
+                        )
                 if s.get("ink"):
                     ink_map_args.append(f"{lbl}={s['ink']}")
                 if s.get("pad_top") is not None:
@@ -1882,6 +1905,10 @@ class TranslationEngine:
                 args += ["--pad-map", *pad_map_args]
             if shadow_map_args:
                 args += ["--shadow-map", *shadow_map_args]
+            if shadow_bdf_map_args:
+                args += ["--shadow-bdf-map", *shadow_bdf_map_args]
+            if absolute_bdf_map_args:
+                args += ["--absolute-bdf-map", *absolute_bdf_map_args]
             # 全局兜底（默认 false）：仅在 slot 未显式写 shadow 时生效。
             if fp_cfg.get("shadow") is True:
                 args.append("--shadow")

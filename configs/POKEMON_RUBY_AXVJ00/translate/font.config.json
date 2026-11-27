@@ -1,101 +1,97 @@
 {
-  "escape": true,
-  "escape_bytes": [
-    249,
-    0
+ "escape": true,
+ "escape_bytes": [
+  249,
+  0
+ ],
+ "ideospace_bytes": [
+  1,
+  247
+ ],
+ "chinese_leads": [
+  [
+   1,
+   5
   ],
-  "ideospace_bytes": [
-    1,
-    247
+  [
+   7,
+   26
   ],
-  "chinese_leads": [
-    [
-      1,
-      5
-    ],
-    [
-      7,
-      26
-    ],
-    [
-      28,
-      30
-    ]
-  ],
-  "_shadow_note": "2026-11-24：全局 shadow 已移除，改为 font_slots[].shadow 逐槽配置，默认 false。★ 三套字库都必须 false：渲染层 grid_draw_chs 会程序化补右下 1px 阴影（先铺 E 色，再把 C 色压在主墨上），字库再自带一层就会双重阴影 → 字糊成一团（实测开始菜单「继续游戏」整片糊掉）。这个开关留给将来需要「字库直出三色预渲染」的场景。",
-  "embed_primary": true,
-  "_embed_primary_note": "2026-11-02 起为 true：三套字库均由 BDF 直出，直接嵌入主 bin。原先 embed_primary=false 会嵌入 *_unshadow，而那份是拿旧 12px 参照对形变来的，会把墨迹多撑 1px。",
-  "_fonts_dir": "configs/POKEMON_RUBY_AXVJ00/fonts",
-  "_font_source_note": "流水线只从 configs/<game>/fonts/ 取 BDF；2026-11-02 起不再回退仓根 fonts/。ink 尺寸为实测墨迹 bbox，容器仍是 16x16 槽 / 128B。三套主 BDF 由 scripts/font/gen_chs_bdfs.py 从 texts_translated.json 字符集 + Windows TTF 超采样拟合生成；仅复用 FireRed ink/pad_top 尺寸，不导出 FR 字形。",
-  "_pad_top_note": "pad_top = 墨迹在 16 高槽里的起始行。必须与旧字库逐字对齐，否则同屏多行会上下互相压盖（队伍小字曾因居中上移 3px 而糊成一片）。旧 Small_unshadow 实测 y=6..14，故 pad_top=6；Normal 实测 y=2..12，故 pad_top=2。",
-  "font_slots": [
-    {
-      "label": "Normal",
-      "addr": 150994944,
-      "glyph_count": 7168,
-      "bytes_per_glyph": 128,
-      "bdf": "normal.bdf",
-      "ink": "12x12",
-      "pad_top": 2,
-      "shadow": false,
-      "_shadow_note": "必须 false！渲染层 grid_draw_chs 会**程序化补**右下 1px 阴影（E 色垫底 + C 色压主墨）。字库若再自带一层，两层叠加 → 字糊成一团（2026-11-24 实测：开始菜单「继续游戏」整片糊掉）。三套字库统一 false。",
-      "_ink_note": "2026-11-10 12px 宋体内嵌点阵（EBDT），非缩放",
-      "advance": 12,
-      "_pad_note": "2026-11-25 实测官方 Normal 字库(0x090001A0) 主墨 y=2..12、含阴影 y=2..13，故 pad_top=2（原 3 会让整字下移 1px）。"
-    },
-    {
-      "label": "Middle",
-      "addr": 154271744,
-      "glyph_count": 7168,
-      "bytes_per_glyph": 128,
-      "bdf": "middle.bdf",
-      "ink": "9x11",
-      "pad_top": 2,
-      "shadow": false
-    },
-    {
-      "label": "Small",
-      "addr": 152043520,
-      "glyph_count": 7168,
-      "bytes_per_glyph": 128,
-      "bdf": "small.bdf",
-      "ink": "9x10",
-      "pad_top": 6,
-      "advance": 10,
-      "shadow": false,
-      "_ink_note": "9x10 / advance 10：实测官方汉化版中文 Small 每字宽 9px、pitch 10px（战斗敌方名字 + 用户队伍截图两个来源一致）。字库侧主墨 x0..x8=9px、阴影到 x9，故 ink_w=9 读全主墨。此值与 hook 的 CHS_INK_SMALL_W=9 / CHS_GLYPH_ADVANCE_SMALL=10 三处必须一致。"
-    },
-    {
-      "label": "Sym",
-      "addr": 152961024,
-      "glyph_count": 9,
-      "bytes_per_glyph": 64,
-      "slot_size": 576,
-      "bdf": "normal.bdf",
-      "ink": "8x12",
-      "pad_top": 2,
-      "_slot_chars_note": "0x36..0x3E 句读标点，按 64B/字 8x16 单独生成；不再复用整张 charmap 的前 9 个汉字（那会让所有标点变成汉字残片）",
-      "slot_chars": [
-        ";",
-        "。",
-        "－",
-        "~",
-        "、",
-        "，",
-        "！",
-        "？",
-        "："
-      ]
-    }
-  ],
-  "bin_override": {
-    "Normal": {
-      "path": "work/_us_cn_ref/FontChsNormal.bin",
-      "_note": "官方 Normal 字库，从 work/_us_cn.gba 0x090001A0 起 dump 896768B(7006槽)。两库紧邻拼接(0x090001A0+7006*128==0x090DB0A0)，故只能导 7006 槽。尾部 162 槽(label 7012..7082 的标点)由 overlay 保留我们自建的字形。"
-    },
-    "Small": {
-      "path": "work/_us_cn_ref/FontChsSmall.bin",
-      "_note": "官方 Small 字库，从 0x090DB0A0 起 dump 896768B(7006槽)。原本 917504B 的尾部 162 槽实测是 0xFF 填充(非字库)，改导 7006 槽以触发 overlay，保留 patch_font_punct 生成的标点。"
-    }
+  [
+   28,
+   30
+  ]
+ ],
+ "_shadow_note": "2026-11-24：全局 shadow 已移除，改为 font_slots[].shadow 逐槽配置，默认 false。★ 三套字库都必须 false：渲染层 grid_draw_chs 会程序化补右下 1px 阴影（先铺 E 色，再把 C 色压在主墨上），字库再自带一层就会双重阴影 → 字糊成一团（实测开始菜单「继续游戏」整片糊掉）。这个开关留给将来需要「字库直出三色预渲染」的场景。",
+ "embed_primary": true,
+ "_embed_primary_note": "2026-11-02 起为 true：三套字库均由 BDF 直出，直接嵌入主 bin。原先 embed_primary=false 会嵌入 *_unshadow，而那份是拿旧 12px 参照对形变来的，会把墨迹多撑 1px。",
+ "_fonts_dir": "configs/POKEMON_RUBY_AXVJ00/fonts",
+ "_font_source_note": "流水线只从 configs/<game>/fonts/ 取 BDF；2026-11-02 起不再回退仓根 fonts/。ink 尺寸为实测墨迹 bbox，容器仍是 16x16 槽 / 128B。三套主 BDF 由 scripts/font/gen_chs_bdfs.py 从 texts_translated.json 字符集 + Windows TTF 超采样拟合生成；仅复用 FireRed ink/pad_top 尺寸，不导出 FR 字形。",
+ "_pad_top_note": "pad_top = 墨迹在 16 高槽里的起始行。必须与旧字库逐字对齐，否则同屏多行会上下互相压盖（队伍小字曾因居中上移 3px 而糊成一片）。旧 Small_unshadow 实测 y=6..14，故 pad_top=6；Normal 实测 y=2..12，故 pad_top=2。",
+ "font_slots": [
+  {
+   "label": "Normal",
+   "addr": 150994944,
+   "glyph_count": 7168,
+   "bytes_per_glyph": 128,
+   "bdf": "normal.bdf",
+   "ink": "12x12",
+   "pad_top": 2,
+   "shadow": false,
+   "_shadow_note": "必须 false！渲染层 grid_draw_chs 会**程序化补**右下 1px 阴影（E 色垫底 + C 色压主墨）。字库若再自带一层，两层叠加 → 字糊成一团（2026-11-24 实测：开始菜单「继续游戏」整片糊掉）。三套字库统一 false。",
+   "_ink_note": "2026-11-10 12px 宋体内嵌点阵（EBDT），非缩放",
+   "advance": 12,
+   "_pad_note": "2026-11-25 实测官方 Normal 字库(0x090001A0) 主墨 y=2..12、含阴影 y=2..13，故 pad_top=2（原 3 会让整字下移 1px）。",
+   "shadow_bdf": "normal.base.shadow.bdf",
+   "_shadow_bdf_note": "官方 Normal 阴影层（手工设计）。实测与「主墨右下1px」0/6763 槽一致，必须照搬。",
+   "absolute": true
+  },
+  {
+   "label": "Middle",
+   "addr": 154271744,
+   "glyph_count": 7168,
+   "bytes_per_glyph": 128,
+   "bdf": "middle.bdf",
+   "ink": "9x11",
+   "pad_top": 2,
+   "shadow": false
+  },
+  {
+   "label": "Small",
+   "addr": 152043520,
+   "glyph_count": 7168,
+   "bytes_per_glyph": 128,
+   "bdf": "small.bdf",
+   "ink": "9x10",
+   "pad_top": 6,
+   "advance": 10,
+   "shadow": false,
+   "_ink_note": "9x10 / advance 10：实测官方汉化版中文 Small 每字宽 9px、pitch 10px（战斗敌方名字 + 用户队伍截图两个来源一致）。字库侧主墨 x0..x8=9px、阴影到 x9，故 ink_w=9 读全主墨。此值与 hook 的 CHS_INK_SMALL_W=9 / CHS_GLYPH_ADVANCE_SMALL=10 三处必须一致。",
+   "shadow_bdf": "small.base.shadow.bdf",
+   "_shadow_bdf_note": "官方 Small 阴影层。同上。",
+   "absolute": true
+  },
+  {
+   "label": "Sym",
+   "addr": 152961024,
+   "glyph_count": 9,
+   "bytes_per_glyph": 64,
+   "slot_size": 576,
+   "bdf": "normal.bdf",
+   "ink": "8x12",
+   "pad_top": 2,
+   "_slot_chars_note": "0x36..0x3E 句读标点，按 64B/字 8x16 单独生成；不再复用整张 charmap 的前 9 个汉字（那会让所有标点变成汉字残片）",
+   "slot_chars": [
+    ";",
+    "。",
+    "－",
+    "~",
+    "、",
+    "，",
+    "！",
+    "？",
+    "："
+   ]
   }
+ ]
 }

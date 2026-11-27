@@ -164,6 +164,42 @@ for i, st in ipairs(STEPS) do
         total_frames = total_frames + st.n
     elseif st.act == "prove" then
         -- 瞬时步骤，无帧数
+    elseif st.act == "scan" then
+        if type(st.addr) ~= "number" then
+            stop(1, string.format("[ERR] scan step %d needs addr", i))
+        end
+        if type(st.len) ~= "number" or st.len < 1 or st.len > 0x10000 then
+            stop(1, string.format("[ERR] scan step %d needs len (1..65536)", i))
+        end
+        if type(st.value) ~= "number" then
+            stop(1, string.format("[ERR] scan step %d needs value", i))
+        end
+        total_frames = total_frames + 1
+    elseif st.act == "pokecart" then
+        if type(st.writes) ~= "table" or #st.writes == 0 then
+            stop(1, string.format("[ERR] pokecart step %d needs writes", i))
+        end
+        total_frames = total_frames + 1
+    elseif st.act == "probe" then
+        -- ★ 读内存并落盘（2026-11-27 新增）。
+        --   用途：验证「战斗界面读写哪个结构才对」这类问题。
+        --   以前只能靠 poke 的旧值日志间接读，一次只能读一处、且要求先写。
+        --   这里直接 dump 一段内存到 scene.log，格式固定便于脚本解析：
+        --     [PROBE] f=<帧> tag=<tag> addr=0xXXXXXXXX len=<n> hex=<hex串>
+        --   参数：
+        --     addr  = 起始地址（绝对）
+        --     sb1   = 或 SaveBlock1 偏移（二选一）
+        --     len   = 读取字节数（默认 100）
+        --     tag   = 日志标签（可选）
+        --   ⚠ 门槛与 poke 相同：必须 prove 成功（存档已载入）。
+        if type(st.len) ~= "number" or st.len < 1 or st.len > 1024 then
+            stop(1, string.format(
+                "[ERR] probe step %d needs len (1..1024)", i))
+        end
+        if type(st.addr) ~= "number" and type(st.sb1) ~= "number" then
+            stop(1, string.format("[ERR] probe step %d needs addr or sb1", i))
+        end
+        total_frames = total_frames + 1
     elseif st.act == "await" then
         -- 状态驱动等待：等「画面稳定 **且** 内存条件满足」。
         -- n = 超时帧数；addr/value（+可选 addr2/value2）= 目标界面特征。
@@ -1098,6 +1134,158 @@ local function exec_instant(fr, st, timeout_flag)
     return true
 end
 
+-- ── 内存扫描（scan）：按值搜一段内存，命中即落盘 ──────────────────────────
+-- 为什么需要：定位未知结构（如 gBattleMons）时，靠 probe 逐段 dump 再离线
+-- 分析极慢（一次只能读 1KB）。这里用 readRange 一次读大块、就地比对，
+-- 只把命中地址记进日志，日志量小、速度快。
+--
+-- 参数：
+--   addr = 起始总线地址
+--   len  = 扫描长度（最多 0x10000 = 64KB，避免单帧耗时过长）
+--   value = 要找的值（u16 或 u32，按 width 解释）
+--   width = 2 或 4（默认 2）
+--   tag   = 日志标签
+-- 输出：
+--   [SCAN] f=<帧> tag=<tag> range=0xAAAAAAAA..0xBBBBBBBB width=<w> value=0xVVVV
+--          hits=0xXXXXXXXX,0xYYYYYYYY,...
+local function do_scan(fr, st)
+    if SB2_RUNTIME == nil then
+        return nil, "scan 被拒绝：prove 还没成功（存档未载入）"
+    end
+    local addr = st.addr
+    local len = st.len
+    local width = st.width or 2
+    local value = st.value
+    if width ~= 2 and width ~= 4 then
+        return nil, "scan width 只能是 2 或 4"
+    end
+    local ok, blob = pcall(function() return emu:readRange(addr, len) end)
+    if not ok or blob == nil then
+        return nil, string.format("scan 读 0x%08X len=%d 失败", addr, len)
+    end
+    local pat
+    if width == 2 then
+        pat = string.char(value & 0xFF, (value >> 8) & 0xFF)
+    else
+        pat = string.char(value & 0xFF, (value >> 8) & 0xFF,
+                          (value >> 16) & 0xFF, (value >> 24) & 0xFF)
+    end
+    local hits = {}
+    local init = 1
+    while true do
+        local i, j = string.find(blob, pat, init, true)
+        if not i then break end
+        -- 命中偏移 i-1（0-based），转回总线地址
+        hits[#hits + 1] = string.format("0x%08X", addr + (i - 1))
+        init = i + 1
+        if #hits >= 64 then break end
+    end
+    log(string.format(
+        "[SCAN] f=%d tag=%s range=0x%08X..0x%08X width=%d value=0x%X hits=%s",
+        fr, st.tag or "-", addr, addr + len, width, value,
+        (#hits == 0) and "(none)" or table.concat(hits, ",")))
+    return #hits
+end
+
+-- ── 金手指·写 ROM 域（pokecart）─────────────────────────────────────────────
+-- 为什么需要：普通 poke 走 CPU 总线（emu:write8(0x08xxxxxx)），GBA 的 ROM 是
+-- 只读掩膜，总线写会被丢弃 —— 实测 `poke write 1 复核失败 @0x083786D0:
+-- 写入 0x1621919 读回 0x1200C0C`。
+--
+-- 但 mGBA 的 Lua 提供 MemoryDomain：emu.memory.cart0（ROM，base=0x08000000），
+-- 它的 write* 用**相对域基址的偏移**，且绕过总线只读限制。
+-- 这正是标准金手指「改野生遇敌表」的原理。
+--
+-- 参数：addr 用**总线绝对地址**（0x08xxxxxx），内部自动减去域基址。
+local function do_pokecart(fr, st)
+    if SB2_RUNTIME == nil then
+        return nil, "pokecart 被拒绝：prove 还没成功（存档未载入）"
+    end
+    local dom = emu.memory and emu.memory.cart0
+    if dom == nil then
+        return nil, "pokecart 不可用：emu.memory.cart0 不存在" ..
+                    "（mGBA 版本过旧？需要 0.10+ 的 scripting）"
+    end
+    local dbase = dom:base()
+    local dsize = dom:size()
+    local n = 0
+    for j, wr in ipairs(st.writes) do
+        local addr = wr.addr
+        if type(addr) ~= "number" then
+            return nil, string.format("pokecart write %d 需要 addr", j)
+        end
+        local off = addr - dbase
+        if off < 0 or off >= dsize then
+            return nil, string.format(
+                "pokecart write %d 地址 0x%08X 超出 ROM 域 [0x%08X,0x%08X)",
+                j, addr, dbase, dbase + dsize)
+        end
+        local wd = wr.width or 1
+        local mask = (wd == 4) and 0xFFFFFFFF or ((1 << (wd * 8)) - 1)
+        local want = wr.value & mask
+        local old
+        if wd == 1 then old = dom:read8(off)
+        elseif wd == 2 then old = dom:read16(off)
+        else old = dom:read32(off) end
+
+        local ok, err
+        if wd == 1 then ok, err = pcall(function() dom:write8(off, want) end)
+        elseif wd == 2 then ok, err = pcall(function() dom:write16(off, want) end)
+        else ok, err = pcall(function() dom:write32(off, want) end) end
+        if not ok then
+            return nil, string.format("pokecart write %d 失败: %s",
+                j, tostring(err))
+        end
+
+        local now
+        if wd == 1 then now = dom:read8(off)
+        elseif wd == 2 then now = dom:read16(off)
+        else now = dom:read32(off) end
+        if now ~= want then
+            return nil, string.format(
+                "pokecart write %d 复核失败 @0x%08X: 写入 0x%X 读回 0x%X",
+                j, addr, want, now)
+        end
+        log(string.format("[PCART] f=%d #%d @0x%08X (off 0x%X) w%d 0x%X -> 0x%X %s",
+            fr, j, addr, off, wd, old & mask, now,
+            wr.note and ("; " .. wr.note) or ""))
+        n = n + 1
+    end
+    return n
+end
+
+-- ── 内存探针（probe）：把一段内存 dump 到 scene.log ────────────────────────
+-- 与 poke 共用「必须已读档」的门槛（理由见 do_poke 的注释）。
+-- 输出格式固定，便于外部脚本解析：
+--   [PROBE] f=<帧> tag=<tag> addr=0xXXXXXXXX len=<n> hex=<hex>
+local function do_probe(fr, st)
+    if SB2_RUNTIME == nil then
+        return nil, "probe 被拒绝：prove 还没成功（存档未载入）"
+    end
+    local addr
+    local via
+    if st.sb1 ~= nil then
+        addr = SB2_RUNTIME + SB1_DELTA + st.sb1
+        via = string.format("sb1+0x%X", st.sb1)
+    else
+        addr = st.addr
+        via = "abs"
+    end
+    local n = st.len
+    local parts = {}
+    for k = 0, n - 1 do
+        local ok, v = pcall(function() return emu:read8(addr + k) end)
+        if not ok then
+            return nil, string.format("probe 读 0x%08X 失败: %s",
+                addr + k, tostring(v))
+        end
+        parts[#parts + 1] = string.format("%02X", v)
+    end
+    log(string.format("[PROBE] f=%d tag=%s addr=0x%08X (%s) len=%d hex=%s",
+        fr, st.tag or "-", addr, via, n, table.concat(parts)))
+    return n
+end
+
 -- ── 金手指：把一组写操作打到**实时内存**上 ──────────────────────────────────
 -- 返回写入条数；任何一条失败返回 nil + 错误信息。
 -- 写之前把原值读出来记进日志：出问题能回滚，也能证明"写之前确实不是这个值"。
@@ -1684,6 +1872,13 @@ advance = function(fr)
         -- poke 要在**画面稳定之后**执行：否则可能刚好在转场中途改内存，
         -- 游戏下一帧就会用旧值重算，改了等于没改。settle 后动手成功率高得多。
         settle_begin("poke", fr)
+    elseif st.act == "probe" then
+        -- probe 同 poke：画面稳定后再读，避免读到转场中间态
+        settle_begin("probe", fr)
+    elseif st.act == "pokecart" then
+        settle_begin("pokecart", fr)
+    elseif st.act == "scan" then
+        settle_begin("scan", fr)
     elseif st.act == "burst" then
         -- burst 之前也要 settle：否则第一张会拍到上一动作的过渡帧。
         settle_begin("burst:" .. tostring(st.name), fr)
@@ -1826,6 +2021,38 @@ callbacks:add("keysRead", function()
                                   fr, cur, st.want))
                 advance(fr)
             end
+            return
+        elseif st.act == "scan" then
+            local n, err = do_scan(fr, st)
+            if n == nil then
+                emu:setKeys(0)
+                stop(1, string.format("[ERR] scan 失败 step=%d f=%d: %s",
+                                      IDX, fr, tostring(err)))
+                return
+            end
+            log(string.format("[SCAN] step=%d 命中 %d 处", IDX, n))
+            advance(fr)
+            return
+        elseif st.act == "pokecart" then
+            local n, err = do_pokecart(fr, st)
+            if n == nil then
+                emu:setKeys(0)
+                stop(1, string.format("[ERR] pokecart 失败 step=%d f=%d: %s",
+                                      IDX, fr, tostring(err)))
+                return
+            end
+            log(string.format("[PCART] step=%d 共写 ROM %d 项", IDX, n))
+            advance(fr)
+            return
+        elseif st.act == "probe" then
+            local n, err = do_probe(fr, st)
+            if n == nil then
+                emu:setKeys(0)
+                stop(1, string.format("[ERR] probe 失败 step=%d f=%d: %s",
+                                      IDX, fr, tostring(err)))
+                return
+            end
+            advance(fr)
             return
         elseif st.act == "poke" then
             local n, err = do_poke(fr, st)

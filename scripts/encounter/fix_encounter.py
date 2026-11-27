@@ -302,6 +302,40 @@ def cmd_apply(args) -> int:
           + (f"，lv={args.level}" if args.level else "") + "）：")
     print("  " + " ".join(f"{b:02X}" for b in patch))
 
+    # ★ --emit-lua（2026-11-27）：输出 pokecart 语句，运行时改 ROM 域。
+    #
+    # 为什么需要这条路：普通 poke 走 CPU 总线，GBA 的 ROM 是只读掩膜，
+    # 总线写被丢弃（实测 `poke write 1 复核失败 @0x083786D0:
+    # 写入 0x1621919 读回 0x1200C0C`）。而 mGBA 的 emu.memory.cart0
+    # 用相对域偏移写，可绕过只读限制 —— 实测 12 槽全部写入成功，
+    # 敌方血条从「负电拍拍 Lv13」变成「Lv25」。
+    #
+    # 好处：完全不碰磁盘上的 ROM 文件，两侧（origin/translated）
+    # 可以用同一份 Lua，天然保证「同一只怪」的对照前提。
+    if args.emit_lua:
+        lines = []
+        lines.append("-- 由 fix_encounter.py --emit-lua 生成，勿手改")
+        lines.append(f"-- map {group}:{num}  wildPokemon=0x{wp:08X}")
+        lines.append(f"-- species={args.species}"
+                     + (f" level={args.level}" if args.level else " level=原值"))
+        lines.append(f"local WILD = 0x{wp:08X}")
+        lines.append("api.pokecart{")
+        for k, (mn, mx, _sp) in enumerate(slots):
+            lv, lv2 = (args.level, args.level) if args.level > 0 else (mn, mx)
+            word = (args.species << 16) | ((lv2 & 0xFF) << 8) | (lv & 0xFF)
+            lines.append(
+                f"    {{ addr = WILD + 0x{k * 4:02X}, width = 4, "
+                f"value = 0x{word:08X}, note = \"slot{k} sp={args.species} "
+                f"lv{lv}\" }},"
+            )
+        lines.append("}")
+        out = Path(args.emit_lua)
+        out.parent.mkdir(parents=True, exist_ok=True)
+        out.write_text("\n".join(lines) + "\n", encoding="utf-8")
+        print(f"\n[OK] 已输出 Lua → {out}")
+        print("     用法：在场景里 dofile 或直接粘进 api.pokecart{...}")
+        return 0
+
     if args.dry_run:
         print("\n[dry-run] 未写入任何文件")
         return 0
@@ -348,6 +382,10 @@ def main() -> int:
     p3.add_argument("--level", type=int, default=0, help="固定等级（0=保持原值）")
     p3.add_argument("--rom", nargs="+", help="一份或多份 ROM（两侧都要打）")
     p3.add_argument("--dry-run", action="store_true")
+    p3.add_argument(
+        "--emit-lua", default=None, metavar="PATH",
+        help="不写 ROM，改为输出一段 Lua（api.pokecart{...}），供 bot 场景 "
+             "在运行时改写 ROM 域的遇敌表（实测有效，见 2026-11-27 记录）")
     p3.set_defaults(func=cmd_apply)
 
     args = ap.parse_args()

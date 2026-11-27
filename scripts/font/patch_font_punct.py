@@ -179,7 +179,11 @@ def patch_font(font_path: Path, charmap_path: Path, bdf_path: Path, *,
         char = m.group(2)
         lead = (hex_val >> 8) & 0xFF
         trail = hex_val & 0xFF
-        if lead == 0x1E and 0x5E <= trail <= 0x64:
+        # ★ 2026-11-27：原来这里限死 0x5E..0x64（只覆盖最早的 7 个标点），
+        #   后面的 0x1B69 起（/ ／ 「」『』ー（）…）压根没被校验到，
+        #   于是硬编码表把它们当成「‥ …」等重绘，斜杠被画成两个点。
+        #   现在扫全部 lead==0x1E 的字符，凡与硬编码表不符一律剔除。
+        if lead == 0x1E:
             adj = lead - 1
             if lead >= 6:
                 adj -= 1
@@ -189,7 +193,13 @@ def patch_font(font_path: Path, charmap_path: Path, bdf_path: Path, *,
             expected = chr(ord(char))
             actual = PATCH_SLOTS.get(gidx)
             if actual and actual != char:
-                print(f"  WARNING: charmap says {hex_val:04X}={char!r} but hardcode has {actual!r}")
+                # ★ 2026-11-27：以前这里只打印 WARNING，依然用硬编码表覆盖，
+                #   导致 0x1B69(/ 斜杠) 被当成「‥」重绘成两个点 ——
+                #   对应画面上「属性/」显示成「属性..」这个 BUG。
+                #   charmap 才是唯一权威：硬编码表与实际不符时，剔除该槽。
+                print(f"  SKIP slot 0x{gidx:04X}: charmap 是 {char!r}，"
+                      f"硬编码表写的是 {actual!r}（以 charmap 为准）")
+                PATCH_SLOTS.pop(gidx, None)
 
     with open(font_path, 'rb') as f:
         buf = bytearray(f.read())

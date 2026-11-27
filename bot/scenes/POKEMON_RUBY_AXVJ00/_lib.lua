@@ -153,6 +153,63 @@ function M.new()
             S[#S + 1] = { act = "poke", writes = writes }
             return api
         end,
+        -- ★ 内存扫描：按值搜一段内存（2026-11-27）
+        --   定位未知结构用。比逐段 probe 快得多：一次 readRange 读 64KB，
+        --   就地比对，只记命中地址。
+        --   用法：api.scan{ addr=0x02000000, len=0x10000, value=354, width=2,
+        --                   tag="find_species" }
+        scan = function(opt)
+            local proved = false
+            for _, s in ipairs(S) do
+                if s.act == "prove" then proved = true end
+            end
+            assert(proved, "scan 之前必须已有 prove 步骤")
+            assert(opt and type(opt.addr) == "number", "scan 需要 addr")
+            S[#S + 1] = { act = "scan", addr = opt.addr,
+                          len = opt.len or 0x10000,
+                          value = opt.value, width = opt.width or 2,
+                          tag = opt.tag }
+            return api
+        end,
+        -- ★ 写 ROM 域（pokecart）：绕过总线只读限制改 ROM 数据（2026-11-27）
+        --   为什么需要：普通 poke 走 CPU 总线，GBA 的 ROM 是只读掩膜，
+        --   总线写被丢弃 —— 实测 `poke write 1 复核失败 @0x083786D0:
+        --   写入 0x1621919 读回 0x1200C0C`。
+        --   mGBA 的 MemoryDomain（emu.memory.cart0）用相对偏移写，
+        --   可绕开只读限制 —— 这就是标准金手指「改野生遇敌表」的原理。
+        --   用法：api.pokecart{ {addr=0x083786D0, width=4, value=0x01621919} }
+        pokecart = function(writes)
+            local proved = false
+            for _, s in ipairs(S) do
+                if s.act == "prove" then proved = true end
+            end
+            assert(proved, "pokecart 之前必须已有 prove 步骤")
+            S[#S + 1] = { act = "pokecart", writes = writes }
+            return api
+        end,
+        -- ★ 内存探针：把一段内存 dump 到 scene.log（2026-11-27 新增）。
+        --   为什么需要：验证「战斗界面到底读哪个结构」这类问题，
+        --   以前只能靠 poke 的旧值日志间接读，一次只能读一处、还要求先写。
+        --   输出格式： [PROBE] f=<帧> tag=<tag> addr=0xXXXXXXXX len=<n> hex=<hex>
+        --   用法：
+        --     api.probe{ addr=0x030045C0, len=100, tag="enemy_party0" }
+        --     api.probe{ sb1=0x1234, len=16, tag="sb1区" }
+        --   ⚠ 门槛同 poke：必须已有 prove（存档已载入）
+        probe = function(opt)
+            local proved = false
+            for _, s in ipairs(S) do
+                if s.act == "prove" then proved = true end
+            end
+            assert(proved,
+                "probe 之前必须已有 prove 步骤：内存要在读档后才有效")
+            assert(opt and (opt.addr ~= nil or opt.sb1 ~= nil),
+                "probe 需要 addr 或 sb1")
+            assert(opt.len and opt.len >= 1 and opt.len <= 1024,
+                "probe 需要 len (1..1024)")
+            S[#S + 1] = { act = "probe", addr = opt.addr, sb1 = opt.sb1,
+                          len = opt.len, tag = opt.tag }
+            return api
+        end,
         -- ★★ 遇敌搜捕：逐格走，一旦 DISPCNT 离开野外值就停手。
         --   为什么这样最好（2026-11-03 用户选定的方案）：
         --   实测 5 轮证明「第 N 格必遇敌」做不到 —— 两侧写入的 RNG 序列

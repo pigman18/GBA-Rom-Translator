@@ -4115,7 +4115,7 @@
   {
     "status": 200,
     "original": "\\CC0505\\CC040D0E0FPP\nわざタイプ／",
-    "translated": "\\CC0505\\CC040D0E0FPP\n类型/"
+    "translated": "\\CC0505\\CC040D0E0FPP\n属性/"
   },
   {
     "status": 200,
@@ -4145,7 +4145,7 @@
   {
     "status": 200,
     "original": "\\CC0505\\CC040D0E0FＰＰ\nわざタイプ／",
-    "translated": "\\CC0505\\CC040D0E0FPP\n类型/"
+    "translated": "\\CC0505\\CC040D0E0FPP\n属性/"
   },
   {
     "status": 200,
@@ -4420,7 +4420,7 @@
   {
     "status": 200,
     "original": "\\CC050Fタイプ",
-    "translated": "\\CC050F类型"
+    "translated": "\\CC050F属性"
   },
   {
     "status": 200,
@@ -41299,12 +41299,12 @@
   {
     "status": 200,
     "original": "わざタイプ",
-    "translated": "类型"
+    "translated": "属性"
   },
   {
     "status": 200,
     "original": "わざタイプ／",
-    "translated": "类型/"
+    "translated": "属性/"
   },
   {
     "status": 200,
@@ -52558,7 +52558,7 @@
   {
     "status": 200,
     "original": "タイプ／",
-    "translated": "类型/"
+    "translated": "属性/"
   },
   {
     "status": 200,

@@ -1318,14 +1318,28 @@ def cmd_export(args):
             print(f"错误: {e}")
             sys.exit(1)
         presets = load_tiles_presets(yaml_path)
+        # tiles.presets 里可能混着 texts 用的 filter 条目（只有 id/type/value，没有 address），
+        # 它们不是图块预设；--all 批量导出必须跳过，否则 apply_tiles_preset_to_args 会 KeyError
+        tile_presets = [p for p in presets
+                        if p.get("address") or p.get("compose") or p.get("preset")]
+        skipped = len(presets) - len(tile_presets)
+        if skipped:
+            print(f"跳过非图块条目 {skipped} 个："
+                  f"{[str(p.get('id')) for p in presets if p not in tile_presets]}")
+        presets = tile_presets
         if not presets:
             print(f"错误: {yaml_path} 中 tiles.presets 为空")
             sys.exit(1)
         print(f"导出全部预设 ({len(presets)}) ← {yaml_path.name}")
+        from collections import Counter
+        addr_count = Counter(str(p.get("address")) for p in presets)
         for p in presets:
             one = argparse.Namespace(**vars(args))
             apply_tiles_preset_to_args(one, p)
             pid = str(p.get("id") or "")
+            # 同一地址常有多个 preset（同图块集的不同裁剪窗口）；只按地址命名会互相覆盖，
+            # 结果看到的往往是最后一个 preset 的窗口 —— 表现为「导出缺块 / 位置不对」
+            one.preset_id = pid if addr_count[str(p.get("address"))] > 1 else None
             print(f"\n=== 预设: {pid} ===")
             _cmd_export_one(one)
         return
@@ -1362,6 +1376,10 @@ def _cmd_export_one(args):
     meta_dir.mkdir(parents=True, exist_ok=True)
 
     prefix = f"0x{addr:08X}"
+    pid_tail = getattr(args, "preset_id", None)
+    if pid_tail:
+        # 同地址多个 preset 时加 id 后缀，避免输出文件互相覆盖
+        prefix = f"{prefix}_{pid_tail}"
 
     # ── 检测/设置压缩 ──
     compression = args.compression
